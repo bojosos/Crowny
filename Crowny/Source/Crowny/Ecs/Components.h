@@ -11,6 +11,7 @@
 #include "Crowny/Common/Math.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
+#include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Physics/Physics3DTypes.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/RenderLight.h"

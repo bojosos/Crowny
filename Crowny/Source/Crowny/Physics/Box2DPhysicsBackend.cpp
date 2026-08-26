@@ -199,9 +199,7 @@ namespace Crowny
                 result.First = Entity(static_cast<entt::entity>(fixtureA->GetBody()->GetUserData().pointer), m_Scene);
                 result.Second = Entity(static_cast<entt::entity>(fixtureB->GetBody()->GetUserData().pointer), m_Scene);
                 result.IsTrigger = fixtureA->IsSensor() || fixtureB->IsSensor();
-                result.Collision.Colliders.reserve(2);
-                result.Collision.Colliders.push_back(result.First);
-                result.Collision.Colliders.push_back(result.Second);
+                result.Collision.Colliders = { result.First, result.Second };
 
                 if (!result.IsTrigger)
                 {

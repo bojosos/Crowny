@@ -22,18 +22,6 @@ namespace Crowny
     struct PersistedScriptState;
     struct ScriptTypeIdentity;
 
-    struct Collision2D
-    {
-        SmallVector<glm::vec2, 2> Points;
-        Vector<Entity> Colliders;
-    };
-
-    struct Collision3D
-    {
-        Vector<Entity> Colliders;
-        SmallVector<PhysicsContactPoint3D, 4> Points;
-    };
-
     class Scene : public Asset
     {
     public:

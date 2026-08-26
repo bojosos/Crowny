@@ -2,6 +2,7 @@
 
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
+#include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Threading/CommandQueue.h"
 #include "cwpch.h"
@@ -166,6 +167,45 @@ TEST_CASE("Thread allocation snapshots isolate worker allocations", "[Memory][Fr
 
     CHECK(Memory::GetThreadAllocationDelta(before, after).AllocationCount == 0);
     CHECK(workerAllocationCount.load(std::memory_order_acquire) == 1);
+}
+
+TEST_CASE("Physics contact collider pairs stay inline on the dispatch path", "[Memory][Frame][Physics]")
+{
+    constexpr uint32_t contactCount = 10'000;
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    const Entity first = scene->CreateEntity("First collider");
+    const Entity second = scene->CreateEntity("Second collider");
+
+    uint64_t observedHandles = 0;
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t contact = 0; contact < contactCount; contact++)
+    {
+        // Box2D snapshots a pair, then copies it once for each scripted receiver.
+        Collision2D snapshot2D;
+        snapshot2D.Colliders = { first, second };
+        Collision2D firstReceiver2D = snapshot2D;
+        Collision2D secondReceiver2D = snapshot2D;
+        std::swap(secondReceiver2D.Colliders[0], secondReceiver2D.Colliders[1]);
+
+        // The 3D scene bridge constructs one collision payload for each receiver.
+        Collision3D firstReceiver3D;
+        firstReceiver3D.Colliders = { first, second };
+        Collision3D secondReceiver3D;
+        secondReceiver3D.Colliders = { second, first };
+
+        observedHandles += static_cast<uint32_t>(firstReceiver2D.Colliders[0].GetHandle());
+        observedHandles += static_cast<uint32_t>(secondReceiver2D.Colliders[0].GetHandle());
+        observedHandles += static_cast<uint32_t>(firstReceiver3D.Colliders[0].GetHandle());
+        observedHandles += static_cast<uint32_t>(secondReceiver3D.Colliders[0].GetHandle());
+    }
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+    const uint64_t expectedPerContact = 2ull * static_cast<uint32_t>(first.GetHandle()) +
+                                        2ull * static_cast<uint32_t>(second.GetHandle());
+    CHECK(observedHandles == expectedPerContact * contactCount);
+    CHECK(delta.AllocationCount == 0u);
+    CHECK(delta.RequestedBytes == 0u);
 }
 
 TEST_CASE("Scene light synchronization allocates nothing after warm-up", "[Memory][Frame][Renderer][SceneSync]")
