@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/DirectionalShadowCascades.h"
 
 #include <glm/ext/matrix_transform.hpp>
@@ -73,4 +74,24 @@ TEST_CASE("Directional cascade centers snap to shadow texels", "[Renderer][Shado
         CHECK_THAT(x, WithinAbs(std::round(x), 0.0001f));
         CHECK_THAT(y, WithinAbs(std::round(y), 0.0001f));
     }
+}
+
+TEST_CASE("Directional cascade builds reuse caller storage without allocations", "[Renderer][Shadows][Memory]")
+{
+    DirectionalShadowCascadeSettings settings;
+    settings.CascadeCount = 4;
+    Vector<DirectionalShadowCascade> cascades;
+    DirectionalShadowCascadeBuilder::Build(glm::mat4(1.0f), glm::radians(60.0f), 16.0f / 9.0f, 0.1f,
+                                            glm::normalize(glm::vec3(0.5f, -1.0f, 0.25f)), settings, cascades);
+
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120; frame++)
+        DirectionalShadowCascadeBuilder::Build(glm::mat4(1.0f), glm::radians(60.0f), 16.0f / 9.0f, 0.1f,
+                                               glm::normalize(glm::vec3(0.5f, -1.0f, 0.25f)), settings, cascades);
+    const Memory::ThreadAllocationSnapshot delta =
+      Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+    CHECK(cascades.size() == settings.CascadeCount);
+    CHECK(delta.AllocationCount == 0);
+    CHECK(delta.RequestedBytes == 0);
 }

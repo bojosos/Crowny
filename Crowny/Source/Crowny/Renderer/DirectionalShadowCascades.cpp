@@ -5,8 +5,29 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
+#include <array>
+#include <span>
+
 namespace Crowny
 {
+    namespace
+    {
+        void WriteSplits(float cameraNear, float shadowDistance, uint32_t cascadeCount, float splitLambda,
+                         std::span<float> output)
+        {
+            CW_ENGINE_ASSERT(output.size() >= cascadeCount + 1u);
+            output[0] = cameraNear;
+            for (uint32_t cascade = 1; cascade < cascadeCount; cascade++)
+            {
+                const float fraction = static_cast<float>(cascade) / cascadeCount;
+                const float logarithmic = cameraNear * std::pow(shadowDistance / cameraNear, fraction);
+                const float uniform = cameraNear + (shadowDistance - cameraNear) * fraction;
+                output[cascade] = glm::mix(uniform, logarithmic, splitLambda);
+            }
+            output[cascadeCount] = shadowDistance;
+        }
+    } // namespace
+
     void DirectionalShadowCascadeBuilder::CalculateSplits(float cameraNear, float shadowDistance, uint32_t cascadeCount,
                                                             float splitLambda, Vector<float>& output)
     {
@@ -15,15 +36,7 @@ namespace Crowny
         cascadeCount = std::clamp(cascadeCount, 1u, 4u);
         splitLambda = std::clamp(splitLambda, 0.0f, 1.0f);
         output.resize(cascadeCount + 1u);
-        output[0] = cameraNear;
-        for (uint32_t cascade = 1; cascade < cascadeCount; cascade++)
-        {
-            const float fraction = static_cast<float>(cascade) / cascadeCount;
-            const float logarithmic = cameraNear * std::pow(shadowDistance / cameraNear, fraction);
-            const float uniform = cameraNear + (shadowDistance - cameraNear) * fraction;
-            output[cascade] = glm::mix(uniform, logarithmic, splitLambda);
-        }
-        output[cascadeCount] = shadowDistance;
+        WriteSplits(cameraNear, shadowDistance, cascadeCount, splitLambda, output);
     }
 
     void DirectionalShadowCascadeBuilder::Build(const glm::mat4& cameraWorld, float verticalFovRadians, float aspectRatio,
@@ -36,8 +49,11 @@ namespace Crowny
         verticalFovRadians = std::clamp(verticalFovRadians, glm::radians(1.0f), glm::radians(179.0f));
         aspectRatio = std::max(aspectRatio, 0.001f);
 
-        Vector<float> splits;
-        CalculateSplits(cameraNear, settings.ShadowDistance, cascadeCount, settings.SplitLambda, splits);
+        std::array<float, 5> splits;
+        cameraNear = std::max(cameraNear, 0.0001f);
+        const float shadowDistance = std::max(settings.ShadowDistance, cameraNear + 0.0001f);
+        const float splitLambda = std::clamp(settings.SplitLambda, 0.0f, 1.0f);
+        WriteSplits(cameraNear, shadowDistance, cascadeCount, splitLambda, splits);
         output.resize(cascadeCount);
 
         const glm::vec3 direction = glm::dot(lightDirection, lightDirection) > 0.000001f
