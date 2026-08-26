@@ -5,6 +5,8 @@
 #include "Crowny/Renderer/RenderGraph.h"
 #include "Crowny/Renderer/RenderGraphResources.h"
 
+#include <array>
+
 using namespace Crowny;
 
 namespace
@@ -87,8 +89,13 @@ TEST_CASE("RenderGraph rebuild and compile reuse warm scratch storage", "[Memory
           graph.CreateBuffer("RenderGraphAllocationUploadBuffer", { 4096, 16, GpuBufferType::Structured });
         const RenderGraphResourceHandle color = graph.CreateTexture("RenderGraphAllocationColorTexture", ColorTexture());
 
-        graph.AddPass("RenderGraphAllocationUploadPass", RenderGraphQueue::Transfer,
-                      [uploadBuffer](RenderGraphPassBuilder& builder) { builder.Write(uploadBuffer, RenderGraphResourceState::TransferWrite); });
+        const std::array<uint64_t, 8> oversizedCapture{};
+        const auto uploadSetup = [uploadBuffer, oversizedCapture](RenderGraphPassBuilder& builder) {
+            static_cast<void>(oversizedCapture);
+            builder.Write(uploadBuffer, RenderGraphResourceState::TransferWrite);
+        };
+        static_assert(sizeof(uploadSetup) > 32u);
+        graph.AddPass("RenderGraphAllocationUploadPass", RenderGraphQueue::Transfer, uploadSetup);
         graph.AddPass("RenderGraphAllocationCullPass", RenderGraphQueue::Compute,
                       [uploadBuffer](RenderGraphPassBuilder& builder) { builder.Read(uploadBuffer, RenderGraphResourceState::ShaderRead); });
         graph.AddPass("RenderGraphAllocationColorPass", RenderGraphQueue::Graphics,

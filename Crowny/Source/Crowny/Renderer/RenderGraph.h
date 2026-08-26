@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <type_traits>
+#include <utility>
 
 namespace Crowny
 {
@@ -249,6 +251,16 @@ namespace Crowny
                                                RenderGraphResourceState initialState, RenderGraphResourceState finalState);
 
         RenderGraphPassHandle AddPass(StringView name, RenderGraphQueue queue, const SetupCallback& setup, ExecuteCallback execute = {});
+        template <typename Setup>
+            requires(!std::is_same_v<std::remove_cvref_t<Setup>, SetupCallback> &&
+                     std::is_invocable_r_v<void, Setup&&, RenderGraphPassBuilder&>)
+        RenderGraphPassHandle AddPass(StringView name, RenderGraphQueue queue, Setup&& setup, ExecuteCallback execute = {})
+        {
+            const RenderGraphPassHandle handle = AddPassNode(name, queue, std::move(execute));
+            RenderGraphPassBuilder builder(*this, handle);
+            std::invoke(std::forward<Setup>(setup), builder);
+            return handle;
+        }
         void AddDependency(RenderGraphPassHandle pass, RenderGraphPassHandle dependency);
 
         const RenderGraphCompileResult& Compile();
@@ -261,6 +273,8 @@ namespace Crowny
 
     private:
         friend class RenderGraphPassBuilder;
+
+        RenderGraphPassHandle AddPassNode(StringView name, RenderGraphQueue queue, ExecuteCallback execute);
 
         enum class Access : uint8_t
         {

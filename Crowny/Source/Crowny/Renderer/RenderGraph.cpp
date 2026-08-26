@@ -240,6 +240,17 @@ namespace Crowny
 
     RenderGraphPassHandle RenderGraph::AddPass(StringView name, RenderGraphQueue queue, const SetupCallback& setup, ExecuteCallback execute)
     {
+        const RenderGraphPassHandle handle = AddPassNode(name, queue, std::move(execute));
+        if (setup)
+        {
+            RenderGraphPassBuilder builder(*this, handle);
+            setup(builder);
+        }
+        return handle;
+    }
+
+    RenderGraphPassHandle RenderGraph::AddPassNode(StringView name, RenderGraphQueue queue, ExecuteCallback execute)
+    {
         RenderGraphPassHandle handle{ static_cast<uint32_t>(m_Passes.Size()), m_Generation };
         PassNode& node = m_Passes.Acquire();
         node.Handle = handle;
@@ -249,12 +260,6 @@ namespace Crowny
         node.Dependencies.clear();
         node.Execute = std::move(execute);
         node.SideEffect = false;
-
-        if (setup)
-        {
-            RenderGraphPassBuilder builder(*this, handle);
-            setup(builder);
-        }
 
         m_Dirty = true;
         return handle;
