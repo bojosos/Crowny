@@ -412,6 +412,8 @@ namespace Crowny
             SceneManager::TryGet()->RemoveLifecycleListener(m_SceneLifecycleListener);
             m_SceneLifecycleListener = 0;
         }
+        if (m_AssetBrowser != nullptr)
+            m_AssetBrowser->Unload();
         BuildManager::Shutdown();
         CodeEditorManager::Shutdown();
         Editor::Shutdown();

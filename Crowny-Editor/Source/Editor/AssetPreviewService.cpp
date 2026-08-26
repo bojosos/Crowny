@@ -33,7 +33,6 @@ namespace Crowny
         Ref<PixelData> Pixels;
         Ref<Task> TaskHandle;
         std::atomic<bool> Cancellation{ false };
-        std::atomic<bool> Complete{ false };
     };
 
     namespace
@@ -358,10 +357,7 @@ namespace Crowny
         void ExecutePreviewWork(const Ref<AssetPreviewService::WorkItem>& work)
         {
             if (work->Cancellation.load(std::memory_order_acquire))
-            {
-                work->Complete.store(true, std::memory_order_release);
                 return;
-            }
 
             try
             {
@@ -397,7 +393,13 @@ namespace Crowny
             {
                 work->Result.Error = "Preview generation failed with an unknown error";
             }
-            work->Complete.store(true, std::memory_order_release);
+        }
+
+        void CancelPreviewWork(const Ref<AssetPreviewService::WorkItem>& work)
+        {
+            work->Cancellation.store(true, std::memory_order_release);
+            if (work->TaskHandle)
+                work->TaskHandle->Cancel();
         }
     } // namespace
 
@@ -425,7 +427,7 @@ namespace Crowny
                 work->LastAccess = ++m_AccessTick;
                 return &work->Result;
             }
-            work->Cancellation.store(true, std::memory_order_release);
+            CancelPreviewWork(work);
             ImGuiVulkanTexture::Release(work->Result.Image);
             m_Cache.erase(existing);
         }
@@ -495,7 +497,7 @@ namespace Crowny
         for (size_t index = 0; index < m_Running.size();)
         {
             Ref<WorkItem> work = m_Running[index];
-            if (!work->Complete.load(std::memory_order_acquire))
+            if (!work->TaskHandle || !work->TaskHandle->IsComplete())
             {
                 index++;
                 continue;
@@ -539,12 +541,10 @@ namespace Crowny
     void AssetPreviewService::CancelPending()
     {
         for (const Ref<WorkItem>& work : m_Pending)
-        {
-            work->Cancellation.store(true, std::memory_order_release);
-        }
+            CancelPreviewWork(work);
         m_Pending.clear();
         for (const Ref<WorkItem>& work : m_Running)
-            work->Cancellation.store(true, std::memory_order_release);
+            CancelPreviewWork(work);
 
         for (auto entry = m_Cache.begin(); entry != m_Cache.end();)
         {
@@ -560,7 +560,7 @@ namespace Crowny
         const auto entry = m_Cache.find(uuid);
         if (entry == m_Cache.end())
             return;
-        entry->second->Cancellation.store(true, std::memory_order_release);
+        CancelPreviewWork(entry->second);
         ImGuiVulkanTexture::Release(entry->second->Result.Image);
         m_Cache.erase(entry);
     }
@@ -568,6 +568,20 @@ namespace Crowny
     void AssetPreviewService::Clear()
     {
         CancelPending();
+        for (const Ref<WorkItem>& work : m_Running)
+        {
+            if (!work->TaskHandle)
+                continue;
+            try
+            {
+                work->TaskHandle->Wait();
+            }
+            catch (...)
+            {
+                // Clearing owns no result reporting. It only needs every worker to leave the asset and decoder modules.
+            }
+        }
+        m_Running.clear();
         for (const auto& [uuid, work] : m_Cache)
             ImGuiVulkanTexture::Release(work->Result.Image);
         m_Cache.clear();
