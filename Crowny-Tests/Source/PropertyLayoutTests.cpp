@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Editor/UndoRedo.h"
 #include "UI/Properties.h"
 
@@ -105,6 +106,31 @@ namespace
         ImGui::EndFrame();
         return observations;
     }
+
+    struct NamedOption
+    {
+        String Name;
+    };
+
+    void DrawDropdownProperties(const Vector<String>& stringOptions, const Vector<NamedOption>& namedOptions, int& stringSelection,
+                                int& literalSelection, int& namedSelection)
+    {
+        ImGui::NewFrame();
+        ImGui::Begin("Dropdown allocation test");
+        UI::BeginPropertyGrid();
+        UI::PropertyDropdown("A deliberately long string option label", stringOptions, stringSelection);
+        UI::PropertyDropdown("A deliberately long literal option label",
+                             { "First long literal option", "Second long literal option", "Third long literal option",
+                               "Fourth long literal option", "Fifth long literal option", "Sixth long literal option",
+                               "Seventh long literal option", "Eighth long literal option", "Ninth long literal option",
+                               "Tenth long literal option" },
+                             literalSelection);
+        UI::PropertyDropdown("A deliberately long selected option label", namedOptions, namedSelection,
+                             [](const NamedOption& option) -> const String& { return option.Name; });
+        UI::EndPropertyGrid();
+        ImGui::End();
+        ImGui::EndFrame();
+    }
 } // namespace
 
 TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[Editor][Properties][ImGui]")
@@ -121,4 +147,31 @@ TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[E
         CHECK(observations.IdBalanced);
         CHECK(observations.ColumnsFinalized);
     }
+}
+
+TEST_CASE("Property dropdowns allocate nothing after ImGui warm-up", "[Editor][Properties][ImGui][Memory][Frame]")
+{
+    UndoRedoScope undoRedo;
+    ImGuiContextScope imgui;
+
+    const Vector<String> stringOptions{ "First deliberately long string option", "Second deliberately long string option" };
+    const Vector<NamedOption> namedOptions{ { "First deliberately long named option" }, { "Second deliberately long named option" } };
+    int stringSelection = 1;
+    int literalSelection = 9;
+    int namedSelection = 1;
+
+    for (uint32_t frame = 0; frame < 8; frame++)
+        DrawDropdownProperties(stringOptions, namedOptions, stringSelection, literalSelection, namedSelection);
+
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120; frame++)
+        DrawDropdownProperties(stringOptions, namedOptions, stringSelection, literalSelection, namedSelection);
+    const Memory::ThreadAllocationSnapshot delta =
+      Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+    CHECK(stringSelection == 1);
+    CHECK(literalSelection == 9);
+    CHECK(namedSelection == 1);
+    CHECK(delta.AllocationCount == 0u);
+    CHECK(delta.RequestedBytes == 0u);
 }

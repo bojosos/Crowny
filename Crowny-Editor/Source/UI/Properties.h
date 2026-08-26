@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Crowny/Utils/SmallVector.h"
 #include "UI/UIUtils.h"
 
 #include "Editor/EditorAssets.h"
@@ -727,20 +726,16 @@ namespace Crowny
                 modified = true;
             }
 
-            String current = options[static_cast<size_t>(selectedIndex)];
-            if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
-                current = "---";
+            const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
+            const char* current = mixed ? "---" : options[static_cast<size_t>(selectedIndex)].c_str();
 
-            const String id = "##" + std::string(label);
-            // ImGui::SetNextItemWidth(150);
-            if (ImGui::BeginCombo(id.c_str(), current.c_str()))
+            if (ImGui::BeginCombo(GenerateID(), current))
             {
                 for (size_t i = 0; i < options.size(); i++)
                 {
                     const bool is_selected = (i == static_cast<size_t>(selectedIndex));
                     if (ImGui::Selectable(options[i].c_str(), is_selected))
                     {
-                        current = options[i];
                         selected = static_cast<TEnum>(i);
                         modified = true;
                     }
@@ -756,9 +751,8 @@ namespace Crowny
         }
 
         template <typename TEnum, typename TUnderlying = int32_t>
-        static bool PropertyDropdown(const char* label, std::initializer_list<const char*> optionsList, TEnum& selected)
+        static bool PropertyDropdown(const char* label, std::initializer_list<const char*> options, TEnum& selected)
         {
-            SmallVector<const char*, 8> options(optionsList);
             TUnderlying selectedIndex = (TUnderlying)selected;
             Pre(label);
             bool modified = false;
@@ -781,19 +775,17 @@ namespace Crowny
                 modified = true;
             }
 
-            const char* current = options[static_cast<size_t>(selectedIndex)];
+            const char* current = options.begin()[static_cast<size_t>(selectedIndex)];
             if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
                 current = "---";
 
-            const String id = "##" + std::string(label);
-            if (ImGui::BeginCombo(id.c_str(), current))
+            if (ImGui::BeginCombo(GenerateID(), current))
             {
-                for (uint32_t i = 0; i < options.size(); i++)
+                for (size_t i = 0; i < options.size(); i++)
                 {
-                    const bool is_selected = (current == options[i]);
-                    if (ImGui::Selectable(options[i], is_selected))
+                    const bool is_selected = i == static_cast<size_t>(selectedIndex);
+                    if (ImGui::Selectable(options.begin()[i], is_selected))
                     {
-                        current = options[i];
                         selected = static_cast<TEnum>(i);
                         modified = true;
                     }
@@ -808,9 +800,9 @@ namespace Crowny
             return modified;
         }
 
-        template <typename Type, typename TUnderlying = int32_t>
+        template <typename Type, typename Selector, typename TUnderlying = int32_t>
         static bool PropertyDropdown(const char* label, const Vector<Type>& options, TUnderlying& selected,
-                                     std::function<const String&(const Type&)> selector)
+                                     const Selector& selector)
         {
             TUnderlying selectedIndex = (TUnderlying)selected;
             Pre(label);
@@ -834,13 +826,11 @@ namespace Crowny
                 modified = true;
             }
 
-            String current = selector(options[static_cast<size_t>(selectedIndex)]);
-            if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
-                current = "---";
+            const String& selectedLabel = selector(options[static_cast<size_t>(selectedIndex)]);
+            const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
+            const char* current = mixed ? "---" : selectedLabel.c_str();
 
-            const String id = "##" + std::string(label);
-            // ImGui::SetNextItemWidth(150);
-            if (ImGui::BeginCombo(id.c_str(), current.c_str()))
+            if (ImGui::BeginCombo(GenerateID(), current))
             {
                 for (size_t i = 0; i < options.size(); i++)
                 {

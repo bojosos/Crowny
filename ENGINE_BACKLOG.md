@@ -134,6 +134,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Finish font assets, import, glyph caching/atlases, shaping boundaries, fallback fonts, Unicode, kerning, wrapping, measurement, DPI, batching, serialization, and editor previews.
 - [ ] Complete text layout and alignment for horizontal/vertical alignment, anchors, pivot, wrapping, overflow, line spacing, tabs, rich spans, bounds, hit testing, and stable results. Use icon quick-tabs for common alignment choices instead of dropdowns.
 - [x] Text layout retains UTF-8 source offsets, emits allocation-reusing caret stops after wrapping, justification, and ellipsis, and resolves a layout-space point to the closest visible caret.
+- [x] Shared editor property dropdowns borrow selected labels, use fixed ImGui-generated IDs, and iterate literal options directly. String, literal, and selector-backed dropdowns allocate nothing across 120 warm frames.
 - [ ] Finish `PixelUtils` and `PixelData`: validated pitches/sizes, all declared conversions, compression/decompression boundaries, mip generation, color spaces, alpha rules, safe overflow handling, and row-parallel kernels for large images.
 - [ ] Finish the cross-platform window system: multiple windows where supported, DPI, display enumeration, fullscreen modes, resize/minimize/focus, cursor modes, clipboard, drag/drop, icons, input routing, Vulkan/OpenGL surface lifetime, and C# APIs.
 
