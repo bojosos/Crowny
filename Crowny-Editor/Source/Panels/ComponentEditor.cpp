@@ -16,7 +16,6 @@
 
 namespace Crowny
 {
-    static String s_SearchString;
     static String s_DefaultScriptContents;
 
     // ---------------------------------------------------------------------------
@@ -100,60 +99,57 @@ namespace Crowny
                std::all_of(value.begin() + 1, value.end(), [&](char c) { return isValidRest(static_cast<unsigned char>(c)); });
     }
 
-    struct ComponentMenuEntry
+    static uint64_t GetScriptCatalogFingerprint(const UnorderedMap<String, MonoClass*>& entityBehaviours, const MonoClass* entityBehaviourBase)
     {
-        ComponentEditor::ComponentTypeID TypeId;
-        const ComponentEditor::ComponentInfo* Info;
-        String Group;
-    };
-
-    static Vector<ComponentMenuEntry> GetSortedComponentEntries(
-      const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos)
-    {
-        Vector<ComponentMenuEntry> entries;
-        for (const auto& [group, members] : componentInfos)
+        uint64_t fingerprint = 0x9ae16a3b2f90404fULL ^ static_cast<uint64_t>(entityBehaviours.size());
+        for (const auto& [name, klass] : entityBehaviours)
         {
-            for (const auto& [tid, componentInfo] : members)
-            {
-                if (tid != entt::type_hash<MonoScriptComponent>::value())
-                    entries.push_back({ tid, &componentInfo, group });
-            }
+            uint64_t entryHash = Hashing::CityHash64(name);
+            entryHash ^= klass == nullptr ? 0xc3a5c85c97cb3127ULL : 0xb492b66fbe98f273ULL;
+            entryHash ^= klass == entityBehaviourBase ? 0x9ddfea08eb382d69ULL : 0ULL;
+            fingerprint ^= entryHash + 0x9e3779b97f4a7c15ULL + (fingerprint << 6u) + (fingerprint >> 2u);
         }
-
-        std::sort(entries.begin(), entries.end(), [](const ComponentMenuEntry& lhs, const ComponentMenuEntry& rhs) {
-            if (lhs.Group.empty() != rhs.Group.empty())
-                return lhs.Group.empty();
-            if (lhs.Group != rhs.Group)
-                return lhs.Group < rhs.Group;
-            return lhs.Info->name < rhs.Info->name;
-        });
-        return entries;
+        return fingerprint;
     }
 
-    static Vector<String> GetSortedScriptNames()
+    static void SynchronizeScriptCatalog(ComponentMenuModel& menu)
     {
         const ScriptInfoManager& scriptInfo = ScriptInfoManager::Get();
         const auto& entityBehaviours = scriptInfo.GetEntityBehaviours();
         const MonoClass* entityBehaviourBase = scriptInfo.GetBuiltinClasses().EntityBehaviour;
+        const uint64_t fingerprint = GetScriptCatalogFingerprint(entityBehaviours, entityBehaviourBase);
+        if (menu.HasScriptCatalog(fingerprint))
+            return;
 
-        Vector<String> scriptNames;
+        Vector<ComponentMenuModel::ScriptEntry> scripts;
+        scripts.reserve(entityBehaviours.size());
         for (const auto& [name, klass] : entityBehaviours)
-        {
-            if (klass != nullptr && klass != entityBehaviourBase)
-                scriptNames.push_back(name);
-        }
-        std::sort(scriptNames.begin(), scriptNames.end());
-        return scriptNames;
+            scripts.push_back({ name, klass != nullptr && klass != entityBehaviourBase });
+        menu.SetScripts(fingerprint, std::move(scripts));
     }
 
-    static void RenderMenuSectionLabel(const String& label)
+    static const ComponentEditor::ComponentInfo* FindComponentInfo(
+      const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
+      ComponentEditor::ComponentTypeID typeId)
+    {
+        for (const auto& group : componentInfos)
+        {
+            const auto& members = group.second;
+            const auto member = members.find(typeId);
+            if (member != members.end())
+                return &member->second;
+        }
+        return nullptr;
+    }
+
+    static void RenderMenuSectionLabel(StringView label)
     {
         ImGui::Dummy(ImVec2(0.0f, 3.0f));
-        ImGui::TextDisabled("%s", label.c_str());
+        ImGui::TextDisabled("%.*s", static_cast<int>(label.size()), label.data());
         ImGui::Dummy(ImVec2(0.0f, 1.0f));
     }
 
-    static bool RenderComponentMenuItem(const String& name, const String& detail, bool alreadyAdded)
+    static bool RenderComponentMenuItem(StringView name, StringView detail, bool alreadyAdded)
     {
         const float lineHeight = ImGui::GetTextLineHeight();
         const float rowHeight = lineHeight * 2.0f + 11.0f;
@@ -171,12 +167,13 @@ namespace Crowny
         const float textMaxX = rowMax.x - trailingWidth;
 
         drawList->PushClipRect(rowMin, ImVec2(textMaxX, rowMax.y), true);
-        drawList->AddText(ImVec2(textX, titleY), titleColor, name.c_str());
-        drawList->AddText(ImVec2(textX, titleY + lineHeight), detailColor, detail.c_str());
+        drawList->AddText(ImVec2(textX, titleY), titleColor, name.data(), name.data() + name.size());
+        drawList->AddText(ImVec2(textX, titleY + lineHeight), detailColor, detail.data(), detail.data() + detail.size());
         drawList->PopClipRect();
 
-        if (textX + ImGui::CalcTextSize(name.c_str()).x > textMaxX && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-            ImGui::SetTooltip("%s", name.c_str());
+        if (textX + ImGui::CalcTextSize(name.data(), name.data() + name.size()).x > textMaxX &&
+            ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("%.*s", static_cast<int>(name.size()), name.data());
 
         if (alreadyAdded)
         {
@@ -559,66 +556,57 @@ namespace Crowny
             scene->AddScriptComponent(entity, "Sandbox", className);
     }
 
-    static void RenderSearchResults(const Ref<Scene>& scene, Entity primary, const Vector<Entity>& entities, const entt::registry& registry,
-                                    const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos)
+    static void RenderSearchResults(const Ref<Scene>& scene, const Vector<Entity>& entities, const entt::registry& registry,
+                                    const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
+                                    ComponentMenuModel& menu, const String& query)
     {
-        Vector<ComponentMenuEntry> componentMatches;
-        for (const ComponentMenuEntry& entry : GetSortedComponentEntries(componentInfos))
-        {
-            const bool nameMatches = StringUtils::IsSearchMathing(entry.Info->name, s_SearchString);
-            const String group = entry.Group.empty() ? "Core" : entry.Group;
-            const bool groupMatches = StringUtils::IsSearchMathing(group, s_SearchString);
-            if (nameMatches || groupMatches)
-                componentMatches.push_back(entry);
-        }
-        std::sort(componentMatches.begin(), componentMatches.end(),
-                  [](const ComponentMenuEntry& lhs, const ComponentMenuEntry& rhs) { return lhs.Info->name < rhs.Info->name; });
-
-        Vector<String> scriptMatches;
-        for (const String& scriptName : GetSortedScriptNames())
-        {
-            if (StringUtils::IsSearchMathing(scriptName, s_SearchString))
-                scriptMatches.push_back(scriptName);
-        }
-
-        const size_t matchCount = componentMatches.size() + scriptMatches.size();
+        const ComponentMenuModel::SearchResults& results = menu.Search(query);
+        const Vector<ComponentMenuModel::ComponentEntry>& components = menu.GetComponents();
+        const Vector<ComponentMenuModel::ScriptEntry>& scripts = menu.GetScripts();
+        const size_t matchCount = results.GetMatchCount();
         if (matchCount == 0)
         {
             ImGui::Dummy(ImVec2(0.0f, 12.0f));
-            ImGui::TextWrapped("No components or scripts match \"%s\".", s_SearchString.c_str());
+            ImGui::TextWrapped("No components or scripts match \"%s\".", query.c_str());
         }
         else
         {
             ImGui::TextDisabled("%zu %s", matchCount, matchCount == 1 ? "result" : "results");
 
-            if (!componentMatches.empty())
+            if (!results.ComponentIndices.empty())
             {
                 RenderMenuSectionLabel("Components");
                 ImGui::PushID("ComponentSearchResults");
-                for (const ComponentMenuEntry& entry : componentMatches)
+                for (size_t componentIndex : results.ComponentIndices)
                 {
-                    ImGui::PushID(entry.TypeId);
-                    const size_t presence = std::count_if(entities.begin(), entities.end(),
-                                                          [&](Entity entity) { return HasComponentByID(registry, entity, entry.TypeId); });
+                    const ComponentMenuModel::ComponentEntry& entry = components[componentIndex];
+                    const auto typeId = static_cast<ComponentEditor::ComponentTypeID>(entry.Id);
+                    ImGui::PushID(typeId);
+                    const size_t presence =
+                      std::count_if(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, typeId); });
                     const bool alreadyAdded = presence == entities.size();
-                    const String detail =
-                      presence == 0u ? (entry.Group.empty() ? "Core component" : entry.Group + " component") : "Add to missing selected entities";
-                    if (RenderComponentMenuItem(entry.Info->name, detail, alreadyAdded))
+                    const StringView detail = presence == 0u ? StringView(entry.Detail) : StringView("Add to missing selected entities");
+                    if (RenderComponentMenuItem(entry.Name, detail, alreadyAdded))
                     {
-                        AddComponentToEntities(scene, entities, registry, entry.TypeId, *entry.Info);
-                        ImGui::CloseCurrentPopup();
+                        const ComponentEditor::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
+                        if (info != nullptr)
+                        {
+                            AddComponentToEntities(scene, entities, registry, typeId, *info);
+                            ImGui::CloseCurrentPopup();
+                        }
                     }
                     ImGui::PopID();
                 }
                 ImGui::PopID();
             }
 
-            if (!scriptMatches.empty())
+            if (!results.ScriptIndices.empty())
             {
                 RenderMenuSectionLabel("Scripts");
                 ImGui::PushID("ScriptSearchResults");
-                for (const String& scriptName : scriptMatches)
+                for (size_t scriptIndex : results.ScriptIndices)
                 {
+                    const String& scriptName = scripts[scriptIndex].Name;
                     ImGui::PushID(scriptName.c_str());
                     const bool alreadyAdded =
                       std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, scriptName); });
@@ -634,60 +622,68 @@ namespace Crowny
             }
         }
 
-        const auto& entityBehaviours = ScriptInfoManager::Get().GetEntityBehaviours();
-        if (IsValidScriptClassName(s_SearchString) && entityBehaviours.find(s_SearchString) == entityBehaviours.end())
+        if (IsValidScriptClassName(query) && !results.ScriptNameDeclared)
         {
             ImGui::Dummy(ImVec2(0.0f, 5.0f));
             ImGui::Separator();
             RenderMenuSectionLabel("Create a C# script");
-            ImGui::TextWrapped("Create %s.cs and attach it to %zu selected %s.", s_SearchString.c_str(), entities.size(),
+            ImGui::TextWrapped("Create %s.cs and attach it to %zu selected %s.", query.c_str(), entities.size(),
                                entities.size() == 1u ? "entity" : "entities");
-            const String createLabel = "Create \"" + s_SearchString + ".cs\"";
-            const bool createRequested = ImGui::Button(createLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f));
+            const bool createRequested = ImGui::Button(results.CreateScriptLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f));
             if (createRequested || (matchCount == 0 && Input::IsKeyPressed(Key::Enter)))
             {
-                CreateNewScript(scene, entities, s_SearchString);
+                CreateNewScript(scene, entities, query);
                 ImGui::CloseCurrentPopup();
             }
         }
     }
 
-    static void RenderCategoryBrowser(const Ref<Scene>& scene, Entity primary, const Vector<Entity>& entities, const entt::registry& registry,
-                                      const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos)
+    static void RenderCategoryBrowser(const Ref<Scene>& scene, const Vector<Entity>& entities, const entt::registry& registry,
+                                      const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
+                                      ComponentMenuModel& menu)
     {
-        const Vector<ComponentMenuEntry> componentEntries = GetSortedComponentEntries(componentInfos);
-        String currentGroup;
+        const Vector<ComponentMenuModel::ComponentEntry>& components = menu.GetComponents();
+        StringView currentGroup;
         bool hasCurrentGroup = false;
         ImGui::PushID("ComponentBrowser");
-        for (const ComponentMenuEntry& entry : componentEntries)
+        for (const ComponentMenuModel::ComponentEntry& entry : components)
         {
-            const String group = entry.Group.empty() ? "Core" : entry.Group;
-            if (!hasCurrentGroup || group != currentGroup)
+            if (!hasCurrentGroup || entry.Group != currentGroup)
             {
-                currentGroup = group;
+                currentGroup = entry.Group;
                 hasCurrentGroup = true;
                 RenderMenuSectionLabel(currentGroup);
             }
 
-            ImGui::PushID(entry.TypeId);
+            const auto typeId = static_cast<ComponentEditor::ComponentTypeID>(entry.Id);
+            ImGui::PushID(typeId);
             const bool alreadyAdded =
-              std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, entry.TypeId); });
-            if (RenderComponentMenuItem(entry.Info->name, "Built-in component", alreadyAdded))
+              std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, typeId); });
+            if (RenderComponentMenuItem(entry.Name, "Built-in component", alreadyAdded))
             {
-                AddComponentToEntities(scene, entities, registry, entry.TypeId, *entry.Info);
-                ImGui::CloseCurrentPopup();
+                const ComponentEditor::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
+                if (info != nullptr)
+                {
+                    AddComponentToEntities(scene, entities, registry, typeId, *info);
+                    ImGui::CloseCurrentPopup();
+                }
             }
             ImGui::PopID();
         }
         ImGui::PopID();
 
-        const Vector<String> scriptNames = GetSortedScriptNames();
-        if (!scriptNames.empty())
+        const Vector<ComponentMenuModel::ScriptEntry>& scripts = menu.GetScripts();
+        const bool hasVisibleScripts =
+          std::any_of(scripts.begin(), scripts.end(), [](const ComponentMenuModel::ScriptEntry& entry) { return entry.Visible; });
+        if (hasVisibleScripts)
         {
             RenderMenuSectionLabel("Scripts");
             ImGui::PushID("ScriptBrowser");
-            for (const String& scriptName : scriptNames)
+            for (const ComponentMenuModel::ScriptEntry& script : scripts)
             {
+                if (!script.Visible)
+                    continue;
+                const String& scriptName = script.Name;
                 ImGui::PushID(scriptName.c_str());
                 const bool alreadyAdded =
                   std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, scriptName); });
@@ -704,7 +700,8 @@ namespace Crowny
     }
 
     static void RenderAddComponentPopup(const Ref<Scene>& scene, Entity primary, const Vector<Entity>& entities, const entt::registry& registry,
-                                        const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos)
+                                        const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
+                                        ComponentMenuModel& menu, String& query, bool& grabSearchFocus)
     {
         ImGui::SetNextWindowSize(ImVec2(370.0f, 460.0f), ImGuiCond_Appearing);
         ImGui::SetNextWindowSizeConstraints(ImVec2(320.0f, 360.0f), ImVec2(480.0f, 620.0f));
@@ -717,11 +714,12 @@ namespace Crowny
         }
 
         if (ImGui::IsWindowAppearing())
-            s_SearchString.clear();
+        {
+            query.clear();
+            grabSearchFocus = true;
+        }
 
-        static bool s_GrabFocus = true;
-        if (ImGui::IsWindowAppearing())
-            s_GrabFocus = true;
+        SynchronizeScriptCatalog(menu);
 
         ImGui::TextUnformatted("Add component");
         if (entities.size() == 1u)
@@ -729,14 +727,14 @@ namespace Crowny
         else
             ImGui::TextDisabled("Add to %zu selected entities", entities.size());
         ImGui::Dummy(ImVec2(0.0f, 3.0f));
-        UIUtils::SearchWidget(s_SearchString, "Search components and scripts...", &s_GrabFocus);
+        UIUtils::SearchWidget(query, "Search components and scripts...", &grabSearchFocus);
         ImGui::Separator();
 
         ImGui::BeginChild("##AddComponentResults", ImVec2(0.0f, 0.0f), false);
-        if (!s_SearchString.empty())
-            RenderSearchResults(scene, primary, entities, registry, componentInfos);
+        if (!query.empty())
+            RenderSearchResults(scene, entities, registry, componentInfos, menu, query);
         else
-            RenderCategoryBrowser(scene, primary, entities, registry, componentInfos);
+            RenderCategoryBrowser(scene, entities, registry, componentInfos, menu);
         ImGui::EndChild();
 
         ImGui::EndPopup();
@@ -800,7 +798,8 @@ namespace Crowny
         if (ImGui::Button("+  Add component", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f)))
             ImGui::OpenPopup("Add Component");
 
-        RenderAddComponentPopup(scene, primary, m_SelectionScratch, registry, m_ComponentInfos);
+        RenderAddComponentPopup(scene, primary, m_SelectionScratch, registry, m_ComponentInfos, m_ComponentMenu, m_ComponentSearch,
+                                m_GrabComponentSearchFocus);
         ImGui::PopID();
     }
 

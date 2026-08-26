@@ -19,6 +19,7 @@ project "Crowny-Tests"
 		"%{wks.location}/Crowny-Editor/Source/Editor/ScriptInspectorTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/UndoRedo.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/ConsoleViewModel.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Panels/ComponentMenuModel.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/MaterialInspectorSchemaCache.cpp",
 	}
 

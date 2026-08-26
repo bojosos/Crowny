@@ -3,6 +3,7 @@
 #include "Crowny/Ecs/Entity.h"
 #include "Editor/ComponentUndoSnapshot.h"
 #include "Editor/ScriptInspectorTransaction.h"
+#include "Panels/ComponentMenuModel.h"
 
 #include <imgui.h>
 
@@ -70,6 +71,8 @@ namespace Crowny
             auto [it, res] = m_ComponentInfos[m_CurrentComponentGroup].insert_or_assign(hash, componentInfo);
             CW_ENGINE_ASSERT(res);
             m_OrderedComponentInfos.push_back(std::make_pair(hash, componentInfo));
+            if constexpr (!std::is_same_v<Component, MonoScriptComponent>)
+                m_ComponentMenu.AddComponent(hash, componentInfo.name, m_CurrentComponentGroup);
             return std::get<ComponentInfo>(*it);
         }
 
@@ -196,6 +199,9 @@ namespace Crowny
         Vector<Pair<ComponentTypeID, ComponentInfo>> m_OrderedComponentInfos;
         Map<String, Map<ComponentTypeID, ComponentInfo>> m_ComponentInfos;
         String m_CurrentComponentGroup;
+        ComponentMenuModel m_ComponentMenu;
+        String m_ComponentSearch;
+        bool m_GrabComponentSearchFocus = true;
         Vector<Entity> m_SelectionScratch;
         Vector<UUID> m_UndoSelection;
         Scene* m_UndoScene = nullptr;
