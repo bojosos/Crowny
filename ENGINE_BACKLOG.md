@@ -96,6 +96,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Add Shift range selection and Ctrl toggle selection to the hierarchy. Complete multi-entity/component editing, mixed-value display, common-component presentation, gizmo rules, and safe removal/addition across a selection.
 - [ ] Finish undo/redo for entity/component creation and deletion, reparenting, transforms/gizmos, multi-edit, text edits, sliders, and drag transactions. One gesture must produce one understandable command.
 - [ ] Polish the console: correct chronological order, cached local-time conversion, search/filter, collapsed duplicate counts, selection, copying, clearing, severity toggles, and bounded storage.
+- [x] Cache console severity labels and selected callstack source labels between changes, and order collapsed sort ties by latest activity.
 - [ ] Finish previews for meshes, materials, textures, audio, fonts, animations, scenes, and scripts. Cancel and drain preview jobs on project/scene shutdown.
 - [ ] Improve panel/editor architecture beyond registration: lifecycle ownership, saved layout, visibility, focus, menus, shortcuts, services, test seams, and less coupling in editor-layer code.
 - [ ] Clean up importers and editor code with focused refactors, explicit ownership, actionable diagnostics, stable asset identity, and no raw filesystem assumptions outside boundary modules.

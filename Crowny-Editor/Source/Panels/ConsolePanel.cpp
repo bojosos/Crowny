@@ -91,23 +91,16 @@ namespace Crowny
         }
 
         RebuildFilteredIndices();
-        Array<uint32_t, 4> counts = {};
-        for (const ConsoleBuffer::Message& message : m_MessageSnapshot)
-            counts[static_cast<uint8_t>(message.LogLevel)] += m_Collapse ? message.RepeatCount : 1;
-
-        uint32_t shownCount = 0;
-        for (const uint32_t messageIndex : m_MessageIndices)
-            shownCount += m_Collapse ? m_MessageSnapshot[messageIndex].RepeatCount : 1;
-
+        const ConsoleViewModel::Summary& summary = m_ViewModel.GetSummary();
         for (size_t i = 0; i < ConsoleBuffer::Message::Levels.size(); i++)
         {
             const ConsoleBuffer::Message::Level level = ConsoleBuffer::Message::Levels[i];
             const size_t levelIndex = static_cast<uint8_t>(level);
-            const String label = String(ConsoleBuffer::Message::GetLevelName(level)) + "  " + std::to_string(counts[levelIndex]);
-            const float width = ImGui::CalcTextSize(label.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+            const char* label = summary.Levels[levelIndex].Label.data();
+            const float width = ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2.0f;
             const glm::vec4 color = GetRenderColor(level);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(color.r, color.g, color.b, color.a));
-            if (ImGui::Selectable(label.c_str(), m_EnabledLevels[levelIndex], ImGuiSelectableFlags_None, ImVec2(width, 0.0f)))
+            if (ImGui::Selectable(label, m_EnabledLevels[levelIndex], ImGuiSelectableFlags_None, ImVec2(width, 0.0f)))
             {
                 m_EnabledLevels[levelIndex] = !m_EnabledLevels[levelIndex];
                 m_FilterDirty = true;
@@ -120,7 +113,7 @@ namespace Crowny
         }
 
         ImGui::SameLine();
-        ImGui::TextDisabled("%u shown", shownCount);
+        ImGui::TextDisabled("%u shown", summary.ShownCount);
     }
 
     void ConsolePanel::RenderSettings()
@@ -147,6 +140,7 @@ namespace Crowny
             m_MessageRevision = std::numeric_limits<uint64_t>::max();
             m_SelectedMessageId = 0;
             m_SelectedMessage = {};
+            m_ViewModel.UpdateSelection(nullptr);
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Remove all console messages");
@@ -230,6 +224,7 @@ namespace Crowny
         {
             m_SelectedMessageId = message.Sequence;
             m_SelectedMessage = message;
+            m_ViewModel.UpdateSelection(&m_SelectedMessage);
         }
         if (ImGui::IsItemHovered())
         {
@@ -280,6 +275,7 @@ namespace Crowny
         ImGui::SeparatorText("Call stack");
         if (ImGui::BeginTable("##consoleCallstack", 2, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
         {
+            const Vector<String>& sourceLabels = m_ViewModel.GetCallstackSourceLabels();
             ImGui::TableSetupColumn("Function", ImGuiTableColumnFlags_WidthStretch, 0.58f);
             ImGui::TableSetupColumn("Source", ImGuiTableColumnFlags_WidthStretch, 0.42f);
             for (size_t i = 0; i < m_SelectedMessage.Callstack.size(); i++)
@@ -290,9 +286,8 @@ namespace Crowny
                 ImGui::TableNextColumn();
                 ImGui::TextUnformatted(call.FunctionSignature.c_str());
                 ImGui::TableNextColumn();
-                const String source = call.SourceFilePath.string() + ":" + std::to_string(call.Line);
                 UI::ScopedColor color(ImGuiCol_Text, ImVec4(0.15f, 0.72f, 0.95f, 1.0f));
-                if (ImGui::Selectable(source.c_str()))
+                if (ImGui::Selectable(sourceLabels[i].c_str()))
                     CodeEditorManager::Get().OpenFile(call.SourceFilePath, call.Line);
                 if (ImGui::IsItemHovered())
                 {
@@ -334,11 +329,13 @@ namespace Crowny
         {
             m_SelectedMessageId = selected->Sequence;
             m_SelectedMessage = *selected;
+            m_ViewModel.UpdateSelection(&m_SelectedMessage);
         }
         else
         {
             m_SelectedMessageId = 0;
             m_SelectedMessage = {};
+            m_ViewModel.UpdateSelection(nullptr);
         }
     }
 
@@ -361,6 +358,7 @@ namespace Crowny
             if (m_EnabledLevels[static_cast<uint8_t>(message.LogLevel)] && MatchesSearch(message))
                 m_MessageIndices.push_back(index);
         }
+        m_ViewModel.UpdateMessages(m_MessageSnapshot, m_MessageIndices, m_Collapse);
         m_FilterDirty = false;
     }
 

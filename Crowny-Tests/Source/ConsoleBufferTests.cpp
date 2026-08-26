@@ -18,6 +18,8 @@ TEST_CASE("Console messages collapse without losing stable identity", "[Common][
     const uint64_t normalRevision = buffer.CopyBuffer(messages);
     REQUIRE(messages.size() == 2);
     CHECK(messages[0].Sequence < messages[1].Sequence);
+    CHECK(messages[0].LastSequence == messages[0].Sequence);
+    CHECK(messages[1].LastSequence == messages[1].Sequence);
     CHECK(messages[0].GroupSequence == messages[0].Sequence);
     CHECK(messages[1].GroupSequence == messages[0].GroupSequence);
     CHECK(messages[0].SearchText.find("could not load asset") != String::npos);
@@ -28,6 +30,7 @@ TEST_CASE("Console messages collapse without losing stable identity", "[Common][
     buffer.CopyBuffer(messages);
     REQUIRE(messages.size() == 1);
     CHECK(messages[0].RepeatCount == 2);
+    CHECK(messages[0].LastSequence > messages[0].Sequence);
     CHECK(messages[0].GroupSequence == messages[0].Sequence);
     const uint64_t collapsedId = messages[0].Sequence;
 
@@ -77,7 +80,7 @@ TEST_CASE("Console search queries support fields, phrases, and exclusions", "[Co
     CHECK(query.Matches(escapedMessage));
 }
 
-TEST_CASE("Collapsed console ordering uses stable sequence tie breakers", "[Common][Console][Ordering]")
+TEST_CASE("Console ordering uses stable tie breakers", "[Common][Console][Ordering]")
 {
     ConsoleBuffer buffer;
     buffer.AddMessage(ConsoleBuffer::Message::Level::Info, "Alpha");
@@ -117,6 +120,28 @@ TEST_CASE("Collapsed console ordering uses stable sequence tie breakers", "[Comm
     REQUIRE(messages.size() == 6);
     for (size_t index = 1; index < messages.size(); index++)
         CHECK(messages[index - 1].Sequence > messages[index].Sequence);
+}
+
+TEST_CASE("Collapsed console ordering uses the latest group activity", "[Common][Console][Ordering]")
+{
+    ConsoleBuffer buffer;
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Info, "Alpha");
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Info, "Beta");
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Info, "Beta");
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Info, "Alpha");
+
+    buffer.Collapse();
+    buffer.Sort(0, false);
+
+    Vector<ConsoleBuffer::Message> messages;
+    buffer.CopyBuffer(messages);
+    REQUIRE(messages.size() == 2u);
+    CHECK(messages[0].MessageText == "Alpha");
+    CHECK(messages[0].Sequence == 1u);
+    CHECK(messages[0].LastSequence == 4u);
+    CHECK(messages[1].MessageText == "Beta");
+    CHECK(messages[1].Sequence == 2u);
+    CHECK(messages[1].LastSequence == 3u);
 }
 
 TEST_CASE("Console snapshots are safe while messages are produced concurrently", "[Common][Console][Threading]")

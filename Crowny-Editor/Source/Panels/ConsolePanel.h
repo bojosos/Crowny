@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/ConsoleBuffer.h"
+#include "Panels/ConsoleViewModel.h"
 #include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
@@ -70,6 +71,7 @@ namespace Crowny
         bool m_FilterDirty = true;
         float m_MessageHeight = 0.0f;
         ConsoleBuffer::Message m_SelectedMessage;
+        ConsoleViewModel m_ViewModel;
     };
 
 } // namespace Crowny

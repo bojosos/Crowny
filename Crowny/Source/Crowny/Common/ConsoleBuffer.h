@@ -33,8 +33,9 @@ namespace Crowny
             Level LogLevel = Level::Info;
             size_t Hash = 0; // for collapse
             std::time_t Timestamp = 0;
-            uint64_t Sequence = 0;
-            uint64_t GroupSequence = 0;
+            uint64_t Sequence = 0;      // Stable row identity; first occurrence for a collapsed group.
+            uint64_t GroupSequence = 0; // Stable identity shared by normal rows in the same collapsed group.
+            uint64_t LastSequence = 0;  // Most recent occurrence, used to order equally sorted collapsed groups.
             uint32_t RepeatCount = 1;
 
             struct FunctionCall

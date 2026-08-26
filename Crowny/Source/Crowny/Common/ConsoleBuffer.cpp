@@ -188,6 +188,7 @@ namespace Crowny
         ScopedLock lock(m_Mutex);
         message.Sequence = m_NextSequence++;
         message.GroupSequence = message.Sequence;
+        message.LastSequence = message.Sequence;
         if (m_CachedTimestamp != message.Timestamp)
         {
             char formattedTime[9] = {};
@@ -212,6 +213,7 @@ namespace Crowny
             Message& collapsedMessage = m_CollapsedMessageBuffer[*matchingCandidate];
             message.GroupSequence = collapsedMessage.GroupSequence;
             collapsedMessage.RepeatCount++;
+            collapsedMessage.LastSequence = message.Sequence;
             collapsedMessage.Timestamp = message.Timestamp;
             collapsedMessage.TimestampText = message.TimestampText;
             collapsedMessage.SearchText = message.SearchText;
@@ -265,7 +267,7 @@ namespace Crowny
                                      return ascending ? lhs.MessageText < rhs.MessageText : lhs.MessageText > rhs.MessageText;
                                  if (sortIdx == 0 && lhs.RepeatCount != rhs.RepeatCount)
                                      return ascending ? lhs.RepeatCount < rhs.RepeatCount : lhs.RepeatCount > rhs.RepeatCount;
-                                 return ascending ? lhs.Sequence < rhs.Sequence : lhs.Sequence > rhs.Sequence;
+                                 return ascending ? lhs.LastSequence < rhs.LastSequence : lhs.LastSequence > rhs.LastSequence;
                              });
             RebuildCollapsedIndices();
         }

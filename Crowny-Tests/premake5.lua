@@ -17,6 +17,7 @@ project "Crowny-Tests"
 		"%{wks.location}/Crowny-Editor/Source/Build/BuildManager.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/ImportScheduler.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/UndoRedo.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Panels/ConsoleViewModel.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/MaterialInspectorSchemaCache.cpp",
 	}
 
