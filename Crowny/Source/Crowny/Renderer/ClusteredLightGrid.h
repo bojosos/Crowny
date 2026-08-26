@@ -12,6 +12,7 @@ namespace Crowny
         uint32_t TileSize = 16;
         uint32_t DepthSlices = 24;
         uint32_t MaxLightsPerCluster = 64;
+        uint32_t MaxDirectionalLights = 8;
         float NearPlane = 0.05f;
         float FarPlane = 1000.0f;
         RenderLayerMask VisibilityMask = RenderLayerMask::All();
@@ -46,8 +47,13 @@ namespace Crowny
     class ClusteredLightBuilder
     {
     public:
-        static void Build(const ClusteredLightGridDesc& desc, const glm::mat4& view, const glm::mat4& projection,
-                          const RenderLightData* lights, uint32_t lightCount, ClusteredLightGrid& output);
+        static void Build(const ClusteredLightGridDesc& desc, const glm::mat4& view, const glm::mat4& projection, const RenderLightData* lights,
+                          uint32_t lightCount, ClusteredLightGrid& output);
+        static ClusteredLightGridDesc ResolveDesc(const RenderPipelineSettings& settings, uint32_t viewportWidth, uint32_t viewportHeight,
+                                                  float nearPlane = 0.05f, float farPlane = 1000.0f,
+                                                  RenderLayerMask visibilityMask = RenderLayerMask::All());
+        static glm::uvec3 GetDimensions(const ClusteredLightGridDesc& desc);
+        static uint64_t GetClusterCount(const ClusteredLightGridDesc& desc);
         static uint32_t DepthToSlice(float depth, float nearPlane, float farPlane, uint32_t depthSlices);
         static uint32_t Flatten(uint32_t x, uint32_t y, uint32_t z, const glm::uvec3& dimensions)
         {

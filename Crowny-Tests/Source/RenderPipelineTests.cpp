@@ -13,10 +13,9 @@ namespace
         desc.Width = width;
         desc.Height = height;
         desc.Format = TextureFormat::RGBA8;
-        return graph.ImportTexture("Output", desc, 1, RenderGraphResourceState::ColorAttachment,
-                                   RenderGraphResourceState::Present);
+        return graph.ImportTexture("Output", desc, 1, RenderGraphResourceState::ColorAttachment, RenderGraphResourceState::Present);
     }
-}
+} // namespace
 
 namespace
 {
@@ -35,7 +34,7 @@ namespace
 
         bool Called = false;
     };
-}
+} // namespace
 
 TEST_CASE("Render pipeline honors camera path overrides", "[Renderer][Pipeline]")
 {
@@ -54,8 +53,8 @@ TEST_CASE("Render features add passes only at their insertion point", "[Renderer
     RenderGraph graph;
     RenderBlackboard blackboard;
     RenderView view;
-    const RenderGraphResourceHandle color = graph.ImportTexture("SceneColor", {}, 1, RenderGraphResourceState::ShaderRead,
-                                                                RenderGraphResourceState::ShaderRead);
+    const RenderGraphResourceHandle color =
+      graph.ImportTexture("SceneColor", {}, 1, RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
     blackboard.Set("SceneColor", color);
 
     Ref<TestRenderFeature> feature = CreateRef<TestRenderFeature>();
@@ -177,6 +176,40 @@ TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency"
     CHECK(blackboard.Contains("GBufferMaterialFlags"));
 }
 
+TEST_CASE("Render pipeline cluster buffers follow non-default runtime settings", "[Renderer][Pipeline][Lights][Clusters]")
+{
+    RenderGraph graph;
+    RenderBlackboard blackboard;
+    RenderView view;
+    RenderPipelineSettings settings;
+    settings.ClusterTileSize = 7;
+    settings.ClusterDepthSlices = 3;
+    settings.MaxLightsPerCluster = 2;
+    settings.MaxDirectionalLights = 3;
+    RenderPipelineAsset pipeline(settings);
+    RenderPipelineGraphDesc desc;
+    desc.Width = 17;
+    desc.Height = 9;
+    desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+    desc.EnablePostProcessing = false;
+
+    pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+    const RenderGraphCompileResult& compiled = graph.Compile();
+    INFO(compiled.Error);
+    REQUIRE(compiled.Succeeded);
+
+    constexpr uint64_t clusterCount = 3ull * 2ull * 3ull;
+    const RenderGraphResourceHandle cells = blackboard.Get("ClusterCells");
+    const RenderGraphResourceHandle indices = blackboard.Get("ClusterLightIndices");
+    const RenderGraphResourceHandle directionals = blackboard.Get("DirectionalLightIndices");
+    REQUIRE(cells.IsValid());
+    REQUIRE(indices.IsValid());
+    REQUIRE(directionals.IsValid());
+    CHECK(compiled.Resources[cells.Index].Desc.Buffer.Size == clusterCount * 8ull);
+    CHECK(compiled.Resources[indices.Index].Desc.Buffer.Size == clusterCount * 2ull * sizeof(uint32_t));
+    CHECK(compiled.Resources[directionals.Index].Desc.Buffer.Size == 3ull * sizeof(uint32_t));
+}
+
 TEST_CASE("Render pipeline compatibility bridge executes after its prerequisite", "[Renderer][Pipeline]")
 {
     RenderGraph graph;
@@ -185,8 +218,7 @@ TEST_CASE("Render pipeline compatibility bridge executes after its prerequisite"
     RenderPipelineAsset pipeline;
     Vector<uint32_t> executionOrder;
     const RenderGraphPassHandle prerequisite = graph.AddPass(
-      "ApplyPersistentChanges", RenderGraphQueue::Transfer,
-      [](RenderGraphPassBuilder& builder) { builder.SetSideEffect(); },
+      "ApplyPersistentChanges", RenderGraphQueue::Transfer, [](RenderGraphPassBuilder& builder) { builder.SetSideEffect(); },
       [&](RenderGraphContext&) { executionOrder.push_back(1); });
 
     RenderPipelineGraphDesc desc;

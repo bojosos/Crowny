@@ -3,6 +3,7 @@
 #include "Crowny/Renderer/RenderPipeline.h"
 
 #include "Crowny/RenderAPI/RenderCapabilities.h"
+#include "Crowny/Renderer/ClusteredLightGrid.h"
 #include "Crowny/Renderer/GpuDrivenDraw.h"
 #include "Crowny/Renderer/GpuMaterial.h"
 
@@ -12,8 +13,7 @@ namespace Crowny
 {
     namespace
     {
-        RenderGraphTextureDesc Texture2D(uint32_t width, uint32_t height, TextureFormat format, uint32_t mipLevels = 1,
-                                         uint32_t samples = 1)
+        RenderGraphTextureDesc Texture2D(uint32_t width, uint32_t height, TextureFormat format, uint32_t mipLevels = 1, uint32_t samples = 1)
         {
             RenderGraphTextureDesc desc;
             desc.Width = std::max(width, 1u);
@@ -39,10 +39,7 @@ namespace Crowny
             return desc;
         }
 
-        uint32_t HiZMipCount(uint32_t width, uint32_t height)
-        {
-            return std::bit_width(std::max({ width, height, 1u }));
-        }
+        uint32_t HiZMipCount(uint32_t width, uint32_t height) { return std::bit_width(std::max({ width, height, 1u })); }
 
         RenderGraphBufferDesc StructuredBuffer(uint64_t size, uint32_t stride)
         {
@@ -122,9 +119,8 @@ namespace Crowny
         }
     }
 
-    RenderPipelineGraphOutput RenderPipelineAsset::BuildFrameGraph(RenderGraph& graph, RenderView& view,
-                                                                    const RenderPipelineGraphDesc& desc,
-                                                                    RenderBlackboard& blackboard) const
+    RenderPipelineGraphOutput RenderPipelineAsset::BuildFrameGraph(RenderGraph& graph, RenderView& view, const RenderPipelineGraphDesc& desc,
+                                                                   RenderBlackboard& blackboard) const
     {
         CW_ENGINE_ASSERT(desc.OutputTarget.IsValid(), "A render pipeline frame graph requires an output target");
         RenderPipelineGraphOutput output;
@@ -133,11 +129,8 @@ namespace Crowny
 
         const uint32_t width = std::max(desc.Width, 1u);
         const uint32_t height = std::max(desc.Height, 1u);
-        const uint32_t tileSize = std::max(m_Settings.ClusterTileSize, 1u);
-        const uint32_t clusterX = (width + tileSize - 1u) / tileSize;
-        const uint32_t clusterY = (height + tileSize - 1u) / tileSize;
-        const uint64_t clusterCount = static_cast<uint64_t>(clusterX) * clusterY *
-                                      std::max(m_Settings.ClusterDepthSlices, 1u);
+        const ClusteredLightGridDesc clusterDesc = ClusteredLightBuilder::ResolveDesc(m_Settings, width, height);
+        const uint64_t clusterCount = ClusteredLightBuilder::GetClusterCount(clusterDesc);
         auto executePass = [&](StringView name) -> RenderGraph::ExecuteCallback {
             if (!desc.PassExecutor)
                 return {};
@@ -146,38 +139,32 @@ namespace Crowny
             return [executor, passName](RenderGraphContext& context) { executor(passName, context); };
         };
 
-        const RenderGraphResourceHandle instances = desc.InstanceTable.IsValid()
-                                                     ? desc.InstanceTable
-                                                     : graph.CreateBuffer("PersistentInstances", StructuredBuffer(128, 128),
-                                                                          RenderGraphResourceLifetime::History);
-        const RenderGraphResourceHandle lights = desc.LightTable.IsValid()
-                                                  ? desc.LightTable
-                                                  : graph.CreateBuffer("PersistentLights", StructuredBuffer(80, 80),
-                                                                       RenderGraphResourceLifetime::History);
-        const RenderGraphResourceHandle meshes = desc.MeshTable.IsValid()
-                                                  ? desc.MeshTable
-                                                  : graph.CreateBuffer("PersistentMeshes", StructuredBuffer(32, 32),
-                                                                       RenderGraphResourceLifetime::History);
-        const RenderGraphResourceHandle meshLods = desc.MeshLodTable.IsValid()
-                                                    ? desc.MeshLodTable
-                                                    : graph.CreateBuffer("PersistentMeshLods", StructuredBuffer(16, 16),
-                                                                         RenderGraphResourceLifetime::History);
-        const RenderGraphResourceHandle meshlets = desc.MeshletTable.IsValid()
-                                                    ? desc.MeshletTable
-                                                    : graph.CreateBuffer("PersistentMeshlets", StructuredBuffer(64, 64),
-                                                                         RenderGraphResourceLifetime::History);
-        const RenderGraphResourceHandle materials = desc.MaterialTable.IsValid()
-                                                     ? desc.MaterialTable
-                                                     : graph.CreateBuffer("PersistentMaterials", StructuredBuffer(sizeof(GpuMaterialData), sizeof(GpuMaterialData)),
-                                                                          RenderGraphResourceLifetime::History);
-        const RenderGraphResourceHandle drawBinTable = desc.DrawBinTable.IsValid()
-                                                        ? desc.DrawBinTable
-                                                        : graph.CreateBuffer("PersistentDrawBins",
-                                                                             StructuredBuffer(
-                                                                               sizeof(GpuDrawBinLookupEntry) * static_cast<uint64_t>(
-                                                                                 std::max(desc.DrawBinLookupCapacity, 1u)),
-                                                                                              sizeof(GpuDrawBinLookupEntry)),
-                                                                             RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle instances =
+          desc.InstanceTable.IsValid() ? desc.InstanceTable
+                                       : graph.CreateBuffer("PersistentInstances", StructuredBuffer(128, 128), RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle lights =
+          desc.LightTable.IsValid() ? desc.LightTable
+                                    : graph.CreateBuffer("PersistentLights", StructuredBuffer(80, 80), RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle meshes =
+          desc.MeshTable.IsValid() ? desc.MeshTable
+                                   : graph.CreateBuffer("PersistentMeshes", StructuredBuffer(32, 32), RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle meshLods =
+          desc.MeshLodTable.IsValid() ? desc.MeshLodTable
+                                      : graph.CreateBuffer("PersistentMeshLods", StructuredBuffer(16, 16), RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle meshlets =
+          desc.MeshletTable.IsValid() ? desc.MeshletTable
+                                      : graph.CreateBuffer("PersistentMeshlets", StructuredBuffer(64, 64), RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle materials =
+          desc.MaterialTable.IsValid() ? desc.MaterialTable
+                                       : graph.CreateBuffer("PersistentMaterials", StructuredBuffer(sizeof(GpuMaterialData), sizeof(GpuMaterialData)),
+                                                            RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle drawBinTable =
+          desc.DrawBinTable.IsValid()
+            ? desc.DrawBinTable
+            : graph.CreateBuffer("PersistentDrawBins",
+                                 StructuredBuffer(sizeof(GpuDrawBinLookupEntry) * static_cast<uint64_t>(std::max(desc.DrawBinLookupCapacity, 1u)),
+                                                  sizeof(GpuDrawBinLookupEntry)),
+                                 RenderGraphResourceLifetime::History);
         const RenderGraphHistoryPair hiZHistory =
           graph.CreateHistoryTexture("HiZ", Texture2D(width, height, TextureFormat::R32F, HiZMipCount(width, height)));
         const RenderGraphResourceHandle previousHiZ = hiZHistory.Read;
@@ -186,17 +173,14 @@ namespace Crowny
           graph.CreateBuffer("VisibleInstances", StructuredBuffer(8ull * RenderInstanceHandle::MaxInstances, 8));
         const RenderGraphResourceHandle culledDrawInstances =
           graph.CreateBuffer("CulledDrawInstances",
-                             StructuredBuffer(sizeof(GpuVisibleDrawInstance) *
-                                                static_cast<uint64_t>(std::max(m_Settings.MaxIndirectCommands, 1u)),
+                             StructuredBuffer(sizeof(GpuVisibleDrawInstance) * static_cast<uint64_t>(std::max(m_Settings.MaxIndirectCommands, 1u)),
                                               sizeof(GpuVisibleDrawInstance)));
         const RenderGraphResourceHandle visibleDrawInstances =
           graph.CreateBuffer("VisibleDrawInstances",
-                             StructuredBuffer(sizeof(GpuVisibleDrawInstance) *
-                                                static_cast<uint64_t>(std::max(m_Settings.MaxIndirectCommands, 1u)),
+                             StructuredBuffer(sizeof(GpuVisibleDrawInstance) * static_cast<uint64_t>(std::max(m_Settings.MaxIndirectCommands, 1u)),
                                               sizeof(GpuVisibleDrawInstance)));
         const RenderGraphResourceHandle meshletCandidates =
-          graph.CreateBuffer("MeshletCandidates",
-                             StructuredBuffer(8ull * std::max(m_Settings.MaxMeshletCandidates, 1u), 8));
+          graph.CreateBuffer("MeshletCandidates", StructuredBuffer(8ull * std::max(m_Settings.MaxMeshletCandidates, 1u), 8));
         const RenderGraphResourceHandle meshletCandidateCounters =
           graph.CreateBuffer("MeshletCandidateCounters", StructuredBuffer(4ull * sizeof(uint32_t), sizeof(uint32_t)));
         const RenderGraphResourceHandle visibilityCounters =
@@ -204,8 +188,7 @@ namespace Crowny
         const RenderGraphResourceHandle drawCounters =
           graph.CreateBuffer("DrawCounters", StructuredBuffer(8ull * sizeof(uint32_t), sizeof(uint32_t)));
         const RenderGraphResourceHandle drawSortKeys =
-          graph.CreateBuffer("DrawSortKeys",
-                             StructuredBuffer(16ull * std::max(m_Settings.MaxIndirectCommands, 1u), 16));
+          graph.CreateBuffer("DrawSortKeys", StructuredBuffer(16ull * std::max(m_Settings.MaxIndirectCommands, 1u), 16));
         const RenderGraphResourceHandle earlyCommands =
           graph.CreateBuffer("EarlyIndirectCommands", IndirectBuffer(20ull * std::max(m_Settings.MaxIndirectCommands, 1u), 20));
         const RenderGraphResourceHandle culledCommands =
@@ -214,54 +197,42 @@ namespace Crowny
           graph.CreateBuffer("FinalIndirectCommands", IndirectBuffer(20ull * std::max(m_Settings.MaxIndirectCommands, 1u), 20));
         const uint32_t drawBinCount = desc.EnableGpuDrawBins ? desc.DrawBinCount : 0u;
         const uint32_t drawBinCounterCount = std::max(drawBinCount * 2u, 2u);
-        const RenderGraphResourceHandle drawCounts =
-          graph.CreateBuffer("IndirectDrawCounts", IndirectBuffer(4ull * drawBinCounterCount, 4));
-        const RenderGraphResourceHandle depthInstanceIds =
-          desc.DepthInstanceIds.IsValid() ? desc.DepthInstanceIds : visibleInstances;
-        const RenderGraphResourceHandle depthCommands =
-          desc.DepthIndirectCommands.IsValid() ? desc.DepthIndirectCommands : earlyCommands;
+        const RenderGraphResourceHandle drawCounts = graph.CreateBuffer("IndirectDrawCounts", IndirectBuffer(4ull * drawBinCounterCount, 4));
+        const RenderGraphResourceHandle depthInstanceIds = desc.DepthInstanceIds.IsValid() ? desc.DepthInstanceIds : visibleInstances;
+        const RenderGraphResourceHandle depthCommands = desc.DepthIndirectCommands.IsValid() ? desc.DepthIndirectCommands : earlyCommands;
 
         output.SceneDepth = graph.CreateTexture("SceneDepth", Texture2D(width, height, TextureFormat::DEPTH32F));
         output.CurrentHiZ = currentHiZ;
         output.HdrColor = graph.CreateTexture("HdrColor", Texture2D(width, height, TextureFormat::RGBA16F));
         output.FinalTarget = desc.OutputTarget;
 
-        const RenderGraphResourceHandle velocity = desc.EnableMotionVectors
-                                                     ? graph.CreateTexture("Velocity", Texture2D(width, height, TextureFormat::RG16F))
-                                                     : RenderGraphResourceHandle{};
+        const RenderGraphResourceHandle velocity =
+          desc.EnableMotionVectors ? graph.CreateTexture("Velocity", Texture2D(width, height, TextureFormat::RG16F)) : RenderGraphResourceHandle{};
         if (desc.EnableObjectID)
             output.ObjectID = graph.CreateTexture("ObjectID", Texture2D(width, height, TextureFormat::R32I));
 
         const RenderGraphResourceHandle shadowAtlas =
           graph.CreateTexture("ShadowAtlas", Texture2D(2048, 2048, TextureFormat::DEPTH32F), RenderGraphResourceLifetime::History);
         const RenderGraphResourceHandle pointShadowArray =
-          graph.CreateTexture("PointShadowArray", TextureCubeArray(512, 16, TextureFormat::DEPTH32F),
-                              RenderGraphResourceLifetime::History);
+          graph.CreateTexture("PointShadowArray", TextureCubeArray(512, 16, TextureFormat::DEPTH32F), RenderGraphResourceLifetime::History);
         const RenderGraphResourceHandle directionalShadowArray =
-          graph.CreateTexture("DirectionalShadowArray", Texture2DArray(2048, 2048, 4, TextureFormat::DEPTH32F),
-                              RenderGraphResourceLifetime::History);
+          graph.CreateTexture("DirectionalShadowArray", Texture2DArray(2048, 2048, 4, TextureFormat::DEPTH32F), RenderGraphResourceLifetime::History);
         const RenderGraphResourceHandle shadowLightTable =
-          graph.CreateBuffer("ShadowLightTable", StructuredBuffer(16ull * RenderLightHandle::MaxLights, 16),
-                             RenderGraphResourceLifetime::History);
+          graph.CreateBuffer("ShadowLightTable", StructuredBuffer(16ull * RenderLightHandle::MaxLights, 16), RenderGraphResourceLifetime::History);
         const RenderGraphResourceHandle shadowViewTable =
-          graph.CreateBuffer("ShadowViewTable", StructuredBuffer(112ull * 4096ull, 112),
-                             RenderGraphResourceLifetime::History);
-        const RenderGraphResourceHandle clusterCells =
-          graph.CreateBuffer("ClusterCells", StructuredBuffer(clusterCount * 8ull, 8));
+          graph.CreateBuffer("ShadowViewTable", StructuredBuffer(112ull * 4096ull, 112), RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle clusterCells = graph.CreateBuffer("ClusterCells", StructuredBuffer(clusterCount * 8ull, 8));
         const RenderGraphResourceHandle clusterLightIndices =
-          graph.CreateBuffer("ClusterLightIndices",
-                             StructuredBuffer(clusterCount * std::max(m_Settings.MaxLightsPerCluster, 1u) * sizeof(uint32_t), 4));
+          graph.CreateBuffer("ClusterLightIndices", StructuredBuffer(clusterCount * clusterDesc.MaxLightsPerCluster * sizeof(uint32_t), 4));
         const RenderGraphResourceHandle directionalLightIndices =
-          graph.CreateBuffer("DirectionalLightIndices",
-                             StructuredBuffer(std::max(m_Settings.MaxDirectionalLights, 1u) * sizeof(uint32_t), 4));
+          graph.CreateBuffer("DirectionalLightIndices", StructuredBuffer(clusterDesc.MaxDirectionalLights * sizeof(uint32_t), 4));
         const RenderGraphResourceHandle clusterCounters =
           graph.CreateBuffer("ClusterLightCounters", StructuredBuffer(4ull * sizeof(uint32_t), sizeof(uint32_t)));
         const RenderGraphResourceHandle ambientOcclusion =
           desc.EnablePostProcessing && m_Settings.EnableGtao
             ? graph.CreateTexture("AmbientOcclusion", Texture2D((width + 1u) / 2u, (height + 1u) / 2u, TextureFormat::R8))
             : RenderGraphResourceHandle{};
-        const RenderGraphResourceHandle materialId =
-          graph.CreateTexture("MaterialID", Texture2D(width, height, TextureFormat::R32I));
+        const RenderGraphResourceHandle materialId = graph.CreateTexture("MaterialID", Texture2D(width, height, TextureFormat::R32I));
 
         blackboard.Clear();
         blackboard.Set("OutputTarget", desc.OutputTarget);
@@ -493,9 +464,8 @@ namespace Crowny
               graph.CreateTexture("GBufferNormalRoughMetal", Texture2D(width, height, TextureFormat::RGBA16F));
             const RenderGraphResourceHandle gbufferEmissive =
               graph.CreateTexture("GBufferEmissive", Texture2D(width, height, TextureFormat::RGBA16F));
-            const RenderGraphResourceHandle gbufferMaterialFlags = materialId
-                                                                    ? materialId
-                                                                    : graph.CreateTexture("GBufferMaterialFlags", Texture2D(width, height, TextureFormat::R32I));
+            const RenderGraphResourceHandle gbufferMaterialFlags =
+              materialId ? materialId : graph.CreateTexture("GBufferMaterialFlags", Texture2D(width, height, TextureFormat::R32I));
             blackboard.Set("GBufferBaseColorAO", gbufferBaseColor);
             blackboard.Set("GBufferNormalRoughMetal", gbufferNormal);
             blackboard.Set("GBufferEmissive", gbufferEmissive);
@@ -613,8 +583,7 @@ namespace Crowny
         RenderGraphResourceHandle resolved = output.HdrColor;
         if (desc.EnablePostProcessing && m_Settings.EnableTaa && velocity)
         {
-            const RenderGraphHistoryPair taaHistory =
-              graph.CreateHistoryTexture("TaaHistory", Texture2D(width, height, TextureFormat::RGBA16F));
+            const RenderGraphHistoryPair taaHistory = graph.CreateHistoryTexture("TaaHistory", Texture2D(width, height, TextureFormat::RGBA16F));
             const RenderGraphResourceHandle taaHistoryRead = taaHistory.Read;
             const RenderGraphResourceHandle taaHistoryWrite = taaHistory.Write;
             resolved = graph.CreateTexture("TemporalResolve", Texture2D(width, height, TextureFormat::RGBA16F));

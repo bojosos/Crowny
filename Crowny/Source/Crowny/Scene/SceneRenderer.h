@@ -82,6 +82,7 @@ namespace Crowny
             RenderLightHandle Handle;
             RenderLightData Data;
             LightShadowSettings Shadows;
+            uint64_t ShadowCasterRevision = 0;
             uint64_t LastSeenEpoch = 0;
         };
 
@@ -185,6 +186,7 @@ namespace Crowny
         mutable UnorderedMap<uint32_t, TrackedMaterialResource> m_ResidentMaterialResources;
         mutable Vector<DirectionalShadowCascade> m_DirectionalCascadeScratch;
         mutable uint64_t m_RenderSyncEpoch = 0;
+        mutable uint64_t m_ShadowCasterRevision = 1;
         mutable uint32_t m_NextMeshResourceIndex = 1;
         mutable uint32_t m_NextMaterialResourceIndex = 1;
         mutable UnorderedMap<uint64_t, CameraHistoryState> m_CameraHistory;

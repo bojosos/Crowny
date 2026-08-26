@@ -115,17 +115,35 @@ TEST_CASE("GPU draw-bin capacity rejects excess bins and preserves zero-count sl
     CHECK(counts[overflowIndex] == 3);
 }
 
-TEST_CASE("GPU draw-bin capacity favors persistent hot bins when the command budget is clamped", "[Renderer][GpuDriven][DrawBins]")
+TEST_CASE("GPU draw-bin admission never accepts a partial bin", "[Renderer][GpuDriven][DrawBins]")
 {
     const GpuDrawBinKey hot = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 1, 0);
     const GpuDrawBinKey cold = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 2, 0);
     const Vector<GpuDrawBinKey> keys = { hot, hot, hot, hot, hot, hot, cold, cold };
     GpuDrawBinLayout layout;
     REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 4, 8, 3 }));
-    REQUIRE(layout.GetBins().size() == 2);
+    REQUIRE(layout.GetBins().size() == 1);
+    CHECK(layout.GetBins()[0].Key == cold);
+    CHECK(layout.GetBins()[0].CommandCapacity == 2);
+    CHECK(layout.GetStats().CommandCapacity == 2);
+    CHECK(layout.GetStats().RejectedBinCount == 1);
+    CHECK_FALSE(layout.Contains(hot));
+    CHECK(layout.Contains(cold));
+}
+
+TEST_CASE("GPU draw-bin budget admits whole hot bins and leaves the rest for CPU fallback", "[Renderer][GpuDriven][DrawBins]")
+{
+    const GpuDrawBinKey hot = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 1, 0);
+    const GpuDrawBinKey cold = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 2, 0);
+    const Vector<GpuDrawBinKey> keys = { hot, hot, hot, cold, cold };
+    GpuDrawBinLayout layout;
+    REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 4, 8, 8 }));
+    REQUIRE(layout.GetBins().size() == 1);
+    CHECK(layout.GetBins()[0].Key == hot);
     CHECK(layout.GetBins()[0].CommandCapacity == 3);
-    CHECK(layout.GetBins()[1].CommandCapacity == 1);
-    CHECK(layout.GetStats().CommandCapacity == 4);
+    CHECK(layout.GetStats().CommandCapacity == 3);
+    CHECK(layout.Contains(hot));
+    CHECK_FALSE(layout.Contains(cold));
 }
 
 TEST_CASE("GPU draw generation batches material records sharing a template", "[Renderer][GpuDriven]")

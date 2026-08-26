@@ -22,8 +22,7 @@ namespace Crowny
     class GpuTexturePool
     {
     public:
-        explicit GpuTexturePool(uint32_t framesInFlight = 2,
-                                uint64_t retainedByteBudget = 64ull * 1024ull * 1024ull);
+        explicit GpuTexturePool(uint32_t framesInFlight = 2, uint64_t retainedByteBudget = 64ull * 1024ull * 1024ull);
 
         void BeginFrame(uint64_t frameNumber);
         Ref<Texture> Acquire(const TextureDesc& desc);
@@ -64,6 +63,7 @@ namespace Crowny
             uint64_t RetiredFrame = 0;
         };
 
+        static bool IsReusableDescriptor(const TextureDesc& desc);
         static TextureKey MakeKey(const TextureDesc& desc);
         Ref<Texture> TryAcquire(const TextureKey& key);
         void MakeReady();

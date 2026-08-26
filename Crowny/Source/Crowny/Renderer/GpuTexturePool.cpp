@@ -10,10 +10,7 @@ namespace Crowny
         constexpr uint32_t READ_WRITE_FLAG = 1u << 1u;
         constexpr uint32_t GENERATE_MIPS_FLAG = 1u << 2u;
 
-        void HashCombine(size_t& hash, uint64_t value)
-        {
-            hash ^= static_cast<size_t>(value) + 0x9e3779b97f4a7c15ull + (hash << 6u) + (hash >> 2u);
-        }
+        void HashCombine(size_t& hash, uint64_t value) { hash ^= static_cast<size_t>(value) + 0x9e3779b97f4a7c15ull + (hash << 6u) + (hash >> 2u); }
 
         uint64_t EstimateTextureBytes(const TextureDesc& desc)
         {
@@ -46,9 +43,12 @@ namespace Crowny
 
     Ref<Texture> GpuTexturePool::Acquire(const TextureDesc& desc)
     {
-        Ref<Texture> pooled = TryAcquire(MakeKey(desc));
-        if (pooled)
-            return pooled;
+        if (IsReusableDescriptor(desc))
+        {
+            Ref<Texture> pooled = TryAcquire(MakeKey(desc));
+            if (pooled)
+                return pooled;
+        }
 
         Ref<Texture> created = Texture::Create(desc);
         if (created)
@@ -64,10 +64,17 @@ namespace Crowny
         if (!texture)
             return;
 
-        const TextureKey key = MakeKey(texture->GetDesc());
+        const TextureDesc& desc = texture->GetDesc();
+        if (!IsReusableDescriptor(desc))
+        {
+            std::scoped_lock lock(m_Mutex);
+            m_Stats.Rejected++;
+            return;
+        }
+
+        const TextureKey key = MakeKey(desc);
         std::scoped_lock lock(m_Mutex);
-        if (texture->GetRefCount() != 1 || key.Size == 0 || m_Stats.RetainedBytes > m_RetainedByteBudget ||
-            key.Size > m_RetainedByteBudget ||
+        if (texture->GetRefCount() != 1 || key.Size == 0 || m_Stats.RetainedBytes > m_RetainedByteBudget || key.Size > m_RetainedByteBudget ||
             key.Size > m_RetainedByteBudget - m_Stats.RetainedBytes)
         {
             m_Stats.Rejected++;
@@ -117,6 +124,12 @@ namespace Crowny
         HashCombine(hash, key.Format);
         HashCombine(hash, key.Size);
         return hash;
+    }
+
+    bool GpuTexturePool::IsReusableDescriptor(const TextureDesc& desc)
+    {
+        return desc.Width != 0 && desc.Height != 0 && desc.Depth != 0 && desc.Samples != 0 && desc.Faces != 0 &&
+               PixelUtils::IsValidFormat(desc.Format);
     }
 
     GpuTexturePool::TextureKey GpuTexturePool::MakeKey(const TextureDesc& desc)
@@ -182,8 +195,7 @@ namespace Crowny
 
     void GpuTexturePool::TrimLocked()
     {
-        for (auto available = m_Available.begin();
-             available != m_Available.end() && m_Stats.RetainedBytes > m_RetainedByteBudget;)
+        for (auto available = m_Available.begin(); available != m_Available.end() && m_Stats.RetainedBytes > m_RetainedByteBudget;)
         {
             Vector<Ref<Texture>>& textures = available->second;
             while (!textures.empty() && m_Stats.RetainedBytes > m_RetainedByteBudget)

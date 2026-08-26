@@ -661,6 +661,39 @@ TEST_CASE("GpuTexturePool enforces its retained-byte budget and trims ready text
     CHECK(trimmedPool.GetStats().RetainedBytes == 0);
 }
 
+TEST_CASE("GpuTexturePool rejects invalid zero-valued descriptors instead of aliasing them", "[Renderer][Resources]")
+{
+    GpuTexturePool pool(2, 1024 * 1024);
+    const TextureDesc valid = PooledTextureDesc();
+    Vector<TextureDesc> invalid(5, valid);
+    invalid[0].Width = 0;
+    invalid[1].Height = 0;
+    invalid[2].Depth = 0;
+    invalid[3].Samples = 0;
+    invalid[4].Faces = 0;
+
+    pool.BeginFrame(30);
+    for (const TextureDesc& desc : invalid)
+    {
+        Ref<Texture> texture = CreateRef<TestGpuTexture>(desc);
+        pool.Release(std::move(texture));
+    }
+    CHECK(pool.GetStats().Rejected == invalid.size());
+    CHECK(pool.GetStats().RetiredTextures == 0);
+    CHECK(pool.GetStats().RetainedBytes == 0);
+
+    Ref<TestGpuTexture> concrete = CreateRef<TestGpuTexture>(valid);
+    TestGpuTexture* identity = concrete.get();
+    Ref<Texture> texture = concrete;
+    concrete = nullptr;
+    pool.Release(std::move(texture));
+    pool.BeginFrame(32);
+
+    Ref<Texture> reused = pool.Acquire(valid);
+    REQUIRE(reused);
+    CHECK(reused.get() == identity);
+}
+
 TEST_CASE("RenderGraph retires replaced physical textures through its allocator", "[Renderer][Resources][RenderGraph]")
 {
     RenderGraph graph;
@@ -668,8 +701,9 @@ TEST_CASE("RenderGraph retires replaced physical textures through its allocator"
     RenderGraphResourceRegistry resources(2, &allocator);
     RenderGraphTextureDesc firstDesc = ColorTexture();
     const RenderGraphResourceHandle first = graph.CreateTexture("First", firstDesc);
-    graph.AddPass("WriteFirst", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) { builder.Write(first); },
-                  [&](RenderGraphContext& context) { REQUIRE(context.GetTexture(first)); });
+    graph.AddPass(
+      "WriteFirst", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) { builder.Write(first); },
+      [&](RenderGraphContext& context) { REQUIRE(context.GetTexture(first)); });
     REQUIRE(graph.Compile().Succeeded);
     REQUIRE(resources.BeginFrame(graph.GetCompileResult(), 1, 1));
     REQUIRE(graph.Execute(nullptr, &resources));
@@ -681,8 +715,9 @@ TEST_CASE("RenderGraph retires replaced physical textures through its allocator"
     RenderGraphTextureDesc secondDesc = firstDesc;
     secondDesc.Width /= 2u;
     const RenderGraphResourceHandle second = graph.CreateTexture("Second", secondDesc);
-    graph.AddPass("WriteSecond", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) { builder.Write(second); },
-                  [&](RenderGraphContext& context) { REQUIRE(context.GetTexture(second)); });
+    graph.AddPass(
+      "WriteSecond", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) { builder.Write(second); },
+      [&](RenderGraphContext& context) { REQUIRE(context.GetTexture(second)); });
     REQUIRE(graph.Compile().Succeeded);
     REQUIRE(resources.BeginFrame(graph.GetCompileResult(), 3, 1));
     REQUIRE(allocator.ReleasedTextures.size() == 1);

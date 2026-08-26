@@ -13,9 +13,8 @@ namespace Crowny
             bool Valid = false;
         };
 
-        ClusterBounds ProjectSphere(const ClusteredLightGridDesc& desc, const glm::uvec3& dimensions,
-                                    const glm::mat4& view, const glm::mat4& projection, const glm::vec3& position,
-                                    float radius)
+        ClusterBounds ProjectSphere(const ClusteredLightGridDesc& desc, const glm::uvec3& dimensions, const glm::mat4& view,
+                                    const glm::mat4& projection, const glm::vec3& position, float radius)
         {
             const glm::vec3 viewPosition = glm::vec3(view * glm::vec4(position, 1.0f));
             const float centerDepth = -viewPosition.z;
@@ -40,8 +39,7 @@ namespace Crowny
                     const glm::vec2 radiusNdc = glm::abs(glm::vec2(projection[0][0], projection[1][1])) * radius / nearestDepth;
                     const glm::vec2 unclampedMinimum = centerNdc - radiusNdc;
                     const glm::vec2 unclampedMaximum = centerNdc + radiusNdc;
-                    if (unclampedMinimum.x > 1.0f || unclampedMinimum.y > 1.0f ||
-                        unclampedMaximum.x < -1.0f || unclampedMaximum.y < -1.0f)
+                    if (unclampedMinimum.x > 1.0f || unclampedMinimum.y > 1.0f || unclampedMaximum.x < -1.0f || unclampedMaximum.y < -1.0f)
                         return {};
                     minimumNdc = glm::max(unclampedMinimum, glm::vec2(-1.0f));
                     maximumNdc = glm::min(unclampedMaximum, glm::vec2(1.0f));
@@ -58,22 +56,21 @@ namespace Crowny
         }
     } // namespace
 
-    void ClusteredLightBuilder::Build(const ClusteredLightGridDesc& inputDesc, const glm::mat4& view,
-                                      const glm::mat4& projection, const RenderLightData* lights, uint32_t lightCount,
-                                      ClusteredLightGrid& output)
+    void ClusteredLightBuilder::Build(const ClusteredLightGridDesc& inputDesc, const glm::mat4& view, const glm::mat4& projection,
+                                      const RenderLightData* lights, uint32_t lightCount, ClusteredLightGrid& output)
     {
         ClusteredLightGridDesc desc = inputDesc;
         desc.ViewportWidth = std::max(desc.ViewportWidth, 1u);
         desc.ViewportHeight = std::max(desc.ViewportHeight, 1u);
         desc.TileSize = std::max(desc.TileSize, 1u);
         desc.DepthSlices = std::max(desc.DepthSlices, 1u);
-        desc.MaxLightsPerCluster = std::max(desc.MaxLightsPerCluster, 1u);
+        desc.MaxLightsPerCluster = std::clamp(desc.MaxLightsPerCluster, 1u, 128u);
+        desc.MaxDirectionalLights = std::max(desc.MaxDirectionalLights, 1u);
         desc.NearPlane = std::max(desc.NearPlane, 0.0001f);
         desc.FarPlane = std::max(desc.FarPlane, desc.NearPlane + 0.0001f);
 
         output.Clear();
-        output.Dimensions = { (desc.ViewportWidth + desc.TileSize - 1u) / desc.TileSize,
-                              (desc.ViewportHeight + desc.TileSize - 1u) / desc.TileSize, desc.DepthSlices };
+        output.Dimensions = GetDimensions(desc);
         const uint32_t clusterCount = output.Dimensions.x * output.Dimensions.y * output.Dimensions.z;
         output.Cells.resize(clusterCount);
         Vector<uint32_t> counts(clusterCount, 0u);
@@ -83,19 +80,21 @@ namespace Crowny
         {
             const RenderLightData& light = lights[lightIndex];
             const RenderLightFlags flags = static_cast<RenderLightFlags>(light.Metadata.y);
-            if (!HasFlag(flags, RenderLightFlags::Enabled) ||
-                !desc.VisibilityMask.Intersects({ light.Metadata.z }))
+            if (!HasFlag(flags, RenderLightFlags::Enabled) || !desc.VisibilityMask.Intersects({ light.Metadata.z }))
                 continue;
 
             const LightType type = static_cast<LightType>(light.Metadata.x);
             if (type == LightType::Directional)
             {
-                output.DirectionalLightIndices.push_back(lightIndex);
+                if (output.DirectionalLightIndices.size() < desc.MaxDirectionalLights)
+                    output.DirectionalLightIndices.push_back(lightIndex);
+                else
+                    output.OverflowCount++;
                 continue;
             }
 
-            const ClusterBounds bounds = ProjectSphere(desc, output.Dimensions, view, projection,
-                                                        glm::vec3(light.PositionRange), light.PositionRange.w);
+            const ClusterBounds bounds =
+              ProjectSphere(desc, output.Dimensions, view, projection, glm::vec3(light.PositionRange), light.PositionRange.w);
             lightBounds[lightIndex] = bounds;
             if (!bounds.Valid)
                 continue;
@@ -136,6 +135,37 @@ namespace Crowny
                             output.LightIndices[cell.Offset + count++] = lightIndex;
                     }
         }
+    }
+
+    ClusteredLightGridDesc ClusteredLightBuilder::ResolveDesc(const RenderPipelineSettings& settings, uint32_t viewportWidth, uint32_t viewportHeight,
+                                                              float nearPlane, float farPlane, RenderLayerMask visibilityMask)
+    {
+        ClusteredLightGridDesc desc;
+        desc.ViewportWidth = std::max(viewportWidth, 1u);
+        desc.ViewportHeight = std::max(viewportHeight, 1u);
+        desc.TileSize = std::max(settings.ClusterTileSize, 1u);
+        desc.DepthSlices = std::max(settings.ClusterDepthSlices, 1u);
+        // BuildClusteredLights.glsl keeps a fixed-size local list.
+        desc.MaxLightsPerCluster = std::clamp(settings.MaxLightsPerCluster, 1u, 128u);
+        desc.MaxDirectionalLights = std::max(settings.MaxDirectionalLights, 1u);
+        desc.NearPlane = std::max(nearPlane, 0.0001f);
+        desc.FarPlane = std::max(farPlane, desc.NearPlane + 0.0001f);
+        desc.VisibilityMask = visibilityMask;
+        return desc;
+    }
+
+    glm::uvec3 ClusteredLightBuilder::GetDimensions(const ClusteredLightGridDesc& inputDesc)
+    {
+        const uint32_t width = std::max(inputDesc.ViewportWidth, 1u);
+        const uint32_t height = std::max(inputDesc.ViewportHeight, 1u);
+        const uint32_t tileSize = std::max(inputDesc.TileSize, 1u);
+        return { 1u + (width - 1u) / tileSize, 1u + (height - 1u) / tileSize, std::max(inputDesc.DepthSlices, 1u) };
+    }
+
+    uint64_t ClusteredLightBuilder::GetClusterCount(const ClusteredLightGridDesc& desc)
+    {
+        const glm::uvec3 dimensions = GetDimensions(desc);
+        return static_cast<uint64_t>(dimensions.x) * dimensions.y * dimensions.z;
     }
 
     uint32_t ClusteredLightBuilder::DepthToSlice(float depth, float nearPlane, float farPlane, uint32_t depthSlices)
