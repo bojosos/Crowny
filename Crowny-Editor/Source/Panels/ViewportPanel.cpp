@@ -9,6 +9,7 @@
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/Scene/SceneRenderer.h"
 
+#include "Panels/ViewportHudText.h"
 #include "Panels/ViewportPanel.h"
 #include "UI/UIUtils.h"
 
@@ -418,22 +419,19 @@ namespace Crowny
 
         if (viewportWidth >= 670.0f)
         {
-            String entityName = selectedEntities.size() > 1u ? fmt::format("{} entities", selectedEntities.size())
-                                : selectedEntity             ? selectedEntity.GetName()
-                                                             : "No selection";
-            if (entityName.size() > 28)
-                entityName = entityName.substr(0, 25) + "...";
             const EditorCamera& camera = EditorLayer::GetEditorCamera();
-            const String status = fmt::format("{}  |  {} x {}  |  View {:.1f} m", entityName, static_cast<int32_t>(m_ViewportSize.x),
-                                              static_cast<int32_t>(m_ViewportSize.y), camera.GetDistance());
-            const ImVec2 textSize = ImGui::CalcTextSize(status.c_str());
+            const StringView entityName = selectedEntity ? StringView(selectedEntity.GetName()) : StringView{};
+            const ViewportHudStatus status =
+              FormatViewportHudStatus(entityName, static_cast<bool>(selectedEntity), selectedEntities.size(), static_cast<int32_t>(m_ViewportSize.x),
+                                      static_cast<int32_t>(m_ViewportSize.y), camera.GetDistance());
+            const ImVec2 textSize = ImGui::CalcTextSize(status.Text.data());
             const ImVec2 statusMin(imageMax.x - textSize.x - 16.0f, hudMin.y);
             const ImVec2 statusMax(imageMax.x - 8.0f, hudMax.y);
             if (statusMin.x > hudMax.x + 8.0f)
             {
                 ImGui::GetWindowDrawList()->AddRectFilled(statusMin, statusMax, IM_COL32(27, 24, 22, 210), 5.0f);
                 ImGui::GetWindowDrawList()->AddText(ImVec2(statusMin.x + 4.0f, statusMin.y + padding + ImGui::GetStyle().FramePadding.y),
-                                                    IM_COL32(190, 184, 178, 255), status.c_str());
+                                                    IM_COL32(190, 184, 178, 255), status.Text.data());
             }
         }
 

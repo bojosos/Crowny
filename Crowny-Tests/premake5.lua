@@ -21,6 +21,7 @@ project "Crowny-Tests"
 		"%{wks.location}/Crowny-Editor/Source/Panels/ConsoleViewModel.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/ComponentMenuModel.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/MaterialInspectorSchemaCache.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Panels/ViewportHudText.cpp",
 	}
 
 	includedirs
