@@ -3,6 +3,7 @@
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
 #include "Crowny/Physics/PhysicsCollision.h"
+#include "Crowny/Renderer/RenderPipeline.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Threading/CommandQueue.h"
 #include "cwpch.h"
@@ -206,6 +207,62 @@ TEST_CASE("Physics contact collider pairs stay inline on the dispatch path", "[M
     CHECK(observedHandles == expectedPerContact * contactCount);
     CHECK(delta.AllocationCount == 0u);
     CHECK(delta.RequestedBytes == 0u);
+}
+
+TEST_CASE("Render blackboard rebuilds allocate nothing after warm-up", "[Memory][Frame][Renderer][RenderGraph]")
+{
+    constexpr std::array<uint32_t, 3> resourceCounts{ 1u, 1000u, 10000u };
+    constexpr uint32_t frameCount = 120u;
+    constexpr StringView missingName = "CrownyFrameGraphResource_ThatDoesNotExist";
+
+    for (const uint32_t resourceCount : resourceCounts)
+    {
+        RenderBlackboard blackboard;
+        Vector<String> names;
+        names.reserve(resourceCount);
+        for (uint32_t index = 0; index < resourceCount; index++)
+            names.push_back("CrownyFrameGraphResource_" + std::to_string(index));
+
+        auto rebuild = [&]() {
+            blackboard.Clear();
+            for (uint32_t index = 0; index < resourceCount; index++)
+            {
+                blackboard.Set(StringView(names[index]),
+                               { index, 1u, RenderGraphResourceType::Buffer });
+            }
+
+            uint64_t checksum = 0;
+            for (const String& name : names)
+                checksum += static_cast<uint64_t>(blackboard.Get(StringView(name)).Index) + 1u;
+            return checksum;
+        };
+
+        const uint64_t expectedChecksum =
+            static_cast<uint64_t>(resourceCount) * (static_cast<uint64_t>(resourceCount) + 1u) / 2u;
+        CHECK(rebuild() == expectedChecksum);
+        blackboard.Clear();
+        CHECK_FALSE(blackboard.Contains(StringView(names.front())));
+        CHECK_FALSE(blackboard.Get(missingName).IsValid());
+        CHECK(rebuild() == expectedChecksum);
+
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        uint64_t checksum = 0;
+        uint64_t misses = 0;
+        for (uint32_t frame = 0; frame < frameCount; frame++)
+        {
+            checksum += rebuild();
+            misses += blackboard.Contains(missingName) ? 0u : 1u;
+            misses += blackboard.Get(missingName).IsValid() ? 0u : 1u;
+        }
+        const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+        const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+        INFO("Resource count: " << resourceCount);
+        CHECK(checksum == expectedChecksum * frameCount);
+        CHECK(misses == 2u * frameCount);
+        CHECK(delta.AllocationCount == 0u);
+        CHECK(delta.RequestedBytes == 0u);
+    }
 }
 
 TEST_CASE("Scene light synchronization allocates nothing after warm-up", "[Memory][Frame][Renderer][SceneSync]")

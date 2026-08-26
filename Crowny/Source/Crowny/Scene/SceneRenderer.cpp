@@ -397,7 +397,7 @@ namespace Crowny
             static_assert(sizeof(LightingViewConstants) == 240);
             static_assert(sizeof(EnvironmentConstants) == 160);
 
-            RenderGraphResourceHandle Resource(StringView name) const { return m_Blackboard->Get(String(name)); }
+            RenderGraphResourceHandle Resource(StringView name) const { return m_Blackboard->Get(name); }
 
             Ref<GenericGpuBuffer> Buffer(RenderGraphContext& context, StringView name) const
             {

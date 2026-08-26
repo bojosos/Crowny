@@ -55,10 +55,39 @@ namespace Crowny
         }
     } // namespace
 
-    RenderGraphResourceHandle RenderBlackboard::Get(const String& name) const
+    void RenderBlackboard::Set(StringView name, RenderGraphResourceHandle resource)
     {
-        const auto resource = m_Resources.find(name);
-        return resource != m_Resources.end() ? resource->second : RenderGraphResourceHandle{};
+        auto entry = m_Resources.find(name);
+        if (entry == m_Resources.end())
+            entry = m_Resources.emplace(String(name), Entry{}).first;
+
+        entry->second.Resource = resource;
+        entry->second.Generation = m_Generation;
+    }
+
+    bool RenderBlackboard::Contains(StringView name) const
+    {
+        const auto entry = m_Resources.find(name);
+        return entry != m_Resources.end() && entry->second.Generation == m_Generation;
+    }
+
+    RenderGraphResourceHandle RenderBlackboard::Get(StringView name) const
+    {
+        const auto entry = m_Resources.find(name);
+        return entry != m_Resources.end() && entry->second.Generation == m_Generation ? entry->second.Resource
+                                                                                     : RenderGraphResourceHandle{};
+    }
+
+    void RenderBlackboard::Clear()
+    {
+        if (m_Generation == std::numeric_limits<uint64_t>::max())
+        {
+            m_Resources.clear();
+            m_Generation = 1;
+            return;
+        }
+
+        m_Generation++;
     }
 
     RenderingPath RenderPipelineAsset::ResolvePath(const RenderCapabilities& capabilities, RenderingPath cameraOverride) const

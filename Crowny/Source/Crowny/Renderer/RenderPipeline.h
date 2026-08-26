@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/HashedString.h"
 #include "Crowny/Common/RefCounted.h"
 #include "Crowny/Renderer/RenderGraph.h"
 #include "Crowny/Renderer/RenderTypes.h"
@@ -52,13 +53,20 @@ namespace Crowny
     class RenderBlackboard
     {
     public:
-        void Set(const String& name, RenderGraphResourceHandle resource) { m_Resources.insert_or_assign(name, resource); }
-        bool Contains(const String& name) const { return m_Resources.find(name) != m_Resources.end(); }
-        RenderGraphResourceHandle Get(const String& name) const;
-        void Clear() { m_Resources.clear(); }
+        void Set(StringView name, RenderGraphResourceHandle resource);
+        bool Contains(StringView name) const;
+        RenderGraphResourceHandle Get(StringView name) const;
+        void Clear();
 
     private:
-        UnorderedMap<String, RenderGraphResourceHandle> m_Resources;
+        struct Entry
+        {
+            RenderGraphResourceHandle Resource;
+            uint64_t Generation = 0;
+        };
+
+        UnorderedMap<String, Entry, StringHash, StringEqual> m_Resources;
+        uint64_t m_Generation = 1;
     };
 
     class IRenderFeature : public RefCounted

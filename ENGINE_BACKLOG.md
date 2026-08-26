@@ -57,6 +57,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Physics and audio runtime components use explicit stable EnTT storage. `AddOrReplace` reapplies editable settings while preserving live handles, component identity, backend-observed velocity and sleep state, and initialized audio-source state across Box2D, Box3D, Jolt, and Bullet.
 - [x] Entity hierarchy selection applies deterministic Shift ranges and Ctrl toggles against the current visible order, with filtered-view fallbacks and deleted-anchor recovery.
 - [x] Native 2D and 3D collision callback payloads keep their fixed two-entity collider pair inline. Box2D snapshot/copy and scene-to-script dispatch paths perform zero native allocations for 10,000 warm contacts.
+- [x] The render blackboard retains named resource entries across frame clears and uses generation-stamped heterogeneous CityHash lookup. Stable 1, 1,000, and 10,000-resource rebuilds allocate nothing across 120 warm frames.
 
 ## Physics and ECS
 
