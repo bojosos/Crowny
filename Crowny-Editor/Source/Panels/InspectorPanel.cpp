@@ -390,179 +390,6 @@ namespace Crowny
         EndPanel();
     }
 
-    static String AutoDisplayName(const String& identifier)
-    {
-        // Convert camelCase/snake_case to "Title Case": "roughness" -> "Roughness", "albedoMap" -> "Albedo Map"
-        String result;
-        for (size_t i = 0; i < identifier.size(); i++)
-        {
-            char c = identifier[i];
-            if (i == 0)
-            {
-                result += (char)std::toupper(c);
-            }
-            else if (std::isupper(c))
-            {
-                result += ' ';
-                result += c;
-            }
-            else if (c == '_')
-            {
-                result += ' ';
-            }
-            else
-            {
-                result += c;
-            }
-        }
-        return result;
-    }
-
-    static ShaderParamType MapDataType(ShaderDataType dt, bool isColor)
-    {
-        switch (dt)
-        {
-        case ShaderDataType::Float:
-            return ShaderParamType::Float;
-        case ShaderDataType::Float2:
-            return ShaderParamType::Float2;
-        case ShaderDataType::Float3:
-            return isColor ? ShaderParamType::Color3 : ShaderParamType::Float3;
-        case ShaderDataType::Float4:
-            return isColor ? ShaderParamType::Color4 : ShaderParamType::Float4;
-        case ShaderDataType::Int:
-            return ShaderParamType::Int;
-        case ShaderDataType::Int2:
-            return ShaderParamType::Int2;
-        case ShaderDataType::Int3:
-            return ShaderParamType::Int3;
-        case ShaderDataType::Int4:
-            return ShaderParamType::Int4;
-        case ShaderDataType::Bool:
-            return ShaderParamType::Bool;
-        case ShaderDataType::Mat3:
-            return ShaderParamType::Mat3;
-        case ShaderDataType::Mat4:
-            return ShaderParamType::Mat4;
-        default:
-            return ShaderParamType::Float;
-        }
-    }
-
-    static ShaderParamType MapResourceType(UniformResourceType rt)
-    {
-        switch (rt)
-        {
-        case SAMPLER2D:
-        case TEXTURE2D:
-            return ShaderParamType::Texture2D;
-        case SAMPLER3D:
-        case TEXTURE3D:
-            return ShaderParamType::Texture3D;
-        case SAMPLERCUBE:
-        case TEXTURECUBE:
-            return ShaderParamType::TextureCube;
-        default:
-            return ShaderParamType::Texture2D;
-        }
-    }
-
-    static Vector<ShaderParameterDesc> BuildInspectorParameters(const Material& mat)
-    {
-        Vector<ShaderParameterDesc> result;
-
-        // Collect annotations from all shader stages
-        UnorderedMap<String, AnnotationSet> allAnnotations;
-        for (uint32_t i = 0; i < SHADER_COUNT; i++)
-        {
-            const auto& annotations = mat.GetAnnotations((ShaderType)i);
-            for (const auto& [name, anno] : annotations)
-                allAnnotations[name] = anno;
-        }
-
-        // Data parameters from uniform buffer members
-        const auto& bindings = mat.GetBindings();
-        for (const auto& [name, member] : bindings)
-        {
-            // Skip internal blocks (prefixed with cw_)
-            if (member.BufferName.rfind("cw_", 0) == 0)
-                continue;
-
-            ShaderParameterDesc desc;
-            desc.Identifier = name;
-            desc.BlockName = member.BufferName;
-            desc.Offset = member.Offset;
-
-            // Apply annotations if present
-            auto annoIt = allAnnotations.find(name);
-            bool isColor = false;
-            if (annoIt != allAnnotations.end())
-            {
-                const auto& anno = annoIt->second;
-                if (!anno.DisplayName.empty())
-                    desc.DisplayName = anno.DisplayName;
-                if (anno.IsHidden)
-                    continue; // Skip hidden params
-                isColor = anno.IsColor;
-                if (anno.IsHDR)
-                    desc.Flags.Set(ShaderParamFlag::HDR);
-                if (anno.HasRange)
-                {
-                    desc.RangeMin = anno.RangeMin;
-                    desc.RangeMax = anno.RangeMax;
-                    desc.HasRange = true;
-                }
-            }
-
-            desc.Type = MapDataType(member.DataType, isColor);
-
-            if (desc.DisplayName.empty())
-                desc.DisplayName = AutoDisplayName(name);
-
-            // Sort order: block binding slot * 1000 + member offset (gives declaration order)
-            desc.SortOrder = mat.GetBlockBindingSlot(member.BufferName) * 1000 + member.Offset;
-
-            result.push_back(desc);
-        }
-
-        // Texture parameters
-        const auto textures = mat.GetTextures();
-        for (const auto& [name, descInfo] : textures)
-        {
-            // Skip internal textures (prefixed with cw_)
-            if (name.rfind("cw_", 0) == 0)
-                continue;
-
-            ShaderParameterDesc desc;
-            desc.Identifier = name;
-            desc.Type = MapResourceType(descInfo.Type);
-            desc.Set = descInfo.Set;
-            desc.Slot = descInfo.Slot;
-
-            auto annoIt = allAnnotations.find(name);
-            if (annoIt != allAnnotations.end())
-            {
-                if (annoIt->second.IsHidden)
-                    continue;
-                if (!annoIt->second.DisplayName.empty())
-                    desc.DisplayName = annoIt->second.DisplayName;
-            }
-
-            if (desc.DisplayName.empty())
-                desc.DisplayName = AutoDisplayName(name);
-
-            // Textures sorted after data params
-            desc.SortOrder = 100000 + descInfo.Slot;
-
-            result.push_back(desc);
-        }
-
-        // Sort by SortOrder for deterministic, declaration-order display
-        std::sort(result.begin(), result.end(), [](const ShaderParameterDesc& a, const ShaderParameterDesc& b) { return a.SortOrder < b.SortOrder; });
-
-        return result;
-    }
-
     void InspectorPanel::RenderMaterialInspector()
     {
         AssetHandle<Material> mat = AssetManager::TryGet()->Load<Material>(m_InspectedAssetPath);
@@ -580,8 +407,7 @@ namespace Crowny
 
         ImGui::Separator();
 
-        // Build sorted, filtered parameter list
-        Vector<ShaderParameterDesc> params = BuildInspectorParameters(*mat.GetInternalPtr());
+        const Vector<ShaderParameterDesc>& params = m_MaterialSchemaCache.Resolve(*mat);
 
         for (const auto& param : params)
         {
@@ -1200,6 +1026,9 @@ namespace Crowny
 
     void InspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
+        if (m_InspectedAssetPath != filepath)
+            m_MaterialSchemaCache.Reset();
+
         if (filepath.empty())
         {
             SetInspectorMode(InspectorMode::Default);
@@ -1281,6 +1110,7 @@ namespace Crowny
 
     void InspectorPanel::SetSelectedEntities(Entity primary, const Vector<Entity>& entities)
     {
+        m_MaterialSchemaCache.Reset();
         m_InspectorMode = InspectorMode::GameObject;
         m_InspectedEntity = primary;
         m_InspectedEntities = entities;
@@ -1289,6 +1119,8 @@ namespace Crowny
 
     void InspectorPanel::SetInspectorMode(InspectorMode mode)
     {
+        if (m_InspectorMode != mode)
+            m_MaterialSchemaCache.Reset();
         m_InspectorMode = mode;
         m_HasPropertyChanged = false;
     }

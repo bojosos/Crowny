@@ -35,10 +35,7 @@ namespace Crowny
 
     private:
         friend class Material;
-        MaterialParamHandle(Material* mat, uint32_t offset, StringID bufferID)
-          : m_Material(mat), m_Offset(offset), m_BufferID(bufferID)
-        {
-        }
+        MaterialParamHandle(Material* mat, uint32_t offset, StringID bufferID) : m_Material(mat), m_Offset(offset), m_BufferID(bufferID) {}
 
         Material* m_Material = nullptr;
         uint32_t m_Offset = 0;
@@ -105,6 +102,8 @@ namespace Crowny
         void ReloadParams();
 
         uint64_t GetParamVersion() const { return m_ParamVersion; }
+        /** Globally unique generation for the current reflected parameter layout. */
+        uint64_t GetLayoutVersion() const { return m_LayoutVersion; }
 
         // Typed parameter handles — caches the lookup, avoids string search on every Set/Get.
         template <typename T> MaterialParamHandle<T> GetParam(const String& name)
@@ -117,10 +116,7 @@ namespace Crowny
             return MaterialParamHandle<T>(this, it->second.Offset, it->second.BufferID);
         }
 
-        MaterialTextureHandle GetTextureParam(const String& name)
-        {
-            return MaterialTextureHandle(this, name);
-        }
+        MaterialTextureHandle GetTextureParam(const String& name) { return MaterialTextureHandle(this, name); }
 
         const BindingMap& GetBindings() const { return m_Bindings; }
         bool HasBinding(const String& name) const { return m_Bindings.find(name) != m_Bindings.cend(); }
@@ -137,8 +133,7 @@ namespace Crowny
             constexpr ShaderDataType expectedType = ShaderDataTypeTrait<T>::Type;
             if (iterFind->second.DataType != expectedType)
             {
-                CW_ENGINE_WARN("Type mismatch for uniform {}: expected {}, got {}", name,
-                               ShaderDataTypeToString(expectedType),
+                CW_ENGINE_WARN("Type mismatch for uniform {}: expected {}, got {}", name, ShaderDataTypeToString(expectedType),
                                ShaderDataTypeToString(iterFind->second.DataType));
                 return T();
             }
@@ -157,9 +152,16 @@ namespace Crowny
         }
 
         Ref<Texture> GetTexture(uint32_t set, uint32_t slot) const { return m_Passes[0].Uniforms->GetTexture(set, slot); }
-        UniformDesc::TextureMap GetTextures() const
+        UniformDesc::TextureMap GetTextures() const { return GetTextureDescriptors(); }
+
+        /** Returns the reflected texture layout. The reference is valid until the next ReloadParams(). */
+        const UniformDesc::TextureMap& GetTextureDescriptors() const
         {
-            return m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc(FRAGMENT_SHADER)->Textures;
+            static const UniformDesc::TextureMap s_Empty;
+            if (m_Passes.empty() || m_Passes[0].Pipeline == nullptr)
+                return s_Empty;
+            const Ref<UniformDesc>& desc = m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc(FRAGMENT_SHADER);
+            return desc != nullptr ? desc->Textures : s_Empty;
         }
 
         const UnorderedMap<String, AnnotationSet>& GetAnnotations(ShaderType shaderType = FRAGMENT_SHADER) const
@@ -232,6 +234,7 @@ namespace Crowny
         Material() = default; // For serialization only
         void CreateAndAppendUniforms(uint32_t passIndex);
         void ApplyDefaults();
+        static uint64_t NextLayoutVersion();
         template <typename Name, typename Value>
         void SetDataParam(const Name& name, ShaderDataType expectedType, const Value& value, StringView valueType);
 
@@ -244,5 +247,6 @@ namespace Crowny
         AssetHandle<Shader> m_Shader;
         ShaderVariation m_Variation;
         uint64_t m_ParamVersion = 0;
+        uint64_t m_LayoutVersion = NextLayoutVersion();
     };
 } // namespace Crowny

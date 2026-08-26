@@ -121,7 +121,7 @@ namespace Crowny
 
         // Texture parameters — only user-editable ones (skip cw_ prefix)
         out << YAML::Key << "Textures" << YAML::Value << YAML::BeginSeq;
-        const auto textures = m_Material->GetTextures();
+        const auto& textures = m_Material->GetTextureDescriptors();
         for (const auto& [name, descInfo] : textures)
         {
             if (name.rfind("cw_", 0) == 0)

@@ -7,6 +7,8 @@ namespace Crowny
 {
     namespace
     {
+        std::atomic<uint64_t> s_NextMaterialLayoutVersion{ 1u };
+
         StringView GetNameView(const String& name) { return name; }
         StringView GetNameView(HashedString name) { return name.GetView(); }
         HashedString GetPropertyName(MaterialPropertyID name) { return HashedString(StringIDTable::GetString(name.Value)); }
@@ -88,8 +90,7 @@ namespace Crowny
     void Material::SetShader(const AssetHandle<Shader>& shader)
     {
         m_Shader = shader;
-        if (m_Shader)
-            ReloadParams();
+        ReloadParams();
     }
 
     void Material::SetVariation(const ShaderVariation& variation)
@@ -100,9 +101,14 @@ namespace Crowny
 
     void Material::ReloadParams()
     {
+        m_LayoutVersion = NextLayoutVersion();
+        ++m_ParamVersion;
         m_Passes.clear();
         m_Bindings.clear();
         m_TextureHandles.clear();
+
+        if (!m_Shader)
+            return;
 
         const auto& technique = m_Shader->GetTechnique(m_Variation);
         const auto& renderPasses = technique->GetRenderPasses();
@@ -116,8 +122,9 @@ namespace Crowny
         }
 
         ApplyDefaults();
-        ++m_ParamVersion;
     }
+
+    uint64_t Material::NextLayoutVersion() { return s_NextMaterialLayoutVersion.fetch_add(1u, std::memory_order_relaxed); }
 
     void Material::CreateAndAppendUniforms(uint32_t passIndex)
     {
@@ -161,8 +168,8 @@ namespace Crowny
             return;
         if (iterFind->second.DataType != expectedType)
         {
-            CW_ENGINE_WARN("Type mismatch for {}: expected {}, got {}", GetNameView(name),
-                           ShaderDataTypeToString(iterFind->second.DataType), valueType);
+            CW_ENGINE_WARN("Type mismatch for {}: expected {}, got {}", GetNameView(name), ShaderDataTypeToString(iterFind->second.DataType),
+                           valueType);
             return;
         }
 
@@ -195,10 +202,7 @@ namespace Crowny
         ++m_ParamVersion;
     }
 
-    void Material::SetFloat(const String& name, float value)
-    {
-        SetDataParam(name, ShaderDataType::Float, value, "Float");
-    }
+    void Material::SetFloat(const String& name, float value) { SetDataParam(name, ShaderDataType::Float, value, "Float"); }
 
     void Material::SetFloat(HashedString name, float value) { SetDataParam(name, ShaderDataType::Float, value, "Float"); }
 
@@ -224,15 +228,9 @@ namespace Crowny
         ++m_ParamVersion;
     }
 
-    void Material::SetFloat3(const String& name, const glm::vec3& value)
-    {
-        SetVector3(name, value);
-    }
+    void Material::SetFloat3(const String& name, const glm::vec3& value) { SetVector3(name, value); }
 
-    void Material::SetInt(const String& name, int value)
-    {
-        SetDataParam(name, ShaderDataType::Int, value, "Int");
-    }
+    void Material::SetInt(const String& name, int value) { SetDataParam(name, ShaderDataType::Int, value, "Int"); }
 
     void Material::SetInt(HashedString name, int value) { SetDataParam(name, ShaderDataType::Int, value, "Int"); }
 
@@ -295,16 +293,9 @@ namespace Crowny
         ++m_ParamVersion;
     }
 
-    void Material::SetColor(const String& name, const glm::vec4& value)
-    {
-        SetDataParam(name, ShaderDataType::Float4, value, "Color");
-    }
+    void Material::SetColor(const String& name, const glm::vec4& value) { SetDataParam(name, ShaderDataType::Float4, value, "Color"); }
 
-
-    void Material::SetColor(HashedString name, const glm::vec4& value)
-    {
-        SetDataParam(name, ShaderDataType::Float4, value, "Color");
-    }
+    void Material::SetColor(HashedString name, const glm::vec4& value) { SetDataParam(name, ShaderDataType::Float4, value, "Color"); }
 
     void Material::SetColor(MaterialPropertyID name, const glm::vec4& value) { SetColor(GetPropertyName(name), value); }
 
@@ -340,29 +331,15 @@ namespace Crowny
         ++m_ParamVersion;
     }
 
-    void Material::SetVector3(const String& name, const glm::vec3& value)
-    {
-        SetDataParam(name, ShaderDataType::Float3, value, "Vector3");
-    }
+    void Material::SetVector3(const String& name, const glm::vec3& value) { SetDataParam(name, ShaderDataType::Float3, value, "Vector3"); }
 
-
-    void Material::SetVector3(HashedString name, const glm::vec3& value)
-    {
-        SetDataParam(name, ShaderDataType::Float3, value, "Vector3");
-    }
+    void Material::SetVector3(HashedString name, const glm::vec3& value) { SetDataParam(name, ShaderDataType::Float3, value, "Vector3"); }
 
     void Material::SetVector3(MaterialPropertyID name, const glm::vec3& value) { SetVector3(GetPropertyName(name), value); }
 
-    void Material::SetMatrix(const String& name, const glm::mat4& value)
-    {
-        SetDataParam(name, ShaderDataType::Mat4, value, "Matrix4");
-    }
+    void Material::SetMatrix(const String& name, const glm::mat4& value) { SetDataParam(name, ShaderDataType::Mat4, value, "Matrix4"); }
 
-
-    void Material::SetMatrix(HashedString name, const glm::mat4& value)
-    {
-        SetDataParam(name, ShaderDataType::Mat4, value, "Matrix4");
-    }
+    void Material::SetMatrix(HashedString name, const glm::mat4& value) { SetDataParam(name, ShaderDataType::Mat4, value, "Matrix4"); }
 
     void Material::SetMatrix(MaterialPropertyID name, const glm::mat4& value) { SetMatrix(GetPropertyName(name), value); }
 
@@ -414,8 +391,7 @@ namespace Crowny
         // Collect annotations from all shader stages
         for (uint32_t i = 0; i < SHADER_COUNT; i++)
         {
-            const Ref<UniformDesc>& desc =
-              m_Passes.empty() ? nullptr : m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc((ShaderType)i);
+            const Ref<UniformDesc>& desc = m_Passes.empty() ? nullptr : m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc((ShaderType)i);
             if (!desc)
                 continue;
 
@@ -431,8 +407,7 @@ namespace Crowny
                         {
                             const auto blockIt = pass.UniformBlocks.find(blockID);
                             if (blockIt != pass.UniformBlocks.end())
-                                blockIt->second->Write(member.Offset, member.DefaultValue.data(),
-                                                       (uint32_t)member.DefaultValue.size());
+                                blockIt->second->Write(member.Offset, member.DefaultValue.data(), (uint32_t)member.DefaultValue.size());
                         }
                     }
                 }

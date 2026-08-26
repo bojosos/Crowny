@@ -51,7 +51,7 @@ namespace Crowny
             }
             if (material.GetPassCount() == 0)
                 return nullptr;
-            const UniformDesc::TextureMap textures = material.GetTextures();
+            const UniformDesc::TextureMap& textures = material.GetTextureDescriptors();
             for (StringView name : names)
             {
                 const auto texture = textures.find(name);

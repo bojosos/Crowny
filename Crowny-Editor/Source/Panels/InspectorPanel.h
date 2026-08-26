@@ -3,6 +3,7 @@
 #include "ComponentEditor.h"
 #include "EditorPanelRegistration.h"
 #include "ImGuiPanel.h"
+#include "MaterialInspectorSchemaCache.h"
 
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
@@ -89,6 +90,7 @@ namespace Crowny
         ComponentEditor m_ComponentEditor; // Helper object for rendering components of entities
 
         // Material inspector auto-save state
+        MaterialInspectorSchemaCache m_MaterialSchemaCache;
         uint64_t m_MaterialLastSaveVersion = 0;
         std::chrono::steady_clock::time_point m_MaterialLastSaveTime;
 
