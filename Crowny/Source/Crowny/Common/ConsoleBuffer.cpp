@@ -45,7 +45,24 @@ namespace Crowny
             }
             return true;
         }
+
+        void FormatTimestamp(std::time_t timestamp, String& output)
+        {
+            char formattedTime[9] = {};
+            tm timeInfo = {};
+#ifdef CW_PLATFORM_WIN32
+            const bool converted = localtime_s(&timeInfo, &timestamp) == 0;
+#else
+            const bool converted = localtime_r(&timestamp, &timeInfo) != nullptr;
+#endif
+            if (converted && strftime(formattedTime, sizeof(formattedTime), "%T", &timeInfo) != 0)
+                output.assign(formattedTime);
+            else
+                output.assign("--:--:--");
+        }
     } // namespace
+
+    ConsoleBuffer::ConsoleBuffer(size_t maxMessages) : m_MaxMessages(std::max<size_t>(maxMessages, 1u)) {}
 
     void ConsoleBuffer::SearchQuery::Set(StringView query)
     {
@@ -189,18 +206,11 @@ namespace Crowny
         message.Sequence = m_NextSequence++;
         message.GroupSequence = message.Sequence;
         message.LastSequence = message.Sequence;
-        if (m_CachedTimestamp != message.Timestamp)
+        if (!m_HasCachedTimestamp || m_CachedTimestamp != message.Timestamp)
         {
-            char formattedTime[9] = {};
-            tm timeInfo = {};
-#ifdef CW_PLATFORM_WIN32
-            localtime_s(&timeInfo, &message.Timestamp);
-#else
-            localtime_r(&message.Timestamp, &timeInfo);
-#endif
-            strftime(formattedTime, sizeof(formattedTime), "%T", &timeInfo);
             m_CachedTimestamp = message.Timestamp;
-            m_CachedTimestampText = formattedTime;
+            FormatTimestamp(message.Timestamp, m_CachedTimestampText);
+            m_HasCachedTimestamp = true;
         }
         message.TimestampText = m_CachedTimestampText;
 
@@ -216,8 +226,6 @@ namespace Crowny
             collapsedMessage.LastSequence = message.Sequence;
             collapsedMessage.Timestamp = message.Timestamp;
             collapsedMessage.TimestampText = message.TimestampText;
-            collapsedMessage.SearchText = message.SearchText;
-            collapsedMessage.SourceSearchText = message.SourceSearchText;
         }
         else
         {
@@ -225,6 +233,7 @@ namespace Crowny
             candidates.push_back(static_cast<uint32_t>(m_CollapsedMessageBuffer.size() - 1));
         }
         m_NormalMessageBuffer.push_back(std::move(message));
+        TrimToCapacity();
         m_SortDirty = m_HasSort;
         m_HasNewMessages.store(true, std::memory_order_release);
         m_Revision.fetch_add(1, std::memory_order_release);
@@ -236,6 +245,7 @@ namespace Crowny
         m_NormalMessageBuffer.clear();
         m_HashToIndices.clear();
         m_CollapsedMessageBuffer.clear();
+        m_DroppedMessageCount.store(0, std::memory_order_release);
         m_SortDirty = false;
         m_HasNewMessages.store(false, std::memory_order_release);
         m_Revision.fetch_add(1, std::memory_order_release);
@@ -285,6 +295,52 @@ namespace Crowny
         m_SortDirty = false;
     }
 
+    void ConsoleBuffer::TrimToCapacity()
+    {
+        if (m_NormalMessageBuffer.size() <= m_MaxMessages)
+            return;
+
+        // Prune large buffers in batches so a full console does not erase and move every retained row on every append.
+        const size_t pruneBatch = m_MaxMessages >= 64u ? std::max<size_t>(m_MaxMessages / 8u, 1u) : 1u;
+        const size_t overCapacity = m_NormalMessageBuffer.size() - m_MaxMessages;
+        const size_t removeCount = std::min(std::max(overCapacity, pruneBatch), m_NormalMessageBuffer.size() - 1u);
+
+        std::sort(m_NormalMessageBuffer.begin(), m_NormalMessageBuffer.end(),
+                  [](const Message& lhs, const Message& rhs) { return lhs.Sequence < rhs.Sequence; });
+        m_NormalMessageBuffer.erase(m_NormalMessageBuffer.begin(), m_NormalMessageBuffer.begin() + removeCount);
+        m_DroppedMessageCount.fetch_add(removeCount, std::memory_order_release);
+        RebuildCollapsedBuffer();
+    }
+
+    void ConsoleBuffer::RebuildCollapsedBuffer()
+    {
+        m_CollapsedMessageBuffer.clear();
+        m_HashToIndices.clear();
+
+        for (const Message& message : m_NormalMessageBuffer)
+        {
+            Vector<uint32_t>& candidates = m_HashToIndices[message.Hash];
+            const auto matchingCandidate = std::find_if(candidates.begin(), candidates.end(), [&](uint32_t index) {
+                return IsSameMessage(m_CollapsedMessageBuffer[index], message);
+            });
+            if (matchingCandidate == candidates.end())
+            {
+                Message retainedMessage = message;
+                retainedMessage.RepeatCount = 1u;
+                retainedMessage.LastSequence = retainedMessage.Sequence;
+                m_CollapsedMessageBuffer.push_back(std::move(retainedMessage));
+                candidates.push_back(static_cast<uint32_t>(m_CollapsedMessageBuffer.size() - 1u));
+                continue;
+            }
+
+            Message& collapsedMessage = m_CollapsedMessageBuffer[*matchingCandidate];
+            collapsedMessage.RepeatCount++;
+            collapsedMessage.LastSequence = message.Sequence;
+            collapsedMessage.Timestamp = message.Timestamp;
+            collapsedMessage.TimestampText = message.TimestampText;
+        }
+    }
+
     void ConsoleBuffer::RebuildCollapsedIndices()
     {
         m_HashToIndices.clear();
@@ -301,6 +357,23 @@ namespace Crowny
         output = m_Collapsed ? m_CollapsedMessageBuffer : m_NormalMessageBuffer;
         m_HasNewMessages.store(false, std::memory_order_release);
         return m_Revision.load(std::memory_order_acquire);
+    }
+
+    bool ConsoleBuffer::CopyBufferIfChanged(Vector<Message>& output, uint64_t& revision)
+    {
+        if (revision == m_Revision.load(std::memory_order_acquire))
+            return false;
+
+        ScopedLock lock(m_Mutex);
+        const uint64_t currentRevision = m_Revision.load(std::memory_order_acquire);
+        if (revision == currentRevision)
+            return false;
+
+        ApplySort();
+        output = m_Collapsed ? m_CollapsedMessageBuffer : m_NormalMessageBuffer;
+        revision = currentRevision;
+        m_HasNewMessages.store(false, std::memory_order_release);
+        return true;
     }
 
     void ConsoleBuffer::Collapse()

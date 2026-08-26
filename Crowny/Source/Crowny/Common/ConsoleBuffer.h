@@ -7,6 +7,8 @@ namespace Crowny
     class ConsoleBuffer : public Module<ConsoleBuffer>
     {
     public:
+        static constexpr size_t DefaultMaxMessages = 10000u;
+
         struct Message
         {
         public:
@@ -78,31 +80,39 @@ namespace Crowny
         };
 
     public:
-        ConsoleBuffer() = default;
+        explicit ConsoleBuffer(size_t maxMessages = DefaultMaxMessages);
         ~ConsoleBuffer() = default;
         void AddMessage(Message::Level logLevel, const String& messageText, const Vector<Message::FunctionCall>& callstack = {});
 
         void Sort(uint32_t sortIdx, bool ascending);
         void Clear();
         uint64_t CopyBuffer(Vector<Message>& output);
+        /** Copies the current view only when revision is stale. Stable calls take the atomic fast path. */
+        bool CopyBufferIfChanged(Vector<Message>& output, uint64_t& revision);
         uint64_t GetRevision() const { return m_Revision.load(std::memory_order_acquire); }
+        uint64_t GetDroppedMessageCount() const { return m_DroppedMessageCount.load(std::memory_order_acquire); }
         void Collapse();
         void Uncollapse();
         bool HasNewMessages() const { return m_HasNewMessages.load(std::memory_order_acquire); }
 
     private:
         void ApplySort();
+        void TrimToCapacity();
+        void RebuildCollapsedBuffer();
         void RebuildCollapsedIndices();
 
         mutable Mutex m_Mutex;
         std::atomic<bool> m_HasNewMessages{ false };
         std::atomic<uint64_t> m_Revision{ 0 };
+        std::atomic<uint64_t> m_DroppedMessageCount{ 0 };
+        size_t m_MaxMessages = DefaultMaxMessages;
         bool m_Collapsed = false;
         bool m_HasSort = false;
         bool m_SortDirty = false;
         uint32_t m_SortIndex = 0;
         bool m_SortAscending = true;
         uint64_t m_NextSequence = 1;
+        bool m_HasCachedTimestamp = false;
         std::time_t m_CachedTimestamp = 0;
         String m_CachedTimestampText;
 

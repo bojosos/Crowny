@@ -108,8 +108,9 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Polish the Asset Browser search and properties layout after ImGui updates. Cover empty states, focus, keyboard navigation, filters, breadcrumbs, thumbnails, context actions, multi-selection, and no-stack-imbalance crashes.
 - [ ] Complete hierarchy multi-entity/component editing, mixed-value display, common-component presentation, gizmo rules, and safe removal/addition across a selection.
 - [ ] Finish undo/redo for entity/component creation and deletion, reparenting, transforms/gizmos, multi-edit, text edits, sliders, and drag transactions. One gesture must produce one understandable command.
-- [ ] Polish the console: correct chronological order, cached local-time conversion, search/filter, collapsed duplicate counts, selection, copying, clearing, severity toggles, and bounded storage.
+- [x] Polish the console: correct chronological order, cached local-time conversion, search/filter, collapsed duplicate counts, selection, copying, clearing, severity toggles, and bounded storage.
 - [x] Cache console severity labels and selected callstack source labels between changes, and order collapsed sort ties by latest activity.
+- [x] Bound console retention to 10,000 rows, prune oldest rows in batches, rebuild retained collapsed counts, and keep stable snapshot/search frames allocation-free.
 - [ ] Finish previews for meshes, materials, textures, audio, fonts, animations, scenes, and scripts. Cancel and drain preview jobs on project/scene shutdown.
 - [ ] Improve panel/editor architecture beyond registration: lifecycle ownership, saved layout, visibility, focus, menus, shortcuts, services, test seams, and less coupling in editor-layer code.
 - [ ] Clean up importers and editor code with focused refactors, explicit ownership, actionable diagnostics, stable asset identity, and no raw filesystem assumptions outside boundary modules.

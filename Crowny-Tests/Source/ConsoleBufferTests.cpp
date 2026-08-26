@@ -1,7 +1,9 @@
 #include "Crowny/Common/ConsoleBuffer.h"
+#include "Crowny/Memory/AllocationCounter.h"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <limits>
 #include <thread>
 
 using namespace Crowny;
@@ -171,4 +173,88 @@ TEST_CASE("Console snapshots are safe while messages are produced concurrently",
         sequenceIds.insert(message.Sequence);
     CHECK(sequenceIds.size() == messages.size());
     CHECK_FALSE(buffer.HasNewMessages());
+}
+
+TEST_CASE("Console retention keeps newest rows and rebuilds collapsed counts", "[Common][Console][Retention]")
+{
+    ConsoleBuffer buffer(4u);
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Info, "Alpha");
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Warn, "Beta");
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Info, "Alpha");
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Error, "Gamma");
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Warn, "Beta");
+
+    Vector<ConsoleBuffer::Message> messages;
+    buffer.CopyBuffer(messages);
+    REQUIRE(messages.size() == 4u);
+    CHECK(messages[0].Sequence == 2u);
+    CHECK(messages[3].Sequence == 5u);
+    CHECK(buffer.GetDroppedMessageCount() == 1u);
+
+    buffer.Collapse();
+    buffer.Sort(0u, false);
+    buffer.CopyBuffer(messages);
+    REQUIRE(messages.size() == 3u);
+    CHECK(messages[0].MessageText == "Beta");
+    CHECK(messages[0].RepeatCount == 2u);
+    CHECK(messages[1].MessageText == "Gamma");
+    CHECK(messages[1].RepeatCount == 1u);
+    CHECK(messages[2].MessageText == "Alpha");
+    CHECK(messages[2].RepeatCount == 1u);
+    CHECK(messages[2].Sequence == 3u);
+    CHECK(messages[2].GroupSequence == 1u);
+
+    buffer.Uncollapse();
+    buffer.Sort(1u, true);
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Info, "Aardvark");
+    buffer.CopyBuffer(messages);
+    REQUIRE(messages.size() == 4u);
+    CHECK(messages[0].MessageText == "Aardvark");
+    CHECK(messages[1].MessageText == "Alpha");
+    CHECK(messages[2].MessageText == "Beta");
+    CHECK(messages[3].MessageText == "Gamma");
+    CHECK(buffer.GetDroppedMessageCount() == 2u);
+
+    buffer.Sort(0u, true);
+    buffer.CopyBuffer(messages);
+    REQUIRE(messages.size() == 4u);
+    CHECK(messages[0].Sequence == 3u);
+    CHECK(messages[1].Sequence == 4u);
+    CHECK(messages[2].Sequence == 5u);
+    CHECK(messages[3].Sequence == 6u);
+
+    buffer.Clear();
+    CHECK(buffer.GetDroppedMessageCount() == 0u);
+}
+
+TEST_CASE("Stable console filtering and snapshot checks allocate nothing", "[Common][Console][Memory][Frame]")
+{
+    ConsoleBuffer buffer;
+    buffer.AddMessage(ConsoleBuffer::Message::Level::Error, "Could not load asset",
+                      { { "Player::Update()", "Scripts/Player.cs", 42u } });
+
+    Vector<ConsoleBuffer::Message> messages;
+    uint64_t revision = std::numeric_limits<uint64_t>::max();
+    REQUIRE(buffer.CopyBufferIfChanged(messages, revision));
+    REQUIRE(messages.size() == 1u);
+
+    ConsoleBuffer::SearchQuery query;
+    query.Set(R"(text:"load asset" source:player level:error -source:generated)");
+    REQUIRE(query.Matches(messages[0]));
+
+    uint32_t matches = 0u;
+    bool copiedStableSnapshot = false;
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120u; frame++)
+    {
+        copiedStableSnapshot = buffer.CopyBufferIfChanged(messages, revision) || copiedStableSnapshot;
+        matches += query.Matches(messages[0]) ? 1u : 0u;
+    }
+    const Memory::ThreadAllocationSnapshot delta =
+        Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+    CHECK_FALSE(copiedStableSnapshot);
+    CHECK(matches == 120u);
+    CHECK(delta.AllocationCount == 0u);
+    CHECK(delta.RequestedBytes == 0u);
 }

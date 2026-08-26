@@ -114,6 +114,12 @@ namespace Crowny
 
         ImGui::SameLine();
         ImGui::TextDisabled("%u shown", summary.ShownCount);
+        const uint64_t droppedCount = ConsoleBuffer::Get().GetDroppedMessageCount();
+        if (droppedCount != 0u)
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("(%llu older dropped)", static_cast<unsigned long long>(droppedCount));
+        }
     }
 
     void ConsolePanel::RenderSettings()
@@ -299,10 +305,9 @@ namespace Crowny
     void ConsolePanel::RefreshMessages()
     {
         ConsoleBuffer& console = ConsoleBuffer::Get();
-        if (m_MessageRevision == console.GetRevision())
+        if (!console.CopyBufferIfChanged(m_MessageSnapshot, m_MessageRevision))
             return;
 
-        m_MessageRevision = console.CopyBuffer(m_MessageSnapshot);
         m_FilterDirty = true;
 
         if (m_SelectedMessageId == 0)
