@@ -476,13 +476,19 @@ namespace Crowny
         void DecodeText(const TextComponent& component, const Font& font, TextLayoutScratch& scratch)
         {
             scratch.Tokens.Reset();
+            scratch.SourceByteLength = component.Text.size();
             size_t offset = 0;
             char32_t codePoint = 0;
             bool previousWasCarriageReturn = false;
-            while (UTF8::NextCodePoint(component.Text, offset, codePoint))
+            while (offset < component.Text.size())
             {
+                const size_t sourceByteStart = offset;
+                if (!UTF8::NextCodePoint(component.Text, offset, codePoint))
+                    break;
                 if (codePoint == U'\n' && previousWasCarriageReturn)
                 {
+                    if (!scratch.Tokens.Empty())
+                        scratch.Tokens[scratch.Tokens.Size() - 1].SourceByteEnd = offset;
                     previousWasCarriageReturn = false;
                     continue;
                 }
@@ -494,6 +500,8 @@ namespace Crowny
                 TextLayoutToken& token = scratch.Tokens.Acquire();
                 token = {};
                 token.CodePoint = codePoint;
+                token.SourceByteStart = sourceByteStart;
+                token.SourceByteEnd = offset;
                 token.NewLine = codePoint == U'\n';
                 token.WhiteSpace = IsTextWhitespace(codePoint);
                 token.Invisible = codePoint == 0x200B || codePoint == 0x00AD;
@@ -873,10 +881,12 @@ namespace Crowny
             scratch.Lines[i].Baseline += static_cast<float>(verticalOffset);
 
         scratch.Glyphs.Reset();
+        scratch.Carets.Reset();
         for (size_t lineIndex = 0; lineIndex < visibleLineCount; lineIndex++)
         {
             TextLayoutLine& line = scratch.Lines[lineIndex];
             line.FirstGlyph = scratch.Glyphs.Size();
+            line.FirstCaret = scratch.Carets.Size();
             double pen = line.X;
             const double relativeWidth = line.Width;
             const double naturalOutputWidth =
@@ -885,6 +895,13 @@ namespace Crowny
             const double gapExpansion = line.ExpandableGaps > 0 ? (relativeWidth - naturalOutputWidth) / line.ExpandableGaps : 0.0;
             const bool whitespaceGaps = CountWhitespaceGaps(scratch, line.TokenStart, line.RenderTokenEnd) > 0;
             uint32_t expandedCharacterGaps = 0;
+
+            const size_t initialSourceByteOffset = line.TokenStart < scratch.Tokens.Size() ? scratch.Tokens[line.TokenStart].SourceByteStart
+                                                                                         : scratch.SourceByteLength;
+            TextLayoutCaret& initialCaret = scratch.Carets.Acquire();
+            initialCaret.SourceByteOffset = initialSourceByteOffset;
+            initialCaret.Position = { static_cast<float>(pen), line.Baseline };
+            initialCaret.LineIndex = static_cast<uint32_t>(lineIndex);
 
             for (size_t i = line.TokenStart; i < line.RenderTokenEnd; i++)
             {
@@ -915,6 +932,15 @@ namespace Crowny
                         expandedCharacterGaps++;
                     }
                 }
+
+                const bool clusterContinues = i + 1 < line.RenderTokenEnd && scratch.Tokens[i + 1].CombiningMark;
+                if (!clusterContinues)
+                {
+                    TextLayoutCaret& caret = scratch.Carets.Acquire();
+                    caret.SourceByteOffset = token.SourceByteEnd;
+                    caret.Position = { static_cast<float>(pen), line.Baseline };
+                    caret.LineIndex = static_cast<uint32_t>(lineIndex);
+                }
             }
 
             if (line.Ellipsized)
@@ -925,15 +951,72 @@ namespace Crowny
                 glyph.PenPosition = { static_cast<float>(pen), line.Baseline };
                 glyph.Advance = static_cast<float>(ellipsisWidth);
                 glyph.LineIndex = static_cast<uint32_t>(lineIndex);
+
+                TextLayoutCaret& caret = scratch.Carets.Acquire();
+                caret.SourceByteOffset = line.RenderTokenEnd > line.TokenStart
+                                           ? scratch.Tokens[line.RenderTokenEnd - 1].SourceByteEnd
+                                           : initialSourceByteOffset;
+                caret.Position = { static_cast<float>(pen + ellipsisWidth), line.Baseline };
+                caret.LineIndex = static_cast<uint32_t>(lineIndex);
             }
             line.GlyphCount = scratch.Glyphs.Size() - line.FirstGlyph;
+            line.CaretCount = scratch.Carets.Size() - line.FirstCaret;
         }
 
         result.Glyphs = scratch.Glyphs.Empty() ? nullptr : scratch.Glyphs.begin();
         result.Lines = scratch.Lines.begin();
+        result.Carets = scratch.Carets.Empty() ? nullptr : scratch.Carets.begin();
         result.GlyphCount = scratch.Glyphs.Size();
         result.LineCount = visibleLineCount;
+        result.CaretCount = scratch.Carets.Size();
         result.Size = { static_cast<float>(maximumLineWidth), static_cast<float>(blockHeight) };
+        return result;
+    }
+
+    TextHitTestResult TextLayout::HitTest(const TextLayoutResult& layout, const glm::vec2& position)
+    {
+        TextHitTestResult result;
+        if (layout.Lines == nullptr || layout.Carets == nullptr || layout.LineCount == 0 || layout.CaretCount == 0)
+            return result;
+
+        const TextLayoutLine* closestLine = nullptr;
+        float closestLineDistance = std::numeric_limits<float>::max();
+        for (size_t lineIndex = 0; lineIndex < layout.LineCount; lineIndex++)
+        {
+            const TextLayoutLine& line = layout.Lines[lineIndex];
+            if (line.CaretCount == 0)
+                continue;
+
+            const float distance = std::abs(position.y - line.Baseline);
+            if (distance < closestLineDistance)
+            {
+                closestLineDistance = distance;
+                closestLine = &line;
+            }
+        }
+        if (closestLine == nullptr)
+            return result;
+
+        const TextLayoutCaret* begin = layout.Carets + closestLine->FirstCaret;
+        const TextLayoutCaret* end = begin + closestLine->CaretCount;
+        const TextLayoutCaret* upper = std::lower_bound(begin, end, position.x,
+          [](const TextLayoutCaret& caret, float x) { return caret.Position.x < x; });
+
+        const TextLayoutCaret* closest = nullptr;
+        if (upper == begin)
+            closest = begin;
+        else if (upper == end)
+            closest = end - 1;
+        else
+        {
+            const TextLayoutCaret* lower = upper - 1;
+            closest = position.x - lower->Position.x < upper->Position.x - position.x ? lower : upper;
+        }
+
+        result.SourceByteOffset = closest->SourceByteOffset;
+        result.CaretPosition = closest->Position;
+        result.LineIndex = closest->LineIndex;
+        result.Valid = true;
         return result;
     }
 
