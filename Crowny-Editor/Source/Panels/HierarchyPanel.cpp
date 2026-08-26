@@ -178,10 +178,7 @@ namespace Crowny
     {
         const ImGuiIO& io = ImGui::GetIO();
         m_PendingSelection = e;
-        m_PendingSelectionMode = io.KeyShift && io.KeyCtrl ? EntitySelectionMode::AddRange
-                                 : io.KeyShift             ? EntitySelectionMode::Range
-                                 : io.KeyCtrl              ? EntitySelectionMode::Toggle
-                                                           : EntitySelectionMode::Replace;
+        m_PendingSelectionMode = ResolveEntitySelectionMode(io.KeyCtrl, io.KeyShift);
     }
 
     void HierarchyPanel::ApplyPendingSelection()

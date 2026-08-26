@@ -54,6 +54,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Asset Browser selection uses full paths, survives filtering and sorting safely, and assigns distinct ImGui IDs to duplicate basenames. Empty-result keyboard actions and destructive operations are bounds-safe.
 - [x] Reference-field popup IDs use owned fixed storage with no warm-frame allocation, and multiline properties share the standard balanced ImGui row cleanup path.
 - [x] Physics and audio runtime components use explicit stable EnTT storage. `AddOrReplace` reapplies editable settings while preserving live handles, component identity, backend-observed velocity and sleep state, and initialized audio-source state across Box2D, Box3D, Jolt, and Bullet.
+- [x] Entity hierarchy selection applies deterministic Shift ranges and Ctrl toggles against the current visible order, with filtered-view fallbacks and deleted-anchor recovery.
 
 ## Physics and ECS
 
@@ -105,7 +106,7 @@ This is the durable record of the requested engine work. A checked item is merge
 
 - [x] Defer Asset Browser rename and drag/drop moves until list, grid, and tree traversal finishes, then reconcile exact-path selection after a successful move.
 - [ ] Polish the Asset Browser search and properties layout after ImGui updates. Cover empty states, focus, keyboard navigation, filters, breadcrumbs, thumbnails, context actions, multi-selection, and no-stack-imbalance crashes.
-- [ ] Add Shift range selection and Ctrl toggle selection to the hierarchy. Complete multi-entity/component editing, mixed-value display, common-component presentation, gizmo rules, and safe removal/addition across a selection.
+- [ ] Complete hierarchy multi-entity/component editing, mixed-value display, common-component presentation, gizmo rules, and safe removal/addition across a selection.
 - [ ] Finish undo/redo for entity/component creation and deletion, reparenting, transforms/gizmos, multi-edit, text edits, sliders, and drag transactions. One gesture must produce one understandable command.
 - [ ] Polish the console: correct chronological order, cached local-time conversion, search/filter, collapsed duplicate counts, selection, copying, clearing, severity toggles, and bounded storage.
 - [x] Cache console severity labels and selected callstack source labels between changes, and order collapsed sort ties by latest activity.
