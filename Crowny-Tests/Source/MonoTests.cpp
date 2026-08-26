@@ -134,4 +134,15 @@ TEST_CASE("Mono::Utils::GCHandles", "[Mono]")
 
         MonoUtils::FreeGCHandle(handle);
     }
+
+    SECTION("Resurrection-tracking weak GCHandle")
+    {
+        uint32_t handle = MonoUtils::NewWeakGCHandle(obj, true);
+        CHECK(handle != 0);
+
+        MonoObject* retrieved = MonoUtils::GetObjectFromGCHandle(handle);
+        CHECK(retrieved == obj);
+
+        MonoUtils::FreeGCHandle(handle);
+    }
 }

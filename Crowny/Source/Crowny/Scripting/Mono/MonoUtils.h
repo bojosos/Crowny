@@ -23,6 +23,7 @@ namespace Crowny
         static MonoString* ToMonoString(const String& value);
 
         static uint32_t NewGCHandle(MonoObject* object, bool pinned);
+        static uint32_t NewWeakGCHandle(MonoObject* object, bool trackResurrection);
         static void FreeGCHandle(uint32_t handle);
         static MonoObject* GetObjectFromGCHandle(uint32_t handle);
 

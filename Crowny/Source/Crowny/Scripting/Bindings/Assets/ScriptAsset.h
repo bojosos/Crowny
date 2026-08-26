@@ -5,6 +5,11 @@
 
 namespace Crowny
 {
+    enum class ScriptAssetOwnership : uint8_t
+    {
+        EngineOwned,
+        ManagedOwned
+    };
 
     class ScriptAssetManager;
 
@@ -24,12 +29,14 @@ namespace Crowny
         virtual void NotifyAssetDestroyed() {}
         ::MonoClass* GetManagedAssetClass(uint32_t id);
         void SetManagedInstance(MonoObject* instance);
+        void SetOwnership(ScriptAssetOwnership ownership);
         void FreeManagedInstance();
 
         void Destroy();
 
     private:
         uint32_t m_GCHandle = 0;
+        ScriptAssetOwnership m_Ownership = ScriptAssetOwnership::EngineOwned;
     };
 
     template <class ScriptClass, class AssetType, class BaseType = ScriptAssetBase> class TScriptAsset : public ScriptObject<ScriptClass, BaseType>
@@ -61,7 +68,8 @@ namespace Crowny
         virtual void OnManagedInstanceDeleted(bool refresh) override
         {
             this->FreeManagedInstance();
-            this->Destroy();
+            if (!refresh)
+                this->Destroy();
         }
 
         AssetHandle<AssetType> m_Asset;

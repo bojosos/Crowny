@@ -35,7 +35,7 @@ namespace Crowny
             return nullptr;
 
         const AssetHandle<PhysicsMaterial2D> material = CreateRuntimePhysicsMaterial2D(*AssetManager::TryGet());
-        ScriptAssetBase* const scriptAsset = ScriptAssetManager::Get().GetScriptAsset(material, true);
+        ScriptAssetBase* const scriptAsset = ScriptAssetManager::Get().CreateManagedOwnedScriptAsset(material);
         return scriptAsset != nullptr ? scriptAsset->GetManagedInstance() : nullptr;
     }
 

@@ -65,6 +65,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Complete 3D physics with Jolt as default and Bullet as an interchangeable backend. Keep common features backend-neutral; expose backend extensions explicitly instead of weakening the common API.
 - [ ] Vendor physics libraries consistently with existing submodules. Record whether upstream can be pinned directly or requires a Crowny fork for build fixes or stable patches.
 - [ ] Complete C# bindings for 2D and 3D bodies, colliders, materials, layers, queries, contacts, callbacks, joints, assets, and serialization.
+- [x] C# can create UUID-bearing, path-free 2D and 3D physics materials with backend-neutral properties and inline scene serialization. Managed-created material and mesh wrappers use collectible weak ownership and are drained safely at scripting shutdown.
 - [ ] Serialize physics materials and collider overrides without raw paths. Define fallback/default material behavior and version migrations.
 - [ ] Draw collider shapes in the viewport when physics overlays are enabled.
 - [ ] Add Play, Simulate Physics, pause, and step behavior using an isolated temporary scene while preserving the edit scene.

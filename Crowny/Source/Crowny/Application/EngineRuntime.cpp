@@ -357,8 +357,8 @@ namespace Crowny
                 throw;
             }
         }
-        StartOwnedModule<ScriptAssetManager>(m_State->ServiceShutdownActions);
         StartOwnedModule<ScriptObjectManager>(m_State->ServiceShutdownActions);
+        StartOwnedModule<ScriptAssetManager>(m_State->ServiceShutdownActions);
     }
 
     void EngineRuntime::StopRenderer()

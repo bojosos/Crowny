@@ -20,7 +20,7 @@ namespace Crowny
                 return nullptr;
 
             const AssetHandle<Mesh> handle = static_asset_cast<Mesh>(AssetManager::TryGet()->CreateAssetHandle(mesh));
-            ScriptAssetBase* scriptAsset = ScriptAssetManager::Get().GetScriptAsset(handle, true);
+            ScriptAssetBase* scriptAsset = ScriptAssetManager::Get().CreateManagedOwnedScriptAsset(handle);
             return scriptAsset != nullptr ? scriptAsset->GetManagedInstance() : nullptr;
         }
     } // namespace

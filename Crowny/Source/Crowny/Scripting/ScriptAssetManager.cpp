@@ -2,6 +2,7 @@
 
 #include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptObjectManager.h"
 
 namespace Crowny
 {
@@ -12,12 +13,27 @@ namespace Crowny
 
     ScriptAssetBase* ScriptAssetManager::CreateScriptAsset(const AssetHandle<Asset>& asset, MonoObject* instance)
     {
+        return CreateScriptAsset(asset, instance, ScriptAssetOwnership::EngineOwned);
+    }
+
+    ScriptAssetBase* ScriptAssetManager::CreateManagedOwnedScriptAsset(const AssetHandle<Asset>& asset)
+    {
+        ScriptAssetBase* const existing = GetScriptAsset(asset.GetUUID());
+        return existing != nullptr ? existing : CreateScriptAsset(asset, nullptr, ScriptAssetOwnership::ManagedOwned);
+    }
+
+    ScriptAssetBase* ScriptAssetManager::CreateScriptAsset(const AssetHandle<Asset>& asset, MonoObject* instance,
+                                                            ScriptAssetOwnership ownership)
+    {
         if (!asset.IsLoaded() || !asset.HasUUID())
             return nullptr;
         AssetInfo* assetInfo = ScriptInfoManager::Get().GetAssetInfo(asset->GetAssetType());
         if (assetInfo == nullptr)
             return nullptr;
         ScriptAssetBase* scriptAsset = assetInfo->CreateCallback(asset, instance);
+        if (scriptAsset == nullptr)
+            return nullptr;
+        scriptAsset->SetOwnership(ownership);
         m_ScriptAssets[asset.GetUUID()] = scriptAsset;
         return scriptAsset;
     }
@@ -45,6 +61,21 @@ namespace Crowny
         const UUID& uuid = handle.GetUUID();
         delete asset;
         m_ScriptAssets.erase(uuid);
+    }
+
+    void ScriptAssetManager::OnShutdown()
+    {
+        if (ScriptObjectManager::IsStartedUp())
+            ScriptObjectManager::Get().Update();
+
+        for (const auto& [uuid, asset] : m_ScriptAssets)
+        {
+            if (asset == nullptr)
+                continue;
+            asset->NotifyAssetDestroyed();
+            delete asset;
+        }
+        m_ScriptAssets.clear();
     }
 
 } // namespace Crowny

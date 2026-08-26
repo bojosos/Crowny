@@ -114,6 +114,11 @@ namespace Crowny
 
     uint32_t MonoUtils::NewGCHandle(MonoObject* object, bool pinned) { return mono_gchandle_new(object, pinned); }
 
+    uint32_t MonoUtils::NewWeakGCHandle(MonoObject* object, bool trackResurrection)
+    {
+        return mono_gchandle_new_weakref(object, trackResurrection);
+    }
+
     void MonoUtils::FreeGCHandle(uint32_t handle) { mono_gchandle_free(handle); }
 
     MonoObject* MonoUtils::GetObjectFromGCHandle(uint32_t handle) { return mono_gchandle_get_target(handle); }
