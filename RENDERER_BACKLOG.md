@@ -87,7 +87,7 @@ Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-dri
 
 ## 3. GPU resource allocation and caches
 
-Status: reusable object pools, caches, a static geometry suballocator, and persistent immutable-mesh residency delivered
+Status: reusable buffer and texture pools, caches, a static geometry suballocator, and persistent immutable-mesh residency delivered
 
 - [x] Inventory the existing VMA-backed Vulkan allocation, frame upload rings, render-graph reuse/aliasing, descriptor pools, render-target cache, pipeline variants, and persistent Vulkan pipeline cache.
 - [x] Compare Crowny with B3DFramework's frame-delayed transient buffer recycling and suballocation design.
@@ -99,7 +99,7 @@ Status: reusable object pools, caches, a static geometry suballocator, and persi
 - [x] Back immutable Vulkan meshes with persistent vertex/index heap pages grouped by structural vertex layout, index width, and topology. Use stable heap binding IDs, GPU-to-GPU buffer copies, meshlet-index uploads, delayed allocation reuse, per-mesh fallbacks for dynamic/skinned/morphed/OpenGL geometry, and capacity/live/high-water telemetry.
 - [x] Add GPU-only draw-run compaction for heap-resident opaque and masked main shading. Persistent CPU-known bins own deterministic command segments and count offsets; compute compacts visible meshlets into those segments and Vulkan submits them with indirect counts without visibility readback or per-object CPU draws.
 - [ ] Extend GPU draw generation beyond this bounded path. Vulkan baseline, OpenGL, early depth, shadow views, dynamic/skinned/morphed/per-mesh geometry, rejected bins, and strict transparency intentionally retain CPU submission until their ordering and fallback contracts are proven. Transparent GPU radix sorting and toon inverted-hull submission remain separate work.
-- [ ] Add pooled transient images where render-graph lifetime aliasing cannot reuse an allocation.
+- [x] Add pooled transient images where render-graph lifetime aliasing cannot reuse an allocation.
 
 ## Validation
 
@@ -111,4 +111,5 @@ Status: reusable object pools, caches, a static geometry suballocator, and persi
 - [x] Normal Vulkan editor shutdown completed with exit code 0, zero assertions, and zero VMA leak lines; the former 15 leaked storage allocations (~27.01 MB) are fixed.
 - [x] Isolated GPU draw-bin validation: focused layout/graph/shader coverage passed 136 assertions in 11 cases; focused GPU-scene coverage passed 94 assertions in 13 cases; full Release Catch2 passed 25,405 assertions in 351 cases.
 - [x] Updated 54-resource built-in pack loaded successfully; Release render harness passed Vulkan 4/4 and OpenGL 4/4 on Intel Iris Xe, with all 4 cross-backend captures matching.
+- [x] Isolated transient-texture validation: focused ASan `[Renderer][Resources]` coverage passed 94 assertions in 8 cases, including descriptor separation, frame-delayed reuse, budget rejection, trimming, and render-graph retirement.
 - [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.

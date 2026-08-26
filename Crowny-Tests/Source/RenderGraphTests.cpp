@@ -2,6 +2,7 @@
 
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/GpuBufferPool.h"
+#include "Crowny/Renderer/GpuTexturePool.h"
 #include "Crowny/Renderer/RenderGraph.h"
 #include "Crowny/Renderer/RenderGraphResources.h"
 
@@ -61,6 +62,71 @@ namespace
         uint32_t GetBufferSize() const override { return 64; }
         void WriteData(uint32_t, uint32_t, const void*, BufferWriteOptions) override {}
         void ReadData(uint32_t, uint32_t, void*) override {}
+    };
+
+    class TestGpuTexture final : public Texture
+    {
+    public:
+        explicit TestGpuTexture(const TextureDesc& desc) : Texture(desc, true) {}
+
+        PixelData Lock(GpuLockOptions, uint32_t, uint32_t, uint32_t) override { return {}; }
+        void Unlock() override {}
+        void ReadData(PixelData&, uint32_t, uint32_t, uint32_t) override {}
+        bool ReadPixel(uint32_t, uint32_t, void*, size_t, uint32_t, uint32_t, uint32_t) override { return false; }
+        void WriteData(const PixelData&, uint32_t, uint32_t, uint32_t) override {}
+    };
+
+    TextureDesc PooledTextureDesc()
+    {
+        TextureDesc desc;
+        desc.Type = TextureType::TEXTURE_DEFAULT;
+        desc.Shape = TextureShape::TEXTURE_2D;
+        desc.sRGB = false;
+        desc.Width = 16;
+        desc.Height = 8;
+        desc.Depth = 1;
+        desc.MipLevels = 0;
+        desc.Samples = 1;
+        desc.Faces = 1;
+        desc.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+        desc.Format = TextureFormat::RGBA8;
+        return desc;
+    }
+
+    class RetiringTextureAllocator final : public IRenderGraphResourceAllocator
+    {
+    public:
+        Ref<Texture> CreateTexture(StringView, const RenderGraphTextureDesc& desc) override
+        {
+            TextureDesc textureDesc;
+            textureDesc.Shape = desc.Shape;
+            textureDesc.sRGB = false;
+            textureDesc.Width = std::max(desc.Width, 1u);
+            textureDesc.Height = std::max(desc.Height, 1u);
+            textureDesc.Depth = std::max(desc.Depth, 1u);
+            textureDesc.MipLevels = std::max(desc.MipLevels, 1u) - 1u;
+            textureDesc.Samples = std::max(desc.Samples, 1u);
+            textureDesc.Faces = std::max(desc.Layers, 1u);
+            textureDesc.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+            textureDesc.Format = desc.Format;
+            Ref<TestGpuTexture> texture = CreateRef<TestGpuTexture>(textureDesc);
+            LastCreated = texture.get();
+            return texture;
+        }
+
+        Ref<GenericGpuBuffer> CreateBuffer(StringView, const RenderGraphBufferDesc&) override { return nullptr; }
+
+        void ReleaseTexture(const RenderGraphTextureDesc& desc, Ref<Texture>&& texture) override
+        {
+            ReleasedDescs.push_back(desc);
+            ReleasedTextures.push_back(texture.get());
+            ReleasedResources.push_back(std::move(texture));
+        }
+
+        Texture* LastCreated = nullptr;
+        Vector<RenderGraphTextureDesc> ReleasedDescs;
+        Vector<Texture*> ReleasedTextures;
+        Vector<Ref<Texture>> ReleasedResources;
     };
 
     class TestRenderTarget final : public RenderTarget
@@ -500,4 +566,129 @@ TEST_CASE("GpuBufferPool delays whole-buffer reuse until in-flight frames retire
     CHECK(reused.get() == identity);
     CHECK(pool.GetStats().Reused == 1);
     CHECK(pool.GetStats().RetainedBytes == 0);
+}
+
+TEST_CASE("GpuTexturePool delays reuse and ignores debug names", "[Renderer][Resources]")
+{
+    GpuTexturePool pool(2, 1024 * 1024);
+    TextureDesc desc = PooledTextureDesc();
+    desc.DebugName = "FirstLogicalResource";
+    Ref<TestGpuTexture> concrete = CreateRef<TestGpuTexture>(desc);
+    TestGpuTexture* identity = concrete.get();
+    Ref<Texture> texture = concrete;
+    concrete = nullptr;
+
+    pool.BeginFrame(10);
+    pool.Release(std::move(texture));
+    CHECK(pool.GetStats().RetiredTextures == 1);
+    CHECK(pool.GetStats().AvailableTextures == 0);
+
+    pool.BeginFrame(11);
+    CHECK(pool.GetStats().RetiredTextures == 1);
+    pool.BeginFrame(12);
+    CHECK(pool.GetStats().RetiredTextures == 0);
+    CHECK(pool.GetStats().AvailableTextures == 1);
+
+    desc.DebugName = "SecondLogicalResource";
+    Ref<Texture> reused = pool.Acquire(desc);
+    REQUIRE(reused);
+    CHECK(reused.get() == identity);
+    CHECK(pool.GetStats().Reused == 1);
+    CHECK(pool.GetStats().RetainedBytes == 0);
+}
+
+TEST_CASE("GpuTexturePool separates every resource-creation field", "[Renderer][Resources]")
+{
+    GpuTexturePool pool(2, 64ull * 1024ull * 1024ull);
+    const TextureDesc base = PooledTextureDesc();
+    Vector<TextureDesc> descriptors(13, base);
+    descriptors[1].Type = TextureType::TEXTURE_SPRITE;
+    descriptors[2].Shape = TextureShape::TEXTURE_3D;
+    descriptors[3].sRGB = true;
+    descriptors[4].ReadWrite = true;
+    descriptors[5].GenerateMipmaps = true;
+    descriptors[6].MipLevels = 1;
+    descriptors[7].Samples = 2;
+    descriptors[8].Faces = 2;
+    descriptors[9].Width = 32;
+    descriptors[10].Height = 16;
+    descriptors[11].Depth = 2;
+    descriptors[12].Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
+    descriptors.push_back(base);
+    descriptors.back().Format = TextureFormat::RG16F;
+
+    Vector<TestGpuTexture*> identities;
+    identities.reserve(descriptors.size());
+    pool.BeginFrame(20);
+    for (const TextureDesc& desc : descriptors)
+    {
+        Ref<TestGpuTexture> concrete = CreateRef<TestGpuTexture>(desc);
+        identities.push_back(concrete.get());
+        Ref<Texture> texture = concrete;
+        concrete = nullptr;
+        pool.Release(std::move(texture));
+    }
+
+    pool.BeginFrame(22);
+    for (size_t index = 0; index < descriptors.size(); index++)
+    {
+        Ref<Texture> texture = pool.Acquire(descriptors[index]);
+        REQUIRE(texture);
+        CHECK(texture.get() == identities[index]);
+    }
+    CHECK(pool.GetStats().Reused == descriptors.size());
+    CHECK(pool.GetStats().RetainedBytes == 0);
+}
+
+TEST_CASE("GpuTexturePool enforces its retained-byte budget and trims ready textures", "[Renderer][Resources]")
+{
+    TextureDesc desc = PooledTextureDesc();
+    GpuTexturePool rejectedPool(2, 128);
+    rejectedPool.BeginFrame(1);
+    Ref<Texture> oversized = CreateRef<TestGpuTexture>(desc);
+    rejectedPool.Release(std::move(oversized));
+    CHECK(rejectedPool.GetStats().Rejected == 1);
+    CHECK(rejectedPool.GetStats().RetainedBytes == 0);
+
+    GpuTexturePool trimmedPool(2, 1024);
+    trimmedPool.BeginFrame(1);
+    Ref<Texture> retained = CreateRef<TestGpuTexture>(desc);
+    trimmedPool.Release(std::move(retained));
+    trimmedPool.BeginFrame(3);
+    CHECK(trimmedPool.GetStats().AvailableTextures == 1);
+    trimmedPool.SetRetainedByteBudget(0);
+    CHECK(trimmedPool.GetStats().AvailableTextures == 0);
+    CHECK(trimmedPool.GetStats().RetainedBytes == 0);
+}
+
+TEST_CASE("RenderGraph retires replaced physical textures through its allocator", "[Renderer][Resources][RenderGraph]")
+{
+    RenderGraph graph;
+    RetiringTextureAllocator allocator;
+    RenderGraphResourceRegistry resources(2, &allocator);
+    RenderGraphTextureDesc firstDesc = ColorTexture();
+    const RenderGraphResourceHandle first = graph.CreateTexture("First", firstDesc);
+    graph.AddPass("WriteFirst", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) { builder.Write(first); },
+                  [&](RenderGraphContext& context) { REQUIRE(context.GetTexture(first)); });
+    REQUIRE(graph.Compile().Succeeded);
+    REQUIRE(resources.BeginFrame(graph.GetCompileResult(), 1, 1));
+    REQUIRE(graph.Execute(nullptr, &resources));
+    Texture* firstIdentity = allocator.LastCreated;
+    REQUIRE(firstIdentity != nullptr);
+    resources.EndFrame();
+
+    graph.Reset();
+    RenderGraphTextureDesc secondDesc = firstDesc;
+    secondDesc.Width /= 2u;
+    const RenderGraphResourceHandle second = graph.CreateTexture("Second", secondDesc);
+    graph.AddPass("WriteSecond", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) { builder.Write(second); },
+                  [&](RenderGraphContext& context) { REQUIRE(context.GetTexture(second)); });
+    REQUIRE(graph.Compile().Succeeded);
+    REQUIRE(resources.BeginFrame(graph.GetCompileResult(), 3, 1));
+    REQUIRE(allocator.ReleasedTextures.size() == 1);
+    CHECK(allocator.ReleasedTextures[0] == firstIdentity);
+    CHECK(allocator.ReleasedDescs[0] == firstDesc);
+    REQUIRE(graph.Execute(nullptr, &resources));
+    CHECK(allocator.LastCreated != firstIdentity);
+    resources.EndFrame();
 }
