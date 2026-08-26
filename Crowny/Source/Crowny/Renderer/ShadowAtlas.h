@@ -73,7 +73,17 @@ namespace Crowny
     class ShadowUpdateScheduler
     {
     public:
-        static void Schedule(const ShadowUpdateRequest* requests, uint32_t requestCount, const ShadowUpdateBudget& budget,
-                             Vector<RenderLightHandle>& scheduled, uint64_t& scheduledPixels);
+        void Schedule(const ShadowUpdateRequest* requests, uint32_t requestCount, const ShadowUpdateBudget& budget,
+                      Vector<RenderLightHandle>& scheduled, uint64_t& scheduledPixels);
+
+    private:
+        struct Candidate
+        {
+            const ShadowUpdateRequest* Request = nullptr;
+            float Score = 0.0f;
+            uint32_t SourceOrdinal = 0;
+        };
+
+        Vector<Candidate> m_Candidates;
     };
 } // namespace Crowny

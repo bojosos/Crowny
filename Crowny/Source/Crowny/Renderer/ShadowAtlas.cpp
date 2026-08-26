@@ -149,26 +149,28 @@ namespace Crowny
         m_FreeBlocks[level].push_back(block);
     }
 
-    void ShadowUpdateScheduler::Schedule(const ShadowUpdateRequest* requests, uint32_t requestCount,
-                                         const ShadowUpdateBudget& budget, Vector<RenderLightHandle>& scheduled,
-                                         uint64_t& scheduledPixels)
+    void ShadowUpdateScheduler::Schedule(const ShadowUpdateRequest* requests, uint32_t requestCount, const ShadowUpdateBudget& budget,
+                                         Vector<RenderLightHandle>& scheduled, uint64_t& scheduledPixels)
     {
         scheduled.clear();
         scheduledPixels = 0;
-        Vector<const ShadowUpdateRequest*> candidates;
-        candidates.reserve(requestCount);
+        m_Candidates.clear();
+        m_Candidates.reserve(requestCount);
         for (uint32_t index = 0; requests != nullptr && index < requestCount; index++)
-            if (requests[index].Light.IsValid() && requests[index].RequiresRedraw &&
-                requests[index].Type != LightType::Directional)
-                candidates.push_back(&requests[index]);
-        std::stable_sort(candidates.begin(), candidates.end(), [](const ShadowUpdateRequest* first, const ShadowUpdateRequest* second) {
-            const float firstScore = first->Importance / static_cast<float>(ShadowPixelCost(*first));
-            const float secondScore = second->Importance / static_cast<float>(ShadowPixelCost(*second));
-            return firstScore > secondScore;
+            if (requests[index].Light.IsValid() && requests[index].RequiresRedraw && requests[index].Type != LightType::Directional)
+                m_Candidates.push_back(
+                  { &requests[index], requests[index].Importance / static_cast<float>(ShadowPixelCost(requests[index])), index });
+        std::sort(m_Candidates.begin(), m_Candidates.end(), [](const Candidate& first, const Candidate& second) {
+            if (first.Score > second.Score)
+                return true;
+            if (second.Score > first.Score)
+                return false;
+            return first.SourceOrdinal < second.SourceOrdinal;
         });
 
-        for (const ShadowUpdateRequest* request : candidates)
+        for (const Candidate& candidate : m_Candidates)
         {
+            const ShadowUpdateRequest* request = candidate.Request;
             if (scheduled.size() >= budget.MaximumLocalUpdates)
                 break;
             const uint64_t pixels = ShadowPixelCost(*request);

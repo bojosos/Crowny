@@ -1271,6 +1271,7 @@ namespace Crowny
             GpuDrawList DepthDrawList;
             UnorderedSet<uint32_t> PendingShadowUpdates;
             UnorderedSet<uint32_t> RenderedShadowLights;
+            ShadowUpdateScheduler ShadowScheduler;
             Vector<RenderLightHandle> ScheduledShadows;
             Vector<ShadowUpdateRequest> ShadowBudgetRequests;
             UnorderedSet<uint32_t> ScheduledShadowSet;
@@ -2599,8 +2600,8 @@ namespace Crowny
                 copy.RequiresRedraw = copy.RequiresRedraw || pendingShadowUpdates.contains(copy.Light.GetValue());
                 budgetRequests.push_back(copy);
             }
-            ShadowUpdateScheduler::Schedule(budgetRequests.data(), static_cast<uint32_t>(budgetRequests.size()), mediumBudget, scheduledShadows,
-                                            scheduledShadowPixels);
+            threadResources.ShadowScheduler.Schedule(budgetRequests.data(), static_cast<uint32_t>(budgetRequests.size()), mediumBudget,
+                                                     scheduledShadows, scheduledShadowPixels);
             UnorderedSet<uint32_t>& scheduledSet = threadResources.ScheduledShadowSet;
             scheduledSet.clear();
             scheduledSet.reserve(scheduledShadows.size());
