@@ -277,6 +277,7 @@ namespace Crowny
             info.Width = basis.Width;
             info.Height = basis.Height;
             info.Depth = 1;
+            info.Layers = basis.Layers;
             info.Faces = basis.Faces;
             info.MipLevels = basis.Levels;
             info.Channels = basis.Components;
@@ -469,7 +470,7 @@ namespace Crowny
                     return CanceledResult(ImageLoadStage::Decode);
                 if (!decoded || transcode.Subresources.empty())
                     return ErrorResult(ImageDiagnosticCode::DecodeFailed, ImageLoadStage::Decode, "KTX2 decode failed: " + error);
-                result.Pixels = transcode.Subresources.front();
+                result.Pixels = transcode.Subresources.front().Pixels;
                 result.Info.PixelFormat = TextureFormat::RGBA8;
                 result.Info.Channels = 4;
                 result.Info.BitDepth = 8;

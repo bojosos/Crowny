@@ -50,9 +50,19 @@ namespace Crowny
             desc.Width = image.Info.Width;
             desc.Height = image.Info.Height;
             desc.Depth = 1;
-            desc.Faces = image.Info.Faces;
-            desc.Shape = image.Info.Faces == 6 ? TextureShape::TEXTURE_CUBE : TextureShape::TEXTURE_2D;
-            desc.MipLevels = (options->MaxMip == 0 ? image.Info.MipLevels : std::min(image.Info.MipLevels, options->MaxMip + 1u)) - 1u;
+            const uint64_t sliceCount = static_cast<uint64_t>(image.Info.Layers) * image.Info.Faces;
+            if (sliceCount == 0 || sliceCount > std::numeric_limits<uint32_t>::max())
+            {
+                CW_ENGINE_ERROR("Could not import texture '{}': KTX2 layer and face count is out of range", filepath);
+                return nullptr;
+            }
+            desc.Faces = static_cast<uint32_t>(sliceCount);
+            desc.Shape = image.Info.GetRuntimeShape();
+            const uint64_t requestedLevels = options->MaxMip == 0
+                                               ? image.Info.MipLevels
+                                               : static_cast<uint64_t>(options->MaxMip) + 1u;
+            const uint32_t importedLevels = static_cast<uint32_t>(std::min<uint64_t>(image.Info.MipLevels, requestedLevels));
+            desc.MipLevels = importedLevels - 1u;
             desc.Format = image.Info.PixelFormat;
             desc.sRGB = image.Info.SRGB;
             desc.DebugName = filepath.filename().string();
