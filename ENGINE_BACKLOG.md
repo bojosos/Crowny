@@ -103,6 +103,7 @@ This is the durable record of the requested engine work. A checked item is merge
 
 ## Editor experience
 
+- [x] Defer Asset Browser rename and drag/drop moves until list, grid, and tree traversal finishes, then reconcile exact-path selection after a successful move.
 - [ ] Polish the Asset Browser search and properties layout after ImGui updates. Cover empty states, focus, keyboard navigation, filters, breadcrumbs, thumbnails, context actions, multi-selection, and no-stack-imbalance crashes.
 - [ ] Add Shift range selection and Ctrl toggle selection to the hierarchy. Complete multi-entity/component editing, mixed-value display, common-component presentation, gizmo rules, and safe removal/addition across a selection.
 - [ ] Finish undo/redo for entity/component creation and deletion, reparenting, transforms/gizmos, multi-edit, text edits, sliders, and drag transactions. One gesture must produce one understandable command.

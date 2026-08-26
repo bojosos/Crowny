@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Panels/AssetBrowserOperations.h"
 #include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
@@ -85,8 +86,9 @@ namespace Crowny
         void RecalculateDirectoryEntries();
         void ClearSelection();
         void ReconcileSelection(const std::optional<Path>& preferredStartPath = {}, const std::optional<Path>& preferredEndPath = {});
+        void ApplyDeferredOperations();
         const DisplayList& GetDisplayList();
-        void UpdateDisplayList();
+        void UpdateDisplayList(const std::optional<Path>& preferredStartPath = {}, const std::optional<Path>& preferredEndPath = {});
 
         void GoForward();
         void GoBackward();
@@ -128,6 +130,7 @@ namespace Crowny
 
         Path m_RenamingPath;
         String m_RenamingText;
+        AssetBrowserOperationQueue m_DeferredOperations;
 
         std::function<void(const Path&)> m_SetSelectedPathCallback;
     };

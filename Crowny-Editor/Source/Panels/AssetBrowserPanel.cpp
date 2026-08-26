@@ -220,6 +220,7 @@ namespace Crowny
 
         // Files
         DrawFiles();
+        ApplyDeferredOperations();
 
         ImGui::EndChild();
         ImGui::Separator();
@@ -823,17 +824,24 @@ namespace Crowny
     }
 
     // Currently the search is performed again. Since we kinda know the changes this might not be necessary.
-    void AssetBrowserPanel::UpdateDisplayList()
+    void AssetBrowserPanel::UpdateDisplayList(const std::optional<Path>& preferredStartPath,
+                                              const std::optional<Path>& preferredEndPath)
     {
         if (m_CurrentDirectoryEntry == nullptr)
             return;
 
-        std::optional<Path> selectionStartPath;
-        std::optional<Path> selectionEndPath;
+        std::optional<Path> selectionStartPath = preferredStartPath;
+        std::optional<Path> selectionEndPath = preferredEndPath;
         if (m_SelectionStartIndex < m_DisplayList.size())
-            selectionStartPath = m_DisplayList[m_SelectionStartIndex]->Filepath;
+        {
+            if (!selectionStartPath)
+                selectionStartPath = m_DisplayList[m_SelectionStartIndex]->Filepath;
+        }
         if (m_SelectionEndIndex < m_DisplayList.size())
-            selectionEndPath = m_DisplayList[m_SelectionEndIndex]->Filepath;
+        {
+            if (!selectionEndPath)
+                selectionEndPath = m_DisplayList[m_SelectionEndIndex]->Filepath;
+        }
 
         const Vector<AssetType> assetTypes = GetActiveAssetTypes();
         if (!m_SearchString.empty())
@@ -863,6 +871,28 @@ namespace Crowny
         SortDisplayList(m_DisplayList);
         m_RequiresSort = false;
         ReconcileSelection(selectionStartPath, selectionEndPath);
+    }
+
+    void AssetBrowserPanel::ApplyDeferredOperations()
+    {
+        Vector<AssetBrowserMoveOperation> operations = m_DeferredOperations.TakePending();
+        if (operations.empty())
+            return;
+
+        std::optional<Path> preferredSelection;
+        for (const AssetBrowserMoveOperation& operation : operations)
+        {
+            Ref<LibraryEntry> movingEntry = ProjectLibrary::Get().FindEntry(operation.Source);
+            ProjectLibrary::Get().MoveEntry(operation.Source, operation.Destination);
+
+            const bool moveSucceeded = movingEntry != nullptr && movingEntry->Filepath == operation.Destination;
+            const std::optional<Path> remappedSelection =
+              RemapAssetBrowserSelectionAfterMove(m_SelectionSet, operation, moveSucceeded);
+            if (remappedSelection)
+                preferredSelection = remappedSelection;
+        }
+
+        UpdateDisplayList(preferredSelection, preferredSelection);
     }
 
     void AssetBrowserPanel::HandleOpen(LibraryEntry* entry)
@@ -1015,10 +1045,7 @@ namespace Crowny
                 {
                     dropping = true;
                     if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
-                    {
-                        ProjectLibrary::Get().MoveEntry(fileEntry->Filepath, path / fileEntry->Filepath.filename());
-                        UpdateDisplayList();
-                    }
+                        m_DeferredOperations.EnqueueMove(fileEntry->Filepath, path / fileEntry->Filepath.filename());
                     ImGui::EndDragDropTarget();
                 }
 
@@ -1045,12 +1072,12 @@ namespace Crowny
                 if (m_RenamingPath == path)
                 {
                     const auto completeRename = [&]() {
-                        if (m_RenamingPath.filename() != m_RenamingText)
-                        {
-                            const Path newPath = EditorUtils::GetUniquePath(m_RenamingPath.parent_path() / m_RenamingText);
-                            ProjectLibrary::Get().MoveEntry(m_RenamingPath, newPath);
-                            UpdateDisplayList();
-                        }
+                        if (m_RenamingPath.empty())
+                            return;
+                        const Path renamingPath = m_RenamingPath;
+                        if (renamingPath.filename() != m_RenamingText)
+                            m_DeferredOperations.EnqueueMove(
+                              renamingPath, EditorUtils::GetUniquePath(renamingPath.parent_path() / m_RenamingText));
                         m_RenamingPath.clear();
                         m_RenamingText.clear();
                     };
@@ -1144,24 +1171,12 @@ namespace Crowny
             else // This file is being renamed
             {
                 auto completeRename = [&]() {
-                    if (m_RenamingPath.filename() == m_RenamingText)
-                    {
-                        m_RenamingPath.clear();
-                        m_RenamingText.clear();
+                    if (m_RenamingPath.empty())
                         return;
-                    }
-                    Path newPath = EditorUtils::GetUniquePath(m_RenamingPath.parent_path() / m_RenamingText);
-
-                    ProjectLibrary::Get().MoveEntry(m_RenamingPath, newPath);
-                    UpdateDisplayList();
-                    // TODO: This is inefficient
-                    const Ref<LibraryEntry>& entry = ProjectLibrary::Get().FindEntry(newPath);
-                    CW_ENGINE_ASSERT(entry);
-                    if (entry) // Select the folder after it is renamed
-                        m_SelectionSet.insert(entry->Filepath);
-                    // This doesn't work well with sort as the entries move around
-                    m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
-
+                    const Path renamingPath = m_RenamingPath;
+                    if (renamingPath.filename() != m_RenamingText)
+                        m_DeferredOperations.EnqueueMove(
+                          renamingPath, EditorUtils::GetUniquePath(renamingPath.parent_path() / m_RenamingText));
                     m_RenamingPath.clear();
                     m_RenamingText.clear();
                 };
@@ -1215,13 +1230,7 @@ namespace Crowny
                 {
                     dropping = true;
                     if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
-                    {
-                        const Path& payloadPath = fileEntry->Filepath;
-                        const Path filename = payloadPath.filename();
-                        ProjectLibrary::Get().MoveEntry(payloadPath,
-                                                        path / filename); // Perhaps I need to end here? Or rather I should change the display list
-                        UpdateDisplayList();
-                    }
+                        m_DeferredOperations.EnqueueMove(fileEntry->Filepath, path / fileEntry->Filepath.filename());
                     ImGui::EndDragDropTarget();
                 }
             }
@@ -1275,7 +1284,6 @@ namespace Crowny
                     }
                 }
             }
-            // TODO: Fix this with drag and drop. It will crash due to the MoveEntry call
             if (!dropping && ImGui::BeginPopupContextItem(entry->Filepath.string().c_str())) // Right click on a file
             {
                 ShowContextMenuContents(entry.get());
@@ -1363,11 +1371,7 @@ namespace Crowny
                 if (ImGui::BeginDragDropTarget())
                 {
                     if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
-                    {
-                        // TODO: Make variant that takes in file entry too. Should be a bit faster.
-                        ProjectLibrary::Get().MoveEntry(fileEntry->Filepath, cur->Filepath / fileEntry->Filepath.filename());
-                        UpdateDisplayList();
-                    }
+                        m_DeferredOperations.EnqueueMove(fileEntry->Filepath, cur->Filepath / fileEntry->Filepath.filename());
                     ImGui::EndDragDropTarget();
                 }
                 if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
@@ -1402,6 +1406,7 @@ namespace Crowny
         display(root, m_LastCurrentDirectory != m_CurrentDirectoryEntry->ElementNameHash ? 0 : -1);
         m_LastCurrentDirectory = m_CurrentDirectoryEntry->ElementNameHash;
         ImGui::End();
+        ApplyDeferredOperations();
     }
 
     void AssetBrowserPanel::ShowContextMenuContents(LibraryEntry* entry, bool isTreeView)
