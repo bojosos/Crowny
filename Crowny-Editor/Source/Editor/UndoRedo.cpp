@@ -100,62 +100,104 @@ namespace Crowny
     void UndoRedo::BeginComponentScope(std::function<Ref<UndoAction>()> factory)
     {
         if (!m_InInteraction)
+        {
             m_Factory = std::move(factory);
+            m_RetainedFactory = nullptr;
+        }
+    }
+
+    bool UndoRedo::BeginComponentScope(const Ref<RetainedUndoActionFactory>& factory)
+    {
+        if (m_InInteraction)
+            return false;
+
+        m_Factory = nullptr;
+        m_RetainedFactory = factory;
+        return true;
     }
 
     void UndoRedo::EndComponentScope()
     {
         if (!m_InInteraction)
+        {
             m_Factory = nullptr;
+            m_RetainedFactory = nullptr;
+        }
     }
 
     void UndoRedo::OnItemInteract() { OnItemInteract(ImGui::IsItemEdited()); }
 
     void UndoRedo::OnItemInteract(bool valueChanged)
     {
-        if (!m_Factory || GImGui == nullptr || GImGui->LastItemData.ID == 0u)
+        if (GImGui == nullptr)
             return;
 
-        const uint32_t itemId = GImGui->LastItemData.ID;
-        const bool active = ImGui::IsItemActive();
-        const bool activated = ImGui::IsItemActivated();
-        const bool changed = valueChanged || ImGui::IsItemEdited();
+        OnItemInteract({ GImGui->LastItemData.ID, ImGui::IsItemActive(), ImGui::IsItemActivated(), ImGui::IsItemDeactivatedAfterEdit(),
+                         valueChanged || ImGui::IsItemEdited() });
+    }
+
+    void UndoRedo::OnItemInteract(const UndoItemInteraction& interaction)
+    {
+        if (!HasComponentActionFactory() || interaction.ItemId == 0u)
+            return;
 
         if (m_InInteraction)
         {
-            if (itemId != m_InteractionItemId)
+            if (interaction.ItemId != m_InteractionItemId)
                 return;
 
-            m_InteractionChanged |= changed;
-            if (ImGui::IsItemDeactivatedAfterEdit() || (!active && !activated))
+            m_InteractionChanged |= interaction.Changed;
+            if (interaction.DeactivatedAfterEdit || (!interaction.Active && !interaction.Activated))
                 FinishInteraction();
             return;
         }
 
-        if (activated && active)
+        if (interaction.Activated && interaction.Active)
         {
             m_InInteraction = true;
-            m_InteractionItemId = itemId;
-            m_InteractionChanged = changed;
-            if (ImGui::IsItemDeactivatedAfterEdit())
+            m_InteractionItemId = interaction.ItemId;
+            m_InteractionChanged = interaction.Changed;
+            if (interaction.DeactivatedAfterEdit)
                 FinishInteraction();
         }
-        else if (changed)
+        else if (interaction.Changed)
         {
-            RegisterAction(m_Factory());
+            RegisterAction(CreateComponentAction());
         }
+    }
+
+    bool UndoRedo::HasComponentActionFactory() const { return m_RetainedFactory != nullptr || static_cast<bool>(m_Factory); }
+
+    Ref<UndoAction> UndoRedo::CreateComponentAction() const
+    {
+        if (m_RetainedFactory != nullptr)
+            return m_RetainedFactory->Build();
+        return m_Factory ? m_Factory() : Ref<UndoAction>{};
+    }
+
+    void UndoRedo::FinishComponentScope(const Ref<RetainedUndoActionFactory>& factory)
+    {
+        if (m_RetainedFactory == factory)
+            FinishInteraction();
+    }
+
+    void UndoRedo::CancelComponentScope(const Ref<RetainedUndoActionFactory>& factory)
+    {
+        if (m_RetainedFactory == factory)
+            CancelInteraction();
     }
 
     void UndoRedo::FinishInteraction()
     {
-        if (m_InteractionChanged && m_Factory)
-            RegisterAction(m_Factory());
+        if (m_InteractionChanged && HasComponentActionFactory())
+            RegisterAction(CreateComponentAction());
         CancelInteraction();
     }
 
     void UndoRedo::CancelInteraction()
     {
         m_Factory = nullptr;
+        m_RetainedFactory = nullptr;
         m_InteractionItemId = 0u;
         m_InInteraction = false;
         m_InteractionChanged = false;

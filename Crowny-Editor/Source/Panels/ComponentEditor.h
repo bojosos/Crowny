@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Crowny/Ecs/Entity.h"
-#include "Editor/UndoRedo.h"
+#include "Editor/ComponentUndoSnapshot.h"
 
 #include <imgui.h>
 
@@ -59,6 +59,7 @@ namespace Crowny
             String name;
             Callback widget;
             ActionCallback create, destroy;
+            Ref<RetainedUndoActionFactory> undoFactory;
         };
 
     public:
@@ -73,44 +74,62 @@ namespace Crowny
 
         template <class Component> ComponentInfo& RegisterComponent(const String& name, typename ComponentInfo::SingleCallback widget)
         {
-            auto wrappedWidget = [widget](Entity primary, const Vector<Entity>& entities) {
-                if (entities.size() != 1u)
-                {
-                    ImGui::Columns(1);
-                    ImGui::TextDisabled("This component cannot be edited across multiple entities yet.");
-                    ImGui::Columns(2);
-                    return;
-                }
-                if constexpr (std::is_same_v<Component, MonoScriptComponent>)
-                {
+            if constexpr (std::is_same_v<Component, MonoScriptComponent>)
+            {
+                auto wrappedWidget = [widget](Entity primary, const Vector<Entity>& entities) {
+                    if (entities.size() != 1u)
+                    {
+                        ImGui::Columns(1);
+                        ImGui::TextDisabled("This component cannot be edited across multiple entities yet.");
+                        ImGui::Columns(2);
+                        return;
+                    }
                     ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(primary);
                     UndoRedo::Get().BeginComponentScope([primary, snapshot]() mutable -> Ref<UndoAction> {
                         return CreateRef<ChangeScriptComponentAction>(primary, std::move(snapshot));
                     });
-                }
-                else
-                {
-                    Component snapshot = primary.GetComponent<Component>();
-                    UndoRedo::Get().BeginComponentScope([primary, snapshot]() -> Ref<UndoAction> {
-                        return CreateRef<ChangeComponentAction<Component>>(primary, snapshot, primary.GetComponent<Component>());
-                    });
-                }
-                widget(primary);
-                UndoRedo::Get().EndComponentScope();
-            };
-            return RegisterComponent<Component>(ComponentInfo{
-              name,
-              wrappedWidget,
-              ComponentAddAction<Component>,
-              ComponentRemoveAction<Component>,
-            });
+                    widget(primary);
+                    UndoRedo::Get().EndComponentScope();
+                };
+                return RegisterComponent<Component>(ComponentInfo{
+                  name,
+                  wrappedWidget,
+                  ComponentAddAction<Component>,
+                  ComponentRemoveAction<Component>,
+                });
+            }
+            else
+            {
+                Ref<ComponentUndoSnapshot<Component>> snapshots = CreateRef<ComponentUndoSnapshot<Component>>();
+                auto wrappedWidget = [widget, snapshots](Entity primary, const Vector<Entity>& entities) {
+                    if (entities.size() != 1u)
+                    {
+                        ImGui::Columns(1);
+                        ImGui::TextDisabled("This component cannot be edited across multiple entities yet.");
+                        ImGui::Columns(2);
+                        return;
+                    }
+                    UndoRedo& undoRedo = UndoRedo::Get();
+                    if (undoRedo.BeginComponentScope(snapshots))
+                        snapshots->Capture(entities);
+                    widget(primary);
+                    undoRedo.EndComponentScope();
+                };
+                return RegisterComponent<Component>(ComponentInfo{
+                  name,
+                  wrappedWidget,
+                  ComponentAddAction<Component>,
+                  ComponentRemoveAction<Component>,
+                  snapshots,
+                });
+            }
         }
 
         template <class Component> ComponentInfo& RegisterComponent(const String& name)
         {
-            auto widget = [](Entity primary, const Vector<Entity>& entities) {
-                if constexpr (std::is_same_v<Component, MonoScriptComponent>)
-                {
+            if constexpr (std::is_same_v<Component, MonoScriptComponent>)
+            {
+                auto widget = [](Entity primary, const Vector<Entity>& entities) {
                     if (entities.size() != 1u)
                     {
                         ComponentSelectionEditorWidget<Component>(primary, entities);
@@ -120,28 +139,34 @@ namespace Crowny
                     UndoRedo::Get().BeginComponentScope([primary, snapshot]() mutable -> Ref<UndoAction> {
                         return CreateRef<ChangeScriptComponentAction>(primary, std::move(snapshot));
                     });
-                }
-                else
-                {
-                    Vector<Pair<Entity, Component>> snapshots;
-                    snapshots.reserve(entities.size());
-                    for (Entity entity : entities)
-                    {
-                        if (entity && entity.HasComponent<Component>())
-                            snapshots.emplace_back(entity, entity.GetComponent<Component>());
-                    }
-                    UndoRedo::Get().BeginComponentScope(
-                      [snapshots]() -> Ref<UndoAction> { return CreateRef<ChangeComponentsAction<Component>>(snapshots); });
-                }
-                ComponentSelectionEditorWidget<Component>(primary, entities);
-                UndoRedo::Get().EndComponentScope();
-            };
-            return RegisterComponent<Component>(ComponentInfo{
-              name,
-              widget,
-              ComponentAddAction<Component>,
-              ComponentRemoveAction<Component>,
-            });
+                    ComponentSelectionEditorWidget<Component>(primary, entities);
+                    UndoRedo::Get().EndComponentScope();
+                };
+                return RegisterComponent<Component>(ComponentInfo{
+                  name,
+                  widget,
+                  ComponentAddAction<Component>,
+                  ComponentRemoveAction<Component>,
+                });
+            }
+            else
+            {
+                Ref<ComponentUndoSnapshot<Component>> snapshots = CreateRef<ComponentUndoSnapshot<Component>>();
+                auto widget = [snapshots](Entity primary, const Vector<Entity>& entities) {
+                    UndoRedo& undoRedo = UndoRedo::Get();
+                    if (undoRedo.BeginComponentScope(snapshots))
+                        snapshots->Capture(entities);
+                    ComponentSelectionEditorWidget<Component>(primary, entities);
+                    undoRedo.EndComponentScope();
+                };
+                return RegisterComponent<Component>(ComponentInfo{
+                  name,
+                  widget,
+                  ComponentAddAction<Component>,
+                  ComponentRemoveAction<Component>,
+                  snapshots,
+                });
+            }
         }
 
         void PushComponentGroup(const String& name) { m_CurrentComponentGroup = name; }
@@ -151,6 +176,8 @@ namespace Crowny
         void Render(Entity primary, const Vector<Entity>& entities);
 
     private:
+        void ResetUndoSnapshots(bool finishInteraction);
+
         bool EntityHasComponent(const entt::registry& registry, const Entity& entity, const ComponentTypeID tid) const
         {
             for (auto [id, storage] : registry.storage())
@@ -166,6 +193,9 @@ namespace Crowny
         Map<String, Map<ComponentTypeID, ComponentInfo>> m_ComponentInfos;
         String m_CurrentComponentGroup;
         Vector<Entity> m_SelectionScratch;
+        Vector<UUID> m_UndoSelection;
+        Scene* m_UndoScene = nullptr;
+        Ref<ComponentUndoSnapshot<TagComponent>> m_TagSnapshots = CreateRef<ComponentUndoSnapshot<TagComponent>>();
     };
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity entity);

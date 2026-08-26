@@ -61,6 +61,23 @@ namespace Crowny
         Vector<Ref<UndoAction>> m_Actions;
     };
 
+    class RetainedUndoActionFactory : public RefCounted
+    {
+    public:
+        virtual ~RetainedUndoActionFactory() = default;
+        virtual Ref<UndoAction> Build() const = 0;
+        virtual void Reset() = 0;
+    };
+
+    struct UndoItemInteraction
+    {
+        uint32_t ItemId = 0u;
+        bool Active = false;
+        bool Activated = false;
+        bool DeactivatedAfterEdit = false;
+        bool Changed = false;
+    };
+
     class UndoRedo : public Module<UndoRedo>
     {
     public:
@@ -79,18 +96,25 @@ namespace Crowny
         void SetActionAppliedCallback(ActionAppliedCallback callback) { m_ActionApplied = std::move(callback); }
 
         void BeginComponentScope(std::function<Ref<UndoAction>()> factory);
+        bool BeginComponentScope(const Ref<RetainedUndoActionFactory>& factory);
         void EndComponentScope();
         void OnItemInteract();
         void OnItemInteract(bool valueChanged);
+        void OnItemInteract(const UndoItemInteraction& interaction);
+        void FinishComponentScope(const Ref<RetainedUndoActionFactory>& factory);
+        void CancelComponentScope(const Ref<RetainedUndoActionFactory>& factory);
         void CancelInteraction();
 
     private:
+        bool HasComponentActionFactory() const;
+        Ref<UndoAction> CreateComponentAction() const;
         void FinishInteraction();
 
         static constexpr size_t MaxHistorySize = 256u;
         Vector<Ref<UndoAction>> m_UndoStack;
         Vector<Ref<UndoAction>> m_RedoStack;
         std::function<Ref<UndoAction>()> m_Factory;
+        Ref<RetainedUndoActionFactory> m_RetainedFactory;
         ActionAppliedCallback m_ActionApplied;
         uint32_t m_InteractionItemId = 0u;
         bool m_InInteraction = false;

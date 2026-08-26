@@ -33,6 +33,19 @@ namespace Crowny
         return false;
     }
 
+    static void ResetUndoFactory(const Ref<RetainedUndoActionFactory>& factory, bool finishInteraction)
+    {
+        if (!factory)
+            return;
+
+        UndoRedo& undoRedo = UndoRedo::Get();
+        if (finishInteraction)
+            undoRedo.FinishComponentScope(factory);
+        else
+            undoRedo.CancelComponentScope(factory);
+        factory->Reset();
+    }
+
     // ---------------------------------------------------------------------------
     // Helper: add a component or script to an entity, eliminating the five
     // duplicate AddScriptComponent call-sites that existed before.
@@ -375,7 +388,7 @@ namespace Crowny
         }
     }
 
-    static void RenderEntityHeader(Entity primary, const Vector<Entity>& entities)
+    static void RenderEntityHeader(Entity primary, const Vector<Entity>& entities, const Ref<ComponentUndoSnapshot<TagComponent>>& snapshots)
     {
         if (!primary || entities.empty())
         {
@@ -398,11 +411,9 @@ namespace Crowny
             ImGui::TextDisabled("Primary: %s", primary.GetName().c_str());
         }
 
-        Vector<Pair<Entity, TagComponent>> snapshots;
-        snapshots.reserve(entities.size());
-        for (Entity entity : entities)
-            snapshots.emplace_back(entity, entity.GetComponent<TagComponent>());
-        UndoRedo::Get().BeginComponentScope([snapshots]() -> Ref<UndoAction> { return CreateRef<ChangeComponentsAction<TagComponent>>(snapshots); });
+        UndoRedo& undoRedo = UndoRedo::Get();
+        if (undoRedo.BeginComponentScope(snapshots))
+            snapshots->Capture(entities);
 
         String name = primary.GetName();
         const bool mixed = std::any_of(entities.begin(), entities.end(), [&](Entity entity) { return entity.GetName() != name; });
@@ -420,7 +431,7 @@ namespace Crowny
         UI::EndPropertyGrid();
         if (mixed)
             ImGui::PopItemFlag();
-        UndoRedo::Get().EndComponentScope();
+        undoRedo.EndComponentScope();
     }
 
     static void RenderComponents(Entity primary, const Vector<Entity>& entities, const entt::registry& registry,
@@ -435,7 +446,10 @@ namespace Crowny
             const bool commonComponent =
               std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, tid); });
             if (!commonComponent)
+            {
+                ResetUndoFactory(ci.undoFactory, false);
                 continue;
+            }
 
             // Set the active component name for override tracking
             if (isPrefabInstance)
@@ -491,6 +505,7 @@ namespace Crowny
 
             if (removeComponent)
             {
+                ResetUndoFactory(ci.undoFactory, true);
                 Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Remove component" : "Remove components");
                 for (Entity entity : entities)
                     actions->Add(ci.destroy(entity));
@@ -510,6 +525,8 @@ namespace Crowny
                 ImGui::PopID();
                 ImGui::Unindent(10.f);
             }
+            else
+                ResetUndoFactory(ci.undoFactory, true);
             ImGui::PopID();
         }
 
@@ -725,11 +742,22 @@ namespace Crowny
         ImGui::PopStyleVar(2);
     }
 
+    void ComponentEditor::ResetUndoSnapshots(bool finishInteraction)
+    {
+        ResetUndoFactory(m_TagSnapshots, finishInteraction);
+        for (auto& entry : m_OrderedComponentInfos)
+            ResetUndoFactory(entry.second.undoFactory, finishInteraction);
+        m_UndoSelection.clear();
+        m_UndoScene = nullptr;
+    }
+
     void ComponentEditor::Render(Entity primary, const Vector<Entity>& selectedEntities)
     {
         Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
         if (!scene || !primary || primary.GetScene() != scene.get())
         {
+            if (m_UndoScene != nullptr || !m_UndoSelection.empty())
+                ResetUndoSnapshots(false);
             ImGui::TextDisabled("Select an entity to inspect its components.");
             return;
         }
@@ -747,11 +775,23 @@ namespace Crowny
             m_SelectionScratch.insert(m_SelectionScratch.begin(), primary);
         else if (primaryEntry != m_SelectionScratch.begin())
             std::iter_swap(m_SelectionScratch.begin(), primaryEntry);
+
+        const bool selectionChanged = m_UndoScene != scene.get() || m_UndoSelection.size() != m_SelectionScratch.size() ||
+                                      !std::equal(m_UndoSelection.begin(), m_UndoSelection.end(), m_SelectionScratch.begin(),
+                                                  m_SelectionScratch.end(), [](UUID uuid, Entity entity) { return uuid == entity.GetUuid(); });
+        if (selectionChanged)
+        {
+            ResetUndoSnapshots(m_UndoScene == scene.get());
+            m_UndoScene = scene.get();
+            m_UndoSelection.reserve(m_SelectionScratch.size());
+            for (Entity entity : m_SelectionScratch)
+                m_UndoSelection.push_back(entity.GetUuid());
+        }
         const entt::registry& registry = scene->m_Registry;
 
         ImGui::PushID(primary);
         ImGui::Separator();
-        RenderEntityHeader(primary, m_SelectionScratch);
+        RenderEntityHeader(primary, m_SelectionScratch, m_TagSnapshots);
         ImGui::Separator();
 
         RenderComponents(primary, m_SelectionScratch, registry, m_OrderedComponentInfos);

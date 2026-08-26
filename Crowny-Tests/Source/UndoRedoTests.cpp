@@ -1,8 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
+#include "Editor/ComponentUndoSnapshot.h"
 #include "Editor/UndoRedo.h"
 
 using namespace Crowny;
@@ -67,6 +69,36 @@ namespace
         int& m_Value;
         int m_OldValue;
         int m_NewValue;
+    };
+
+    class IntegerSnapshotFactory final : public RetainedUndoActionFactory
+    {
+    public:
+        explicit IntegerSnapshotFactory(int& value) : m_Value(value) {}
+
+        void Capture() { m_OldValue = m_Value; }
+        Ref<UndoAction> Build() const override
+        {
+            m_BuildCount++;
+            return CreateRef<IntegerAction>(m_Value, m_OldValue, m_Value);
+        }
+        void Reset() override { m_OldValue = m_Value; }
+
+        uint32_t GetBuildCount() const { return m_BuildCount; }
+
+    private:
+        int& m_Value;
+        int m_OldValue = 0;
+        mutable uint32_t m_BuildCount = 0u;
+    };
+
+    class SnapshotResource final : public RefCounted
+    {
+    };
+
+    struct SnapshotResourceComponent : ComponentBase
+    {
+        Ref<SnapshotResource> Resource;
     };
 } // namespace
 
@@ -175,6 +207,168 @@ TEST_CASE("Component add and remove actions preserve component data", "[Editor][
     CHECK(entity.GetComponent<CameraComponent>().Camera.GetOrthographicSize() == 23.0f);
     removeAction.Commit();
     CHECK_FALSE(entity.HasComponent<CameraComponent>());
+}
+
+TEST_CASE("Retained component snapshots preserve multi-edit undo state", "[Editor][Undo][Component]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity first = scene->CreateEntity("First");
+    Entity second = scene->CreateEntity("Second");
+    Vector<Entity> entities{ first, second };
+
+    Ref<ComponentUndoSnapshot<TagComponent>> snapshots = CreateRef<ComponentUndoSnapshot<TagComponent>>();
+    snapshots->Capture(entities);
+    CHECK(snapshots->Size() == 2u);
+
+    first.GetComponent<TagComponent>().Tag = "Changed first";
+    second.GetComponent<TagComponent>().Tag = "Changed second";
+    Ref<UndoAction> action = snapshots->Build();
+    REQUIRE(action != nullptr);
+
+    action->Revert();
+    CHECK(first.GetName() == "First");
+    CHECK(second.GetName() == "Second");
+    action->Commit();
+    CHECK(first.GetName() == "Changed first");
+    CHECK(second.GetName() == "Changed second");
+}
+
+TEST_CASE("Retained undo scopes freeze the first drag snapshot", "[Editor][Undo][Component]")
+{
+    UndoRedo::StartUp();
+    int value = 1;
+    int unrelatedValue = 20;
+    Ref<IntegerSnapshotFactory> snapshots = CreateRef<IntegerSnapshotFactory>(value);
+    Ref<IntegerSnapshotFactory> unrelatedSnapshots = CreateRef<IntegerSnapshotFactory>(unrelatedValue);
+
+    REQUIRE(UndoRedo::Get().BeginComponentScope(snapshots));
+    snapshots->Capture();
+    value = 2;
+    UndoRedo::Get().OnItemInteract({ 7u, true, true, false, true });
+    UndoRedo::Get().EndComponentScope();
+
+    CHECK_FALSE(UndoRedo::Get().BeginComponentScope(unrelatedSnapshots));
+    value = 3;
+    UndoRedo::Get().OnItemInteract({ 8u, true, true, false, true });
+    UndoRedo::Get().OnItemInteract({ 7u, false, false, true, false });
+    UndoRedo::Get().EndComponentScope();
+
+    CHECK(snapshots->GetBuildCount() == 1u);
+    CHECK(unrelatedSnapshots->GetBuildCount() == 0u);
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(value == 1);
+    UndoRedo::Get().Redo();
+    CHECK(value == 3);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Immediate component edits create one undo action", "[Editor][Undo][Component]")
+{
+    UndoRedo::StartUp();
+    int value = 4;
+    Ref<IntegerSnapshotFactory> snapshots = CreateRef<IntegerSnapshotFactory>(value);
+    REQUIRE(UndoRedo::Get().BeginComponentScope(snapshots));
+    snapshots->Capture();
+    value = 9;
+    UndoRedo::Get().OnItemInteract({ 11u, false, false, false, true });
+    UndoRedo::Get().EndComponentScope();
+
+    CHECK(snapshots->GetBuildCount() == 1u);
+    UndoRedo::Get().Undo();
+    CHECK(value == 4);
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Redo();
+    CHECK(value == 9);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Component scope ownership preserves unrelated transactions", "[Editor][Undo][Component]")
+{
+    UndoRedo::StartUp();
+    int value = 1;
+    uint32_t buildCount = 0u;
+    UndoRedo::Get().BeginComponentScope([&]() -> Ref<UndoAction> {
+        buildCount++;
+        return CreateRef<IntegerAction>(value, 1, value);
+    });
+    value = 2;
+    UndoRedo::Get().OnItemInteract({ 17u, true, true, false, true });
+    UndoRedo::Get().EndComponentScope();
+
+    int unrelatedValue = 0;
+    Ref<IntegerSnapshotFactory> unrelated = CreateRef<IntegerSnapshotFactory>(unrelatedValue);
+    UndoRedo::Get().CancelComponentScope(unrelated);
+    UndoRedo::Get().OnItemInteract({ 17u, false, false, true, false });
+
+    CHECK(buildCount == 1u);
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(value == 1);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Reset component snapshots release retained resources", "[Editor][Undo][Component]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Resource holder");
+    Ref<SnapshotResource> resource = CreateRef<SnapshotResource>();
+    entity.AddComponent<SnapshotResourceComponent>().Resource = resource;
+    CHECK(resource->GetRefCount() == 2u);
+
+    Ref<ComponentUndoSnapshot<SnapshotResourceComponent>> snapshots = CreateRef<ComponentUndoSnapshot<SnapshotResourceComponent>>();
+    snapshots->Capture(Vector<Entity>{ entity });
+    CHECK(resource->GetRefCount() == 3u);
+    entity.RemoveComponent<SnapshotResourceComponent>();
+    CHECK(resource->GetRefCount() == 2u);
+    snapshots->Reset();
+    CHECK(resource->GetRefCount() == 1u);
+}
+
+TEST_CASE("Stable tag and mesh snapshot scopes allocate nothing after warm-up", "[Editor][Undo][Component][Memory]")
+{
+    constexpr size_t entityCount = 64u;
+    constexpr size_t frameCount = 120u;
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Vector<Entity> entities;
+    entities.reserve(entityCount);
+    for (size_t entityIndex = 0u; entityIndex < entityCount; entityIndex++)
+    {
+        Entity entity = scene->CreateEntity("Retained component snapshot name longer than the short-string buffer");
+        entity.AddComponent<MeshRendererComponent>().Materials.resize(8u);
+        entities.push_back(entity);
+    }
+
+    Ref<ComponentUndoSnapshot<TagComponent>> tagSnapshots = CreateRef<ComponentUndoSnapshot<TagComponent>>();
+    Ref<ComponentUndoSnapshot<MeshRendererComponent>> meshSnapshots = CreateRef<ComponentUndoSnapshot<MeshRendererComponent>>();
+    tagSnapshots->Capture(entities);
+    meshSnapshots->Capture(entities);
+    const size_t retainedTagCapacity = tagSnapshots->Capacity();
+    const size_t retainedMeshCapacity = meshSnapshots->Capacity();
+
+    UndoRedo::StartUp();
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    bool allScopesStarted = true;
+    for (size_t frameIndex = 0u; frameIndex < frameCount; frameIndex++)
+    {
+        allScopesStarted &= UndoRedo::Get().BeginComponentScope(tagSnapshots);
+        tagSnapshots->Capture(entities);
+        UndoRedo::Get().EndComponentScope();
+        allScopesStarted &= UndoRedo::Get().BeginComponentScope(meshSnapshots);
+        meshSnapshots->Capture(entities);
+        UndoRedo::Get().EndComponentScope();
+    }
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+    UndoRedo::Shutdown();
+
+    CHECK(allScopesStarted);
+    CHECK(tagSnapshots->Size() == entityCount);
+    CHECK(meshSnapshots->Size() == entityCount);
+    CHECK(tagSnapshots->Capacity() == retainedTagCapacity);
+    CHECK(meshSnapshots->Capacity() == retainedMeshCapacity);
+    CHECK(delta.AllocationCount == 0u);
+    CHECK(delta.RequestedBytes == 0u);
 }
 
 TEST_CASE("Script undo and redo use MonoScript persisted-state policy", "[Editor][Undo][Scripting][PersistedState]")

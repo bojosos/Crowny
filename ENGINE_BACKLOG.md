@@ -40,6 +40,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Thread-local allocation telemetry covers standard, aligned, sized, array, and nothrow allocation families without the heavy leak tracker's map/mutex. Render-graph construction and compilation retain graph/result/compiler scratch and perform zero calling-thread allocations across 120 identical frames after warm-up.
 - [x] CPU draw-list and 2D ordering are measured allocation-free after warm-up at 10,000 items. Main-view draw lists and indirect run-count uploads now retain renderer-owned scratch instead of rebuilding temporary vectors every frame.
 - [x] Per-record synchronization epochs replace the four node-based seen sets for instances, lights, meshes, and materials. The stable and post-removal 1,000-light extraction paths are specifically measured allocation-free after warm-up.
+- [x] Common native component-inspector scopes retain typed pre-edit snapshots and bind undo factories without rebuilding captured vectors or heap-backed callables. Tag multi-edit snapshots are measured allocation-free for 120 warm frames; managed-script capture and components whose assignment rebuilds node containers remain separate optimizations.
 
 ## Physics and ECS
 
