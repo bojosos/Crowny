@@ -100,6 +100,12 @@ namespace
     {
         Ref<SnapshotResource> Resource;
     };
+
+    struct UndoValueComponent : ComponentBase
+    {
+        int Primary = 0;
+        int Secondary = 0;
+    };
 } // namespace
 
 TEST_CASE("Undo history invalidates redo after a new edit", "[Editor][Undo]")
@@ -283,6 +289,149 @@ TEST_CASE("Immediate component edits create one undo action", "[Editor][Undo][Co
     UndoRedo::Shutdown();
 }
 
+TEST_CASE("Component snapshots finalize redo after the setter", "[Editor][Undo][Component]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Target");
+    entity.AddComponent<UndoValueComponent>().Primary = 4;
+    const Vector<Entity> entities{ entity };
+    Ref<ComponentUndoSnapshot<UndoValueComponent>> snapshots = CreateRef<ComponentUndoSnapshot<UndoValueComponent>>();
+
+    UndoRedo::StartUp();
+    REQUIRE(UndoRedo::Get().BeginComponentScope(snapshots));
+    snapshots->Capture(entities);
+    UndoRedo::Get().OnItemInteract({ 11u, false, false, false, true });
+    entity.GetComponent<UndoValueComponent>().Primary = 9;
+    snapshots->CompleteFrame();
+    UndoRedo::Get().EndComponentScope();
+
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(entity.GetComponent<UndoValueComponent>().Primary == 4);
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Redo();
+    CHECK(entity.GetComponent<UndoValueComponent>().Primary == 9);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Component snapshots coalesce instantaneous changes from one frame", "[Editor][Undo][Component]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Target");
+    UndoValueComponent& value = entity.AddComponent<UndoValueComponent>();
+    value.Primary = 1;
+    value.Secondary = 2;
+    const Vector<Entity> entities{ entity };
+    Ref<ComponentUndoSnapshot<UndoValueComponent>> snapshots = CreateRef<ComponentUndoSnapshot<UndoValueComponent>>();
+
+    UndoRedo::StartUp();
+    REQUIRE(UndoRedo::Get().BeginComponentScope(snapshots));
+    snapshots->Capture(entities);
+    UndoRedo::Get().OnItemInteract({ 11u, false, false, false, true });
+    value.Primary = 3;
+    UndoRedo::Get().OnItemInteract({ 12u, false, false, false, true });
+    value.Secondary = 4;
+    snapshots->CompleteFrame();
+    UndoRedo::Get().EndComponentScope();
+
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(entity.GetComponent<UndoValueComponent>().Primary == 1);
+    CHECK(entity.GetComponent<UndoValueComponent>().Secondary == 2);
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Redo();
+    CHECK(entity.GetComponent<UndoValueComponent>().Primary == 3);
+    CHECK(entity.GetComponent<UndoValueComponent>().Secondary == 4);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Component snapshots preserve distinct multi-edit undo values", "[Editor][Undo][Component]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity first = scene->CreateEntity("First");
+    Entity second = scene->CreateEntity("Second");
+    first.AddComponent<UndoValueComponent>().Primary = 1;
+    second.AddComponent<UndoValueComponent>().Primary = 2;
+    const Vector<Entity> entities{ first, second };
+    Ref<ComponentUndoSnapshot<UndoValueComponent>> snapshots = CreateRef<ComponentUndoSnapshot<UndoValueComponent>>();
+
+    UndoRedo::StartUp();
+    REQUIRE(UndoRedo::Get().BeginComponentScope(snapshots));
+    snapshots->Capture(entities);
+    UndoRedo::Get().OnItemInteract({ 11u, false, false, false, true });
+    first.GetComponent<UndoValueComponent>().Primary = 8;
+    second.GetComponent<UndoValueComponent>().Primary = 8;
+    snapshots->CompleteFrame();
+    UndoRedo::Get().EndComponentScope();
+
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(first.GetComponent<UndoValueComponent>().Primary == 1);
+    CHECK(second.GetComponent<UndoValueComponent>().Primary == 2);
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Redo();
+    CHECK(first.GetComponent<UndoValueComponent>().Primary == 8);
+    CHECK(second.GetComponent<UndoValueComponent>().Primary == 8);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Component snapshots capture the final drag value after the setter", "[Editor][Undo][Component]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Target");
+    entity.AddComponent<UndoValueComponent>().Primary = 1;
+    const Vector<Entity> entities{ entity };
+    Ref<ComponentUndoSnapshot<UndoValueComponent>> snapshots = CreateRef<ComponentUndoSnapshot<UndoValueComponent>>();
+
+    UndoRedo::StartUp();
+    REQUIRE(UndoRedo::Get().BeginComponentScope(snapshots));
+    snapshots->Capture(entities);
+    UndoRedo::Get().OnItemInteract({ 11u, true, true, false, true });
+    entity.GetComponent<UndoValueComponent>().Primary = 2;
+    snapshots->CompleteFrame();
+    UndoRedo::Get().EndComponentScope();
+
+    CHECK_FALSE(UndoRedo::Get().BeginComponentScope(snapshots));
+    UndoRedo::Get().OnItemInteract({ 11u, false, false, true, true });
+    entity.GetComponent<UndoValueComponent>().Primary = 3;
+    snapshots->CompleteFrame();
+    UndoRedo::Get().EndComponentScope();
+
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(entity.GetComponent<UndoValueComponent>().Primary == 1);
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Redo();
+    CHECK(entity.GetComponent<UndoValueComponent>().Primary == 3);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Component snapshot finish and reset preserve redo state", "[Editor][Undo][Component]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Target");
+    entity.AddComponent<UndoValueComponent>().Primary = 1;
+    const Vector<Entity> entities{ entity };
+    Ref<ComponentUndoSnapshot<UndoValueComponent>> snapshots = CreateRef<ComponentUndoSnapshot<UndoValueComponent>>();
+
+    UndoRedo::StartUp();
+    REQUIRE(UndoRedo::Get().BeginComponentScope(snapshots));
+    snapshots->Capture(entities);
+    UndoRedo::Get().OnItemInteract({ 11u, true, true, false, true });
+    entity.GetComponent<UndoValueComponent>().Primary = 5;
+    UndoRedo::Get().EndComponentScope();
+    UndoRedo::Get().FinishComponentScope(snapshots);
+    snapshots->Reset();
+
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(entity.GetComponent<UndoValueComponent>().Primary == 1);
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Redo();
+    CHECK(entity.GetComponent<UndoValueComponent>().Primary == 5);
+    UndoRedo::Shutdown();
+}
+
 TEST_CASE("Component scope ownership preserves unrelated transactions", "[Editor][Undo][Component]")
 {
     UndoRedo::StartUp();
@@ -353,9 +502,11 @@ TEST_CASE("Stable tag and mesh snapshot scopes allocate nothing after warm-up", 
     {
         allScopesStarted &= UndoRedo::Get().BeginComponentScope(tagSnapshots);
         tagSnapshots->Capture(entities);
+        tagSnapshots->CompleteFrame();
         UndoRedo::Get().EndComponentScope();
         allScopesStarted &= UndoRedo::Get().BeginComponentScope(meshSnapshots);
         meshSnapshots->Capture(entities);
+        meshSnapshots->CompleteFrame();
         UndoRedo::Get().EndComponentScope();
     }
     const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();

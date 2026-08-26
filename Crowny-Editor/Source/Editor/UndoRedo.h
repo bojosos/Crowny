@@ -233,6 +233,16 @@ namespace Crowny
             }
         }
 
+        void FinalizeNewValues()
+        {
+            for (Snapshot& snapshot : m_Snapshots)
+            {
+                Entity target = snapshot.SceneRef ? snapshot.SceneRef->TryGetEntityFromUuid(snapshot.Target) : Entity{};
+                if (target && target.template HasComponent<T>())
+                    snapshot.NewValue = target.template GetComponent<T>();
+            }
+        }
+
         void Commit() override { Apply(false); }
         void Revert() override { Apply(true); }
 

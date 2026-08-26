@@ -36,13 +36,35 @@ namespace Crowny
                 m_Snapshots.erase(m_Snapshots.begin() + static_cast<std::ptrdiff_t>(snapshotIndex), m_Snapshots.end());
         }
 
-        Ref<UndoAction> Build() const override { return CreateRef<ChangeComponentsAction<T>>(m_Snapshots); }
-        void Reset() override { m_Snapshots.clear(); }
+        Ref<UndoAction> Build() const override
+        {
+            if (m_PendingAction != nullptr)
+                return {};
+
+            m_PendingAction = CreateRef<ChangeComponentsAction<T>>(m_Snapshots);
+            return m_PendingAction;
+        }
+
+        void CompleteFrame()
+        {
+            if (m_PendingAction == nullptr)
+                return;
+
+            m_PendingAction->FinalizeNewValues();
+            m_PendingAction = nullptr;
+        }
+
+        void Reset() override
+        {
+            m_Snapshots.clear();
+            m_PendingAction = nullptr;
+        }
 
         size_t Size() const { return m_Snapshots.size(); }
         size_t Capacity() const { return m_Snapshots.capacity(); }
 
     private:
         Vector<Pair<Entity, T>> m_Snapshots;
+        mutable Ref<ChangeComponentsAction<T>> m_PendingAction;
     };
 } // namespace Crowny

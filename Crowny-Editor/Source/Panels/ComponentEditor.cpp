@@ -431,6 +431,7 @@ namespace Crowny
         UI::EndPropertyGrid();
         if (mixed)
             ImGui::PopItemFlag();
+        snapshots->CompleteFrame();
         undoRedo.EndComponentScope();
     }
 

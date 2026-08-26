@@ -115,6 +115,7 @@ namespace Crowny
                     if (undoRedo.BeginComponentScope(snapshots))
                         snapshots->Capture(entities);
                     widget(primary);
+                    snapshots->CompleteFrame();
                     undoRedo.EndComponentScope();
                 };
                 return RegisterComponent<Component>(ComponentInfo{
@@ -160,6 +161,7 @@ namespace Crowny
                     if (undoRedo.BeginComponentScope(snapshots))
                         snapshots->Capture(entities);
                     ComponentSelectionEditorWidget<Component>(primary, entities);
+                    snapshots->CompleteFrame();
                     undoRedo.EndComponentScope();
                 };
                 return RegisterComponent<Component>(ComponentInfo{
