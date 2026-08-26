@@ -237,6 +237,12 @@ namespace Crowny
 
         m_SceneRenderer = new SceneRenderer(nullptr, nullptr);
         m_SceneLifecycleListener = SceneManager::TryGet()->AddLifecycleListener([this](const SceneLifecycleEvent& event) {
+            if (event.Type == SceneLifecycleEventType::ActiveChanged || event.Type == SceneLifecycleEventType::ExecutionStateChanged)
+            {
+                const Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
+                UndoRedo::Get().SetSceneContext(activeScene, event.State == SceneExecutionState::Edit);
+            }
+
             if (event.Type == SceneLifecycleEventType::ActiveChanged)
             {
                 const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
@@ -273,6 +279,8 @@ namespace Crowny
                 break;
             }
         });
+        UndoRedo::Get().SetSceneContext(SceneManager::TryGet()->GetActiveScene(),
+                                        SceneManager::TryGet()->GetExecutionState() == SceneExecutionState::Edit);
     }
 
     void EditorLayer::CreateRenderTarget()

@@ -47,7 +47,7 @@ namespace Crowny
 
     void UndoRedo::RegisterAction(const Ref<UndoAction>& action)
     {
-        if (!action)
+        if (!m_RecordingEnabled || !action)
             return;
 
         m_RedoStack.clear();
@@ -59,7 +59,7 @@ namespace Crowny
     Ref<UndoAction> UndoRedo::Undo()
     {
         CancelInteraction();
-        if (m_UndoStack.empty())
+        if (!m_RecordingEnabled || m_UndoStack.empty())
             return {};
 
         Ref<UndoAction> action = m_UndoStack.back();
@@ -74,7 +74,7 @@ namespace Crowny
     Ref<UndoAction> UndoRedo::Redo()
     {
         CancelInteraction();
-        if (m_RedoStack.empty())
+        if (!m_RecordingEnabled || m_RedoStack.empty())
             return {};
 
         Ref<UndoAction> action = m_RedoStack.back();
@@ -97,9 +97,26 @@ namespace Crowny
         m_RedoStack.clear();
     }
 
+    void UndoRedo::SetSceneContext(const Ref<Scene>& scene, bool recordingEnabled)
+    {
+        if (!recordingEnabled)
+        {
+            CancelInteraction();
+            m_RecordingEnabled = false;
+            return;
+        }
+
+        m_RecordingEnabled = true;
+        if (m_HistoryScene != scene)
+        {
+            Clear();
+            m_HistoryScene = scene;
+        }
+    }
+
     void UndoRedo::BeginComponentScope(std::function<Ref<UndoAction>()> factory)
     {
-        if (!m_InInteraction)
+        if (m_RecordingEnabled && !m_InInteraction)
         {
             m_Factory = std::move(factory);
             m_RetainedFactory = nullptr;
@@ -108,7 +125,7 @@ namespace Crowny
 
     bool UndoRedo::BeginComponentScope(const Ref<RetainedUndoActionFactory>& factory)
     {
-        if (m_InInteraction)
+        if (!m_RecordingEnabled || m_InInteraction)
             return false;
 
         m_Factory = nullptr;

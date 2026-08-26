@@ -130,6 +130,85 @@ TEST_CASE("Undo history invalidates redo after a new edit", "[Editor][Undo]")
     UndoRedo::Shutdown();
 }
 
+TEST_CASE("Undo history follows the edit scene context", "[Editor][Undo][Scene]")
+{
+    Ref<Scene> firstEditScene = CreateRef<Scene>(false);
+    Ref<Scene> runtimeScene = CreateRef<Scene>(*firstEditScene);
+    Ref<Scene> secondEditScene = CreateRef<Scene>(false);
+    int value = 2;
+
+    UndoRedo::StartUp();
+    UndoRedo& undoRedo = UndoRedo::Get();
+    undoRedo.SetSceneContext(firstEditScene, true);
+    undoRedo.RegisterAction(CreateRef<IntegerAction>(value, 1, 2));
+    REQUIRE(undoRedo.CanUndo());
+
+    undoRedo.SetSceneContext(runtimeScene, false);
+    CHECK_FALSE(undoRedo.IsRecordingEnabled());
+    CHECK_FALSE(undoRedo.CanUndo());
+    CHECK(undoRedo.Undo() == nullptr);
+    undoRedo.RegisterAction(CreateRef<IntegerAction>(value, 2, 3));
+
+    Ref<IntegerSnapshotFactory> runtimeSnapshot = CreateRef<IntegerSnapshotFactory>(value);
+    CHECK_FALSE(undoRedo.BeginComponentScope(runtimeSnapshot));
+    undoRedo.BeginComponentScope([&]() -> Ref<UndoAction> { return CreateRef<IntegerAction>(value, 2, value); });
+    undoRedo.OnItemInteract({ 41u, false, false, false, true });
+    undoRedo.EndComponentScope();
+
+    undoRedo.SetSceneContext(firstEditScene, true);
+    CHECK(undoRedo.IsRecordingEnabled());
+    REQUIRE(undoRedo.CanUndo());
+    undoRedo.Undo();
+    CHECK(value == 1);
+
+    value = 4;
+    undoRedo.RegisterAction(CreateRef<IntegerAction>(value, 1, 4));
+    REQUIRE(undoRedo.CanUndo());
+    undoRedo.SetSceneContext(secondEditScene, true);
+    CHECK_FALSE(undoRedo.CanUndo());
+    CHECK_FALSE(undoRedo.CanRedo());
+
+    undoRedo.RegisterAction(CreateRef<IntegerAction>(value, 3, 4));
+    REQUIRE(undoRedo.CanUndo());
+    undoRedo.SetSceneContext(nullptr, true);
+    CHECK_FALSE(undoRedo.CanUndo());
+    CHECK_FALSE(undoRedo.CanRedo());
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Disabling undo recording cancels an active component interaction", "[Editor][Undo][Scene][Component]")
+{
+    Ref<Scene> editScene = CreateRef<Scene>(false);
+    Ref<Scene> runtimeScene = CreateRef<Scene>(*editScene);
+    int value = 1;
+    Ref<IntegerSnapshotFactory> snapshots = CreateRef<IntegerSnapshotFactory>(value);
+
+    UndoRedo::StartUp();
+    UndoRedo& undoRedo = UndoRedo::Get();
+    undoRedo.SetSceneContext(editScene, true);
+    REQUIRE(undoRedo.BeginComponentScope(snapshots));
+    snapshots->Capture();
+    value = 2;
+    undoRedo.OnItemInteract({ 17u, true, true, false, true });
+    undoRedo.EndComponentScope();
+
+    undoRedo.SetSceneContext(runtimeScene, false);
+    undoRedo.FinishComponentScope(snapshots);
+    CHECK(snapshots->GetBuildCount() == 0u);
+    CHECK_FALSE(undoRedo.CanUndo());
+
+    undoRedo.SetSceneContext(editScene, true);
+    REQUIRE(undoRedo.BeginComponentScope(snapshots));
+    snapshots->Capture();
+    value = 3;
+    undoRedo.OnItemInteract({ 17u, false, false, false, true });
+    undoRedo.EndComponentScope();
+    REQUIRE(undoRedo.CanUndo());
+    undoRedo.Undo();
+    CHECK(value == 2);
+    UndoRedo::Shutdown();
+}
+
 TEST_CASE("Deleted entity undo restores its subtree and sibling position", "[Editor][Undo][Hierarchy]")
 {
     Ref<Scene> scene = CreateRef<Scene>();

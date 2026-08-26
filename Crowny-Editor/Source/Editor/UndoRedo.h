@@ -3,7 +3,6 @@
 #include "Crowny/Common/Module.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
-#include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
 
 namespace Crowny
@@ -88,11 +87,16 @@ namespace Crowny
         Ref<UndoAction> Undo();
         Ref<UndoAction> Redo();
 
-        bool CanUndo() const { return !m_UndoStack.empty(); }
-        bool CanRedo() const { return !m_RedoStack.empty(); }
+        bool CanUndo() const { return m_RecordingEnabled && !m_UndoStack.empty(); }
+        bool CanRedo() const { return m_RecordingEnabled && !m_RedoStack.empty(); }
         const String& GetUndoName() const;
         const String& GetRedoName() const;
         void Clear();
+
+        // Scene history remains dormant while a runtime clone is active. Returning to the
+        // same edit scene restores it; selecting a different edit scene starts fresh history.
+        void SetSceneContext(const Ref<Scene>& scene, bool recordingEnabled);
+        bool IsRecordingEnabled() const { return m_RecordingEnabled; }
 
         void SetActionAppliedCallback(ActionAppliedCallback callback) { m_ActionApplied = std::move(callback); }
 
@@ -114,12 +118,14 @@ namespace Crowny
         static constexpr size_t MaxHistorySize = 256u;
         Vector<Ref<UndoAction>> m_UndoStack;
         Vector<Ref<UndoAction>> m_RedoStack;
+        Ref<Scene> m_HistoryScene;
         std::function<Ref<UndoAction>()> m_Factory;
         Ref<RetainedUndoActionFactory> m_RetainedFactory;
         ActionAppliedCallback m_ActionApplied;
         uint32_t m_InteractionItemId = 0u;
         bool m_InInteraction = false;
         bool m_InteractionChanged = false;
+        bool m_RecordingEnabled = true;
     };
 
     template <typename T> class AddComponentAction : public UndoAction
