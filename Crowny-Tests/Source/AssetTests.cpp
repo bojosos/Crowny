@@ -137,6 +137,32 @@ TEST_CASE("Physics material YAML preserves values and supplies legacy defaults",
     CHECK(PhysicsMaterial3DSerializer::Deserialize(YAML::Load("Density: invalid\n")) == nullptr);
 }
 
+TEST_CASE("Managed physics material factories create serializable runtime handles", "[Assets][Physics][Scripting][Bindings]")
+{
+    AssetManager manager;
+    PhysicsMaterialData material2DData;
+    material2DData.Friction = 0.25f;
+    material2DData.FrictionCombine = PhysicsCombineMode::Maximum;
+    PhysicsMaterialData material3DData;
+    material3DData.Restitution = 0.75f;
+    material3DData.RestitutionCombine = PhysicsCombineMode::Multiply;
+
+    const AssetHandle<PhysicsMaterial2D> material2D = CreateRuntimePhysicsMaterial2D(manager, material2DData);
+    const AssetHandle<PhysicsMaterial3D> material3D = CreateRuntimePhysicsMaterial3D(manager, material3DData);
+    REQUIRE(material2D);
+    REQUIRE(material3D);
+    CHECK(material2D.HasUUID());
+    CHECK(material3D.HasUUID());
+    CHECK(material2D->GetFriction() == 0.25f);
+    CHECK(material2D->GetFrictionCombine() == PhysicsCombineMode::Maximum);
+    CHECK(material3D->GetRestitution() == 0.75f);
+    CHECK(material3D->GetRestitutionCombine() == PhysicsCombineMode::Multiply);
+
+    Path assetPath;
+    CHECK_FALSE(manager.GetAssetPath(material2D.GetUUID(), assetPath));
+    CHECK_FALSE(manager.GetAssetPath(material3D.GetUUID(), assetPath));
+}
+
 TEST_CASE("Physics material assets survive binary round trips", "[Assets][Physics][Serialization]")
 {
     const Path material2DPath = fs::temp_directory_path() / "crowny-physics-material-roundtrip.pmat";

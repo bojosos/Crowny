@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Assets/Asset.h"
+#include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Common/Common.h"
 
 #include <cstdint>
@@ -105,4 +106,9 @@ namespace Crowny
 
         PhysicsMaterialData m_Data;
     };
+
+    AssetHandle<PhysicsMaterial2D> CreateRuntimePhysicsMaterial2D(AssetManager& assetManager,
+                                                                  const PhysicsMaterialData& data = {});
+    AssetHandle<PhysicsMaterial3D> CreateRuntimePhysicsMaterial3D(AssetManager& assetManager,
+                                                                  const PhysicsMaterialData& data = {});
 } // namespace Crowny

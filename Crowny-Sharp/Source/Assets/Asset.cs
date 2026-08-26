@@ -144,6 +144,12 @@ namespace Crowny
     /// <summary>Reusable material assigned to a 2D collider.</summary>
     public sealed class PhysicsMaterial2D : Asset
     {
+        /// <summary>Creates a runtime material that can be assigned to colliders and serialized with a scene.</summary>
+        public static PhysicsMaterial2D Create()
+        {
+            return Internal_Create();
+        }
+
         public float Density
         {
             get { return Internal_GetDensity(m_InternalPtr); }
@@ -180,6 +186,7 @@ namespace Crowny
             set { Internal_SetRestitutionCombine(m_InternalPtr, value); }
         }
 
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsMaterial2D Internal_Create();
         [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetDensity(IntPtr material);
         [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetDensity(IntPtr material, float value);
         [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetFriction(IntPtr material);
@@ -197,6 +204,12 @@ namespace Crowny
     /// <summary>Reusable material assigned to a 3D collider.</summary>
     public sealed class PhysicsMaterial3D : Asset
     {
+        /// <summary>Creates a runtime material shared by Box3D, Jolt, and Bullet colliders.</summary>
+        public static PhysicsMaterial3D Create()
+        {
+            return Internal_Create();
+        }
+
         public float Density
         {
             get { return Internal_GetDensity(m_InternalPtr); }
@@ -233,6 +246,7 @@ namespace Crowny
             set { Internal_SetRestitutionCombine(m_InternalPtr, value); }
         }
 
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsMaterial3D Internal_Create();
         [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetDensity(IntPtr material);
         [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetDensity(IntPtr material, float value);
         [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetFriction(IntPtr material);

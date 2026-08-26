@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics3D.h"
@@ -69,6 +70,13 @@ namespace Crowny
             return first.Density == second.Density && first.Friction == second.Friction && first.Restitution == second.Restitution &&
                    first.RestitutionThreshold == second.RestitutionThreshold && first.FrictionCombine == second.FrictionCombine &&
                    first.RestitutionCombine == second.RestitutionCombine;
+        }
+
+        template <typename T> AssetHandle<T> CreateRuntimePhysicsMaterial(AssetManager& assetManager, const PhysicsMaterialData& data)
+        {
+            Ref<T> material = CreateRef<T>();
+            material->SetData(data);
+            return static_asset_cast<T>(assetManager.CreateAssetHandle(material));
         }
     } // namespace
 
@@ -230,4 +238,14 @@ namespace Crowny
     }
 
     void PhysicsMaterial3D::NotifyChanged() { Refresh3DUsers(this); }
+
+    AssetHandle<PhysicsMaterial2D> CreateRuntimePhysicsMaterial2D(AssetManager& assetManager, const PhysicsMaterialData& data)
+    {
+        return CreateRuntimePhysicsMaterial<PhysicsMaterial2D>(assetManager, data);
+    }
+
+    AssetHandle<PhysicsMaterial3D> CreateRuntimePhysicsMaterial3D(AssetManager& assetManager, const PhysicsMaterialData& data)
+    {
+        return CreateRuntimePhysicsMaterial<PhysicsMaterial3D>(assetManager, data);
+    }
 } // namespace Crowny

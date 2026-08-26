@@ -2,6 +2,9 @@
 
 #include "Crowny/Scripting/Bindings/Assets/ScriptPhysicsMaterial2D.h"
 
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
+
 namespace Crowny
 {
     ScriptPhysicsMaterial2D::ScriptPhysicsMaterial2D(MonoObject* instance, const AssetHandle<PhysicsMaterial2D>& material)
@@ -11,6 +14,7 @@ namespace Crowny
 
     void ScriptPhysicsMaterial2D::InitRuntimeData()
     {
+        MetaData.ScriptClass->AddInternalCall("Internal_Create", (void*)&Internal_Create);
         MetaData.ScriptClass->AddInternalCall("Internal_GetDensity", (void*)&Internal_GetDensity);
         MetaData.ScriptClass->AddInternalCall("Internal_SetDensity", (void*)&Internal_SetDensity);
         MetaData.ScriptClass->AddInternalCall("Internal_GetFriction", (void*)&Internal_GetFriction);
@@ -23,6 +27,16 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetFrictionCombine", (void*)&Internal_SetFrictionCombine);
         MetaData.ScriptClass->AddInternalCall("Internal_GetRestitutionCombine", (void*)&Internal_GetRestitutionCombine);
         MetaData.ScriptClass->AddInternalCall("Internal_SetRestitutionCombine", (void*)&Internal_SetRestitutionCombine);
+    }
+
+    MonoObject* ScriptPhysicsMaterial2D::Internal_Create()
+    {
+        if (AssetManager::TryGet() == nullptr || !ScriptAssetManager::IsStartedUp())
+            return nullptr;
+
+        const AssetHandle<PhysicsMaterial2D> material = CreateRuntimePhysicsMaterial2D(*AssetManager::TryGet());
+        ScriptAssetBase* const scriptAsset = ScriptAssetManager::Get().GetScriptAsset(material, true);
+        return scriptAsset != nullptr ? scriptAsset->GetManagedInstance() : nullptr;
     }
 
     float ScriptPhysicsMaterial2D::Internal_GetDensity(ScriptPhysicsMaterial2D* thisPtr)

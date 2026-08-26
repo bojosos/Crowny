@@ -12,6 +12,7 @@ namespace Crowny
         ScriptPhysicsMaterial3D(MonoObject* instance, const AssetHandle<PhysicsMaterial3D>& material);
 
     private:
+        static MonoObject* Internal_Create();
         static float Internal_GetDensity(ScriptPhysicsMaterial3D* thisPtr);
         static void Internal_SetDensity(ScriptPhysicsMaterial3D* thisPtr, float value);
         static float Internal_GetFriction(ScriptPhysicsMaterial3D* thisPtr);

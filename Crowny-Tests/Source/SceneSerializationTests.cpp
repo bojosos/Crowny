@@ -851,18 +851,14 @@ TEST_CASE("Physics material references survive YAML and binary scene round trips
     scene->SetName("PhysicsMaterials");
     Entity entity = scene->CreateEntity("Colliders");
 
-    Ref<PhysicsMaterial2D> material2D = CreateRef<PhysicsMaterial2D>();
-    material2D->SetFriction(0.15f);
-    material2D->SetFrictionCombine(PhysicsCombineMode::Maximum);
-    const AssetHandle<PhysicsMaterial2D> material2DHandle =
-      static_asset_cast<PhysicsMaterial2D>(AssetManager::TryGet()->CreateAssetHandle(material2D));
+    const AssetHandle<PhysicsMaterial2D> material2DHandle = CreateRuntimePhysicsMaterial2D(*AssetManager::TryGet());
+    material2DHandle->SetFriction(0.15f);
+    material2DHandle->SetFrictionCombine(PhysicsCombineMode::Maximum);
     entity.AddComponent<BoxCollider2DComponent>().SetMaterial(material2DHandle);
 
-    Ref<PhysicsMaterial3D> material3D = CreateRef<PhysicsMaterial3D>();
-    material3D->SetRestitution(0.85f);
-    material3D->SetRestitutionCombine(PhysicsCombineMode::Multiply);
-    const AssetHandle<PhysicsMaterial3D> material3DHandle =
-      static_asset_cast<PhysicsMaterial3D>(AssetManager::TryGet()->CreateAssetHandle(material3D));
+    const AssetHandle<PhysicsMaterial3D> material3DHandle = CreateRuntimePhysicsMaterial3D(*AssetManager::TryGet());
+    material3DHandle->SetRestitution(0.85f);
+    material3DHandle->SetRestitutionCombine(PhysicsCombineMode::Multiply);
     entity.AddComponent<SphereCollider3DComponent>().SetMaterial(material3DHandle);
 
     const auto verify = [&](const Ref<Scene>& loadedScene) {
@@ -876,6 +872,8 @@ TEST_CASE("Physics material references survive YAML and binary scene round trips
         CHECK(collider3D.GetMaterial()->GetRestitution() == 0.85f);
         CHECK(collider2D.GetMaterial()->GetFrictionCombine() == PhysicsCombineMode::Maximum);
         CHECK(collider3D.GetMaterial()->GetRestitutionCombine() == PhysicsCombineMode::Multiply);
+        CHECK(collider2D.GetMaterial().GetUUID() != material2DHandle.GetUUID());
+        CHECK(collider3D.GetMaterial().GetUUID() != material3DHandle.GetUUID());
     };
 
     SECTION("YAML")
