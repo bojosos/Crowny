@@ -3,6 +3,8 @@
 #include "Crowny/RenderAPI/RenderCapabilities.h"
 #include "Crowny/Renderer/RenderPipeline.h"
 
+#include <array>
+
 using namespace Crowny;
 
 namespace
@@ -145,6 +147,57 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     };
     CHECK(transitionsToIndirect(commands));
     CHECK(transitionsToIndirect(counts));
+}
+
+TEST_CASE("Depth prepass configures motion-vector and object-ID outputs independently", "[Renderer][Pipeline]")
+{
+    struct OutputCase
+    {
+        bool MotionVectors;
+        bool ObjectID;
+        DepthPrepassOutputMode ExpectedMode;
+        uint32_t ExpectedColorAttachmentCount;
+        uint32_t ExpectedMotionVectorAttachment;
+        uint32_t ExpectedObjectIDAttachment;
+    };
+    constexpr std::array<OutputCase, 4> cases = {
+        OutputCase{ false, false, DepthPrepassOutputMode::DepthOnly, 0, DepthPrepassOutputLayout::NoAttachment,
+                    DepthPrepassOutputLayout::NoAttachment },
+        OutputCase{ true, false, DepthPrepassOutputMode::MotionVectors, 1, 0, DepthPrepassOutputLayout::NoAttachment },
+        OutputCase{ false, true, DepthPrepassOutputMode::ObjectID, 1, DepthPrepassOutputLayout::NoAttachment, 0 },
+        OutputCase{ true, true, DepthPrepassOutputMode::MotionVectorsAndObjectID, 2, 0, 1 },
+    };
+
+    for (const OutputCase& outputCase : cases)
+    {
+        CAPTURE(outputCase.MotionVectors, outputCase.ObjectID);
+        RenderGraph graph;
+        RenderBlackboard blackboard;
+        RenderView view;
+        RenderPipelineAsset pipeline;
+        RenderPipelineGraphDesc desc;
+        desc.Width = 320;
+        desc.Height = 180;
+        desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+        desc.EnableMotionVectors = outputCase.MotionVectors;
+        desc.EnableObjectID = outputCase.ObjectID;
+        desc.EnablePostProcessing = false;
+
+        const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+        const RenderGraphCompileResult& compiled = graph.Compile();
+
+        INFO(compiled.Error);
+        REQUIRE(compiled.Succeeded);
+        CHECK(output.DepthPrepassLayout.Mode == outputCase.ExpectedMode);
+        CHECK(output.DepthPrepassLayout.ColorAttachmentCount == outputCase.ExpectedColorAttachmentCount);
+        CHECK(output.DepthPrepassLayout.MotionVectorAttachment == outputCase.ExpectedMotionVectorAttachment);
+        CHECK(output.DepthPrepassLayout.ObjectIDAttachment == outputCase.ExpectedObjectIDAttachment);
+        CHECK(blackboard.Contains("Velocity") == outputCase.MotionVectors);
+        CHECK(output.ObjectID.IsValid() == outputCase.ObjectID);
+        CHECK(blackboard.Contains("ObjectID") == outputCase.ObjectID);
+        if (outputCase.ObjectID)
+            CHECK(blackboard.Get("ObjectID") == output.ObjectID);
+    }
 }
 
 TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency", "[Renderer][Pipeline]")

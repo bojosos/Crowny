@@ -665,8 +665,7 @@ namespace Crowny
 
             void RenderDepth(RenderGraphContext& context)
             {
-                if (m_DepthDrawList == nullptr || m_DepthDrawList->Commands.empty() ||
-                    !Ensure(m_Depth, m_DepthAttempted, "Resources/Shaders/GpuDepthOnly.asset"))
+                if (m_DepthDrawList == nullptr || m_DepthDrawList->Commands.empty())
                     return;
                 const Ref<GenericGpuBuffer> instances = Buffer(context, "InstanceTable");
                 const Ref<GenericGpuBuffer> instanceIds = Buffer(context, "DepthInstanceIds");
@@ -674,24 +673,33 @@ namespace Crowny
                 if (!instances || !instanceIds || !commands)
                     return;
 
+                DepthPrepassOutputLayout outputLayout =
+                  ResolveDepthPrepassOutputLayout(Resource("Velocity").IsValid(), Resource("ObjectID").IsValid());
+                const bool objectIdOnly = outputLayout.Mode == DepthPrepassOutputMode::ObjectID;
+                const bool objectIdOnlyShadersReady =
+                  objectIdOnly && Ensure(m_DepthObjectID, m_DepthObjectIDAttempted, "Resources/Shaders/GpuDepthObjectID.asset") &&
+                  Ensure(m_AnimatedDepthObjectID, m_AnimatedDepthObjectIDAttempted, "Resources/Shaders/GpuAnimatedDepthObjectID.asset");
+                GraphicsMaterial* staticDepthMaterial = objectIdOnlyShadersReady ? &m_DepthObjectID : &m_Depth;
+                if (!objectIdOnlyShadersReady && !Ensure(m_Depth, m_DepthAttempted, "Resources/Shaders/GpuDepthOnly.asset"))
+                    return;
+                // Missing object-ID-only assets must not disable depth or bind
+                // the velocity shader to an integer color attachment.
+                if (objectIdOnly && !objectIdOnlyShadersReady)
+                    outputLayout = {};
+
                 RenderGraphRenderTargetDesc attachments;
                 attachments.Depth = Resource("SceneDepth");
                 DepthViewConstants view;
                 view.ViewProjection = m_View.Projection * m_View.View;
                 view.PreviousViewProjection = m_View.PreviousViewProjection;
-                m_Depth.WriteUniformBlock(0, 0, &view, sizeof(view));
-                m_Depth.SetBuffer(0, 1, instances);
-                m_Depth.SetBuffer(0, 2, instanceIds);
-                if (Resource("Velocity"))
-                {
-                    attachments.Colors[0] = Resource("Velocity");
-                    attachments.ColorCount = 1;
-                    if (Resource("ObjectID"))
-                    {
-                        attachments.Colors[1] = Resource("ObjectID");
-                        attachments.ColorCount = 2;
-                    }
-                }
+                staticDepthMaterial->WriteUniformBlock(0, 0, &view, sizeof(view));
+                staticDepthMaterial->SetBuffer(0, 1, instances);
+                staticDepthMaterial->SetBuffer(0, 2, instanceIds);
+                attachments.ColorCount = outputLayout.ColorAttachmentCount;
+                if (outputLayout.MotionVectorAttachment != DepthPrepassOutputLayout::NoAttachment)
+                    attachments.Colors[outputLayout.MotionVectorAttachment] = Resource("Velocity");
+                if (outputLayout.ObjectIDAttachment != DepthPrepassOutputLayout::NoAttachment)
+                    attachments.Colors[outputLayout.ObjectIDAttachment] = Resource("ObjectID");
                 const Ref<RenderTarget> target = context.GetRenderTarget(attachments);
                 if (!target)
                     return;
@@ -708,15 +716,20 @@ namespace Crowny
                     const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
                     if (!vertexBuffer || !indexBuffer)
                         continue;
-                    GraphicsMaterial* depthMaterial = &m_Depth;
+                    GraphicsMaterial* depthMaterial = staticDepthMaterial;
                     if (vertexBuffer->GetLayout()->HasAttribute(VertexAttribute::PreviousPosition))
                     {
-                        if (!Ensure(m_AnimatedDepth, m_AnimatedDepthAttempted, "Resources/Shaders/GpuAnimatedDepthOnly.asset"))
-                            continue;
-                        m_AnimatedDepth.WriteUniformBlock(0, 0, &view, sizeof(view));
-                        m_AnimatedDepth.SetBuffer(0, 1, instances);
-                        m_AnimatedDepth.SetBuffer(0, 2, instanceIds);
-                        depthMaterial = &m_AnimatedDepth;
+                        if (objectIdOnlyShadersReady)
+                            depthMaterial = &m_AnimatedDepthObjectID;
+                        else
+                        {
+                            if (!Ensure(m_AnimatedDepth, m_AnimatedDepthAttempted, "Resources/Shaders/GpuAnimatedDepthOnly.asset"))
+                                continue;
+                            depthMaterial = &m_AnimatedDepth;
+                        }
+                        depthMaterial->WriteUniformBlock(0, 0, &view, sizeof(view));
+                        depthMaterial->SetBuffer(0, 1, instances);
+                        depthMaterial->SetBuffer(0, 2, instanceIds);
                     }
                     if (depthMaterial != boundMaterial)
                     {
@@ -1219,6 +1232,8 @@ namespace Crowny
             ComputeMaterial m_Bloom;
             GraphicsMaterial m_Depth;
             GraphicsMaterial m_AnimatedDepth;
+            GraphicsMaterial m_DepthObjectID;
+            GraphicsMaterial m_AnimatedDepthObjectID;
             GraphicsMaterial m_ShadowDepth;
             GraphicsMaterial m_ForwardPlus;
             GraphicsMaterial m_ForwardPremultiplied;
@@ -1248,6 +1263,8 @@ namespace Crowny
             bool m_GtaoAttempted = false;
             bool m_DepthAttempted = false;
             bool m_AnimatedDepthAttempted = false;
+            bool m_DepthObjectIDAttempted = false;
+            bool m_AnimatedDepthObjectIDAttempted = false;
             bool m_ShadowDepthAttempted = false;
             bool m_ForwardPlusAttempted = false;
             bool m_ForwardPremultipliedAttempted = false;

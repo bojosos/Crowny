@@ -52,6 +52,19 @@ namespace Crowny
         }
     } // namespace
 
+    DepthPrepassOutputLayout ResolveDepthPrepassOutputLayout(bool enableMotionVectors, bool enableObjectID)
+    {
+        if (enableMotionVectors)
+        {
+            if (enableObjectID)
+                return { DepthPrepassOutputMode::MotionVectorsAndObjectID, 2, 0, 1 };
+            return { DepthPrepassOutputMode::MotionVectors, 1, 0, DepthPrepassOutputLayout::NoAttachment };
+        }
+        if (enableObjectID)
+            return { DepthPrepassOutputMode::ObjectID, 1, DepthPrepassOutputLayout::NoAttachment, 0 };
+        return {};
+    }
+
     void RenderBlackboard::Set(StringView name, RenderGraphResourceHandle resource)
     {
         auto entry = m_Resources.find(name);
@@ -205,6 +218,7 @@ namespace Crowny
         output.CurrentHiZ = currentHiZ;
         output.HdrColor = graph.CreateTexture("HdrColor", Texture2D(width, height, TextureFormat::RGBA16F));
         output.FinalTarget = desc.OutputTarget;
+        output.DepthPrepassLayout = ResolveDepthPrepassOutputLayout(desc.EnableMotionVectors, desc.EnableObjectID);
 
         const RenderGraphResourceHandle velocity =
           desc.EnableMotionVectors ? graph.CreateTexture("Velocity", Texture2D(width, height, TextureFormat::RG16F)) : RenderGraphResourceHandle{};
