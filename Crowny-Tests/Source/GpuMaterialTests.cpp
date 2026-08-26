@@ -110,7 +110,8 @@ TEST_CASE("Only exact built-in shader names use the compatibility material route
 
     const MaterialRenderClassification lookalike = MaterialRenderClassifier::Classify("MyToonShader.asset", {}, false, false);
     CHECK_FALSE(lookalike.UsesStandardGpuRecord());
-    CHECK(lookalike.IsForwardOnlyOpaque());
+    CHECK_FALSE(lookalike.IsForwardOnlyOpaque());
+    CHECK(lookalike.IsUnsupported());
 
     const GpuMaterialData unsupported = GpuMaterialPacker::PackUnsupported();
     CHECK(unsupported.TextureIndices1.w == GpuMaterialPacker::UnsupportedModelAndAlpha);

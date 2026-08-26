@@ -38,7 +38,7 @@ Status: implemented in the renderer work (directional, point, and spot lights, c
 
 > Finish the integration of basis universal and compressed textures
 
-Status: implemented in the current working tree, including Basis/KTX2 encode/transcode, compressed format selection, subresource validation, fallback behavior, and the mip-chain integration below. Keep compressed cubemap/array fixtures open under mip validation.
+Status: implemented, including Basis/KTX2 encode/transcode for 2D and cubemap arrays, checked layer/face/mip metadata, compressed format selection, flattened Vulkan/OpenGL runtime uploads, fallback behavior, and mip-chain integration.
 
 > and continue with the renderer, i saw it's not finished
 
@@ -48,7 +48,7 @@ Status: ongoing under the master renderer acceptance outline above. Do not inter
 
 > Make sure all of the skeletal and morph animation stuff is well integrated into the renderer
 
-Status: integrated into GPU-scene deformation, culling bounds, shared depth/shadow/velocity/opaque paths, previous-frame data, and CPU/OpenGL fallback work in the current tree; retain parity and stress coverage in the master plan.
+Status: CPU deformation is integrated across culling bounds, depth, shadows, velocity, opaque shading, and OpenGL fallback. Unchanged poses now settle previous-position motion data once and then skip repeated deformation and full-mesh uploads. Compute skinning and morph caching remain open.
 
 ### Current implementation batch
 
@@ -60,7 +60,7 @@ Status: integrated into GPU-scene deformation, culling bounds, shared depth/shad
 
 ## 1. Mip generation and rendering
 
-Status: core integration and isolated GPU mip-selection coverage delivered; compressed cubemap/array fixtures remain
+Status: core integration, isolated GPU mip-selection coverage, and deterministic compressed-array codec fixtures delivered
 
 - [x] Reuse the pinned Basis Universal resampler for import-time mip generation instead of adding a second image-resize dependency.
 - [x] Filter color textures in linear light, premultiply alpha during filtering, renormalize normal maps, optionally preserve alpha coverage, and support box, triangle, Mitchell, Lanczos4, and Kaiser filters.
@@ -69,7 +69,7 @@ Status: core integration and isolated GPU mip-selection coverage delivered; comp
 - [x] Use mip-capable sampler filters, explicit LOD ranges and bias, and feature-checked/clamped anisotropy. `MipFilter::NONE` samples mip zero only.
 - [x] Unit-test odd dimensions, one-pixel termination, sRGB filtering, alpha edges, normal renormalization, and maximum-level limits.
 - [x] Add an authored four-level mip-selection render reference. Vulkan and OpenGL both select the requested mip and match the shared reference on Intel Iris Xe.
-- [ ] Add authored compressed cubemap/array fixtures.
+- [x] Add deterministic authored compressed 2D-array and cubemap-array fixtures with layer/face/mip identity and malformed-range coverage.
 
 ## 2. Material models and toon rendering
 
@@ -104,6 +104,10 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Reject zero-sized or otherwise invalid transient texture descriptors from the reuse pool so they cannot alias valid one-valued descriptors.
 - [ ] Extend GPU draw generation beyond this bounded path. Vulkan baseline, OpenGL, early depth, shadow views, dynamic/skinned/morphed/per-mesh geometry, rejected bins, and strict transparency intentionally retain CPU submission until their ordering and fallback contracts are proven. Transparent GPU radix sorting and toon inverted-hull submission remain separate work.
 - [x] Add pooled transient images where render-graph lifetime aliasing cannot reuse an allocation.
+- [x] Route explicitly classified custom opaque materials through the post-lighting forward-only pass; keep standard GPU bins separate and reject unsupported records during GPU compaction.
+- [x] Require explicit `#pragma material_model custom` metadata before using the reverse-Z forward-only contract; unmarked shaders remain unsupported instead of inheriting an incompatible depth state.
+- [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
+- [ ] Cook and verify the independent depth-prepass output matrix: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID.
 
 ## Validation
 

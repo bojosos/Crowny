@@ -84,6 +84,7 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     desc.DrawBinCount = 3;
     desc.DrawBinLookupCapacity = 8;
     desc.EnableGpuDrawBins = true;
+    desc.EnableObjectID = true;
 
     const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
     const RenderGraphCompileResult& compiled = graph.Compile();
@@ -147,6 +148,11 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     };
     CHECK(transitionsToIndirect(commands));
     CHECK(transitionsToIndirect(counts));
+    CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
+        return barrier.Resource == output.ObjectID &&
+               barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
+               graph.GetPassName(barrier.BeforePass) == "ForwardPlusOpaque";
+    }));
 }
 
 TEST_CASE("Depth prepass configures motion-vector and object-ID outputs independently", "[Renderer][Pipeline]")
@@ -211,8 +217,9 @@ TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency"
     desc.Height = 720;
     desc.Path = RenderingPath::DeferredPlus;
     desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+    desc.EnableObjectID = true;
 
-    pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+    const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
     const RenderGraphCompileResult& compiled = graph.Compile();
     INFO(compiled.Error);
     REQUIRE(compiled.Succeeded);
@@ -227,6 +234,11 @@ TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency"
     CHECK(blackboard.Contains("GBufferNormalRoughMetal"));
     CHECK(blackboard.Contains("GBufferEmissive"));
     CHECK(blackboard.Contains("GBufferMaterialFlags"));
+    CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
+        return barrier.Resource == output.ObjectID &&
+               barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
+               graph.GetPassName(barrier.BeforePass) == "DeferredGBuffer";
+    }));
 }
 
 TEST_CASE("Render pipeline cluster buffers follow non-default runtime settings", "[Renderer][Pipeline][Lights][Clusters]")

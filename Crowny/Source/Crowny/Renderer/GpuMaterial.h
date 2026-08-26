@@ -17,7 +17,8 @@ namespace Crowny
     enum class MaterialRenderRoute : uint8_t
     {
         StandardGpu,
-        ForwardOnly
+        ForwardOnly,
+        Unsupported
     };
 
     struct MaterialRenderClassification
@@ -28,11 +29,12 @@ namespace Crowny
 
         bool UsesStandardGpuRecord() const { return Route == MaterialRenderRoute::StandardGpu; }
         bool IsForwardOnlyOpaque() const { return Route == MaterialRenderRoute::ForwardOnly && Alpha == AlphaMode::Opaque; }
+        bool IsUnsupported() const { return Route == MaterialRenderRoute::Unsupported; }
     };
 
     // Converts explicit shader metadata into one deterministic render route.
-    // Unmarked third-party shaders fail closed to the forward-only path rather
-    // than being interpreted as the engine's standard material layout.
+    // Unmarked third-party shaders fail closed as unsupported rather than being
+    // interpreted as the engine's standard layout or a reverse-Z compatible pass.
     class MaterialRenderClassifier
     {
     public:

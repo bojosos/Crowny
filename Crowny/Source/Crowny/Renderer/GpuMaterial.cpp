@@ -54,7 +54,10 @@ namespace Crowny
             else if (stem == "toon")
                 model = "toon";
             else
-                model = "custom";
+            {
+                result.Route = MaterialRenderRoute::Unsupported;
+                return result;
+            }
         }
 
         if (model == "standard")
@@ -63,8 +66,10 @@ namespace Crowny
             result.Model = MaterialModel::Unlit;
         else if (model == "toon")
             result.Model = MaterialModel::Toon;
-        else
+        else if (model == "custom")
             result.Route = MaterialRenderRoute::ForwardOnly;
+        else
+            result.Route = MaterialRenderRoute::Unsupported;
         return result;
     }
 

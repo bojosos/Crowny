@@ -952,9 +952,13 @@ namespace Crowny
                 m_ForwardPlus.SetTexture(
                   0, 16, TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
                 BindMaterialTable(m_ForwardPlus, m_ForwardTextureVersion, context);
-                RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
+                const RenderSurfaceMask loadMask(
+                  static_cast<uint32_t>(RT_DEPTH_STENCIL) |
+                  (Resource("ObjectID") ? static_cast<uint32_t>(RT_COLOR2) : 0u));
+                RenderAPI::TryGet()->SetRenderTarget(target, 0, loadMask);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f);
+                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f, 0,
+                                                   static_cast<uint8_t>(RT_COLOR0 | RT_COLOR1));
                 const Ref<GenericGpuBuffer> gpuInstanceIds = Buffer(context, "VisibleDrawInstances");
                 const Ref<GenericGpuBuffer> gpuCommands = Buffer(context, "IndirectCommands");
                 const Ref<GenericGpuBuffer> gpuCounts = Buffer(context, "IndirectDrawCounts");
@@ -995,9 +999,15 @@ namespace Crowny
                 m_DeferredGBuffer.WriteUniformBlock(0, 0, &view, sizeof(view));
                 m_DeferredGBuffer.SetBuffer(0, 1, instances);
                 BindMaterialTable(m_DeferredGBuffer, m_DeferredTextureVersion, context);
-                RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
+                const RenderSurfaceMask loadMask(
+                  static_cast<uint32_t>(RT_DEPTH_STENCIL) |
+                  (Resource("ObjectID") ? static_cast<uint32_t>(RT_COLOR4) : 0u));
+                RenderAPI::TryGet()->SetRenderTarget(target, 0, loadMask);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f);
+                RenderAPI::TryGet()->ClearViewport(
+                  FBT_COLOR, glm::vec4(0.0f), 0.0f, 0,
+                  static_cast<uint8_t>(static_cast<uint32_t>(RT_COLOR0) | static_cast<uint32_t>(RT_COLOR1) |
+                                       static_cast<uint32_t>(RT_COLOR2) | static_cast<uint32_t>(RT_COLOR3)));
                 const Ref<GenericGpuBuffer> gpuInstanceIds = Buffer(context, "VisibleDrawInstances");
                 const Ref<GenericGpuBuffer> gpuCommands = Buffer(context, "IndirectCommands");
                 const Ref<GenericGpuBuffer> gpuCounts = Buffer(context, "IndirectDrawCounts");

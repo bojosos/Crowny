@@ -501,7 +501,7 @@ namespace Crowny
                   builder.Write(gbufferEmissive, RenderGraphResourceState::ColorAttachment);
                   builder.Write(gbufferMaterialFlags, RenderGraphResourceState::ColorAttachment);
                   if (output.ObjectID)
-                      builder.Write(output.ObjectID, RenderGraphResourceState::ColorAttachment);
+                      builder.ReadWrite(output.ObjectID, RenderGraphResourceState::ColorAttachmentReadWrite);
               },
               executePass("DeferredGBuffer"));
             graph.AddPass(
@@ -537,6 +537,8 @@ namespace Crowny
                   builder.Write(output.HdrColor, RenderGraphResourceState::ColorAttachment);
                   if (materialId)
                       builder.Write(materialId, RenderGraphResourceState::ColorAttachment);
+                  if (output.ObjectID)
+                      builder.ReadWrite(output.ObjectID, RenderGraphResourceState::ColorAttachmentReadWrite);
               },
               executePass("ForwardPlusOpaque"));
         }
