@@ -194,6 +194,18 @@ namespace Crowny
         }
 
         StartOwnedModule<StringIDTable>(m_State->CoreShutdownActions);
+
+        // Mono must initialize before Crowny creates worker threads. Starting Mono after
+        // TaskSystem triggers an invalid cooperative-suspend transition during Linux
+        // domain reloads. Managed assemblies and higher-level scripting services remain
+        // deferred.
+        if (!MonoManager::IsStartedUp())
+        {
+            m_State->ServiceShutdownActions.emplace_back([]() { MonoManager::Shutdown(); });
+            if (!StartMono(m_State->Description))
+                m_State->ServiceShutdownActions.pop_back();
+        }
+
         m_State->OwnsTaskSystem = StartOwnedModule<TaskSystem>(m_State->CoreShutdownActions);
         StartOwnedModule<Importer>(m_State->CoreShutdownActions);
         Importer::RegisterBuiltinImporters();
@@ -295,12 +307,6 @@ namespace Crowny
         if (ScriptObjectManager::IsStartedUp())
             return;
 
-        if (!MonoManager::IsStartedUp())
-        {
-            m_State->ServiceShutdownActions.emplace_back([]() { MonoManager::Shutdown(); });
-            if (!StartMono(m_State->Description))
-                m_State->ServiceShutdownActions.pop_back();
-        }
         if (!MonoManager::IsStartedUp())
             return;
 
