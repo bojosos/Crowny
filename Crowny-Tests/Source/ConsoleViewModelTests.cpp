@@ -45,6 +45,7 @@ TEST_CASE("Console view model retains severity summaries", "[Editor][Console]")
 TEST_CASE("Console view model retains selected callstack labels", "[Editor][Console]")
 {
     ConsoleBuffer::Message message;
+    message.Sequence = 42u;
     message.Callstack = {
         { "Player::Update()", "Scripts/Player.cs", 42u },
         { "Game::Tick()", "Scripts/Game.cs", 7u },
@@ -66,6 +67,7 @@ TEST_CASE("Console view model reads allocate nothing after warm-up", "[Editor][C
         MakeMessage(ConsoleBuffer::Message::Level::Info, 3u),
         MakeMessage(ConsoleBuffer::Message::Level::Warn),
     };
+    messages[0].Sequence = 42u;
     messages[0].Callstack = { { "Player::Update()", "Scripts/Player.cs", 42u } };
     const Vector<uint32_t> visibleIndices = { 0u, 1u };
     ConsoleViewModel model;
@@ -77,6 +79,7 @@ TEST_CASE("Console view model reads allocate nothing after warm-up", "[Editor][C
     const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
     for (uint32_t frame = 0; frame < 120u; frame++)
     {
+        model.UpdateSelection(&messages[0]);
         checksum += model.GetSummary().ShownCount;
         checksum += model.GetCallstackSourceLabels()[0].size();
     }

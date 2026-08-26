@@ -28,10 +28,19 @@ namespace Crowny
 
     void ConsoleViewModel::UpdateSelection(const ConsoleBuffer::Message* message)
     {
-        m_CallstackSourceLabels.clear();
-        if (message == nullptr)
+        if (message != nullptr && m_HasSelection && m_SelectedSequence == message->Sequence)
             return;
 
+        m_CallstackSourceLabels.clear();
+        if (message == nullptr)
+        {
+            m_SelectedSequence = 0u;
+            m_HasSelection = false;
+            return;
+        }
+
+        m_SelectedSequence = message->Sequence;
+        m_HasSelection = true;
         m_CallstackSourceLabels.reserve(message->Callstack.size());
         for (const ConsoleBuffer::Message::FunctionCall& call : message->Callstack)
             m_CallstackSourceLabels.push_back(call.SourceFilePath.string() + ":" + std::to_string(call.Line));

@@ -56,6 +56,8 @@ namespace Crowny
         bool IsScrollToBottomEnabled() const { return m_AllowScrollingToBottom; }
 
     private:
+        void SetSelectedMessage(const ConsoleBuffer::Message* message);
+
         Vector<uint32_t> m_MessageIndices;
         Vector<ConsoleBuffer::Message> m_MessageSnapshot;
         ConsoleBuffer::SearchQuery m_SearchQuery;

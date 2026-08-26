@@ -138,9 +138,7 @@ namespace Crowny
             m_MessageIndices.clear();
             m_MessageSnapshot.clear();
             m_MessageRevision = std::numeric_limits<uint64_t>::max();
-            m_SelectedMessageId = 0;
-            m_SelectedMessage = {};
-            m_ViewModel.UpdateSelection(nullptr);
+            SetSelectedMessage(nullptr);
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Remove all console messages");
@@ -221,11 +219,7 @@ namespace Crowny
             ImGui::Text("%u", message.RepeatCount);
         ImGui::TableNextColumn();
         if (ImGui::Selectable(message.MessageText.c_str(), &selected))
-        {
-            m_SelectedMessageId = message.Sequence;
-            m_SelectedMessage = message;
-            m_ViewModel.UpdateSelection(&m_SelectedMessage);
-        }
+            SetSelectedMessage(&message);
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -300,10 +294,7 @@ namespace Crowny
         }
     }
 
-    bool ConsolePanel::MatchesSearch(const ConsoleBuffer::Message& message) const
-    {
-        return m_SearchQuery.Matches(message);
-    }
+    bool ConsolePanel::MatchesSearch(const ConsoleBuffer::Message& message) const { return m_SearchQuery.Matches(message); }
 
     void ConsolePanel::RefreshMessages()
     {
@@ -326,17 +317,24 @@ namespace Crowny
             });
         }
         if (selected != m_MessageSnapshot.end())
-        {
-            m_SelectedMessageId = selected->Sequence;
-            m_SelectedMessage = *selected;
-            m_ViewModel.UpdateSelection(&m_SelectedMessage);
-        }
+            SetSelectedMessage(&*selected);
         else
+            SetSelectedMessage(nullptr);
+    }
+
+    void ConsolePanel::SetSelectedMessage(const ConsoleBuffer::Message* message)
+    {
+        if (message != nullptr)
         {
-            m_SelectedMessageId = 0;
-            m_SelectedMessage = {};
-            m_ViewModel.UpdateSelection(nullptr);
+            m_SelectedMessageId = message->Sequence;
+            m_SelectedMessage = *message;
+            m_ViewModel.UpdateSelection(&m_SelectedMessage);
+            return;
         }
+
+        m_SelectedMessageId = 0u;
+        m_SelectedMessage = {};
+        m_ViewModel.UpdateSelection(nullptr);
     }
 
     void ConsolePanel::RebuildSearchTerms()

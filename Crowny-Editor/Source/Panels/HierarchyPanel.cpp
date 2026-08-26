@@ -299,7 +299,7 @@ namespace Crowny
             UIUtils::SetEntityPayload(entity);
             const size_t dragCount = m_Selection.Contains(entity) ? m_Selection.GetAll().size() : 1u;
             if (dragCount == 1u)
-                ImGui::TextUnformatted(name.c_str());
+                ImGui::TextUnformatted(name);
             else
                 ImGui::Text("%zu entities", dragCount);
             ImGui::EndDragDropSource();

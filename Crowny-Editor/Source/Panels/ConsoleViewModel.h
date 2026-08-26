@@ -30,5 +30,7 @@ namespace Crowny
     private:
         Summary m_Summary;
         Vector<String> m_CallstackSourceLabels;
+        uint64_t m_SelectedSequence = 0u;
+        bool m_HasSelection = false;
     };
 } // namespace Crowny
