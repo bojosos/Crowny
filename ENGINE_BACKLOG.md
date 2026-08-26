@@ -42,6 +42,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Per-record synchronization epochs replace the four node-based seen sets for instances, lights, meshes, and materials. The stable and post-removal 1,000-light extraction paths are specifically measured allocation-free after warm-up.
 - [x] Common native component-inspector scopes retain typed pre-edit snapshots and bind undo factories without rebuilding captured vectors or heap-backed callables. Tag multi-edit snapshots are measured allocation-free for 120 warm frames; managed-script capture and components whose assignment rebuilds node containers remain separate optimizations.
 - [x] Material inspection caches reflected parameter schemas by material instance and layout version. Warm resolves allocate nothing, value edits do not rebuild the schema, and the editor cache retains no material, texture, shader, or GPU-resource references.
+- [x] Normal entity-hierarchy rows borrow their component-owned tag labels instead of allocating one string per visible entity per frame.
 
 ## Physics and ECS
 

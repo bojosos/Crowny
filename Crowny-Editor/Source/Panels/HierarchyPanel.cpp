@@ -237,7 +237,7 @@ namespace Crowny
         m_VisibleEntities.push_back(entity);
         const auto& tc = entity.GetComponent<TagComponent>();
         const auto& rc = entity.GetComponent<RelationshipComponent>();
-        const String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
+        const char* name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
 
         const bool selected = m_Selection.Contains(entity);
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowOverlap;
@@ -249,7 +249,7 @@ namespace Crowny
 
         if (entity == m_Renaming)
         {
-            ImGui::PushID(name.c_str());
+            ImGui::PushID(name);
             Rename(entity);
             if (hasChildren)
             {
@@ -278,7 +278,7 @@ namespace Crowny
         if (isPrefabInstance)
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(100, 160, 255, 255));
 
-        bool open = ImGui::TreeNodeEx(name.c_str(), flags | (selected ? ImGuiTreeNodeFlags_Selected : 0));
+        bool open = ImGui::TreeNodeEx(name, flags | (selected ? ImGuiTreeNodeFlags_Selected : 0));
 
         if (isPrefabInstance)
             ImGui::PopStyleColor();
