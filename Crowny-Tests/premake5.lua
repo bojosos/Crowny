@@ -19,9 +19,12 @@ project "Crowny-Tests"
 		"%{wks.location}/Crowny-Editor/Source/Editor/ScriptInspectorTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/UndoRedo.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/ConsoleViewModel.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Panels/AssetBrowserSelection.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/ComponentMenuModel.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/MaterialInspectorSchemaCache.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/ViewportHudText.cpp",
+		"%{wks.location}/Crowny-Editor/Source/UI/Properties.cpp",
+		"%{wks.location}/Crowny-Editor/Source/UI/PopupLabelId.cpp",
 	}
 
 	includedirs
@@ -36,6 +39,7 @@ project "Crowny-Tests"
 		"%{IncludeDir.spdlog}",
 		"%{IncludeDir.mono}",
 		"%{IncludeDir.imgui}",
+		"%{IncludeDir.ImGuizmo}",
 		"%{IncludeDir.stb_image}",
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.cereal}",

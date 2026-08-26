@@ -47,6 +47,12 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Managed-script inspector undo captures detached persisted state only when an item changes, records redo after the managed setter, and resets its retained transaction on selection, scene, and Mono domain changes. Stable warm frames perform no undo capture or allocation.
 - [x] Material inspection caches reflected parameter schemas by material instance and layout version. Warm resolves allocate nothing, value edits do not rebuild the schema, and the editor cache retains no material, texture, shader, or GPU-resource references.
 - [x] Normal entity-hierarchy rows borrow their component-owned tag labels instead of allocating one string per visible entity per frame.
+- [x] Dynamic animation and procedural-mesh uploads use typed, move-only render commands with retained result slots instead of heap-backed `std::function` targets; 1, 1,000, and 10,000-command warm paths allocate nothing.
+- [x] Directional shadow cascade splits use fixed stack storage, removing the remaining per-camera split-vector allocation after warm-up.
+- [x] Component, script, and reparent undo actions retain their target scene safely. Play and Simulate make edit history dormant instead of recording against runtime clones; edit-scene replacement clears stale history.
+- [x] Add-component search retains sorted catalogs and query results, while the viewport HUD uses bounded fixed-buffer formatting. Their stable visible-frame paths are covered by zero-allocation tests.
+- [x] Asset Browser selection uses full paths, survives filtering and sorting safely, and assigns distinct ImGui IDs to duplicate basenames. Empty-result keyboard actions and destructive operations are bounds-safe.
+- [x] Reference-field popup IDs use owned fixed storage with no warm-frame allocation, and multiline properties share the standard balanced ImGui row cleanup path.
 
 ## Physics and ECS
 

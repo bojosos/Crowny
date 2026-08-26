@@ -460,25 +460,19 @@ namespace Crowny
             Pre(label);
             const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
 
-            if (IsItemDisabled())
-                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-
             const bool modified = ImGui::InputTextMultiline(GenerateID(), &value);
 
             if (mixed && value.empty() && !ImGui::IsItemActive())
             {
                 const ImRect bounds = UI::GetItemRect();
-                ImGui::GetWindowDrawList()->AddText(bounds.Min + ImGui::GetStyle().FramePadding, ImGui::GetColorU32(ImGuiCol_TextDisabled),
-                                                    "Multiple values");
+                const ImVec2 padding = ImGui::GetStyle().FramePadding;
+                ImGui::GetWindowDrawList()->AddText(ImVec2(bounds.Min.x + padding.x, bounds.Min.y + padding.y),
+                                                    ImGui::GetColorU32(ImGuiCol_TextDisabled), "Multiple values");
             }
 
             UndoRedo::Get().OnItemInteract();
 
-            if (IsItemDisabled())
-                ImGui::PopStyleVar();
-
-            ImGui::PopItemWidth();
-            ImGui::NextColumn();
+            Post();
 
             return modified;
         }

@@ -9,6 +9,7 @@
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Editor/Editor.h"
 #include "Editor/ProjectLibrary.h"
+#include "UI/PopupLabelId.h"
 
 #include "Crowny/Physics/Physics2D.h"
 
@@ -91,6 +92,8 @@ namespace Crowny
             *fmt::format_to_n(s_LabelIDBuffer, std::size(s_LabelIDBuffer), "{}##{}", label, s_Counter++).out = 0;
             return s_LabelIDBuffer;
         }
+
+        template <size_t N> static PopupLabelId GeneratePopupID(const char (&label)[N]) noexcept { return PopupLabelId::Create(label, s_Counter++); }
 
         static void PushID()
         {
@@ -430,8 +433,8 @@ namespace Crowny
 
         static bool SearchWidget(String& searchString, const char* hint = "Search...", bool* grabFocus = nullptr);
 
-        static bool ScriptSearchPopup(const String& id, String& selectedScript, bool* cleared = nullptr, const char* hint = "Search Entities",
-                                      const ImVec2& size = ImVec2{ 250.0f, 350.0f })
+        static bool ScriptSearchPopup(const UI::PopupLabelId& id, String& selectedScript, bool* cleared = nullptr,
+                                      const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
@@ -450,7 +453,7 @@ namespace Crowny
 
             static bool grabFocus = true;
 
-            if (BeginPopup(id.c_str(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+            if (BeginPopup(id.CStr(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
             {
                 static String searchString;
 
@@ -565,10 +568,10 @@ namespace Crowny
                 const float itemHeight = 28.0f;
 
                 const String buttonText = Physics2D::TryGet()->GetLayerName(selectedLayer);
-                const String layerSearchPopupId = UI::GenerateLabelID("EntitySearch");
+                const UI::PopupLabelId layerSearchPopupId = UI::GeneratePopupID("EntitySearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
-                    ImGui::OpenPopup(layerSearchPopupId.c_str());
+                    ImGui::OpenPopup(layerSearchPopupId.CStr());
                 ImGui::PopStyleColor();
                 ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 
@@ -586,7 +589,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool LayerSearchPopup(const String& id, uint32_t& selectedLayerMask, const char* hint = "Layer",
+        static bool LayerSearchPopup(const UI::PopupLabelId& id, uint32_t& selectedLayerMask, const char* hint = "Layer",
                                      const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
@@ -606,7 +609,7 @@ namespace Crowny
 
             static bool grabFocus = true;
 
-            if (BeginPopup(id.c_str(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+            if (BeginPopup(id.CStr(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
             {
                 static String searchString;
 
@@ -679,8 +682,8 @@ namespace Crowny
             return modified;
         }
 
-        static bool EntitySearchPopup(const String& id, Entity& selectedEntity, bool* cleared = nullptr, const char* hint = "Search Entities",
-                                      const ImVec2& size = ImVec2{ 250.0f, 350.0f })
+        static bool EntitySearchPopup(const UI::PopupLabelId& id, Entity& selectedEntity, bool* cleared = nullptr,
+                                      const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
@@ -699,7 +702,7 @@ namespace Crowny
 
             static bool grabFocus = true;
 
-            if (BeginPopup(id.c_str(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+            if (BeginPopup(id.CStr(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
             {
                 static String searchString;
 
@@ -799,7 +802,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool AssetSearchPopup(const String& id, AssetType assetType, AssetHandle<Asset>& assetHandle, bool* cleared = nullptr,
+        static bool AssetSearchPopup(const UI::PopupLabelId& id, AssetType assetType, AssetHandle<Asset>& assetHandle, bool* cleared = nullptr,
                                      const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
@@ -819,7 +822,7 @@ namespace Crowny
 
             static bool grabFocus = true;
 
-            if (BeginPopup(id.c_str(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+            if (BeginPopup(id.CStr(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
             {
                 static String searchString;
 
@@ -937,10 +940,10 @@ namespace Crowny
                 String buttonText = "Null";
                 if (entity)
                     buttonText = entity.GetName();
-                const String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
+                const UI::PopupLabelId entitySearchPopupId = UI::GeneratePopupID("EntitySearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
-                    ImGui::OpenPopup(entitySearchPopupId.c_str());
+                    ImGui::OpenPopup(entitySearchPopupId.CStr());
                 ImGui::PopStyleColor();
                 ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 
@@ -996,10 +999,10 @@ namespace Crowny
                     buttonText = assetHandle->GetName();
                 else if (assetHandle.HasUUID())
                     buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
-                const String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
+                const UI::PopupLabelId entitySearchPopupId = UI::GeneratePopupID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
-                    ImGui::OpenPopup(entitySearchPopupId.c_str());
+                    ImGui::OpenPopup(entitySearchPopupId.CStr());
                 ImGui::PopStyleColor();
                 ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 
@@ -1069,10 +1072,10 @@ namespace Crowny
                     buttonText = assetHandle->GetName();
                 else if (assetHandle.HasUUID())
                     buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
-                const String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
+                const UI::PopupLabelId entitySearchPopupId = UI::GeneratePopupID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
-                    ImGui::OpenPopup(entitySearchPopupId.c_str());
+                    ImGui::OpenPopup(entitySearchPopupId.CStr());
                 ImGui::PopStyleColor();
                 ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 
@@ -1125,10 +1128,10 @@ namespace Crowny
                 String buttonText = "Null";
                 if (!name.empty())
                     buttonText = name;
-                const String scriptSearchPopupId = UI::GenerateLabelID("ScriptSearch");
+                const UI::PopupLabelId scriptSearchPopupId = UI::GeneratePopupID("ScriptSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
-                    ImGui::OpenPopup(scriptSearchPopupId.c_str());
+                    ImGui::OpenPopup(scriptSearchPopupId.CStr());
                 ImGui::PopStyleColor();
                 ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 

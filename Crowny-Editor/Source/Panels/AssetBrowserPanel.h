@@ -7,6 +7,8 @@
 #include "Editor/EditorDefaults.h"
 #include "Editor/ProjectLibrary.h"
 
+#include <optional>
+
 namespace Crowny
 {
 
@@ -82,6 +84,7 @@ namespace Crowny
         void HandleKeyboardNavigation();
         void RecalculateDirectoryEntries();
         void ClearSelection();
+        void ReconcileSelection(const std::optional<Path>& preferredStartPath = {}, const std::optional<Path>& preferredEndPath = {});
         const DisplayList& GetDisplayList();
         void UpdateDisplayList();
 
@@ -103,7 +106,9 @@ namespace Crowny
         String m_CsDefaultText;
 
         Vector<Path> m_OrderedSelection;
-        UnorderedSet<size_t> m_SelectionSet;
+        Vector<const Path*> m_DisplayEntryPaths;
+        Vector<const Path*> m_SortedDisplayEntryPaths;
+        UnorderedSet<Path, HashPath> m_SelectionSet;
         uint32_t m_SelectionStartIndex = (uint32_t)-1;
         uint32_t m_SelectionEndIndex = 0;
         size_t m_LastCurrentDirectory = 0;

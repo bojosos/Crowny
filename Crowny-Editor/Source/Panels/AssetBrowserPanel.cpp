@@ -1,6 +1,7 @@
 #include "cwepch.h"
 
 #include "Panels/AssetBrowserPanel.h"
+#include "Panels/AssetBrowserSelection.h"
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
@@ -535,23 +536,18 @@ namespace Crowny
 
         if (Input::IsKeyDown(Key::Delete)) // Delete selected items
         {
-            while (!m_SelectionSet.empty())
+            Vector<Path> pathsToDelete;
+            pathsToDelete.reserve(m_SelectionSet.size());
+            for (const Ref<LibraryEntry>& entry : displayList)
             {
-                const DisplayList& displayList = GetDisplayList();
-                for (const Ref<LibraryEntry>& entry : displayList)
-                {
-                    // This is not enough
-                    auto iterFind = m_SelectionSet.find(entry->ElementNameHash);
-                    if (iterFind != m_SelectionSet.end())
-                    {
-                        ProjectLibrary::Get().DeleteEntry(entry->Filepath);
-                        m_SelectionSet.erase(iterFind);
-                        break;
-                    }
-                }
+                if (m_SelectionSet.contains(entry->Filepath))
+                    pathsToDelete.push_back(entry->Filepath);
             }
-            UpdateDisplayList();
             ClearSelection();
+            for (const Path& path : pathsToDelete)
+                ProjectLibrary::Get().DeleteEntry(path);
+            if (!pathsToDelete.empty())
+                UpdateDisplayList();
         }
 
         if (Input::IsKeyDown(Key::F2)) // Rename the first selected item
@@ -565,7 +561,7 @@ namespace Crowny
             m_RenamingText = m_RenamingPath.filename().string();
         }
 
-        if (Input::IsKeyDown(Key::Enter) && !m_SelectionSet.empty()) // Enter a directory using the keyboard
+        if (Input::IsKeyDown(Key::Enter) && !m_SelectionSet.empty() && m_SelectionStartIndex < displayList.size())
         {
             LibraryEntry* entry = displayList[m_SelectionStartIndex].get();
             HandleOpen(entry);
@@ -584,11 +580,14 @@ namespace Crowny
                 String clipboardString;
                 for (const auto& entry : displayList)
                 {
-                    if (m_SelectionSet.find(entry->ElementNameHash) != m_SelectionSet.end())
+                    if (m_SelectionSet.contains(entry->Filepath))
                         clipboardString += entry->Filepath.string() + '\n';
                 }
-                clipboardString = clipboardString.substr(1, clipboardString.size() - 1);
-                PlatformUtils::CopyToClipboard(clipboardString);
+                if (!clipboardString.empty())
+                {
+                    clipboardString.pop_back();
+                    PlatformUtils::CopyToClipboard(clipboardString);
+                }
             }
 
             if (Input::IsKeyDown(Key::V) && m_SearchString.empty()) // Paste (Ctrl+V), only paste if we aren't searching
@@ -609,10 +608,12 @@ namespace Crowny
 
             if (Input::IsKeyDown(Key::A)) // Select all (Ctrl+A)
             {
+                if (displayList.empty())
+                    return;
                 m_SelectionStartIndex = 0;
-                m_SelectionEndIndex = displayList.size() > 0 ? (uint32_t)(displayList.size() - 1) : 0;
+                m_SelectionEndIndex = static_cast<uint32_t>(displayList.size() - 1);
                 for (uint32_t i = m_SelectionStartIndex; i <= m_SelectionEndIndex; i++)
-                    m_SelectionSet.insert(displayList[i]->ElementNameHash);
+                    m_SelectionSet.insert(displayList[i]->Filepath);
             }
         }
 
@@ -623,7 +624,7 @@ namespace Crowny
             {
                 if (displayList.size() > 0)
                 {
-                    m_SelectionSet.insert(displayList[0]->ElementNameHash); // Select the first entry
+                    m_SelectionSet.insert(displayList[0]->Filepath); // Select the first entry
                     m_SelectionEndIndex = m_SelectionStartIndex = 0;
                 }
             }
@@ -632,7 +633,7 @@ namespace Crowny
                 if (displayList.size() > 0)
                 {
                     const size_t lastIdx = displayList.size() - 1;
-                    m_SelectionSet.insert(displayList[lastIdx]->ElementNameHash); // Select the last entry
+                    m_SelectionSet.insert(displayList[lastIdx]->Filepath); // Select the last entry
                     m_SelectionEndIndex = m_SelectionStartIndex = (uint32_t)lastIdx;
                 }
             }
@@ -647,7 +648,7 @@ namespace Crowny
                     m_SelectionSet.clear();
                     m_SelectionEndIndex = m_SelectionStartIndex = std::max(0, (int32_t)m_SelectionStartIndex - 1);
                     const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
-                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SelectionSet.insert(entry->Filepath);
                     m_SetSelectedPathCallback(entry->Filepath);
                 }
                 else
@@ -665,7 +666,7 @@ namespace Crowny
                     m_SelectionSet.clear();
                     m_SelectionEndIndex = m_SelectionStartIndex = std::min((int32_t)m_SelectionStartIndex + 1, (int32_t)displayList.size() - 1);
                     const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
-                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SelectionSet.insert(entry->Filepath);
                     m_SetSelectedPathCallback(entry->Filepath);
                 }
                 else
@@ -683,7 +684,7 @@ namespace Crowny
                     m_SelectionSet.clear();
                     m_SelectionEndIndex = m_SelectionStartIndex = std::max(0, (int32_t)(m_SelectionStartIndex - m_ColumnCount));
                     const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
-                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SelectionSet.insert(entry->Filepath);
                     m_SetSelectedPathCallback(entry->Filepath);
                 }
                 else
@@ -701,7 +702,7 @@ namespace Crowny
                     m_SelectionSet.clear();
                     m_SelectionEndIndex = m_SelectionStartIndex = std::min(m_SelectionStartIndex + m_ColumnCount, (uint32_t)displayList.size() - 1);
                     const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
-                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SelectionSet.insert(entry->Filepath);
                     m_SetSelectedPathCallback(entry->Filepath);
                 }
                 else
@@ -719,7 +720,7 @@ namespace Crowny
                 const uint32_t startIdx = std::min(m_SelectionStartIndex, m_SelectionEndIndex);
                 const uint32_t endIdx = std::max(m_SelectionStartIndex, m_SelectionEndIndex);
                 for (uint32_t i = startIdx; i <= endIdx; i++)
-                    m_SelectionSet.insert(displayList[i]->ElementNameHash);
+                    m_SelectionSet.insert(displayList[i]->Filepath);
             }
         }
     }
@@ -731,6 +732,34 @@ namespace Crowny
         m_SelectionEndIndex = 0;
 
         m_SetSelectedPathCallback({});
+    }
+
+    void AssetBrowserPanel::ReconcileSelection(const std::optional<Path>& preferredStartPath, const std::optional<Path>& preferredEndPath)
+    {
+        m_DisplayEntryPaths.clear();
+        m_DisplayEntryPaths.reserve(m_DisplayList.size());
+        for (const Ref<LibraryEntry>& entry : m_DisplayList)
+            m_DisplayEntryPaths.push_back(&entry->Filepath);
+        m_SortedDisplayEntryPaths = m_DisplayEntryPaths;
+        std::sort(m_SortedDisplayEntryPaths.begin(), m_SortedDisplayEntryPaths.end(),
+                  [](const Path* lhs, const Path* rhs) { return *lhs < *rhs; });
+
+        const uint32_t previousStartIndex = m_SelectionStartIndex;
+        const bool hadSelection = !m_SelectionSet.empty();
+        const AssetBrowserSelectionResult result =
+          ReconcileAssetBrowserSelection(m_SelectionSet, m_DisplayEntryPaths, m_SortedDisplayEntryPaths, preferredStartPath, preferredEndPath);
+        m_SelectionStartIndex = result.StartIndex;
+        m_SelectionEndIndex = result.EndIndex;
+
+        if (m_SelectionSet.empty())
+        {
+            if (hadSelection)
+                m_SetSelectedPathCallback({});
+            return;
+        }
+
+        if (result.SelectionChanged || result.StartIndex != previousStartIndex)
+            m_SetSelectedPathCallback(m_DisplayList[result.StartIndex]->Filepath);
     }
 
     void AssetBrowserPanel::SortDisplayList(DisplayList& displayList) const
@@ -780,20 +809,15 @@ namespace Crowny
         DisplayList& displayList = m_DisplayList;
         if (m_RequiresSort)
         {
-            // Store the selection start idx hash so it can be restored after the entries move around.
-            size_t selectionStartHash = 0;
+            std::optional<Path> selectionStartPath;
+            std::optional<Path> selectionEndPath;
             if (m_SelectionStartIndex < displayList.size())
-                selectionStartHash = displayList[m_SelectionStartIndex]->ElementNameHash;
+                selectionStartPath = displayList[m_SelectionStartIndex]->Filepath;
+            if (m_SelectionEndIndex < displayList.size())
+                selectionEndPath = displayList[m_SelectionEndIndex]->Filepath;
             SortDisplayList(displayList);
             m_RequiresSort = false;
-            if (m_SelectionStartIndex < displayList.size())
-            {
-                for (uint32_t i = 0; i < displayList.size(); i++)
-                {
-                    if (displayList[i]->ElementNameHash == selectionStartHash)
-                        m_SelectionStartIndex = m_SelectionEndIndex = i;
-                }
-            }
+            ReconcileSelection(selectionStartPath, selectionEndPath);
         }
         return displayList;
     }
@@ -803,6 +827,13 @@ namespace Crowny
     {
         if (m_CurrentDirectoryEntry == nullptr)
             return;
+
+        std::optional<Path> selectionStartPath;
+        std::optional<Path> selectionEndPath;
+        if (m_SelectionStartIndex < m_DisplayList.size())
+            selectionStartPath = m_DisplayList[m_SelectionStartIndex]->Filepath;
+        if (m_SelectionEndIndex < m_DisplayList.size())
+            selectionEndPath = m_DisplayList[m_SelectionEndIndex]->Filepath;
 
         const Vector<AssetType> assetTypes = GetActiveAssetTypes();
         if (!m_SearchString.empty())
@@ -829,7 +860,9 @@ namespace Crowny
                     m_DisplayList.push_back(entry);
             }
         }
-        m_RequiresSort = true;
+        SortDisplayList(m_DisplayList);
+        m_RequiresSort = false;
+        ReconcileSelection(selectionStartPath, selectionEndPath);
     }
 
     void AssetBrowserPanel::HandleOpen(LibraryEntry* entry)
@@ -914,11 +947,11 @@ namespace Crowny
             {
                 const Ref<LibraryEntry>& entry = displayList[entryIdx];
                 const Path& path = entry->Filepath;
-                const uint32_t upperBits = static_cast<uint32_t>(entry->ElementNameHash >> 32);
-                const uint32_t lowerBits = static_cast<uint32_t>(entry->ElementNameHash & 0xffffffff);
-                ImGui::PushID(upperBits ^ lowerBits);
+                const AssetBrowserItemId itemId = MakeAssetBrowserItemId(path);
+                ImGui::PushID(static_cast<int>(itemId.UpperBits));
+                ImGui::PushID(static_cast<int>(itemId.LowerBits));
 
-                const bool selected = m_SelectionSet.find(entry->ElementNameHash) != m_SelectionSet.end();
+                const bool selected = m_SelectionSet.contains(entry->Filepath);
                 ImTextureID texture = entry->Type == LibraryEntryType::Directory ? m_FolderIcon : m_FileIcon;
                 const AssetPreviewResult* preview = nullptr;
                 if (entry->Type == LibraryEntryType::File)
@@ -942,12 +975,12 @@ namespace Crowny
                     if (Input::IsKeyPressed(Key::LeftControl))
                     {
                         if (selected)
-                            m_SelectionSet.erase(entry->ElementNameHash);
+                            m_SelectionSet.erase(entry->Filepath);
                         else
                         {
                             if (m_SelectionSet.empty())
                                 m_SelectionStartIndex = entryIdx;
-                            m_SelectionSet.insert(entry->ElementNameHash);
+                            m_SelectionSet.insert(entry->Filepath);
                             m_SelectionEndIndex = entryIdx;
                         }
                     }
@@ -957,13 +990,13 @@ namespace Crowny
                         const uint32_t first = std::min(entryIdx, m_SelectionStartIndex);
                         const uint32_t last = std::max(entryIdx, m_SelectionStartIndex);
                         for (uint32_t i = first; i <= last; i++)
-                            m_SelectionSet.insert(displayList[i]->ElementNameHash);
+                            m_SelectionSet.insert(displayList[i]->Filepath);
                         m_SelectionEndIndex = entryIdx;
                     }
                     else
                     {
                         m_SelectionSet.clear();
-                        m_SelectionSet.insert(entry->ElementNameHash);
+                        m_SelectionSet.insert(entry->Filepath);
                         m_SelectionStartIndex = m_SelectionEndIndex = entryIdx;
                         m_SetSelectedPathCallback(entry->Type == LibraryEntryType::File ? path : Path{});
                     }
@@ -992,7 +1025,7 @@ namespace Crowny
                 if (ImGui::IsItemClicked(ImGuiMouseButton_Right) && !selected)
                 {
                     m_SelectionSet.clear();
-                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SelectionSet.insert(entry->Filepath);
                     m_SelectionStartIndex = m_SelectionEndIndex = entryIdx;
                     m_SetSelectedPathCallback(entry->Type == LibraryEntryType::File ? path : Path{});
                 }
@@ -1045,6 +1078,7 @@ namespace Crowny
                     ImGui::TextDisabled("-");
 
                 ImGui::PopID();
+                ImGui::PopID();
                 if (shouldOpen)
                 {
                     ImGui::EndTable();
@@ -1071,11 +1105,11 @@ namespace Crowny
             const auto entry = displayList[entryIdx];
             const auto& path = entry->Filepath;
 
-            const uint32_t upperBits = static_cast<uint32_t>(entry->ElementNameHash >> 32);
-            const uint32_t lowerBits = static_cast<uint32_t>(entry->ElementNameHash & 0xffffffff);
-            ImGui::PushID(upperBits ^ lowerBits);
+            const AssetBrowserItemId itemId = MakeAssetBrowserItemId(path);
+            ImGui::PushID(static_cast<int>(itemId.UpperBits));
+            ImGui::PushID(static_cast<int>(itemId.LowerBits));
 
-            auto iterFind = m_SelectionSet.find(entry->ElementNameHash); // Show selected files
+            auto iterFind = m_SelectionSet.find(entry->Filepath); // Show selected files
             const bool selected = iterFind != m_SelectionSet.end();
 
             ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -1124,7 +1158,7 @@ namespace Crowny
                     const Ref<LibraryEntry>& entry = ProjectLibrary::Get().FindEntry(newPath);
                     CW_ENGINE_ASSERT(entry);
                     if (entry) // Select the folder after it is renamed
-                        m_SelectionSet.insert(entry->ElementNameHash);
+                        m_SelectionSet.insert(entry->Filepath);
                     // This doesn't work well with sort as the entries move around
                     m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
 
@@ -1205,12 +1239,12 @@ namespace Crowny
                     if (Input::IsKeyPressed(Key::LeftControl)) // Multi-select
                     {
                         if (selected)
-                            m_SelectionSet.erase(entry->ElementNameHash);
+                            m_SelectionSet.erase(entry->Filepath);
                         else
                         {
                             if (m_SelectionSet.empty())
                                 m_SelectionStartIndex = entryIdx;
-                            m_SelectionSet.insert(entry->ElementNameHash);
+                            m_SelectionSet.insert(entry->Filepath);
                             m_SelectionEndIndex = entryIdx;
                         }
                     }
@@ -1220,19 +1254,19 @@ namespace Crowny
                         if (entryIdx < m_SelectionStartIndex) // Select from right to left
                         {
                             for (uint32_t i = entryIdx; i <= m_SelectionStartIndex; i++)
-                                m_SelectionSet.insert(displayList[i]->ElementNameHash);
+                                m_SelectionSet.insert(displayList[i]->Filepath);
                         }
                         else
                         {
                             for (uint32_t i = m_SelectionStartIndex; i <= entryIdx; i++)
-                                m_SelectionSet.insert(displayList[i]->ElementNameHash);
+                                m_SelectionSet.insert(displayList[i]->Filepath);
                         }
                         m_SelectionEndIndex = entryIdx;
                     }
                     else
                     {
                         m_SelectionSet.clear();
-                        m_SelectionSet.insert(entry->ElementNameHash);
+                        m_SelectionSet.insert(entry->Filepath);
                         m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
                         if (entry->Type != LibraryEntryType::Directory)
                             m_SetSelectedPathCallback(path);
@@ -1247,6 +1281,7 @@ namespace Crowny
                 ShowContextMenuContents(entry.get());
                 ImGui::EndPopup();
             }
+            ImGui::PopID();
             ImGui::PopID();
             if (shouldOpen)
             {
