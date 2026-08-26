@@ -2,8 +2,98 @@
 
 #include "Crowny/Renderer/GpuMaterial.h"
 
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Renderer/Material.h"
+
+#include <cctype>
+
 namespace Crowny
 {
+    namespace
+    {
+        String Lower(StringView value)
+        {
+            String result(value);
+            std::transform(result.begin(), result.end(), result.begin(),
+                           [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
+            return result;
+        }
+
+        String ShaderStem(StringView shaderName)
+        {
+            const Path path{ String(shaderName) };
+            return Lower(path.stem().string());
+        }
+    } // namespace
+
+    MaterialRenderClassification MaterialRenderClassifier::Classify(StringView shaderName, const Vector<String>& techniqueTags,
+                                                                     bool hasBlending, bool alphaMasked)
+    {
+        MaterialRenderClassification result;
+        result.Alpha = hasBlending ? AlphaMode::Premultiplied : AlphaMode::Opaque;
+        if (alphaMasked)
+            result.Alpha = AlphaMode::Mask;
+
+        String model;
+        for (const String& tag : techniqueTags)
+        {
+            static constexpr StringView prefix = "material_model=";
+            if (tag.size() <= prefix.size() || !StringView(tag).starts_with(prefix))
+                continue;
+            model = Lower(StringView(tag).substr(prefix.size()));
+            break;
+        }
+
+        if (model.empty())
+        {
+            const String stem = ShaderStem(shaderName);
+            if (stem == "pbribl")
+                model = "standard";
+            else if (stem == "unlit")
+                model = "unlit";
+            else if (stem == "toon")
+                model = "toon";
+            else
+                model = "custom";
+        }
+
+        if (model == "standard")
+            result.Model = MaterialModel::Standard;
+        else if (model == "unlit")
+            result.Model = MaterialModel::Unlit;
+        else if (model == "toon")
+            result.Model = MaterialModel::Toon;
+        else
+            result.Route = MaterialRenderRoute::ForwardOnly;
+        return result;
+    }
+
+    MaterialRenderClassification MaterialRenderClassifier::Classify(const Material& material)
+    {
+        const AssetHandle<Shader> shader = material.GetShader();
+        if (!shader)
+            return Classify({}, {}, false, false);
+
+        const Ref<ShaderTechnique>& technique = shader->GetTechnique(material.GetVariation());
+        bool hasBlending = false;
+        if (technique)
+        {
+            hasBlending = std::any_of(technique->GetRenderPasses().begin(), technique->GetRenderPasses().end(),
+                                      [](const Ref<ShaderRenderPass>& pass) { return pass && pass->HasBlending(); });
+        }
+        const bool alphaMasked = material.GetVariation().Has("ALPHA_MASK") && material.GetVariation().GetBool("ALPHA_MASK");
+        String shaderIdentity = shader->GetName();
+        if (shaderIdentity.empty())
+        {
+            Path shaderPath;
+            if (AssetManager::TryGet() != nullptr && AssetManager::TryGet()->GetAssetPath(shader.GetUUID(), shaderPath))
+                shaderIdentity = shaderPath.generic_string();
+        }
+        static const Vector<String> emptyTags;
+        const Vector<String>& tags = technique ? technique->GetTags() : emptyTags;
+        return Classify(shaderIdentity, tags, hasBlending, alphaMasked);
+    }
+
     GpuMaterialData GpuMaterialPacker::Pack(const StandardMaterialDesc& desc)
     {
         GpuMaterialData output;
@@ -56,6 +146,13 @@ namespace Crowny
             desc.ToonPatternTexture, desc.ToonRampTexture, desc.ToonMatcapTexture,
             static_cast<uint32_t>(desc.ToonPatternMappingMode)
         };
+        return output;
+    }
+
+    GpuMaterialData GpuMaterialPacker::PackUnsupported()
+    {
+        GpuMaterialData output;
+        output.TextureIndices1.w = UnsupportedModelAndAlpha;
         return output;
     }
 } // namespace Crowny

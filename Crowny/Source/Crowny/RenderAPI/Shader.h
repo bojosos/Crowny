@@ -128,6 +128,7 @@ namespace Crowny
                                            const Vector<Ref<ShaderRenderPass>>& renderPasses);
         void Compile();
         const Vector<Ref<ShaderRenderPass>>& GetRenderPasses() const { return m_Passes; }
+        const Vector<String>& GetTags() const { return m_Tags; }
         const ShaderVariation& GetVariation() const { return m_Variation; }
 
     protected:

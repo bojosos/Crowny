@@ -94,7 +94,7 @@ namespace Crowny
             const HashedString pragma(name);
             return pragma == "variation"_hstr || pragma == "variation_multi"_hstr || pragma == "depth_read"_hstr ||
                    pragma == "depth_write"_hstr || pragma == "depth_compare"_hstr || pragma == "cull"_hstr ||
-                   pragma == "polygon_mode"_hstr;
+                   pragma == "polygon_mode"_hstr || pragma == "material_model"_hstr;
         }
 
         void ValidatePass(ParsedShaderSource& result, const Path& path, const ShaderSourcePass& pass, uint32_t line)
@@ -162,6 +162,7 @@ namespace Crowny
         bool sawStage = false;
         Set<String> variationNames;
         Set<String> passNames;
+        bool materialModelDeclared = false;
 
         auto ensurePass = [&]() -> ShaderSourcePass& {
             if (currentPass == nullptr)
@@ -236,6 +237,27 @@ namespace Crowny
                     engineDirective[index] = true;
                     const String pragmaValue = value.size() > tokens[0].size() ? String(Trim(value.substr(tokens[0].size()))) : String();
                     ShaderPragma pragma{ tokens[0], pragmaValue, lineNumber };
+                    if (tokens[0] == "material_model")
+                    {
+                        if (currentPass != nullptr)
+                            AddError(result, path, lineNumber,
+                                     "#pragma material_model is global and must appear before the first pass or stage.");
+                        if (materialModelDeclared)
+                            AddError(result, path, lineNumber, "#pragma material_model is declared more than once.");
+                        materialModelDeclared = true;
+                        if (tokens.size() != 2)
+                            AddError(result, path, lineNumber,
+                                     "#pragma material_model expects one of: standard, unlit, toon, custom.");
+                        else
+                        {
+                            const String model = Lower(tokens[1]);
+                            if (model != "standard" && model != "unlit" && model != "toon" && model != "custom")
+                                AddError(result, path, lineNumber,
+                                         "Unknown material model '" + tokens[1] + "'. Expected standard, unlit, toon, or custom.");
+                            else
+                                pragma.Value = model;
+                        }
+                    }
                     if (currentPass != nullptr)
                         currentPass->Pragmas.push_back(pragma);
                     else

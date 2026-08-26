@@ -143,13 +143,15 @@ namespace Crowny
         {
         public:
             void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
-                            const GpuDrawBinLayout* drawBinLayout, const Ref<EnvironmentMap>& environment, const RenderPipelineSettings& settings)
+                            const GpuDrawBinLayout* drawBinLayout, const RenderSnapshot& snapshot,
+                            const Ref<EnvironmentMap>& environment, const RenderPipelineSettings& settings)
             {
                 m_View = view;
                 m_Blackboard = &blackboard;
                 m_Scene = &scene;
                 m_DepthDrawList = &depthDrawList;
                 m_DrawBinLayout = drawBinLayout;
+                m_Snapshot = &snapshot;
                 m_Environment = environment;
                 m_Settings = settings;
                 m_GpuInstanceCullingReady = false;
@@ -197,7 +199,7 @@ namespace Crowny
                 else if (name == "ToonOutlines")
                     RenderToonOutlines(context);
                 else if (name == "SkyAndForwardOnlyOpaque")
-                    RenderSky(context);
+                    RenderSkyAndForwardOnlyOpaque(context);
                 else if (name == "ForwardPlusTransparencyAndWorld2D")
                     RenderTransparency(context);
                 else if (name == "TemporalResolve")
@@ -249,7 +251,7 @@ namespace Crowny
                     RenderAPI::TryGet()->SetRenderTarget(target);
                     RenderAPI::TryGet()->SetViewport(view.Viewport.x, view.Viewport.y, view.Viewport.z, view.Viewport.w);
                     RenderAPI::TryGet()->ClearViewport(FBT_DEPTH, glm::vec4(0.0f), 0.0f);
-                    DrawCpuOpaqueRuns(m_ShadowDepth, commands, view.DrawList, false);
+                    DrawCpuOpaqueRuns(m_ShadowDepth, commands, view.DrawList, false, true);
                 }
             }
 
@@ -710,7 +712,8 @@ namespace Crowny
                 GraphicsMaterial* boundMaterial = nullptr;
                 for (const GpuDrawRun& run : m_DepthDrawList->Runs)
                 {
-                    if (run.Bin.Phase != RenderDrawPhase::Opaque || run.Bin.Alpha != AlphaMode::Opaque || run.CommandCount == 0)
+                    const bool depthPhase = run.Bin.Phase == RenderDrawPhase::Opaque || run.Bin.Phase == RenderDrawPhase::ForwardOpaque;
+                    if (!depthPhase || run.Bin.Alpha != AlphaMode::Opaque || run.CommandCount == 0)
                         continue;
                     const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
                     const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
@@ -859,14 +862,16 @@ namespace Crowny
                 textureVersion = m_Scene->GetBindlessTextureVersion();
             }
 
-            void DrawCpuOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList, bool skipGpuBins)
+            void DrawCpuOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList,
+                                   bool skipGpuBins, bool includeForwardOnly = false)
             {
                 if (commands == nullptr || !material.Bind())
                     return;
                 for (const GpuDrawRun& run : drawList.Runs)
                 {
-                    if (run.Bin.Phase != RenderDrawPhase::Opaque || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) ||
-                        run.CommandCount == 0)
+                    const bool supportedPhase = run.Bin.Phase == RenderDrawPhase::Opaque ||
+                                                (includeForwardOnly && run.Bin.Phase == RenderDrawPhase::ForwardOpaque);
+                    if (!supportedPhase || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) || run.CommandCount == 0)
                         continue;
                     if (skipGpuBins && m_DrawBinLayout != nullptr && m_DrawBinLayout->Contains(run.Bin))
                         continue;
@@ -1183,10 +1188,8 @@ namespace Crowny
                     RenderAPI::TryGet()->Draw(0, 3, 1);
             }
 
-            void RenderSky(RenderGraphContext& context)
+            void RenderSkyAndForwardOnlyOpaque(RenderGraphContext& context)
             {
-                if (!Ensure(m_Sky, m_SkyAttempted, "Resources/Shaders/Sky.asset"))
-                    return;
                 RenderGraphRenderTargetDesc attachments;
                 attachments.Colors[0] = Resource("HdrColor");
                 attachments.ColorCount = 1;
@@ -1194,16 +1197,34 @@ namespace Crowny
                 const Ref<RenderTarget> target = context.GetRenderTarget(attachments);
                 if (!target)
                     return;
-                SkyConstants constants;
-                constants.InverseViewProjection = glm::inverse(m_View.Projection * m_View.View);
-                constants.CameraPositionIntensity = glm::inverse(m_View.View)[3];
-                constants.CameraPositionIntensity.w = m_Environment && m_Environment->GetEnvironmentCubemap() ? 1.0f : 0.0f;
-                m_Sky.WriteUniformBlock(0, 0, &constants, sizeof(constants));
-                m_Sky.SetTexture(0, 1, m_Environment ? m_Environment->GetEnvironmentCubemap() : nullptr);
                 RenderAPI::TryGet()->SetRenderTarget(target, FBT_DEPTH, RT_ALL);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                if (m_Sky.Bind())
-                    RenderAPI::TryGet()->Draw(0, 3, 1);
+                if (Ensure(m_Sky, m_SkyAttempted, "Resources/Shaders/Sky.asset"))
+                {
+                    SkyConstants constants;
+                    constants.InverseViewProjection = glm::inverse(m_View.Projection * m_View.View);
+                    constants.CameraPositionIntensity = glm::inverse(m_View.View)[3];
+                    constants.CameraPositionIntensity.w = m_Environment && m_Environment->GetEnvironmentCubemap() ? 1.0f : 0.0f;
+                    m_Sky.WriteUniformBlock(0, 0, &constants, sizeof(constants));
+                    m_Sky.SetTexture(0, 1, m_Environment ? m_Environment->GetEnvironmentCubemap() : nullptr);
+                    if (m_Sky.Bind())
+                        RenderAPI::TryGet()->Draw(0, 3, 1);
+                }
+
+                if (m_Snapshot == nullptr || !m_Scene->HasForwardOnlyOpaqueMaterials())
+                    return;
+                ForwardRenderer::SetPolygonMode(m_Snapshot->OverridePolygonMode);
+                ForwardRenderer::Begin();
+                ForwardRenderer::BeginForwardOnlyScene(m_Snapshot->ProjectionMatrix, m_Snapshot->ViewMatrix,
+                                                       m_Snapshot->CameraPosition, m_Snapshot->Environment);
+                ForwardRenderer::SetLights(m_Snapshot->LegacyLights.begin(),
+                                           static_cast<uint32_t>(m_Snapshot->LegacyLights.Size()));
+                for (const RenderableObject& object : m_Snapshot->MeshObjects)
+                    ForwardRenderer::SubmitForwardOnlyOpaque(object.MeshHandle, object.Materials, object.WorldMatrix);
+                ForwardRenderer::Flush();
+                ForwardRenderer::EndScene();
+                ForwardRenderer::End();
+                ForwardRenderer::SetPolygonMode(PolygonMode::Solid);
             }
 
             float NearPlane() const
@@ -1217,6 +1238,7 @@ namespace Crowny
             GpuScene* m_Scene = nullptr;
             const GpuDrawList* m_DepthDrawList = nullptr;
             const GpuDrawBinLayout* m_DrawBinLayout = nullptr;
+            const RenderSnapshot* m_Snapshot = nullptr;
             Ref<EnvironmentMap> m_Environment;
             RenderPipelineSettings m_Settings;
             ComputeMaterial m_CullInstances;
@@ -2775,8 +2797,9 @@ namespace Crowny
             graphDesc.FinalComposition = [&](RenderGraphContext&) { RenderLegacyOverlays(snapshot); };
         }
         pipeline.BuildFrameGraph(renderGraph, view, graphDesc, blackboard);
-        gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList, gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr,
-                                     snapshot.Environment, pipeline.GetSettings());
+        gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList,
+                                     gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr, snapshot, snapshot.Environment,
+                                     pipeline.GetSettings());
 
         const RenderGraphCompileResult& compiledGraph = renderGraph.Compile();
         const bool resourceFrameBegun = graphResources.BeginFrame(compiledGraph, snapshot.FrameNumber, snapshot.HistoryNamespace, view.CameraCut);

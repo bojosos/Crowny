@@ -16,6 +16,7 @@
 #include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
@@ -261,6 +262,14 @@ namespace Crowny
         DrawSkybox(rapi);
     }
 
+    void ForwardRenderer::BeginForwardOnlyScene(const glm::mat4& projection, const glm::mat4& viewMatrix,
+                                                 const glm::vec3& cameraPosition, const Ref<EnvironmentMap>& environment)
+    {
+        ZoneScopedN("ForwardRenderer::BeginForwardOnlyScene");
+        BindEnvironment(environment);
+        SetupSceneUniforms(projection, viewMatrix, cameraPosition);
+    }
+
     void ForwardRenderer::SetPolygonMode(PolygonMode mode) { s_Data->OverridePolygonMode = mode; }
 
     void ForwardRenderer::SubmitLightSetup() {}
@@ -372,6 +381,51 @@ namespace Crowny
                     renderMaterial->SetFloat("metalness"_hstr, metalness);
                 }
                 DrawMaterialPasses(rapi, renderMaterial, sub.MeshDrawMode, sub.IndexOffset, sub.IndexCount, mesh->GetVertexCount());
+            }
+        }
+    }
+
+    void ForwardRenderer::SubmitForwardOnlyOpaque(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials,
+                                                   const glm::mat4& transform)
+    {
+        ZoneScopedN("ForwardRenderer::SubmitForwardOnlyOpaque");
+        if (!mesh)
+            return;
+
+        RenderAPI& rapi = *RenderAPI::TryGet();
+        const Vector<SubMesh>& subMeshes = mesh->GetSubMeshes();
+        auto getMaterial = [&](uint32_t index) -> Ref<Material> {
+            if (index < materials.size() && materials[index])
+                return materials[index].GetInternalPtr();
+            if (!materials.empty() && materials[0])
+                return materials[0].GetInternalPtr();
+            return s_Data->PbrMaterial;
+        };
+        auto draw = [&](uint32_t materialIndex, DrawMode drawMode, uint32_t indexOffset, uint32_t indexCount) {
+            const Ref<Material> sourceMaterial = getMaterial(materialIndex);
+            if (!sourceMaterial || !MaterialRenderClassifier::Classify(*sourceMaterial).IsForwardOnlyOpaque())
+                return;
+            const Ref<Material> renderMaterial =
+              s_Data->OverridePolygonMode == PolygonMode::Wireframe ? s_Data->WireframeMaterial : sourceMaterial;
+            ApplySceneUniforms(renderMaterial, transform);
+            DrawMaterialPasses(rapi, renderMaterial, drawMode, indexOffset, indexCount, mesh->GetVertexCount());
+        };
+
+        Ref<VertexBuffer> vertexBuffer = mesh->GetVertexBuffer();
+        if (!vertexBuffer || !mesh->GetIndexBuffer())
+            return;
+        rapi.SetVertexLayout(vertexBuffer->GetLayout());
+        rapi.SetVertexBuffers(0, &vertexBuffer, 1);
+        rapi.SetIndexBuffer(mesh->GetIndexBuffer());
+
+        if (subMeshes.empty())
+            draw(0, mesh->GetDrawMode(), 0, mesh->GetIndexCount());
+        else
+        {
+            for (uint32_t index = 0; index < static_cast<uint32_t>(subMeshes.size()); index++)
+            {
+                const SubMesh& subMesh = subMeshes[index];
+                draw(index, subMesh.MeshDrawMode, subMesh.IndexOffset, subMesh.IndexCount);
             }
         }
     }

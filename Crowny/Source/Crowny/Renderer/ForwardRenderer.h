@@ -17,7 +17,11 @@ namespace Crowny
         static void BeginScene(const Camera& camera, const glm::mat4& transform, const Ref<EnvironmentMap>& environment = nullptr);
         static void BeginScene(const glm::mat4& projection, const glm::mat4& viewMatrix, const glm::vec3& cameraPosition,
                                const Ref<EnvironmentMap>& environment = nullptr);
+        static void BeginForwardOnlyScene(const glm::mat4& projection, const glm::mat4& viewMatrix, const glm::vec3& cameraPosition,
+                                          const Ref<EnvironmentMap>& environment = nullptr);
         static void Submit(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials, const glm::mat4& transform);
+        static void SubmitForwardOnlyOpaque(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials,
+                                            const glm::mat4& transform);
         static void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform);
         static void SubmitLightSetup();
         static void SetLights(const RenderLightData* lights, uint32_t lightCount);

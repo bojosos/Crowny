@@ -150,6 +150,74 @@ void main() {}
     }
 }
 
+TEST_CASE("Shader material model metadata is global and deterministic", "[Shader][Materials]")
+{
+    const ParsedShaderSource parsed = ShaderSourceParser::Parse("custom.glsl", R"(#pragma material_model custom
+#type vertex
+void main() {}
+#type fragment
+void main() {}
+)");
+    REQUIRE(parsed.Succeeded());
+    REQUIRE(parsed.GlobalPragmas.size() == 1);
+    CHECK(parsed.GlobalPragmas[0].Name == "material_model");
+    CHECK(parsed.GlobalPragmas[0].Value == "custom");
+
+    const ParsedShaderSource invalid = ShaderSourceParser::Parse("invalid_model.glsl", R"(#pragma material_model cloth
+#type vertex
+void main() {}
+#type fragment
+void main() {}
+)");
+    CHECK_FALSE(invalid.Succeeded());
+    CHECK(HasErrorContaining(invalid, "Unknown material model"));
+
+    const ParsedShaderSource duplicate = ShaderSourceParser::Parse("duplicate_model.glsl", R"(#pragma material_model standard
+#pragma material_model toon
+#type vertex
+void main() {}
+#type fragment
+void main() {}
+)");
+    CHECK_FALSE(duplicate.Succeeded());
+    CHECK(HasErrorContaining(duplicate, "declared more than once"));
+
+    const ParsedShaderSource passLocal = ShaderSourceParser::Parse("pass_model.glsl", R"(#type vertex
+#pragma material_model custom
+void main() {}
+#type fragment
+void main() {}
+)");
+    CHECK_FALSE(passLocal.Succeeded());
+    CHECK(HasErrorContaining(passLocal, "must appear before"));
+}
+
+TEST_CASE("Shader compiler preserves material model technique metadata", "[Shader][Materials]")
+{
+    const String source = R"(#lang glsl
+#pragma material_model custom
+#type vertex
+#version 450
+layout(location = 0) in vec3 cw_Position;
+void main() { gl_Position = vec4(cw_Position, 1.0); }
+#type fragment
+#version 450
+layout(location = 0) out vec4 outColor;
+void main() { outColor = vec4(1.0); }
+)";
+
+    const ShaderCompileResult result = ShaderCompiler::CompileWithDiagnostics("custom_material.glsl", source);
+    REQUIRE(result.Succeeded());
+    REQUIRE(result.Description.Techniques.size() == 1);
+    REQUIRE(result.Description.Techniques[0]->GetTags().size() == 1);
+    CHECK(result.Description.Techniques[0]->GetTags()[0] == "material_model=custom");
+    const ShaderRenderPassDesc& pass = result.Description.Techniques[0]->GetRenderPasses()[0]->GetPassDesc();
+    REQUIRE(pass.DepthStencilState);
+    CHECK(pass.DepthStencilState->EnableDepthRead);
+    CHECK_FALSE(pass.DepthStencilState->EnableDepthWrite);
+    CHECK(pass.DepthStencilState->DepthCompareFunction == CompareFunction::GREATER_EQUAL);
+}
+
 TEST_CASE("Shader compiler rejects malformed blend-state values", "[Shader]")
 {
     String source = BASIC_VARIATION_SHADER;

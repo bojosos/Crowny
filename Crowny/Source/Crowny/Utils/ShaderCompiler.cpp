@@ -860,9 +860,20 @@ namespace Crowny
     {
         Vector<Ref<ShaderRenderPass>> renderPasses;
         renderPasses.reserve(parsedSource.Passes.size());
+        const bool customForwardOnly = std::any_of(parsedSource.GlobalPragmas.begin(), parsedSource.GlobalPragmas.end(),
+                                                   [](const ShaderPragma& pragma) {
+                                                       return pragma.Name == "material_model" && pragma.Value == "custom";
+                                                   });
         for (const ShaderSourcePass& sourcePass : parsedSource.Passes)
         {
             ShaderRenderPassDesc passDesc;
+            if (customForwardOnly)
+            {
+                passDesc.DepthStencilState = CreateRef<DepthStencilStateDesc>();
+                passDesc.DepthStencilState->EnableDepthRead = true;
+                passDesc.DepthStencilState->EnableDepthWrite = false;
+                passDesc.DepthStencilState->DepthCompareFunction = CompareFunction::GREATER_EQUAL;
+            }
             bool passSucceeded = true;
             for (uint32_t typeIndex = 0; typeIndex < SHADER_COUNT; ++typeIndex)
             {
@@ -941,6 +952,12 @@ namespace Crowny
             return result;
 
         const ShaderLanguage inputLanguage = parsedSource.Language == "hlsl" ? ShaderLanguage::HLSL : ShaderLanguage::GLSL;
+        Vector<String> techniqueTags;
+        for (const ShaderPragma& pragma : parsedSource.GlobalPragmas)
+        {
+            if (pragma.Name == "material_model")
+                techniqueTags.push_back("material_model=" + pragma.Value);
+        }
 
         // Compile the cartesian product in declaration order, using mixed-radix indexing.
         const uint32_t totalCombinations = parsedSource.VariationCount;
@@ -974,7 +991,7 @@ namespace Crowny
             Vector<Ref<ShaderRenderPass>> renderPasses = CompilePasses(path, parsedSource, inputLanguage, shaderLanguage, mergedDefines,
                                                                        blendState, result.Diagnostics);
             if (renderPasses.size() == parsedSource.Passes.size())
-                result.Description.Techniques.push_back(ShaderTechnique::Create({}, variation, renderPasses));
+                result.Description.Techniques.push_back(ShaderTechnique::Create(techniqueTags, variation, renderPasses));
         }
         if (!result.Succeeded())
             result.Description.Techniques.clear();

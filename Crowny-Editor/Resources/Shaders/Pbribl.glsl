@@ -1,4 +1,5 @@
 #lang glsl
+#pragma material_model standard
 #type vertex
 #version 450
 

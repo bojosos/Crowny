@@ -171,6 +171,25 @@ TEST_CASE("GPU draw generation batches material records sharing a template", "[R
     CHECK(output.Runs[0].CommandCount == 2);
 }
 
+TEST_CASE("Forward-only opaque draws remain outside standard opaque runs", "[Renderer][GpuDriven][Materials]")
+{
+    Vector<GpuDrawCandidate> candidates = {
+        Candidate(1, 0, 1, 1, 0, 1.0f),
+        Candidate(2, 0, 1, 2, 36, 2.0f),
+    };
+    candidates[1].Bin.Phase = RenderDrawPhase::ForwardOpaque;
+
+    GpuDrawListBuilder builder;
+    GpuDrawList output;
+    builder.Build(candidates.data(), static_cast<uint32_t>(candidates.size()), output);
+
+    REQUIRE(output.Runs.size() == 2);
+    CHECK(output.Runs[0].Bin.Phase == RenderDrawPhase::Opaque);
+    CHECK(output.Runs[1].Bin.Phase == RenderDrawPhase::ForwardOpaque);
+    CHECK(output.Runs[0].CommandCount == 1);
+    CHECK(output.Runs[1].CommandCount == 1);
+}
+
 TEST_CASE("Strict transparent draw generation preserves render-layer and depth order", "[Renderer][GpuDriven]")
 {
     Vector<GpuDrawCandidate> candidates = {

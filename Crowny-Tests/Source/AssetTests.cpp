@@ -240,7 +240,7 @@ TEST_CASE("Shader state descriptors survive asset round trips", "[Assets][Shader
     passDesc.DepthStencilState->StencilBackPassOp = StencilOperation::Invert;
 
     Ref<ShaderRenderPass> pass = ShaderRenderPass::Create(passDesc);
-    Ref<ShaderTechnique> technique = ShaderTechnique::Create({}, {}, { pass });
+    Ref<ShaderTechnique> technique = ShaderTechnique::Create({ "material_model=custom" }, {}, { pass });
     ShaderDesc shaderDesc;
     shaderDesc.Techniques = { technique };
     Ref<Shader> shader = Shader::Create(shaderDesc);
@@ -263,6 +263,8 @@ TEST_CASE("Shader state descriptors survive asset round trips", "[Assets][Shader
     AssetHandle<Shader> loaded = manager.Load<Shader>(assetPath, false);
     REQUIRE(loaded);
     REQUIRE(loaded->GetTechniques().size() == 1);
+    REQUIRE(loaded->GetTechniques()[0]->GetTags().size() == 1);
+    CHECK(loaded->GetTechniques()[0]->GetTags()[0] == "material_model=custom");
     REQUIRE(loaded->GetTechniques()[0]->GetRenderPasses().size() == 1);
     const ShaderRenderPassDesc& loadedDesc = loaded->GetTechniques()[0]->GetRenderPasses()[0]->GetPassDesc();
     REQUIRE(loadedDesc.BlendState);
