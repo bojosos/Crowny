@@ -110,6 +110,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Polish the Asset Browser search and properties layout after ImGui updates. Cover empty states, focus, keyboard navigation, filters, breadcrumbs, thumbnails, context actions, multi-selection, and no-stack-imbalance crashes.
 - [ ] Complete hierarchy multi-entity/component editing, mixed-value display, common-component presentation, gizmo rules, and safe removal/addition across a selection.
 - [ ] Finish undo/redo for entity/component creation and deletion, reparenting, transforms/gizmos, multi-edit, text edits, sliders, and drag transactions. One gesture must produce one understandable command.
+- [x] Box Collider 2D bounds gizmo drags produce one undo action, restore both offset and size, and discard no-op or cancelled gestures.
 - [x] Polish the console: correct chronological order, cached local-time conversion, search/filter, collapsed duplicate counts, selection, copying, clearing, severity toggles, and bounded storage.
 - [x] Cache console severity labels and selected callstack source labels between changes, and order collapsed sort ties by latest activity.
 - [x] Bound console retention to 10,000 rows, prune oldest rows in batches, rebuild retained collapsed counts, and keep stable snapshot/search frames allocation-free.

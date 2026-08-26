@@ -275,6 +275,14 @@ namespace Crowny
         m_TransformSnapshots.clear();
     }
 
+    void ViewportPanel::EndColliderBoundsInteraction(bool cancel)
+    {
+        if (cancel)
+            m_ColliderBoundsTransaction.Cancel();
+        else
+            UndoRedo::Get().RegisterAction(m_ColliderBoundsTransaction.Commit());
+    }
+
     Ref<UndoAction> ViewportPanel::BuildTransformAction() const
     {
         Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(m_TransformSnapshots.size() == 1u ? "Transform entity" : "Transform entities");
@@ -627,6 +635,14 @@ namespace Crowny
 
             if (m_GizmoMode == GizmoEditMode::Bounds && selectedEntities.size() == 1u && selected.HasComponent<BoxCollider2DComponent>())
             {
+                if (m_GizmoWasUsing)
+                {
+                    EndTransformInteraction();
+                    m_GizmoWasUsing = false;
+                }
+                if (m_ColliderBoundsTransaction.IsActive() && !m_ColliderBoundsTransaction.Owns(selected))
+                    EndColliderBoundsInteraction(Input::IsKeyPressed(Key::Escape));
+
                 auto& bc2d = selected.GetComponent<BoxCollider2DComponent>();
                 glm::mat4 entityWorld = selected.GetWorldMatrix();
                 glm::mat4 colliderTransform = entityWorld * glm::translate(glm::mat4(1.0f), glm::vec3(bc2d.GetOffset(), 0.0f)) *
@@ -651,13 +667,25 @@ namespace Crowny
 
                     if (newSize.x > 0.0f && newSize.y > 0.0f)
                     {
-                        bc2d.SetOffset(newOffset, selected);
-                        bc2d.SetSize(newSize, selected);
+                        if (!m_ColliderBoundsTransaction.IsActive())
+                            m_ColliderBoundsTransaction.Begin(selected);
+                        m_ColliderBoundsTransaction.Update(newOffset, newSize);
                     }
+                }
+
+                if (m_ColliderBoundsTransaction.IsActive())
+                {
+                    if (Input::IsKeyPressed(Key::Escape))
+                        EndColliderBoundsInteraction(true);
+                    else if (!ImGuizmo::IsUsing())
+                        EndColliderBoundsInteraction(false);
                 }
             }
             else
             {
+                if (m_ColliderBoundsTransaction.IsActive())
+                    EndColliderBoundsInteraction(Input::IsKeyPressed(Key::Escape));
+
                 glm::mat4 transform = m_GizmoWasUsing                ? m_CurrentGizmoTransform
                                       : selectedEntities.size() > 1u ? GetSelectionPivot(selected, selectedEntities)
                                                                      : selected.GetWorldMatrix();
@@ -685,6 +713,8 @@ namespace Crowny
             EndTransformInteraction();
             m_GizmoWasUsing = false;
         }
+        else if (m_ColliderBoundsTransaction.IsActive())
+            EndColliderBoundsInteraction(Input::IsKeyPressed(Key::Escape));
         const float viewportMinSize = std::min(m_ViewportSize.x, m_ViewportSize.y);
         const float viewCubeSize = std::clamp(viewportMinSize * 0.22f, 72.0f, 128.0f);
         if (viewportMinSize >= 100.0f &&
