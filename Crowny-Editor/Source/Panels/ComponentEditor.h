@@ -2,6 +2,7 @@
 
 #include "Crowny/Ecs/Entity.h"
 #include "Editor/ComponentUndoSnapshot.h"
+#include "Editor/ScriptInspectorTransaction.h"
 
 #include <imgui.h>
 
@@ -76,7 +77,8 @@ namespace Crowny
         {
             if constexpr (std::is_same_v<Component, MonoScriptComponent>)
             {
-                auto wrappedWidget = [widget](Entity primary, const Vector<Entity>& entities) {
+                Ref<ScriptInspectorTransaction> transaction = CreateRef<ScriptInspectorTransaction>();
+                auto wrappedWidget = [widget, transaction](Entity primary, const Vector<Entity>& entities) {
                     if (entities.size() != 1u)
                     {
                         ImGui::Columns(1);
@@ -84,11 +86,10 @@ namespace Crowny
                         ImGui::Columns(2);
                         return;
                     }
-                    ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(primary);
-                    UndoRedo::Get().BeginComponentScope([primary, snapshot]() mutable -> Ref<UndoAction> {
-                        return CreateRef<ChangeScriptComponentAction>(primary, std::move(snapshot));
-                    });
+                    transaction->SetTarget(primary);
+                    UndoRedo::Get().BeginComponentScope(transaction);
                     widget(primary);
+                    transaction->CompleteFrame();
                     UndoRedo::Get().EndComponentScope();
                 };
                 return RegisterComponent<Component>(ComponentInfo{
@@ -96,6 +97,7 @@ namespace Crowny
                   wrappedWidget,
                   ComponentAddAction<Component>,
                   ComponentRemoveAction<Component>,
+                  transaction,
                 });
             }
             else
@@ -129,17 +131,17 @@ namespace Crowny
         {
             if constexpr (std::is_same_v<Component, MonoScriptComponent>)
             {
-                auto widget = [](Entity primary, const Vector<Entity>& entities) {
+                Ref<ScriptInspectorTransaction> transaction = CreateRef<ScriptInspectorTransaction>();
+                auto widget = [transaction](Entity primary, const Vector<Entity>& entities) {
                     if (entities.size() != 1u)
                     {
                         ComponentSelectionEditorWidget<Component>(primary, entities);
                         return;
                     }
-                    ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(primary);
-                    UndoRedo::Get().BeginComponentScope([primary, snapshot]() mutable -> Ref<UndoAction> {
-                        return CreateRef<ChangeScriptComponentAction>(primary, std::move(snapshot));
-                    });
+                    transaction->SetTarget(primary);
+                    UndoRedo::Get().BeginComponentScope(transaction);
                     ComponentSelectionEditorWidget<Component>(primary, entities);
+                    transaction->CompleteFrame();
                     UndoRedo::Get().EndComponentScope();
                 };
                 return RegisterComponent<Component>(ComponentInfo{
@@ -147,6 +149,7 @@ namespace Crowny
                   widget,
                   ComponentAddAction<Component>,
                   ComponentRemoveAction<Component>,
+                  transaction,
                 });
             }
             else
@@ -174,10 +177,9 @@ namespace Crowny
         void PopComponentGroup() { m_CurrentComponentGroup.clear(); }
 
         void Render(Entity primary, const Vector<Entity>& entities);
+        void ResetUndoTransactions(bool finishInteraction);
 
     private:
-        void ResetUndoSnapshots(bool finishInteraction);
-
         bool EntityHasComponent(const entt::registry& registry, const Entity& entity, const ComponentTypeID tid) const
         {
             for (auto [id, storage] : registry.storage())

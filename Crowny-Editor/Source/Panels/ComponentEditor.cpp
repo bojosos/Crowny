@@ -742,7 +742,7 @@ namespace Crowny
         ImGui::PopStyleVar(2);
     }
 
-    void ComponentEditor::ResetUndoSnapshots(bool finishInteraction)
+    void ComponentEditor::ResetUndoTransactions(bool finishInteraction)
     {
         ResetUndoFactory(m_TagSnapshots, finishInteraction);
         for (auto& entry : m_OrderedComponentInfos)
@@ -757,7 +757,7 @@ namespace Crowny
         if (!scene || !primary || primary.GetScene() != scene.get())
         {
             if (m_UndoScene != nullptr || !m_UndoSelection.empty())
-                ResetUndoSnapshots(false);
+                ResetUndoTransactions(false);
             ImGui::TextDisabled("Select an entity to inspect its components.");
             return;
         }
@@ -781,7 +781,7 @@ namespace Crowny
                                                   m_SelectionScratch.end(), [](UUID uuid, Entity entity) { return uuid == entity.GetUuid(); });
         if (selectionChanged)
         {
-            ResetUndoSnapshots(m_UndoScene == scene.get());
+            ResetUndoTransactions(m_UndoScene == scene.get());
             m_UndoScene = scene.get();
             m_UndoSelection.reserve(m_SelectionScratch.size());
             for (Entity entity : m_SelectionScratch)

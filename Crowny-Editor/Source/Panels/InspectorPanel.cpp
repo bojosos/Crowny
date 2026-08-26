@@ -1110,6 +1110,10 @@ namespace Crowny
 
     void InspectorPanel::SetSelectedEntities(Entity primary, const Vector<Entity>& entities)
     {
+        const bool sameScene = m_InspectedEntity && primary && m_InspectedEntity.GetScene() == primary.GetScene();
+        const bool sameSelection = m_InspectedEntity == primary && m_InspectedEntities == entities;
+        if (!sameSelection)
+            m_ComponentEditor.ResetUndoTransactions(sameScene);
         m_MaterialSchemaCache.Reset();
         m_InspectorMode = InspectorMode::GameObject;
         m_InspectedEntity = primary;
@@ -1120,9 +1124,14 @@ namespace Crowny
     void InspectorPanel::SetInspectorMode(InspectorMode mode)
     {
         if (m_InspectorMode != mode)
+        {
+            m_ComponentEditor.ResetUndoTransactions(true);
             m_MaterialSchemaCache.Reset();
+        }
         m_InspectorMode = mode;
         m_HasPropertyChanged = false;
     }
+
+    void InspectorPanel::ResetUndoTransactions(bool finishInteraction) { m_ComponentEditor.ResetUndoTransactions(finishInteraction); }
 
 } // namespace Crowny

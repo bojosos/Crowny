@@ -61,14 +61,6 @@ namespace Crowny
         Vector<Ref<UndoAction>> m_Actions;
     };
 
-    class RetainedUndoActionFactory : public RefCounted
-    {
-    public:
-        virtual ~RetainedUndoActionFactory() = default;
-        virtual Ref<UndoAction> Build() const = 0;
-        virtual void Reset() = 0;
-    };
-
     struct UndoItemInteraction
     {
         uint32_t ItemId = 0u;
@@ -76,6 +68,15 @@ namespace Crowny
         bool Activated = false;
         bool DeactivatedAfterEdit = false;
         bool Changed = false;
+    };
+
+    class RetainedUndoActionFactory : public RefCounted
+    {
+    public:
+        virtual ~RetainedUndoActionFactory() = default;
+        virtual void BeforeItemInteraction(const UndoItemInteraction&) {}
+        virtual Ref<UndoAction> Build() const = 0;
+        virtual void Reset() = 0;
     };
 
     class UndoRedo : public Module<UndoRedo>
@@ -260,6 +261,7 @@ namespace Crowny
         ChangeScriptComponentAction(Entity entity, State oldState, String name = "Edit script");
 
         static State Capture(Entity entity);
+        void CaptureNewState(Entity entity);
         void Commit() override;
         void Revert() override;
 

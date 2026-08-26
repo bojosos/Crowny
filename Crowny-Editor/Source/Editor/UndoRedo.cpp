@@ -141,6 +141,9 @@ namespace Crowny
         if (!HasComponentActionFactory() || interaction.ItemId == 0u)
             return;
 
+        if (m_RetainedFactory != nullptr)
+            m_RetainedFactory->BeforeItemInteraction(interaction);
+
         if (m_InInteraction)
         {
             if (interaction.ItemId != m_InteractionItemId)
@@ -220,6 +223,12 @@ namespace Crowny
         for (const MonoScript& script : component.Scripts)
             state.push_back(CloneScriptState(script.CapturePersistedState(), entity.GetScene()));
         return state;
+    }
+
+    void ChangeScriptComponentAction::CaptureNewState(Entity entity)
+    {
+        if (entity && entity.GetScene() == m_Scene && entity.GetUuid() == m_Entity)
+            m_NewState = Capture(entity);
     }
 
     void ChangeScriptComponentAction::Commit() { Apply(m_NewState); }

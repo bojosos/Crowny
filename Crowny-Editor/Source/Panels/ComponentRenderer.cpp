@@ -20,8 +20,8 @@ namespace Crowny
             if (ImGui::Button("-"))
             {
                 const ScriptTypeIdentity identity = scriptComponent.Scripts[i].GetTypeIdentity();
-                entity.GetScene()->RemoveScriptComponent(entity, identity);
                 UndoRedo::Get().OnItemInteract(true);
+                entity.GetScene()->RemoveScriptComponent(entity, identity);
                 ImGui::PopID();
                 if (!entity.HasComponent<MonoScriptComponent>())
                     return;

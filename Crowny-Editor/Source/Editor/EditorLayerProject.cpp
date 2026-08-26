@@ -491,6 +491,8 @@ namespace Crowny
         Vector<AssemblyRefreshInfo> refreshInfos;
         refreshInfos.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
         refreshInfos.emplace_back(GAME_ASSEMBLY, &stagedGameAssembly);
+        if (m_InspectorPanel)
+            m_InspectorPanel->ResetUndoTransactions(false);
         if (!ScriptObjectManager::Get().RefreshAssemblies(refreshInfos))
             return false;
 
