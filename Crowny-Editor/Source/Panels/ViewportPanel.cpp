@@ -139,7 +139,7 @@ namespace Crowny
         private:
             Entity Resolve() const { return m_Scene ? m_Scene->TryGetEntityFromUuid(m_Target) : Entity{}; }
 
-            Scene* m_Scene = nullptr;
+            Ref<Scene> m_Scene;
             UUID m_Target = UUID::EMPTY;
             glm::mat4 m_OldTransform{ 1.0f };
             glm::mat4 m_NewTransform{ 1.0f };
@@ -179,6 +179,8 @@ namespace Crowny
         m_GizmoMode = projSettings->GizmoMode;
         m_LocalMode = projSettings->GizmoLocalMode;
     }
+
+    ViewportPanel::~ViewportPanel() { CancelActiveInteractions(); }
 
     const Vector<Entity>& ViewportPanel::RefreshSelectionScratch(Entity primary)
     {
@@ -251,7 +253,7 @@ namespace Crowny
         const Vector<Entity>& topLevelSelection = GetTopLevelSelection(selectedEntities);
         m_TransformSnapshots.reserve(topLevelSelection.size());
         for (Entity entity : topLevelSelection)
-            m_TransformSnapshots.push_back({ entity, entity.GetWorldMatrix() });
+            m_TransformSnapshots.push_back({ Ref<Scene>(entity.GetScene()), entity, entity.GetWorldMatrix() });
         m_InitialGizmoTransform = pivot;
         m_CurrentGizmoTransform = pivot;
         m_TransformTransaction.Begin(TransformTransactionId, [this] { return BuildTransformAction(); });
@@ -275,12 +277,33 @@ namespace Crowny
         m_TransformSnapshots.clear();
     }
 
+    void ViewportPanel::CancelTransformInteraction()
+    {
+        for (TransformSnapshot& snapshot : m_TransformSnapshots)
+        {
+            if (snapshot.Target)
+                snapshot.Target.SetWorldTransform(snapshot.WorldTransform);
+        }
+        m_TransformTransaction.Cancel(TransformTransactionId);
+        m_TransformSnapshots.clear();
+    }
+
     void ViewportPanel::EndColliderBoundsInteraction(bool cancel)
     {
         if (cancel)
             m_ColliderBoundsTransaction.Cancel();
         else
             UndoRedo::Get().RegisterAction(m_ColliderBoundsTransaction.Commit());
+    }
+
+    void ViewportPanel::CancelActiveInteractions()
+    {
+        if (m_TransformTransaction.IsActive())
+            CancelTransformInteraction();
+        else
+            m_TransformSnapshots.clear();
+        m_GizmoWasUsing = false;
+        m_ColliderBoundsTransaction.Cancel();
     }
 
     Ref<UndoAction> ViewportPanel::BuildTransformAction() const
@@ -518,6 +541,7 @@ namespace Crowny
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         if (!BeginPanel())
         {
+            CancelActiveInteractions();
             EndPanel();
             ImGui::PopStyleVar();
             return;

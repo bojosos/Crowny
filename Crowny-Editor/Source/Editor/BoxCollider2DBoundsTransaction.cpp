@@ -56,12 +56,14 @@ namespace Crowny
         };
     } // namespace
 
+    BoxCollider2DBoundsTransaction::~BoxCollider2DBoundsTransaction() { Cancel(); }
+
     bool BoxCollider2DBoundsTransaction::Begin(Entity target)
     {
         if (IsActive() || !target || !target.HasComponent<BoxCollider2DComponent>())
             return false;
 
-        m_Scene = target.GetScene();
+        m_Scene = Ref<Scene>(target.GetScene());
         m_Target = target.GetUuid();
         m_Before = Capture(target);
         if (!m_Transaction.Begin(TransactionId, [this] { return BuildAction(); }))

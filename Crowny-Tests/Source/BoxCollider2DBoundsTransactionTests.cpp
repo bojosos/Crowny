@@ -134,3 +134,19 @@ TEST_CASE("Box collider bounds transactions retain their target scene", "[Editor
     action->Revert();
     CheckBounds(retained, { 0.0f, 0.0f }, { 0.5f, 0.5f });
 }
+
+TEST_CASE("Destroying an active box collider bounds transaction cancels it", "[Editor][Undo][Viewport][Collider][Lifetime]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Collider");
+    entity.AddComponent<BoxCollider2DComponent>();
+
+    {
+        BoxCollider2DBoundsTransaction transaction;
+        REQUIRE(transaction.Begin(entity));
+        REQUIRE(transaction.Update({ 1.0f, 2.0f }, { 3.0f, 4.0f }));
+        CheckBounds(entity, { 1.0f, 2.0f }, { 3.0f, 4.0f });
+    }
+
+    CheckBounds(entity, { 0.0f, 0.0f }, { 0.5f, 0.5f });
+}

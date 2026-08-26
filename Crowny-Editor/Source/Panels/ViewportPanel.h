@@ -48,7 +48,7 @@ namespace Crowny
         inline static constexpr EditorPanelRegistration<ViewportPanel> Registration{ "Viewport", "View/Viewport" };
 
         ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<const Vector<Entity>&()> selectedEntities);
-        ~ViewportPanel() = default;
+        ~ViewportPanel() override;
 
         virtual void Render() override;
         const glm::vec2& GetViewportSize() const { return m_ViewportSize; }
@@ -72,6 +72,7 @@ namespace Crowny
     private:
         struct TransformSnapshot
         {
+            Ref<Scene> SceneRef;
             Entity Target;
             glm::mat4 WorldTransform{ 1.0f };
         };
@@ -83,7 +84,9 @@ namespace Crowny
         void BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot);
         void ApplyTransformInteraction(const glm::mat4& pivot);
         void EndTransformInteraction();
+        void CancelTransformInteraction();
         void EndColliderBoundsInteraction(bool cancel);
+        void CancelActiveInteractions();
         Ref<UndoAction> BuildTransformAction() const;
 
         bool m_LocalMode = true;

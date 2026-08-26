@@ -7,6 +7,8 @@ namespace Crowny
     class BoxCollider2DBoundsTransaction
     {
     public:
+        ~BoxCollider2DBoundsTransaction();
+
         bool Begin(Entity target);
         bool Update(const glm::vec2& offset, const glm::vec2& size);
         Ref<UndoAction> Commit();
