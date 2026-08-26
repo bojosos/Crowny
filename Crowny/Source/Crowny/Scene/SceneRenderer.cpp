@@ -1739,7 +1739,7 @@ namespace Crowny
                 continue;
 
             const SkeletonPose* pose = meshRenderer.MeshHandle->GetSkeleton() ? &animation.Player->GetPose() : nullptr;
-            if (!animation.Deformer->Deform(pose, animation.Player->GetMorphWeights()))
+            if (!animation.Deformer->Deform(pose, animation.Player->GetMorphWeights()) || !animation.Deformer->WasLastDeformChanged())
                 continue;
 
             const Ref<MeshData> output = animation.Deformer->GetOutputMeshData();
