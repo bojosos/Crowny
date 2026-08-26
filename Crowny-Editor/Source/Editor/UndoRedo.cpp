@@ -227,7 +227,7 @@ namespace Crowny
 
     void ChangeScriptComponentAction::CaptureNewState(Entity entity)
     {
-        if (entity && entity.GetScene() == m_Scene && entity.GetUuid() == m_Entity)
+        if (entity && entity.GetScene() == m_Scene.get() && entity.GetUuid() == m_Entity)
             m_NewState = Capture(entity);
     }
 

@@ -147,7 +147,7 @@ namespace Crowny
     private:
         Entity Resolve() const { return m_Scene ? m_Scene->TryGetEntityFromUuid(m_Entity) : Entity{}; }
 
-        Scene* m_Scene = nullptr;
+        Ref<Scene> m_Scene;
         UUID m_Entity;
         T m_Component;
     };
@@ -177,7 +177,7 @@ namespace Crowny
     private:
         Entity Resolve() const { return m_Scene ? m_Scene->TryGetEntityFromUuid(m_Entity) : Entity{}; }
 
-        Scene* m_Scene = nullptr;
+        Ref<Scene> m_Scene;
         UUID m_Entity;
         T m_Component;
     };
@@ -207,7 +207,7 @@ namespace Crowny
                 entity.NotifyTransformChanged();
         }
 
-        Scene* m_Scene = nullptr;
+        Ref<Scene> m_Scene;
         UUID m_Entity;
         T m_OldComponent, m_NewComponent;
     };
@@ -217,7 +217,7 @@ namespace Crowny
     public:
         struct Snapshot
         {
-            Scene* SceneRef = nullptr;
+            Ref<Scene> SceneRef;
             UUID Target;
             T OldValue;
             T NewValue;
@@ -229,7 +229,7 @@ namespace Crowny
             for (const auto& [entity, oldValue] : oldValues)
             {
                 if (entity && entity.template HasComponent<T>())
-                    m_Snapshots.push_back({ entity.GetScene(), entity.GetUuid(), oldValue, entity.template GetComponent<T>() });
+                    m_Snapshots.push_back({ Ref<Scene>(entity.GetScene()), entity.GetUuid(), oldValue, entity.template GetComponent<T>() });
             }
         }
 
@@ -278,7 +278,7 @@ namespace Crowny
     private:
         void Apply(const State& state);
 
-        Scene* m_Scene = nullptr;
+        Ref<Scene> m_Scene;
         UUID m_Entity = UUID::EMPTY;
         State m_OldState;
         State m_NewState;
@@ -345,7 +345,7 @@ namespace Crowny
     private:
         void Reparent(UUID targetUuid, uint32_t siblingIndex);
 
-        Scene* m_Scene = nullptr;
+        Ref<Scene> m_Scene;
         UUID m_Entity = UUID::EMPTY;
         UUID m_OldParent = UUID::EMPTY;
         UUID m_NewParent = UUID::EMPTY;

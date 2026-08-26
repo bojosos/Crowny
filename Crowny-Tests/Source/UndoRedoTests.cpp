@@ -215,6 +215,116 @@ TEST_CASE("Component add and remove actions preserve component data", "[Editor][
     CHECK_FALSE(entity.HasComponent<CameraComponent>());
 }
 
+TEST_CASE("Component undo actions retain their target scene", "[Editor][Undo][Component][Lifetime]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Camera");
+    entity.AddComponent<CameraComponent>().Camera.SetOrthographicSize(17.0f);
+    const UUID entityUuid = entity.GetUuid();
+    Scene* retainedScene = scene.get();
+    const uint32_t initialSceneReferences = scene->GetRefCount();
+
+    Ref<AddComponentAction<CameraComponent>> addAction = CreateRef<AddComponentAction<CameraComponent>>(entity);
+    Vector<Pair<Entity, CameraComponent>> oldValues{ { entity, entity.GetComponent<CameraComponent>() } };
+    Ref<ChangeComponentsAction<CameraComponent>> changeAction = CreateRef<ChangeComponentsAction<CameraComponent>>(oldValues);
+    Ref<ChangeScriptComponentAction> scriptAction = CreateRef<ChangeScriptComponentAction>(entity, ChangeScriptComponentAction::State{});
+    REQUIRE(scene->GetRefCount() == initialSceneReferences + 3u);
+
+    entity = {};
+    oldValues.clear();
+    scene = nullptr;
+    REQUIRE(retainedScene->GetRefCount() == 3u);
+
+    addAction->Revert();
+    Entity retainedEntity = retainedScene->TryGetEntityFromUuid(entityUuid);
+    REQUIRE(retainedEntity);
+    CHECK_FALSE(retainedEntity.HasComponent<CameraComponent>());
+
+    addAction->Commit();
+    REQUIRE(retainedEntity.HasComponent<CameraComponent>());
+    CHECK(retainedEntity.GetComponent<CameraComponent>().Camera.GetOrthographicSize() == 17.0f);
+
+    changeAction->Revert();
+    scriptAction->Revert();
+    retainedScene->DestroyEntity(retainedEntity);
+    addAction->Revert();
+    addAction->Commit();
+    changeAction->Commit();
+    scriptAction->Commit();
+    CHECK_FALSE(retainedScene->TryGetEntityFromUuid(entityUuid));
+
+    retainedEntity = {};
+    addAction = nullptr;
+    changeAction = nullptr;
+    scriptAction = nullptr;
+}
+
+TEST_CASE("Reparent undo retains its scene and restores hierarchy state", "[Editor][Undo][Hierarchy][Lifetime]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity oldParent = scene->CreateEntity("Old parent");
+    Entity newParent = scene->CreateEntity("New parent");
+    Entity before = scene->CreateEntity("Before");
+    Entity child = scene->CreateEntity("Child");
+    Entity after = scene->CreateEntity("After");
+    Entity existing = scene->CreateEntity("Existing destination child");
+    REQUIRE(before.SetParent(oldParent));
+    REQUIRE(child.SetParent(oldParent));
+    REQUIRE(after.SetParent(oldParent));
+    REQUIRE(existing.SetParent(newParent));
+    oldParent.SetPosition({ 10.0f, 0.0f, 0.0f });
+    newParent.SetPosition({ -5.0f, 0.0f, 0.0f });
+    child.SetPosition({ 2.0f, 3.0f, 4.0f });
+
+    const UUID childUuid = child.GetUuid();
+    const UUID oldParentUuid = oldParent.GetUuid();
+    const UUID newParentUuid = newParent.GetUuid();
+    const glm::vec3 worldPosition = child.GetWorldPosition();
+    Scene* retainedScene = scene.get();
+    const uint32_t initialSceneReferences = scene->GetRefCount();
+    Ref<EntityReparentAction> action = CreateRef<EntityReparentAction>(child, oldParent, newParent);
+    REQUIRE(scene->GetRefCount() == initialSceneReferences + 1u);
+    REQUIRE(child.SetParent(newParent));
+    REQUIRE(child.GetSiblingIndex() == 1u);
+
+    oldParent = {};
+    newParent = {};
+    before = {};
+    child = {};
+    after = {};
+    existing = {};
+    scene = nullptr;
+    REQUIRE(retainedScene->GetRefCount() == 1u);
+
+    for (uint32_t cycle = 0u; cycle < 2u; cycle++)
+    {
+        action->Revert();
+        Entity retainedChild = retainedScene->TryGetEntityFromUuid(childUuid);
+        REQUIRE(retainedChild);
+        CHECK(retainedChild.GetParent() == retainedScene->TryGetEntityFromUuid(oldParentUuid));
+        CHECK(retainedChild.GetSiblingIndex() == 1u);
+        CHECK(retainedChild.GetWorldPosition() == worldPosition);
+
+        action->Commit();
+        CHECK(retainedChild.GetParent() == retainedScene->TryGetEntityFromUuid(newParentUuid));
+        CHECK(retainedChild.GetSiblingIndex() == 1u);
+        CHECK(retainedChild.GetWorldPosition() == worldPosition);
+    }
+
+    Entity removedParent = retainedScene->TryGetEntityFromUuid(oldParentUuid);
+    retainedScene->DestroyEntity(removedParent);
+    action->Revert();
+    Entity retainedChild = retainedScene->TryGetEntityFromUuid(childUuid);
+    REQUIRE(retainedChild);
+    CHECK(retainedChild.GetParent() == retainedScene->TryGetEntityFromUuid(newParentUuid));
+
+    retainedScene->DestroyEntity(retainedChild);
+    action->Commit();
+    CHECK_FALSE(retainedScene->TryGetEntityFromUuid(childUuid));
+
+    action = nullptr;
+}
+
 TEST_CASE("Retained component snapshots preserve multi-edit undo state", "[Editor][Undo][Component]")
 {
     Ref<Scene> scene = CreateRef<Scene>(false);
