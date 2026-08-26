@@ -61,7 +61,11 @@ namespace Crowny
         return *this;
     }
 
-    void AudioListenerComponent::Initialize() { m_Internal = AudioManager::TryGet()->CreateListener(); }
+    void AudioListenerComponent::Initialize()
+    {
+        if (AudioManager* audioManager = AudioManager::TryGet())
+            m_Internal = audioManager->CreateListener();
+    }
 
     void AudioListenerComponent::OnTransformChanged(const Transform& transform)
     {
@@ -77,7 +81,6 @@ namespace Crowny
             return *this;
 
         ComponentBase::operator=(other);
-        m_Internal = nullptr;
         m_AudioClip = other.m_AudioClip;
         m_IsMuted = other.m_IsMuted;
         m_Volume = other.m_Volume;
@@ -99,22 +102,37 @@ namespace Crowny
 
     void AudioSourceComponent::OnInitialize()
     {
+        AudioManager* audioManager = AudioManager::TryGet();
+        if (audioManager == nullptr)
+            return;
         if (m_Internal == nullptr)
-            m_Internal = AudioManager::TryGet()->CreateSource();
+            m_Internal = audioManager->CreateSource();
+        ApplyRuntimeSettings();
+
+        if (m_PlayOnAwake)
+            m_Internal->Play();
+    }
+
+    void AudioSourceComponent::ApplyRuntimeSettings()
+    {
+        if (m_Internal == nullptr)
+            return;
+
         m_Internal->SetClip(m_AudioClip);
-        m_Internal->SetVolume(m_Volume);
+        m_Internal->SetVolume(m_IsMuted ? 0.0f : m_Volume);
         m_Internal->SetPitch(m_Pitch);
         m_Internal->SetLooping(m_Loop);
         m_Internal->SetMinDistance(m_MinDistance);
         m_Internal->SetMaxDistance(m_MaxDistance);
         m_Internal->SetTime(m_Time);
 
-        // Resolve bus name against the active mixer. Empty name = leave the source on whatever bus
-        // CreateSource() defaulted to (the master bus of the active mixer, or nothing).
-        if (!m_BusName.empty())
+        AudioManager* audioManager = AudioManager::TryGet();
+        if (audioManager != nullptr)
         {
-            if (Ref<AudioBus> bus = AudioManager::TryGet()->FindBus(m_BusName))
-                m_Internal->SetBus(bus);
+            Ref<AudioBus> bus = m_BusName.empty() ? nullptr : audioManager->FindBus(m_BusName);
+            if (!bus && audioManager->GetActiveMixer())
+                bus = audioManager->GetActiveMixer()->GetMasterBus();
+            m_Internal->SetBus(bus);
         }
 
         m_Internal->SetLowPassGain(m_LowPassGain);
@@ -123,9 +141,6 @@ namespace Crowny
         m_Internal->SetConeOuterAngle(m_ConeOuterAngle);
         m_Internal->SetConeOuterGain(m_ConeOuterGain);
         m_Internal->SetConeOuterGainHF(m_ConeOuterGainHF);
-
-        if (m_PlayOnAwake)
-            m_Internal->Play();
     }
 
     void AudioSourceComponent::OnTransformChanged(const Transform& transform)
@@ -140,7 +155,7 @@ namespace Crowny
             return;
         m_Volume = volume;
         if (m_Internal != nullptr)
-            m_Internal->SetVolume(m_Volume);
+            m_Internal->SetVolume(m_IsMuted ? 0.0f : m_Volume);
     }
 
     void AudioSourceComponent::SetPitch(float pitch)
@@ -215,9 +230,12 @@ namespace Crowny
         m_BusName = busName;
         if (m_Internal != nullptr)
         {
-            Ref<AudioBus> bus = m_BusName.empty() ? nullptr : AudioManager::TryGet()->FindBus(m_BusName);
-            if (!bus && AudioManager::TryGet()->GetActiveMixer())
-                bus = AudioManager::TryGet()->GetActiveMixer()->GetMasterBus();
+            AudioManager* audioManager = AudioManager::TryGet();
+            if (audioManager == nullptr)
+                return;
+            Ref<AudioBus> bus = m_BusName.empty() ? nullptr : audioManager->FindBus(m_BusName);
+            if (!bus && audioManager->GetActiveMixer())
+                bus = audioManager->GetActiveMixer()->GetMasterBus();
             m_Internal->SetBus(bus);
         }
     }
@@ -639,7 +657,6 @@ namespace Crowny
         m_Filter = other.m_Filter;
         m_LinearVelocity = other.m_LinearVelocity;
         m_AngularVelocity = other.m_AngularVelocity;
-        RuntimeBody = {};
     }
 
     Rigidbody3DComponent::Rigidbody3DComponent(const Rigidbody3DComponent& other) : ComponentBase(other) { CopySettings(other); }
@@ -814,7 +831,6 @@ namespace Crowny
         m_IsTrigger = other.m_IsTrigger;
         m_Material = other.m_Material;
         m_Filter = other.m_Filter;
-        RuntimeShape = {};
     }
 
     Collider3D::Collider3D(const Collider3D& other) : ComponentBase(other) { CopySettings(other); }

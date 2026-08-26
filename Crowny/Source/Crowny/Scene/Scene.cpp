@@ -193,22 +193,30 @@ namespace Crowny
     void Scene::RegisterEntityCallbacks()
     {
         m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
+        m_Registry.on_update<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentUpdate>(this);
         m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
         m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
+        m_Registry.on_update<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentUpdate>(this);
         m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
         m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(this);
+        m_Registry.on_update<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentUpdate>(this);
         m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
 
         m_Registry.on_construct<Rigidbody3DComponent>().connect<&Scene::OnRigidbody3DComponentConstruct>(this);
+        m_Registry.on_update<Rigidbody3DComponent>().connect<&Scene::OnRigidbody3DComponentUpdate>(this);
         m_Registry.on_destroy<Rigidbody3DComponent>().connect<&Scene::OnRigidbody3DComponentDestroy>(this);
         m_Registry.on_construct<BoxCollider3DComponent>().connect<&Scene::OnBoxCollider3DComponentConstruct>(this);
+        m_Registry.on_update<BoxCollider3DComponent>().connect<&Scene::OnBoxCollider3DComponentUpdate>(this);
         m_Registry.on_destroy<BoxCollider3DComponent>().connect<&Scene::OnBoxCollider3DComponentDestroy>(this);
         m_Registry.on_construct<SphereCollider3DComponent>().connect<&Scene::OnSphereCollider3DComponentConstruct>(this);
+        m_Registry.on_update<SphereCollider3DComponent>().connect<&Scene::OnSphereCollider3DComponentUpdate>(this);
         m_Registry.on_destroy<SphereCollider3DComponent>().connect<&Scene::OnSphereCollider3DComponentDestroy>(this);
         m_Registry.on_construct<CapsuleCollider3DComponent>().connect<&Scene::OnCapsuleCollider3DComponentConstruct>(this);
+        m_Registry.on_update<CapsuleCollider3DComponent>().connect<&Scene::OnCapsuleCollider3DComponentUpdate>(this);
         m_Registry.on_destroy<CapsuleCollider3DComponent>().connect<&Scene::OnCapsuleCollider3DComponentDestroy>(this);
 
         m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentConstruct>(this);
+        m_Registry.on_update<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentUpdate>(this);
         m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentDestroy>(this);
 
         m_Registry.on_destroy<TransformComponent>().connect<&Scene::OnTransformComponentDestroy>(this);
@@ -317,6 +325,30 @@ namespace Crowny
         Physics2D::TryGet()->CreateRigidbody(e);
     }
 
+    void Scene::OnRigidbody2DComponentUpdate(entt::registry& registry, entt::entity entity)
+    {
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
+            return;
+
+        Entity e = { entity, this };
+        auto& rigidbody = registry.get<Rigidbody2DComponent>(entity);
+        if (rigidbody.RuntimeBody == nullptr)
+            return;
+
+        Physics2D& physics = *Physics2D::TryGet();
+        const glm::vec2 linearVelocity = physics.GetLinearVelocity(e);
+        const float angularVelocity = physics.GetAngularVelocity(e);
+        const bool awake = physics.IsBodyAwake(e);
+        physics.DestroyRigidbody(e);
+        physics.CreateRigidbody(e);
+        if (rigidbody.RuntimeBody != nullptr)
+        {
+            physics.SetLinearVelocity(e, linearVelocity);
+            physics.SetAngularVelocity(e, angularVelocity);
+            physics.SetBodyAwake(e, awake);
+        }
+    }
+
     void Scene::OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
         if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
@@ -333,6 +365,19 @@ namespace Crowny
         Physics2D::TryGet()->CreateBoxCollider(e);
     }
 
+    void Scene::OnBoxCollider2DComponentUpdate(entt::registry& registry, entt::entity entity)
+    {
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
+            return;
+
+        Entity e = { entity, this };
+        auto& collider = registry.get<BoxCollider2DComponent>(entity);
+        if (collider.RuntimeFixture == nullptr)
+            return;
+        Physics2D::TryGet()->DestroyFixture(e, collider);
+        Physics2D::TryGet()->CreateBoxCollider(e);
+    }
+
     void Scene::OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
         if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
@@ -346,6 +391,19 @@ namespace Crowny
         if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
             return;
         Entity e = { entity, this };
+        Physics2D::TryGet()->CreateCircleCollider(e);
+    }
+
+    void Scene::OnCircleCollider2DComponentUpdate(entt::registry& registry, entt::entity entity)
+    {
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
+            return;
+
+        Entity e = { entity, this };
+        auto& collider = registry.get<CircleCollider2DComponent>(entity);
+        if (collider.RuntimeFixture == nullptr)
+            return;
+        Physics2D::TryGet()->DestroyFixture(e, collider);
         Physics2D::TryGet()->CreateCircleCollider(e);
     }
 
@@ -565,12 +623,17 @@ namespace Crowny
             return;
         glm::vec3 linearVelocity{ 0.0f };
         glm::vec3 angularVelocity{ 0.0f };
+        bool awake = false;
+        bool preserveAwake = false;
         const bool hasRigidbody = entity.HasComponent<Rigidbody3DComponent>();
         if (hasRigidbody)
         {
             auto& rigidbody = entity.GetComponent<Rigidbody3DComponent>();
             linearVelocity = rigidbody.GetLinearVelocity();
             angularVelocity = rigidbody.GetAngularVelocity();
+            preserveAwake = static_cast<bool>(rigidbody.RuntimeBody);
+            if (preserveAwake)
+                awake = rigidbody.IsAwake();
         }
         DestroyPhysics3DBody(entity.GetHandle());
         CreatePhysics3DBody(entity);
@@ -579,6 +642,8 @@ namespace Crowny
             auto& rigidbody = entity.GetComponent<Rigidbody3DComponent>();
             rigidbody.SetLinearVelocity(linearVelocity);
             rigidbody.SetAngularVelocity(angularVelocity);
+            if (preserveAwake)
+                rigidbody.SetAwake(awake);
         }
     }
 
@@ -622,6 +687,12 @@ namespace Crowny
             RecreatePhysics3DBody({ entity, this });
     }
 
+    void Scene::OnRigidbody3DComponentUpdate(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DBody({ entity, this });
+    }
+
     void Scene::OnRigidbody3DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
         if (m_Physics3DActive)
@@ -633,6 +704,12 @@ namespace Crowny
     }
 
     void Scene::OnBoxCollider3DComponentConstruct(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DShapes({ entity, this });
+    }
+
+    void Scene::OnBoxCollider3DComponentUpdate(entt::registry&, entt::entity entity)
     {
         if (m_Physics3DActive)
             RecreatePhysics3DShapes({ entity, this });
@@ -655,6 +732,12 @@ namespace Crowny
             RecreatePhysics3DShapes({ entity, this });
     }
 
+    void Scene::OnSphereCollider3DComponentUpdate(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DShapes({ entity, this });
+    }
+
     void Scene::OnSphereCollider3DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
         const auto body = m_Physics3DBodies.find(entity);
@@ -667,6 +750,12 @@ namespace Crowny
     }
 
     void Scene::OnCapsuleCollider3DComponentConstruct(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DShapes({ entity, this });
+    }
+
+    void Scene::OnCapsuleCollider3DComponentUpdate(entt::registry&, entt::entity entity)
     {
         if (m_Physics3DActive)
             RecreatePhysics3DShapes({ entity, this });
@@ -809,8 +898,13 @@ namespace Crowny
         Entity e = { entity, this };
         AudioSourceComponent& source = e.GetComponent<AudioSourceComponent>();
         source.OnInitialize();
-        if (source.GetPlayOnAwake())
-            source.Play();
+    }
+
+    void Scene::OnAudioSourceComponentUpdate(entt::registry& registry, entt::entity entity)
+    {
+        if (!AudioManager::IsStartedUp() || !m_RuntimeActive)
+            return;
+        registry.get<AudioSourceComponent>(entity).ApplyRuntimeSettings();
     }
 
     void Scene::OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity)
@@ -925,11 +1019,14 @@ namespace Crowny
         if (AudioManager::TryGet() != nullptr)
         {
             auto listenerView = m_Registry.view<AudioListenerComponent>();
-            if (listenerView.size() == 0)
+            uint32_t listenerCount = 0;
+            for ([[maybe_unused]] entt::entity entity : listenerView)
+                ++listenerCount;
+            if (listenerCount == 0)
                 CW_ENGINE_WARN("No audio listener in scene");
             else
             {
-                if (listenerView.size() > 1)
+                if (listenerCount > 1)
                     CW_ENGINE_WARN("Multiple audio listeners in scene; using the first enabled listener");
                 for (auto e : listenerView)
                 {
@@ -938,11 +1035,7 @@ namespace Crowny
                     break;
                 }
             }
-            m_Registry.view<AudioSourceComponent>().each([&](entt::entity entity, AudioSourceComponent& source) {
-                source.OnInitialize();
-                if (source.GetPlayOnAwake())
-                    source.Play();
-            });
+            m_Registry.view<AudioSourceComponent>().each([](AudioSourceComponent& source) { source.OnInitialize(); });
         }
         m_Registry.view<AnimationComponent>().each([](AnimationComponent& animation) { animation.ResetRuntime(); });
     }

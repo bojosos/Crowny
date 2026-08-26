@@ -110,19 +110,26 @@ namespace Crowny
         void RebuildCopiedRelationships(const Scene& source, const UnorderedMap<UUID, entt::entity>& entityMap);
 
         void OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnRigidbody2DComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnBoxCollider2DComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnCircleCollider2DComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity);
 
         void OnRigidbody3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnRigidbody3DComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnRigidbody3DComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnBoxCollider3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnBoxCollider3DComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnBoxCollider3DComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnSphereCollider3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnSphereCollider3DComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnSphereCollider3DComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnCapsuleCollider3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnCapsuleCollider3DComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnCapsuleCollider3DComponentDestroy(entt::registry& registry, entt::entity entity);
 
         bool BeginPhysics3D();
@@ -136,6 +143,7 @@ namespace Crowny
         void HandlePhysics3DContact(const PhysicsContactEvent3D& event);
 
         void OnAudioSourceComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnAudioSourceComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity);
 
         void OnTransformComponentDestroy(entt::registry& registry, entt::entity entity);

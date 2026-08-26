@@ -476,15 +476,14 @@ namespace Crowny
     class AudioListenerComponent : public ComponentBase
     {
     public:
+        static constexpr bool in_place_delete = true;
+
         AudioListenerComponent() = default;
         AudioListenerComponent(const AudioListenerComponent& other) : ComponentBase(other) {}
         AudioListenerComponent& operator=(const AudioListenerComponent& other)
         {
             if (this != &other)
-            {
                 ComponentBase::operator=(other);
-                m_Internal = nullptr;
-            }
             return *this;
         }
 
@@ -500,11 +499,14 @@ namespace Crowny
     struct AudioSourceComponent : public ComponentBase
     {
     public:
+        static constexpr bool in_place_delete = true;
+
         AudioSourceComponent() : ComponentBase() {}
         AudioSourceComponent(const AudioSourceComponent& other);
         AudioSourceComponent& operator=(const AudioSourceComponent& other);
 
         void OnInitialize();
+        void ApplyRuntimeSettings();
         void OnEnabled();
         void OnDisabled();
         void OnDestroyed();
@@ -549,6 +551,7 @@ namespace Crowny
         void Stop();
 
         AudioSourceState GetState() const;
+        const AudioSource* GetRuntimeSource() const noexcept { return m_Internal.Get(); }
 
     private:
         AssetHandle<AudioClip> m_AudioClip;
@@ -741,6 +744,8 @@ namespace Crowny
 
     struct Rigidbody2DComponent : public ComponentBase
     {
+        static constexpr bool in_place_delete = true;
+
         Rigidbody2DComponent() : ComponentBase() {}
         Rigidbody2DComponent(const Rigidbody2DComponent& other) : ComponentBase(other) { CopySettings(other); }
         Rigidbody2DComponent& operator=(const Rigidbody2DComponent& other)
@@ -793,10 +798,6 @@ namespace Crowny
     private:
         void CopySettings(const Rigidbody2DComponent& other)
         {
-            RuntimeBody = nullptr;
-            RuntimePreviousPosition = glm::vec2(0.0f);
-            RuntimePreviousRotation = 0.0f;
-            RuntimeHasPreviousState = false;
             m_Type = other.m_Type;
             m_SleepMode = other.m_SleepMode;
             m_Constraints = other.m_Constraints;
@@ -831,6 +832,8 @@ namespace Crowny
 
     struct Collider2D : ComponentBase
     {
+        static constexpr bool in_place_delete = true;
+
         Collider2D() : ComponentBase() {}
         Collider2D(const Collider2D& other)
           : ComponentBase(other), m_Offset(other.m_Offset), m_Material(other.m_Material), m_IsTrigger(other.m_IsTrigger)
@@ -841,7 +844,6 @@ namespace Crowny
             if (this != &other)
             {
                 ComponentBase::operator=(other);
-                RuntimeFixture = nullptr;
                 m_Offset = other.m_Offset;
                 m_Material = other.m_Material;
                 m_IsTrigger = other.m_IsTrigger;
@@ -867,6 +869,8 @@ namespace Crowny
 
     struct BoxCollider2DComponent : public Collider2D
     {
+        static constexpr bool in_place_delete = true;
+
         BoxCollider2DComponent();
         BoxCollider2DComponent(const BoxCollider2DComponent& collider) = default;
 
@@ -883,6 +887,8 @@ namespace Crowny
 
     struct CircleCollider2DComponent : public Collider2D
     {
+        static constexpr bool in_place_delete = true;
+
         CircleCollider2DComponent();
         CircleCollider2DComponent(const CircleCollider2DComponent& collider) = default;
 
@@ -899,6 +905,8 @@ namespace Crowny
 
     struct Rigidbody3DComponent : public ComponentBase
     {
+        static constexpr bool in_place_delete = true;
+
         Rigidbody3DComponent() : ComponentBase() {}
         Rigidbody3DComponent(const Rigidbody3DComponent& other);
         Rigidbody3DComponent& operator=(const Rigidbody3DComponent& other);
@@ -967,6 +975,8 @@ namespace Crowny
 
     struct Collider3D : public ComponentBase
     {
+        static constexpr bool in_place_delete = true;
+
         Collider3D();
         Collider3D(const Collider3D& other);
         Collider3D& operator=(const Collider3D& other);
@@ -999,6 +1009,8 @@ namespace Crowny
 
     struct BoxCollider3DComponent : public Collider3D
     {
+        static constexpr bool in_place_delete = true;
+
         BoxCollider3DComponent() = default;
         BoxCollider3DComponent(const BoxCollider3DComponent& other);
         BoxCollider3DComponent& operator=(const BoxCollider3DComponent& other);
@@ -1014,6 +1026,8 @@ namespace Crowny
 
     struct SphereCollider3DComponent : public Collider3D
     {
+        static constexpr bool in_place_delete = true;
+
         SphereCollider3DComponent() = default;
         SphereCollider3DComponent(const SphereCollider3DComponent& other);
         SphereCollider3DComponent& operator=(const SphereCollider3DComponent& other);
@@ -1029,6 +1043,8 @@ namespace Crowny
 
     struct CapsuleCollider3DComponent : public Collider3D
     {
+        static constexpr bool in_place_delete = true;
+
         CapsuleCollider3DComponent() = default;
         CapsuleCollider3DComponent(const CapsuleCollider3DComponent& other);
         CapsuleCollider3DComponent& operator=(const CapsuleCollider3DComponent& other);
@@ -1044,6 +1060,16 @@ namespace Crowny
     };
 
     template <> void ComponentEditorWidget<CapsuleCollider3DComponent>(Entity e);
+
+    static_assert(entt::component_traits<Rigidbody2DComponent>::in_place_delete);
+    static_assert(entt::component_traits<BoxCollider2DComponent>::in_place_delete);
+    static_assert(entt::component_traits<CircleCollider2DComponent>::in_place_delete);
+    static_assert(entt::component_traits<Rigidbody3DComponent>::in_place_delete);
+    static_assert(entt::component_traits<BoxCollider3DComponent>::in_place_delete);
+    static_assert(entt::component_traits<SphereCollider3DComponent>::in_place_delete);
+    static_assert(entt::component_traits<CapsuleCollider3DComponent>::in_place_delete);
+    static_assert(entt::component_traits<AudioSourceComponent>::in_place_delete);
+    static_assert(entt::component_traits<AudioListenerComponent>::in_place_delete);
 
     struct PrefabComponent : public ComponentBase
     {

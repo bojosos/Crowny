@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics2DBackend.h"
@@ -40,6 +41,32 @@ namespace
         }
         return nullptr;
     }
+
+    void EnsureHeadlessRuntime()
+    {
+        if (!Application::IsStartedUp())
+        {
+            ApplicationDesc description;
+            description.Name = "PhysicsTests";
+            description.Headless = true;
+            description.WorkingDirectory = fs::current_path();
+            Application::StartUp(description);
+        }
+        REQUIRE(Physics2D::IsStartedUp());
+        REQUIRE(Physics3D::IsStartedUp());
+    }
+
+    struct Physics3DBackendRestore
+    {
+        ~Physics3DBackendRestore()
+        {
+            if (Physics3D::IsStartedUp() && Physics.GetBackend() != Original)
+                Physics.SetBackend(Original);
+        }
+
+        Physics3D& Physics;
+        Physics3DBackendType Original;
+    };
 } // namespace
 
 TEST_CASE("Box2D implements the backend-neutral 2D contract", "[Physics][Physics2D]")
@@ -76,6 +103,69 @@ TEST_CASE("Box2D implements the backend-neutral 2D contract", "[Physics][Physics
     backend->StopSimulation(scene.get());
     CHECK_FALSE(backend->IsSimulating());
     CHECK(body.GetComponent<Rigidbody2DComponent>().RuntimeBody == nullptr);
+}
+
+TEST_CASE("Active 2D components survive AddOrReplace and clean up", "[Physics][Physics2D][Ecs][Lifecycle]")
+{
+    EnsureHeadlessRuntime();
+
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity body = scene->CreateEntity("Replaceable 2D body");
+    auto& rigidbody = body.AddComponent<Rigidbody2DComponent>();
+    rigidbody.SetBodyType(RigidbodyBodyType::Dynamic);
+    auto& box = body.AddComponent<BoxCollider2DComponent>();
+    box.SetSize({ 1.0f, 2.0f }, body);
+    auto& circle = body.AddComponent<CircleCollider2DComponent>();
+    circle.SetRadius(0.5f, body);
+
+    scene->OnSimulationStart();
+    REQUIRE(rigidbody.RuntimeBody != nullptr);
+    REQUIRE(box.RuntimeFixture != nullptr);
+    REQUIRE(circle.RuntimeFixture != nullptr);
+
+    Physics2D::Get().SetLinearVelocity(body, { 3.0f, -2.0f });
+    Physics2D::Get().SetAngularVelocity(body, 1.25f);
+    Physics2D::Get().SetBodyAwake(body, false);
+
+    Rigidbody2DComponent bodySettings = rigidbody;
+    bodySettings.SetMass(4.0f);
+    bodySettings.SetGravityScale(0.5f);
+    const uint64_t bodyInstanceId = rigidbody.InstanceId;
+    Rigidbody2DComponent* bodyAddress = &rigidbody;
+    auto& replacedBody = body.AddOrReplaceComponent<Rigidbody2DComponent>(bodySettings);
+    CHECK(&replacedBody == bodyAddress);
+    CHECK(replacedBody.InstanceId == bodyInstanceId);
+    REQUIRE(replacedBody.RuntimeBody != nullptr);
+    CHECK(Physics2D::Get().GetLinearVelocity(body) == glm::vec2(3.0f, -2.0f));
+    CHECK(Physics2D::Get().GetAngularVelocity(body) == 1.25f);
+    CHECK_FALSE(Physics2D::Get().IsBodyAwake(body));
+    CHECK(replacedBody.GetConfiguredMass() == 4.0f);
+    CHECK(replacedBody.GetGravityScale() == 0.5f);
+
+    BoxCollider2DComponent boxSettings = box;
+    boxSettings.SetSize({ 4.0f, 6.0f }, {});
+    boxSettings.SetIsTrigger(true);
+    const uint64_t boxInstanceId = box.InstanceId;
+    auto& replacedBox = body.AddOrReplaceComponent<BoxCollider2DComponent>(boxSettings);
+    CHECK(replacedBox.InstanceId == boxInstanceId);
+    REQUIRE(replacedBox.RuntimeFixture != nullptr);
+    CHECK(replacedBox.GetSize() == glm::vec2(4.0f, 6.0f));
+    CHECK(replacedBox.IsTrigger());
+
+    CircleCollider2DComponent circleSettings = circle;
+    circleSettings.SetRadius(1.5f, {});
+    circleSettings.SetIsTrigger(true);
+    const uint64_t circleInstanceId = circle.InstanceId;
+    auto& replacedCircle = body.AddOrReplaceComponent<CircleCollider2DComponent>(circleSettings);
+    CHECK(replacedCircle.InstanceId == circleInstanceId);
+    REQUIRE(replacedCircle.RuntimeFixture != nullptr);
+    CHECK(replacedCircle.GetRadius() == 1.5f);
+    CHECK(replacedCircle.IsTrigger());
+
+    scene->OnSimulationEnd();
+    CHECK(replacedBody.RuntimeBody == nullptr);
+    CHECK(replacedBox.RuntimeFixture == nullptr);
+    CHECK(replacedCircle.RuntimeFixture == nullptr);
 }
 
 TEST_CASE("2D physics material values enforce backend-neutral ranges", "[Physics][Physics2D][Material]")
@@ -218,6 +308,96 @@ TEST_CASE("3D backends implement the common contract", "[Physics][Physics3D]")
             backend->DestroyBody(dynamicBody);
             backend->DestroyBody(staticBody);
             backend->Shutdown();
+        }
+    }
+}
+
+TEST_CASE("Active 3D components survive AddOrReplace on every backend", "[Physics][Physics3D][Ecs][Lifecycle]")
+{
+    EnsureHeadlessRuntime();
+    Physics3D& physics = Physics3D::Get();
+    [[maybe_unused]] Physics3DBackendRestore restoreBackend{ physics, physics.GetBackend() };
+
+    for (const BackendCase& backendCase : BackendCases)
+    {
+        DYNAMIC_SECTION(backendCase.Name)
+        {
+            if (!Physics3D::IsBackendCompiled(backendCase.Type))
+                SKIP("Selected backend is not compiled into this build");
+            REQUIRE(physics.SetBackend(backendCase.Type));
+
+            Ref<Scene> scene = CreateRef<Scene>(false);
+            Entity body = scene->CreateEntity("Replaceable 3D body");
+            auto& rigidbody = body.AddComponent<Rigidbody3DComponent>();
+            rigidbody.SetBodyType(PhysicsBodyType3D::Dynamic, body);
+            rigidbody.SetAutoMass(false, body);
+            rigidbody.SetMass(2.0f, body);
+            auto& box = body.AddComponent<BoxCollider3DComponent>();
+            box.SetSize({ 1.0f, 2.0f, 3.0f }, body);
+            auto& sphere = body.AddComponent<SphereCollider3DComponent>();
+            sphere.SetRadius(0.75f, body);
+            auto& capsule = body.AddComponent<CapsuleCollider3DComponent>();
+            capsule.SetRadius(0.5f, body);
+            capsule.SetHeight(2.5f, body);
+
+            scene->OnSimulationStart();
+            REQUIRE(rigidbody.RuntimeBody);
+            REQUIRE(box.RuntimeShape);
+            REQUIRE(sphere.RuntimeShape);
+            REQUIRE(capsule.RuntimeShape);
+
+            rigidbody.SetLinearVelocity({ 2.0f, -1.0f, 3.0f });
+            rigidbody.SetAngularVelocity({ 0.25f, 0.5f, 0.75f });
+            rigidbody.SetAwake(false);
+
+            Rigidbody3DComponent bodySettings = rigidbody;
+            bodySettings.SetMass(7.0f, {});
+            bodySettings.SetGravityScale(0.35f);
+            const uint64_t bodyInstanceId = rigidbody.InstanceId;
+            Rigidbody3DComponent* bodyAddress = &rigidbody;
+            auto& replacedBody = body.AddOrReplaceComponent<Rigidbody3DComponent>(bodySettings);
+            CHECK(&replacedBody == bodyAddress);
+            CHECK(replacedBody.InstanceId == bodyInstanceId);
+            REQUIRE(replacedBody.RuntimeBody);
+            CHECK(replacedBody.GetMass() == 7.0f);
+            CHECK(replacedBody.GetGravityScale() == 0.35f);
+            CHECK(replacedBody.GetLinearVelocity() == glm::vec3(2.0f, -1.0f, 3.0f));
+            CHECK(replacedBody.GetAngularVelocity() == glm::vec3(0.25f, 0.5f, 0.75f));
+            CHECK_FALSE(replacedBody.IsAwake());
+
+            BoxCollider3DComponent boxSettings = box;
+            boxSettings.SetSize({ 4.0f, 5.0f, 6.0f }, {});
+            boxSettings.SetIsTrigger(true);
+            const uint64_t boxInstanceId = box.InstanceId;
+            auto& replacedBox = body.AddOrReplaceComponent<BoxCollider3DComponent>(boxSettings);
+            CHECK(replacedBox.InstanceId == boxInstanceId);
+            REQUIRE(replacedBox.RuntimeShape);
+            CHECK(replacedBox.GetSize() == glm::vec3(4.0f, 5.0f, 6.0f));
+            CHECK(replacedBox.IsTrigger());
+
+            SphereCollider3DComponent sphereSettings = sphere;
+            sphereSettings.SetRadius(1.25f, {});
+            const uint64_t sphereInstanceId = sphere.InstanceId;
+            auto& replacedSphere = body.AddOrReplaceComponent<SphereCollider3DComponent>(sphereSettings);
+            CHECK(replacedSphere.InstanceId == sphereInstanceId);
+            REQUIRE(replacedSphere.RuntimeShape);
+            CHECK(replacedSphere.GetRadius() == 1.25f);
+
+            CapsuleCollider3DComponent capsuleSettings = capsule;
+            capsuleSettings.SetRadius(0.9f, {});
+            capsuleSettings.SetHeight(3.5f, {});
+            const uint64_t capsuleInstanceId = capsule.InstanceId;
+            auto& replacedCapsule = body.AddOrReplaceComponent<CapsuleCollider3DComponent>(capsuleSettings);
+            CHECK(replacedCapsule.InstanceId == capsuleInstanceId);
+            REQUIRE(replacedCapsule.RuntimeShape);
+            CHECK(replacedCapsule.GetRadius() == 0.9f);
+            CHECK(replacedCapsule.GetHeight() == 3.5f);
+
+            scene->OnSimulationEnd();
+            CHECK_FALSE(static_cast<bool>(replacedBody.RuntimeBody));
+            CHECK_FALSE(static_cast<bool>(replacedBox.RuntimeShape));
+            CHECK_FALSE(static_cast<bool>(replacedSphere.RuntimeShape));
+            CHECK_FALSE(static_cast<bool>(replacedCapsule.RuntimeShape));
         }
     }
 }
