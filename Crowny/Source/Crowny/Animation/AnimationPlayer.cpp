@@ -6,6 +6,9 @@ namespace Crowny
 {
     namespace
     {
+        // Match loop playback's 16-cycle callback limit while accounting for two reflected segments per cycle.
+        constexpr uint32_t MAX_PING_PONG_EVENT_PREFIX_SEGMENTS = 33;
+
         Transform IdentityTransform() { return Transform(glm::vec3(0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(1.0f)); }
     } // namespace
 
@@ -93,9 +96,9 @@ namespace Crowny
             return;
 
         const float length = clip.GetLength();
-        const bool forward = currentTime > previousTime;
-        const auto dispatchRange = [&](float start, float end, bool includeStart) {
-            if (forward)
+        const bool playbackForward = currentTime > previousTime;
+        const auto dispatchRange = [&](float start, float end, bool rangeForward, bool includeStart) {
+            if (rangeForward)
             {
                 for (const AnimationEvent& event : clip.GetEvents())
                 {
@@ -115,7 +118,42 @@ namespace Crowny
 
         if (m_WrapMode != AnimationWrapMode::Loop || length <= 0.0f)
         {
-            dispatchRange(NormalizeTime(clip, previousTime, m_WrapMode), NormalizeTime(clip, currentTime, m_WrapMode), false);
+            if (m_WrapMode != AnimationWrapMode::PingPong || length <= 0.0f)
+            {
+                dispatchRange(NormalizeTime(clip, previousTime, m_WrapMode), NormalizeTime(clip, currentTime, m_WrapMode), playbackForward,
+                              false);
+                return;
+            }
+
+            float cursor = previousTime;
+            uint32_t segmentCount = 0;
+            while ((playbackForward ? cursor < currentTime : cursor > currentTime) &&
+                   segmentCount < MAX_PING_PONG_EVENT_PREFIX_SEGMENTS)
+            {
+                const double cycle = playbackForward ? std::floor(static_cast<double>(cursor) / length)
+                                                     : std::ceil(static_cast<double>(cursor) / length) - 1.0;
+                const double boundary = (playbackForward ? cycle + 1.0 : cycle) * length;
+                const float segmentEnd = playbackForward ? std::min(currentTime, static_cast<float>(boundary))
+                                                         : std::max(currentTime, static_cast<float>(boundary));
+                const float localStart = NormalizeTime(clip, cursor, AnimationWrapMode::PingPong);
+                const float localEnd = NormalizeTime(clip, segmentEnd, AnimationWrapMode::PingPong);
+                dispatchRange(localStart, localEnd, localEnd > localStart, false);
+
+                if (segmentEnd == cursor)
+                    break;
+                cursor = segmentEnd;
+                segmentCount++;
+            }
+
+            if (playbackForward ? cursor < currentTime : cursor > currentTime)
+            {
+                const double currentCycle = static_cast<double>(currentTime) / length;
+                const double finalStartCycle = playbackForward ? std::ceil(currentCycle) - 1.0 : std::floor(currentCycle) + 1.0;
+                const float finalStart = static_cast<float>(finalStartCycle * length);
+                const float localStart = NormalizeTime(clip, finalStart, AnimationWrapMode::PingPong);
+                const float localEnd = NormalizeTime(clip, currentTime, AnimationWrapMode::PingPong);
+                dispatchRange(localStart, localEnd, localEnd > localStart, false);
+            }
             return;
         }
 
@@ -125,25 +163,25 @@ namespace Crowny
         const int64_t endCycle = static_cast<int64_t>(std::floor(currentTime / length));
         if (startCycle == endCycle)
         {
-            dispatchRange(start, end, false);
+            dispatchRange(start, end, playbackForward, false);
             return;
         }
 
-        if (forward)
+        if (playbackForward)
         {
-            dispatchRange(start, length, false);
+            dispatchRange(start, length, true, false);
             const int64_t fullCycles = std::min<int64_t>(endCycle - startCycle - 1, 16);
             for (int64_t cycle = 0; cycle < fullCycles; cycle++)
-                dispatchRange(0.0f, length, true);
-            dispatchRange(0.0f, end, true);
+                dispatchRange(0.0f, length, true, true);
+            dispatchRange(0.0f, end, true, true);
         }
         else
         {
-            dispatchRange(start, 0.0f, false);
+            dispatchRange(start, 0.0f, false, false);
             const int64_t fullCycles = std::min<int64_t>(startCycle - endCycle - 1, 16);
             for (int64_t cycle = 0; cycle < fullCycles; cycle++)
-                dispatchRange(length, 0.0f, true);
-            dispatchRange(length, end, true);
+                dispatchRange(length, 0.0f, false, true);
+            dispatchRange(length, end, false, true);
         }
     }
 

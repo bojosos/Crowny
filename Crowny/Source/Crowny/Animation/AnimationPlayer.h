@@ -31,6 +31,10 @@ namespace Crowny
         float GetTime() const { return m_Time; }
         AnimationPlaybackState GetState() const { return m_State; }
         const Ref<AnimationClip>& GetClip() const { return m_Clip; }
+        /**
+         * Events are emitted in playback order and endpoints fire once per crossing. To bound callback storms, one Update reports
+         * at most 16 complete wrap cycles plus its first and final partial segments.
+         */
         void SetEventCallback(EventCallback callback) { m_EventCallback = std::move(callback); }
 
         void Update(float deltaTime, const Ref<Skeleton>& skeleton = nullptr, const Ref<MeshMorph>& morph = nullptr);

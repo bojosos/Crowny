@@ -100,6 +100,49 @@ TEST_CASE("Animation player evaluates events, morph weights, and cross fades", "
     CHECK(player.GetMorphWeights()[0] == Approx(0.25f));
 }
 
+TEST_CASE("Ping-pong animation events follow every reflected segment", "[Animation][Player][Events]")
+{
+    Ref<AnimationClip> clip = AnimationClip::Create(AnimationCurve<float>({ { 0.0f, 0.0f }, { 1.0f, 1.0f } }));
+    clip->SetEvents({ { "Start", 0.0f, {} }, { "Quarter", 0.25f, {} }, { "ThreeQuarter", 0.75f, {} }, { "End", 1.0f, {} } });
+
+    AnimationPlayer player;
+    Vector<String> events;
+    player.SetEventCallback([&](const AnimationEvent& event) { events.push_back(event.Name); });
+    player.SetWrapMode(AnimationWrapMode::PingPong);
+    player.Play(clip);
+
+    player.Seek(0.5f);
+    player.Update(1.0f);
+    CHECK((events == Vector<String>{ "ThreeQuarter", "End", "ThreeQuarter" }));
+
+    events.clear();
+    player.SetSpeed(-1.0f);
+    player.Update(1.0f);
+    CHECK((events == Vector<String>{ "ThreeQuarter", "End", "ThreeQuarter" }));
+
+    events.clear();
+    player.SetSpeed(1.0f);
+    player.Seek(1.0f);
+    player.Update(0.25f);
+    CHECK((events == Vector<String>{ "ThreeQuarter" }));
+}
+
+TEST_CASE("Ping-pong animation events remain ordered across both clip ends", "[Animation][Player][Events]")
+{
+    Ref<AnimationClip> clip = AnimationClip::Create(AnimationCurve<float>({ { 0.0f, 0.0f }, { 1.0f, 1.0f } }));
+    clip->SetEvents({ { "Start", 0.0f, {} }, { "Quarter", 0.25f, {} }, { "ThreeQuarter", 0.75f, {} }, { "End", 1.0f, {} } });
+
+    AnimationPlayer player;
+    Vector<String> events;
+    player.SetEventCallback([&](const AnimationEvent& event) { events.push_back(event.Name); });
+    player.SetWrapMode(AnimationWrapMode::PingPong);
+    player.Play(clip);
+    player.Seek(0.5f);
+    player.Update(2.0f);
+
+    CHECK((events == Vector<String>{ "ThreeQuarter", "End", "ThreeQuarter", "Quarter", "Start", "Quarter" }));
+}
+
 TEST_CASE("Looping root motion remains continuous across clip boundaries", "[Animation][Player]")
 {
     RootMotionCurves rootMotion;
