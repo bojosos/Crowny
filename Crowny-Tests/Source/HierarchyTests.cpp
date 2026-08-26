@@ -416,4 +416,35 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
         CHECK(clone.GetChild(0).GetName() == "A");
         CHECK(clone.GetChild(1).GetName() == "B");
     }
+
+    SECTION("Duplicate attaches each clone to its final parent once")
+    {
+        Entity parent = scene->CreateEntity("Parent");
+        Entity source = scene->CreateEntity("Source");
+        Entity child = scene->CreateEntity("Child");
+        source.SetParent(parent);
+        child.SetParent(source);
+        parent.SetPosition({ 10.0f, 20.0f, 30.0f });
+        source.SetPosition({ 1.0f, 2.0f, 3.0f });
+        child.SetPosition({ 4.0f, 5.0f, 6.0f });
+
+        auto& sourceChildren = source.GetComponent<RelationshipComponent>().Children;
+        sourceChildren.shrink_to_fit();
+        const Entity* sourceChildStorage = sourceChildren.data();
+        const size_t sourceChildCapacity = sourceChildren.capacity();
+        const glm::mat4 sourceWorld = source.GetWorldMatrix();
+        const glm::mat4 childWorld = child.GetWorldMatrix();
+
+        Entity clone = scene->DuplicateEntity(source, true);
+
+        REQUIRE(clone);
+        REQUIRE(clone.GetChildCount() == 1);
+        CHECK(sourceChildren.data() == sourceChildStorage);
+        CHECK(sourceChildren.capacity() == sourceChildCapacity);
+        CHECK(source.GetChild(0) == child);
+        CHECK(clone.GetLocalPosition() == source.GetLocalPosition());
+        CHECK(clone.GetChild(0).GetLocalPosition() == child.GetLocalPosition());
+        ExpectMatrixEqual(clone.GetWorldMatrix(), sourceWorld);
+        ExpectMatrixEqual(clone.GetChild(0).GetWorldMatrix(), childWorld);
+    }
 }

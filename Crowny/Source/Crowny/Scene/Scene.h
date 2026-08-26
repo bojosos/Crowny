@@ -94,6 +94,8 @@ namespace Crowny
         template <typename... Components> auto GetAllEntitiesWith() const { return m_Registry.view<const Components...>(); }
 
     private:
+        Entity CreateEntityInternal(const UUID& uuid, const String& name, Entity parent);
+        Entity DuplicateEntityInternal(Entity entity, bool includeChildren, Entity cloneParent);
         void RegisterEntityCallbacks();
         void RebuildCopiedRelationships(const Scene& source, const UnorderedMap<UUID, entt::entity>& entityMap);
 

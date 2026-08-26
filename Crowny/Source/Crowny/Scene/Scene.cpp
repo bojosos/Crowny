@@ -275,33 +275,22 @@ namespace Crowny
 
         const Entity sourceParent = entity.GetParent();
         const uint32_t sourceSiblingIndex = entity.GetSiblingIndex();
-        Entity newEntity = CreateEntity(entity.GetName());
-        const Entity creationParent = newEntity.GetParent();
-        CopyAllExistingComponents(newEntity, entity);
-
-        if (sourceParent != creationParent)
-            newEntity.SetParent(sourceParent);
-        if (sourceParent)
+        Entity newEntity = DuplicateEntityInternal(entity, includeChildren, sourceParent);
+        if (newEntity && sourceParent)
             newEntity.SetSiblingIndex(sourceSiblingIndex + 1);
+        return newEntity;
+    }
+
+    Entity Scene::DuplicateEntityInternal(Entity entity, bool includeChildren, Entity cloneParent)
+    {
+        Entity newEntity = CreateEntityInternal(UuidGenerator::Generate(), entity.GetName(), cloneParent);
+        CopyAllExistingComponents(newEntity, entity);
+        newEntity.NotifyTransformChanged();
 
         if (includeChildren)
         {
-            const Vector<Entity> children = entity.GetChildren();
-            uint32_t childIndex = 0;
-            for (Entity child : children)
-            {
-                Entity childClone = DuplicateEntity(child, true);
-                if (childClone && childClone.SetParent(newEntity))
-                {
-                    const Transform& sourceLocal = child.GetLocalTransform();
-                    TransformComponent& cloneTransform = childClone.GetTransform();
-                    cloneTransform.SetPosition(sourceLocal.GetPosition());
-                    cloneTransform.SetRotation(sourceLocal.GetRotation());
-                    cloneTransform.SetScale(sourceLocal.GetScale());
-                    childClone.NotifyTransformChanged();
-                    childClone.SetSiblingIndex(childIndex++);
-                }
-            }
+            for (Entity child : entity.GetChildren())
+                DuplicateEntityInternal(child, true, newEntity);
         }
         return newEntity;
     }
@@ -1139,17 +1128,7 @@ namespace Crowny
 
     Entity Scene::CreateEntity(const String& name)
     {
-        Entity entity = { m_Registry.create(), this };
-        const UUID uuid = UuidGenerator::Generate();
-        entity.AddComponent<IDComponent>(uuid);
-        m_EntityMap[uuid] = entity.GetHandle();
-        entity.AddComponent<TagComponent>(name);
-        entity.AddComponent<TransformComponent>();
-        entity.AddComponent<RelationshipComponent>();
-        if (m_RootEntity)
-            entity.SetParent(*m_RootEntity);
-
-        return entity;
+        return CreateEntityInternal(UuidGenerator::Generate(), name, m_RootEntity ? *m_RootEntity : Entity{});
     }
 
     Entity Scene::CreateEntityWithUuid(const UUID& uuid, const String& name)
@@ -1163,6 +1142,21 @@ namespace Crowny
         entity.AddComponent<TransformComponent>();
         if (m_RootEntity)
             entity.SetParent(*m_RootEntity);
+
+        return entity;
+    }
+
+    Entity Scene::CreateEntityInternal(const UUID& uuid, const String& name, Entity parent)
+    {
+        Entity entity(m_Registry.create(), this);
+
+        entity.AddComponent<IDComponent>(uuid);
+        m_EntityMap[uuid] = entity.GetHandle();
+        entity.AddComponent<TagComponent>(name);
+        entity.AddComponent<TransformComponent>();
+        entity.AddComponent<RelationshipComponent>();
+        if (parent)
+            entity.SetParent(parent);
 
         return entity;
     }
