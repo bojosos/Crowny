@@ -125,7 +125,7 @@ TEST_CASE("Active 2D components survive AddOrReplace and clean up", "[Physics][P
 
     Physics2D::Get().SetLinearVelocity(body, { 3.0f, -2.0f });
     Physics2D::Get().SetAngularVelocity(body, 1.25f);
-    Physics2D::Get().SetBodyAwake(body, false);
+    Physics2D::Get().SetBodyAwake(body, true);
 
     Rigidbody2DComponent bodySettings = rigidbody;
     bodySettings.SetMass(4.0f);
@@ -138,9 +138,25 @@ TEST_CASE("Active 2D components survive AddOrReplace and clean up", "[Physics][P
     REQUIRE(replacedBody.RuntimeBody != nullptr);
     CHECK(Physics2D::Get().GetLinearVelocity(body) == glm::vec2(3.0f, -2.0f));
     CHECK(Physics2D::Get().GetAngularVelocity(body) == 1.25f);
-    CHECK_FALSE(Physics2D::Get().IsBodyAwake(body));
+    CHECK(Physics2D::Get().IsBodyAwake(body));
     CHECK(replacedBody.GetConfiguredMass() == 4.0f);
     CHECK(replacedBody.GetGravityScale() == 0.5f);
+
+    Physics2D::Get().SetBodyAwake(body, false);
+    const glm::vec2 sleepingLinearVelocity = Physics2D::Get().GetLinearVelocity(body);
+    const float sleepingAngularVelocity = Physics2D::Get().GetAngularVelocity(body);
+    Rigidbody2DComponent sleepingSettings = replacedBody;
+    sleepingSettings.SetLinearDrag(0.3f);
+    sleepingSettings.SetAngularDrag(0.4f);
+    auto& sleepingBody = body.AddOrReplaceComponent<Rigidbody2DComponent>(sleepingSettings);
+    CHECK(&sleepingBody == bodyAddress);
+    CHECK(sleepingBody.InstanceId == bodyInstanceId);
+    REQUIRE(sleepingBody.RuntimeBody != nullptr);
+    CHECK(Physics2D::Get().GetLinearVelocity(body) == sleepingLinearVelocity);
+    CHECK(Physics2D::Get().GetAngularVelocity(body) == sleepingAngularVelocity);
+    CHECK_FALSE(Physics2D::Get().IsBodyAwake(body));
+    CHECK(sleepingBody.GetLinearDrag() == 0.3f);
+    CHECK(sleepingBody.GetAngularDrag() == 0.4f);
 
     BoxCollider2DComponent boxSettings = box;
     boxSettings.SetSize({ 4.0f, 6.0f }, {});
@@ -348,7 +364,7 @@ TEST_CASE("Active 3D components survive AddOrReplace on every backend", "[Physic
 
             rigidbody.SetLinearVelocity({ 2.0f, -1.0f, 3.0f });
             rigidbody.SetAngularVelocity({ 0.25f, 0.5f, 0.75f });
-            rigidbody.SetAwake(false);
+            rigidbody.SetAwake(true);
 
             Rigidbody3DComponent bodySettings = rigidbody;
             bodySettings.SetMass(7.0f, {});
@@ -363,7 +379,22 @@ TEST_CASE("Active 3D components survive AddOrReplace on every backend", "[Physic
             CHECK(replacedBody.GetGravityScale() == 0.35f);
             CHECK(replacedBody.GetLinearVelocity() == glm::vec3(2.0f, -1.0f, 3.0f));
             CHECK(replacedBody.GetAngularVelocity() == glm::vec3(0.25f, 0.5f, 0.75f));
-            CHECK_FALSE(replacedBody.IsAwake());
+            CHECK(replacedBody.IsAwake());
+
+            replacedBody.SetAwake(false);
+            const glm::vec3 sleepingLinearVelocity = replacedBody.GetLinearVelocity();
+            const glm::vec3 sleepingAngularVelocity = replacedBody.GetAngularVelocity();
+            Rigidbody3DComponent sleepingSettings = replacedBody;
+            sleepingSettings.SetDamping(0.2f, 0.3f);
+            auto& sleepingBody = body.AddOrReplaceComponent<Rigidbody3DComponent>(sleepingSettings);
+            CHECK(&sleepingBody == bodyAddress);
+            CHECK(sleepingBody.InstanceId == bodyInstanceId);
+            REQUIRE(sleepingBody.RuntimeBody);
+            CHECK(sleepingBody.GetLinearVelocity() == sleepingLinearVelocity);
+            CHECK(sleepingBody.GetAngularVelocity() == sleepingAngularVelocity);
+            CHECK_FALSE(sleepingBody.IsAwake());
+            CHECK(sleepingBody.GetLinearDamping() == 0.2f);
+            CHECK(sleepingBody.GetAngularDamping() == 0.3f);
 
             BoxCollider3DComponent boxSettings = box;
             boxSettings.SetSize({ 4.0f, 5.0f, 6.0f }, {});

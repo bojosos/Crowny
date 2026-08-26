@@ -53,6 +53,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Add-component search retains sorted catalogs and query results, while the viewport HUD uses bounded fixed-buffer formatting. Their stable visible-frame paths are covered by zero-allocation tests.
 - [x] Asset Browser selection uses full paths, survives filtering and sorting safely, and assigns distinct ImGui IDs to duplicate basenames. Empty-result keyboard actions and destructive operations are bounds-safe.
 - [x] Reference-field popup IDs use owned fixed storage with no warm-frame allocation, and multiline properties share the standard balanced ImGui row cleanup path.
+- [x] Physics and audio runtime components use explicit stable EnTT storage. `AddOrReplace` reapplies editable settings while preserving live handles, component identity, backend-observed velocity and sleep state, and initialized audio-source state across Box2D, Box3D, Jolt, and Bullet.
 
 ## Physics and ECS
 
