@@ -15,7 +15,7 @@ namespace Crowny
         m_ContextStates.resize(frameContextCount, ContextState::Available);
         for (uint32_t index = 0; index < frameContextCount; index++)
             m_FrameContexts.emplace_back(index);
-        m_PendingResourceCommands.reserve(64);
+        m_PendingMeshUploads.reserve(64);
     }
 
     RenderThread::~RenderThread() { Stop(); }
@@ -68,12 +68,11 @@ namespace Crowny
         CW_ENGINE_ASSERT(m_FrameOpen);
 
         {
-            ScopedLock resourceLock(m_ResourceCommandMutex);
+            ScopedLock resourceLock(m_MeshUploadMutex);
             FrameContext& context = m_FrameContexts[m_RecordingContext];
-            context.ResourceCommands.insert(context.ResourceCommands.end(),
-                                            std::make_move_iterator(m_PendingResourceCommands.begin()),
-                                            std::make_move_iterator(m_PendingResourceCommands.end()));
-            m_PendingResourceCommands.clear();
+            context.MeshUploadCommands.insert(context.MeshUploadCommands.end(), std::make_move_iterator(m_PendingMeshUploads.begin()),
+                                              std::make_move_iterator(m_PendingMeshUploads.end()));
+            m_PendingMeshUploads.clear();
         }
 
         {
@@ -105,10 +104,10 @@ namespace Crowny
         });
     }
 
-    void RenderThread::EnqueueResourceCommand(std::function<void()>&& cmd)
+    void RenderThread::EnqueueMeshUpload(MeshUploadCommand command)
     {
-        ScopedLock lock(m_ResourceCommandMutex);
-        m_PendingResourceCommands.push_back(std::move(cmd));
+        ScopedLock lock(m_MeshUploadMutex);
+        m_PendingMeshUploads.push_back(std::move(command));
     }
 
     void RenderThread::RenderLoop()
@@ -136,10 +135,10 @@ namespace Crowny
             FrameMarkStart("RenderThread");
 
             {
-                ZoneScopedN("DrainResourceCmds");
-                for (std::function<void()>& command : context.ResourceCommands)
-                    command();
-                context.ResourceCommands.clear();
+                ZoneScopedN("DrainMeshUploads");
+                for (MeshUploadCommand& command : context.MeshUploadCommands)
+                    command.Execute();
+                context.MeshUploadCommands.clear();
             }
 
             {
@@ -158,14 +157,14 @@ namespace Crowny
             m_ContextAvailable.notify_all();
         }
 
-        Vector<std::function<void()>> pendingResourceCommands;
+        Vector<MeshUploadCommand> pendingMeshUploads;
         {
-            ScopedLock lock(m_ResourceCommandMutex);
-            pendingResourceCommands = std::move(m_PendingResourceCommands);
-            m_PendingResourceCommands.clear();
+            ScopedLock lock(m_MeshUploadMutex);
+            pendingMeshUploads = std::move(m_PendingMeshUploads);
+            m_PendingMeshUploads.clear();
         }
-        for (std::function<void()>& command : pendingResourceCommands)
-            command();
+        for (MeshUploadCommand& command : pendingMeshUploads)
+            command.Execute();
 
         SceneRenderer::ShutdownRenderThreadResources();
     }

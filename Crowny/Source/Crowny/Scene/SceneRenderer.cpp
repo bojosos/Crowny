@@ -1575,20 +1575,23 @@ namespace Crowny
         {
             auto& proc = m_Scene->m_Registry.get<ProceduralMeshComponent>(ee);
 
-            // Read back any completed GPU upload from a previous frame's render thread lambda.
-            // PendingGpuResult is written by the render thread and read here on the sim thread
-            // only after WaitForFrameDone() has returned, so no synchronisation is needed.
-            if (proc.PendingGpuResult)
+            if (proc.PendingGpuResult && proc.GpuUploadPending)
             {
-                if (*proc.PendingGpuResult)
+                Ref<Mesh> uploadedMesh;
+                if (proc.PendingGpuResult->TryConsume(uploadedMesh))
                 {
-                    proc.GpuMesh = *proc.PendingGpuResult;
-                    if (!proc.RuntimeMeshHandle || proc.RuntimeMeshHandle.GetInternalPtr() != proc.GpuMesh)
-                        proc.RuntimeMeshHandle = static_asset_cast<Mesh>(AssetManager::TryGet()->CreateAssetHandle(proc.GpuMesh));
-                    proc.NeedsGpuUpload = false;
+                    proc.GpuUploadPending = false;
+                    if (uploadedMesh)
+                    {
+                        proc.GpuMesh = std::move(uploadedMesh);
+                        if (!proc.RuntimeMeshHandle || proc.RuntimeMeshHandle.GetInternalPtr() != proc.GpuMesh)
+                            proc.RuntimeMeshHandle = static_asset_cast<Mesh>(AssetManager::TryGet()->CreateAssetHandle(proc.GpuMesh));
+                        proc.NeedsGpuUpload = false;
+                    }
                 }
-                proc.PendingGpuResult = nullptr;
             }
+            if (proc.GpuUploadPending)
+                continue;
 
             if (!proc.Graph.IsLoaded())
                 continue;
@@ -1619,35 +1622,22 @@ namespace Crowny
             proc.LastEvaluatedVersion = currentVersion;
             proc.NeedsGpuUpload = true;
 
-            // Enqueue GPU resource creation/upload on the render thread.
-            // Capture GpuMesh by value (it's a shared_ptr, so the Mesh object stays alive).
-            // Write the result into a shared slot instead of a raw pointer into the component.
-            Ref<Mesh> existingMesh = proc.GpuMesh;
-            auto resultSlot = std::make_shared<Ref<Mesh>>();
-            proc.PendingGpuResult = resultSlot;
-
             RenderThread* rt = Application::TryGet()->GetRenderThread();
             if (rt && rt->IsRunning())
             {
-                rt->EnqueueResourceCommand([existingMesh, resultSlot, result]() mutable {
-                    if (existingMesh)
-                    {
-                        // Reuse existing GPU mesh — update data and re-upload
-                        existingMesh->SetMeshData(result);
-                        existingMesh->UploadToGpu();
-                        *resultSlot = existingMesh;
-                    }
-                    else
-                    {
-                        // First time: create GPU mesh with Dynamic usage for efficient updates
-                        *resultSlot = Mesh::Create({ result, MeshUsage::Dynamic | MeshUsage::CpuCached });
-                    }
-                });
+                if (!proc.PendingGpuResult)
+                    proc.PendingGpuResult = std::make_shared<MeshUploadResult>();
+                proc.PendingGpuResult->ResetForSubmission();
+                proc.GpuUploadPending = true;
+
+                MeshDesc uploadDescription;
+                uploadDescription.Data = result;
+                uploadDescription.Usage = MeshUsage::Dynamic | MeshUsage::CpuCached;
+                rt->EnqueueMeshUpload(MeshUploadCommand(proc.GpuMesh, std::move(uploadDescription), proc.PendingGpuResult));
             }
             else
             {
                 // Single-threaded fallback: create/upload directly and apply immediately
-                proc.PendingGpuResult = nullptr;
                 if (proc.GpuMesh)
                 {
                     proc.GpuMesh->SetMeshData(result);
@@ -1660,6 +1650,7 @@ namespace Crowny
                 if (!proc.RuntimeMeshHandle || proc.RuntimeMeshHandle.GetInternalPtr() != proc.GpuMesh)
                     proc.RuntimeMeshHandle = static_asset_cast<Mesh>(AssetManager::TryGet()->CreateAssetHandle(proc.GpuMesh));
                 proc.NeedsGpuUpload = false;
+                proc.GpuUploadPending = false;
             }
         }
     }
@@ -1706,23 +1697,21 @@ namespace Crowny
                     animation.Player->Pause();
                 animation.RuntimeSourceMesh = sourceMeshId;
                 animation.RuntimeClip = clipId;
-                animation.PendingGpuResult = std::make_shared<AnimationGpuUploadResult>();
+                animation.PendingGpuResult = std::make_shared<MeshUploadResult>();
             }
 
             RenderThread* renderThread = Application::TryGet()->GetRenderThread();
-            if (animation.PendingGpuResult && animation.GpuUploadPending && animation.PendingGpuResult->Complete.load(std::memory_order_acquire))
+            Ref<Mesh> uploadedMesh;
+            if (animation.PendingGpuResult && animation.GpuUploadPending && animation.PendingGpuResult->TryConsume(uploadedMesh))
             {
-                animation.RuntimeMesh = animation.PendingGpuResult->MeshResource;
-                animation.PendingGpuResult->MeshResource = nullptr;
-                animation.PendingGpuResult->Complete.store(false, std::memory_order_relaxed);
+                animation.RuntimeMesh = std::move(uploadedMesh);
                 animation.GpuUploadPending = false;
                 if (animation.RuntimeMesh && !animation.RuntimeMeshHandle)
                     animation.RuntimeMeshHandle = static_asset_cast<Mesh>(AssetManager::TryGet()->CreateAssetHandle(animation.RuntimeMesh));
             }
             else if (animation.GpuUploadPending && (!renderThread || !renderThread->IsRunning()))
             {
-                animation.PendingGpuResult->MeshResource = nullptr;
-                animation.PendingGpuResult->Complete.store(false, std::memory_order_relaxed);
+                animation.PendingGpuResult->ResetForSubmission();
                 animation.GpuUploadPending = false;
             }
 
@@ -1751,9 +1740,8 @@ namespace Crowny
 
             const Ref<MeshData> output = animation.Deformer->GetOutputMeshData();
             const Ref<Mesh> existingMesh = animation.RuntimeMesh;
-            const std::shared_ptr<AnimationGpuUploadResult> resultSlot = animation.PendingGpuResult;
-            resultSlot->MeshResource = nullptr;
-            resultSlot->Complete.store(false, std::memory_order_relaxed);
+            const std::shared_ptr<MeshUploadResult> resultSlot = animation.PendingGpuResult;
+            resultSlot->ResetForSubmission();
             animation.GpuUploadPending = true;
 
             MeshDesc runtimeDesc;
@@ -1768,19 +1756,7 @@ namespace Crowny
             }
             if (renderThread && renderThread->IsRunning())
             {
-                renderThread->EnqueueResourceCommand([existingMesh, resultSlot, runtimeDesc]() mutable {
-                    if (existingMesh)
-                    {
-                        existingMesh->SetMeshData(runtimeDesc.Data);
-                        existingMesh->UploadToGpu();
-                        resultSlot->MeshResource = existingMesh;
-                    }
-                    else
-                    {
-                        resultSlot->MeshResource = Mesh::Create(runtimeDesc);
-                    }
-                    resultSlot->Complete.store(true, std::memory_order_release);
-                });
+                renderThread->EnqueueMeshUpload(MeshUploadCommand(existingMesh, std::move(runtimeDesc), resultSlot));
             }
             else
             {

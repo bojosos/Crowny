@@ -28,9 +28,8 @@ namespace Crowny
         // Called by sim thread: blocks until the render thread finishes the current frame.
         void WaitForFrameDone();
 
-        // Called by sim thread: enqueues a GPU resource command (create/destroy texture, etc.)
-        // to be executed on the render thread.
-        void EnqueueResourceCommand(std::function<void()>&& cmd);
+        // Called by the simulation thread. The command owns its inputs until the render thread executes it.
+        void EnqueueMeshUpload(MeshUploadCommand command);
 
         bool IsRunning() const { return m_Running.load(std::memory_order_acquire); }
         uint32_t GetFrameContextCount() const { return static_cast<uint32_t>(m_FrameContexts.size()); }
@@ -54,8 +53,8 @@ namespace Crowny
         Signal m_ContextReady;
         Signal m_ContextAvailable;
 
-        Vector<std::function<void()>> m_PendingResourceCommands;
-        Mutex m_ResourceCommandMutex;
+        Vector<MeshUploadCommand> m_PendingMeshUploads;
+        Mutex m_MeshUploadMutex;
 
         std::atomic<bool> m_Running{ false };
         uint32_t m_NextWriteContext = 0;

@@ -19,9 +19,11 @@
 
 #include <atomic>
 #include <limits>
+#include <memory>
 
 namespace Crowny
 {
+    class MeshUploadResult;
 
     inline std::atomic<uint64_t> s_NextAvailableId{ 1 };
 
@@ -421,10 +423,9 @@ namespace Crowny
         bool NeedsGpuUpload = false;                // New CpuMeshData ready, upload on render thread
         uint32_t LastEvaluatedVersion = 0xFFFFFFFF; // Version of the graph when last evaluated
 
-        // Output slot written by the render thread lambda and read back by the sim thread
-        // at the start of the next UpdateProceduralMeshes call. Using shared_ptr ensures
-        // the slot stays alive independently of this component's lifetime.
-        std::shared_ptr<Ref<Mesh>> PendingGpuResult;
+        // The queued command shares this result, so it remains valid if the component is destroyed.
+        std::shared_ptr<MeshUploadResult> PendingGpuResult;
+        bool GpuUploadPending = false;
 
         ProceduralMeshComponent() : ComponentBase() {}
         ProceduralMeshComponent(const ProceduralMeshComponent& other) : ComponentBase(other) { CopySettings(other); }
@@ -451,6 +452,7 @@ namespace Crowny
             NeedsGpuUpload = false;
             LastEvaluatedVersion = 0xFFFFFFFF;
             PendingGpuResult = nullptr;
+            GpuUploadPending = false;
         }
     };
 
@@ -1084,12 +1086,6 @@ namespace Crowny
         }
     };
 
-    struct AnimationGpuUploadResult
-    {
-        Ref<Mesh> MeshResource;
-        std::atomic<bool> Complete{ false };
-    };
-
     struct AnimationComponent : public ComponentBase
     {
         AssetHandle<AnimationClip> Clip;
@@ -1102,7 +1098,7 @@ namespace Crowny
         Ref<MeshDeformer> Deformer;
         Ref<Mesh> RuntimeMesh;
         AssetHandle<Mesh> RuntimeMeshHandle;
-        std::shared_ptr<AnimationGpuUploadResult> PendingGpuResult;
+        std::shared_ptr<MeshUploadResult> PendingGpuResult;
         bool GpuUploadPending = false;
         UUID RuntimeSourceMesh = UUID::EMPTY;
         UUID RuntimeClip = UUID::EMPTY;
