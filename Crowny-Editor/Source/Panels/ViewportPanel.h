@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Editor/UndoRedo.h"
 #include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
@@ -81,6 +82,7 @@ namespace Crowny
         void BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot);
         void ApplyTransformInteraction(const glm::mat4& pivot);
         void EndTransformInteraction();
+        Ref<UndoAction> BuildTransformAction() const;
 
         bool m_LocalMode = true;
         bool m_SnapEnabled = false;
@@ -96,6 +98,7 @@ namespace Crowny
         Vector<Entity> m_SelectedEntitiesScratch;
         Vector<Entity> m_TopLevelSelectionScratch;
         Vector<TransformSnapshot> m_TransformSnapshots;
+        UndoTransaction m_TransformTransaction;
         glm::mat4 m_InitialGizmoTransform{ 1.0f };
         glm::mat4 m_CurrentGizmoTransform{ 1.0f };
         bool m_GizmoWasUsing = false;

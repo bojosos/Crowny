@@ -78,6 +78,36 @@ namespace Crowny
         virtual void Reset() = 0;
     };
 
+    class UndoTransaction
+    {
+    public:
+        using Id = uint64_t;
+        using ActionFactory = std::function<Ref<UndoAction>()>;
+
+        // IDs are non-zero and protect an active gesture from unrelated controls. The
+        // factory runs once, at commit, and only after Update reports a real change.
+        bool Begin(Id id, ActionFactory factory);
+        bool Begin(Id id, const Ref<RetainedUndoActionFactory>& factory);
+        void Update(Id id, bool changed = true);
+        Ref<UndoAction> Commit(Id id);
+        void Cancel(Id id);
+        void Cancel();
+
+        bool IsActive() const { return m_Active; }
+        Id GetId() const { return m_Id; }
+        bool Owns(Id id) const { return m_Active && id != 0u && m_Id == id; }
+        bool Owns(const Ref<RetainedUndoActionFactory>& factory) const { return m_Active && m_RetainedFactory == factory; }
+
+    private:
+        Ref<UndoAction> BuildAction() const;
+
+        ActionFactory m_Factory;
+        Ref<RetainedUndoActionFactory> m_RetainedFactory;
+        Id m_Id = 0u;
+        bool m_Active = false;
+        bool m_Changed = false;
+    };
+
     class UndoRedo : public Module<UndoRedo>
     {
     public:
@@ -111,8 +141,8 @@ namespace Crowny
         void CancelInteraction();
 
     private:
-        bool HasComponentActionFactory() const;
-        Ref<UndoAction> CreateComponentAction() const;
+        bool HasPendingActionFactory() const;
+        bool BeginPendingTransaction(uint32_t itemId);
         void FinishInteraction();
 
         static constexpr size_t MaxHistorySize = 256u;
@@ -121,10 +151,10 @@ namespace Crowny
         Ref<Scene> m_HistoryScene;
         std::function<Ref<UndoAction>()> m_Factory;
         Ref<RetainedUndoActionFactory> m_RetainedFactory;
+        UndoTransaction m_Transaction;
         ActionAppliedCallback m_ActionApplied;
-        uint32_t m_InteractionItemId = 0u;
-        bool m_InInteraction = false;
-        bool m_InteractionChanged = false;
+        bool m_ComponentScopeOpen = false;
+        bool m_CommitPending = false;
         bool m_RecordingEnabled = true;
     };
 

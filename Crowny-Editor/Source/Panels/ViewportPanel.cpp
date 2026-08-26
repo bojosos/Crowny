@@ -24,6 +24,8 @@ namespace Crowny
 
     namespace
     {
+        constexpr UndoTransaction::Id TransformTransactionId = 1u;
+
         bool IsSupportedViewportAsset(const FileEntry* fileEntry)
         {
             if (fileEntry == nullptr || fileEntry->Metadata == nullptr)
@@ -242,6 +244,9 @@ namespace Crowny
 
     void ViewportPanel::BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot)
     {
+        if (m_TransformTransaction.IsActive())
+            EndTransformInteraction();
+
         m_TransformSnapshots.clear();
         const Vector<Entity>& topLevelSelection = GetTopLevelSelection(selectedEntities);
         m_TransformSnapshots.reserve(topLevelSelection.size());
@@ -249,6 +254,7 @@ namespace Crowny
             m_TransformSnapshots.push_back({ entity, entity.GetWorldMatrix() });
         m_InitialGizmoTransform = pivot;
         m_CurrentGizmoTransform = pivot;
+        m_TransformTransaction.Begin(TransformTransactionId, [this] { return BuildTransformAction(); });
     }
 
     void ViewportPanel::ApplyTransformInteraction(const glm::mat4& pivot)
@@ -260,9 +266,16 @@ namespace Crowny
             if (snapshot.Target)
                 snapshot.Target.SetWorldTransform(delta * snapshot.WorldTransform);
         }
+        m_TransformTransaction.Update(TransformTransactionId, MatrixChanged(m_InitialGizmoTransform, m_CurrentGizmoTransform));
     }
 
     void ViewportPanel::EndTransformInteraction()
+    {
+        UndoRedo::Get().RegisterAction(m_TransformTransaction.Commit(TransformTransactionId));
+        m_TransformSnapshots.clear();
+    }
+
+    Ref<UndoAction> ViewportPanel::BuildTransformAction() const
     {
         Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(m_TransformSnapshots.size() == 1u ? "Transform entity" : "Transform entities");
         for (const TransformSnapshot& snapshot : m_TransformSnapshots)
@@ -273,9 +286,9 @@ namespace Crowny
             if (MatrixChanged(snapshot.WorldTransform, current))
                 actions->Add(CreateRef<WorldTransformAction>(snapshot.Target, snapshot.WorldTransform, current));
         }
-        if (!actions->Empty())
-            UndoRedo::Get().RegisterAction(actions);
-        m_TransformSnapshots.clear();
+        if (actions->Empty())
+            return {};
+        return actions;
     }
 
     void ViewportPanel::DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity selectedEntity, const Vector<Entity>& selectedEntities)

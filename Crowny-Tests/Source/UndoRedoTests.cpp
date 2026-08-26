@@ -108,6 +108,119 @@ namespace
     };
 } // namespace
 
+TEST_CASE("Undo transactions coalesce continuous edits into one action", "[Editor][Undo][Transaction]")
+{
+    constexpr UndoTransaction::Id transactionId = 71u;
+    int value = 1;
+    const int before = value;
+    uint32_t buildCount = 0u;
+    UndoTransaction transaction;
+
+    REQUIRE(transaction.Begin(transactionId, [&]() -> Ref<UndoAction> {
+        buildCount++;
+        return CreateRef<IntegerAction>(value, before, value);
+    }));
+    value = 2;
+    transaction.Update(transactionId);
+    value = 5;
+    transaction.Update(transactionId);
+
+    CHECK_FALSE(transaction.Begin(72u, [] { return Ref<UndoAction>{}; }));
+    CHECK(transaction.Commit(72u) == nullptr);
+    CHECK(transaction.IsActive());
+
+    Ref<UndoAction> action = transaction.Commit(transactionId);
+    REQUIRE(action != nullptr);
+    CHECK(buildCount == 1u);
+    CHECK_FALSE(transaction.IsActive());
+    CHECK(transaction.Commit(transactionId) == nullptr);
+
+    UndoRedo::StartUp();
+    UndoRedo::Get().RegisterAction(action);
+    UndoRedo::Get().Undo();
+    CHECK(value == 1);
+    UndoRedo::Get().Redo();
+    CHECK(value == 5);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Undo transactions discard no-op and cancelled edits", "[Editor][Undo][Transaction]")
+{
+    constexpr UndoTransaction::Id transactionId = 19u;
+    int value = 3;
+    uint32_t buildCount = 0u;
+    UndoTransaction transaction;
+    const auto makeAction = [&]() -> Ref<UndoAction> {
+        buildCount++;
+        return CreateRef<IntegerAction>(value, 3, value);
+    };
+
+    REQUIRE(transaction.Begin(transactionId, makeAction));
+    CHECK(transaction.Commit(transactionId) == nullptr);
+    CHECK(buildCount == 0u);
+
+    REQUIRE(transaction.Begin(transactionId, makeAction));
+    value = 8;
+    transaction.Update(transactionId);
+    transaction.Cancel(20u);
+    CHECK(transaction.IsActive());
+    transaction.Cancel(transactionId);
+    CHECK_FALSE(transaction.IsActive());
+    CHECK(buildCount == 0u);
+    CHECK(transaction.Commit(transactionId) == nullptr);
+}
+
+TEST_CASE("Component transactions build after the final setter", "[Editor][Undo][Transaction][Component]")
+{
+    int value = 1;
+    UndoRedo::StartUp();
+
+    const int before = value;
+    UndoRedo::Get().BeginComponentScope([&]() -> Ref<UndoAction> { return CreateRef<IntegerAction>(value, before, value); });
+    UndoRedo::Get().OnItemInteract({ 44u, true, true, false, true });
+    value = 2;
+    UndoRedo::Get().EndComponentScope();
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+
+    Ref<IntegerSnapshotFactory> unrelated = CreateRef<IntegerSnapshotFactory>(value);
+    UndoRedo::Get().OnItemInteract({ 45u, false, false, true, true });
+    UndoRedo::Get().EndComponentScope();
+    CHECK_FALSE(UndoRedo::Get().BeginComponentScope(unrelated));
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+
+    UndoRedo::Get().BeginComponentScope([&]() -> Ref<UndoAction> { return CreateRef<IntegerAction>(value, 2, value); });
+    UndoRedo::Get().OnItemInteract({ 44u, false, false, true, true });
+    value = 6;
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().EndComponentScope();
+
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(value == 1);
+    UndoRedo::Get().Redo();
+    CHECK(value == 6);
+    UndoRedo::Shutdown();
+}
+
+TEST_CASE("Immediate component transactions capture the mutated bound value", "[Editor][Undo][Transaction][Component]")
+{
+    int value = 4;
+    UndoRedo::StartUp();
+
+    UndoRedo::Get().BeginComponentScope([&]() -> Ref<UndoAction> { return CreateRef<IntegerAction>(value, 4, value); });
+    value = 9;
+    UndoRedo::Get().OnItemInteract({ 31u, false, false, false, true });
+    CHECK_FALSE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().EndComponentScope();
+
+    REQUIRE(UndoRedo::Get().CanUndo());
+    UndoRedo::Get().Undo();
+    CHECK(value == 4);
+    UndoRedo::Get().Redo();
+    CHECK(value == 9);
+    UndoRedo::Shutdown();
+}
+
 TEST_CASE("Undo history invalidates redo after a new edit", "[Editor][Undo]")
 {
     UndoRedo::StartUp();
@@ -176,7 +289,7 @@ TEST_CASE("Undo history follows the edit scene context", "[Editor][Undo][Scene]"
     UndoRedo::Shutdown();
 }
 
-TEST_CASE("Disabling undo recording cancels an active component interaction", "[Editor][Undo][Scene][Component]")
+TEST_CASE("Disabling undo recording cancels an active component transaction", "[Editor][Undo][Scene][Component][Transaction]")
 {
     Ref<Scene> editScene = CreateRef<Scene>(false);
     Ref<Scene> runtimeScene = CreateRef<Scene>(*editScene);

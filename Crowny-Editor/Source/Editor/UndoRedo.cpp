@@ -45,6 +45,70 @@ namespace Crowny
         }
     } // namespace
 
+    bool UndoTransaction::Begin(Id id, ActionFactory factory)
+    {
+        if (m_Active || id == 0u || !factory)
+            return false;
+
+        m_Id = id;
+        m_Factory = std::move(factory);
+        m_RetainedFactory = nullptr;
+        m_Active = true;
+        m_Changed = false;
+        return true;
+    }
+
+    bool UndoTransaction::Begin(Id id, const Ref<RetainedUndoActionFactory>& factory)
+    {
+        if (m_Active || id == 0u || factory == nullptr)
+            return false;
+
+        m_Id = id;
+        m_Factory = nullptr;
+        m_RetainedFactory = factory;
+        m_Active = true;
+        m_Changed = false;
+        return true;
+    }
+
+    void UndoTransaction::Update(Id id, bool changed)
+    {
+        if (Owns(id))
+            m_Changed |= changed;
+    }
+
+    Ref<UndoAction> UndoTransaction::Commit(Id id)
+    {
+        if (!Owns(id))
+            return {};
+
+        Ref<UndoAction> action = m_Changed ? BuildAction() : Ref<UndoAction>{};
+        Cancel();
+        return action;
+    }
+
+    void UndoTransaction::Cancel(Id id)
+    {
+        if (Owns(id))
+            Cancel();
+    }
+
+    void UndoTransaction::Cancel()
+    {
+        m_Factory = nullptr;
+        m_RetainedFactory = nullptr;
+        m_Id = 0u;
+        m_Active = false;
+        m_Changed = false;
+    }
+
+    Ref<UndoAction> UndoTransaction::BuildAction() const
+    {
+        if (m_RetainedFactory != nullptr)
+            return m_RetainedFactory->Build();
+        return m_Factory ? m_Factory() : Ref<UndoAction>{};
+    }
+
     void UndoRedo::RegisterAction(const Ref<UndoAction>& action)
     {
         if (!m_RecordingEnabled || !action)
@@ -116,16 +180,24 @@ namespace Crowny
 
     void UndoRedo::BeginComponentScope(std::function<Ref<UndoAction>()> factory)
     {
-        if (m_RecordingEnabled && !m_InInteraction)
-        {
-            m_Factory = std::move(factory);
-            m_RetainedFactory = nullptr;
-        }
+        if (!m_RecordingEnabled)
+            return;
+
+        m_ComponentScopeOpen = true;
+        if (m_Transaction.IsActive())
+            return;
+
+        m_Factory = std::move(factory);
+        m_RetainedFactory = nullptr;
     }
 
     bool UndoRedo::BeginComponentScope(const Ref<RetainedUndoActionFactory>& factory)
     {
-        if (!m_RecordingEnabled || m_InInteraction)
+        if (!m_RecordingEnabled)
+            return false;
+
+        m_ComponentScopeOpen = true;
+        if (m_Transaction.IsActive())
             return false;
 
         m_Factory = nullptr;
@@ -135,11 +207,15 @@ namespace Crowny
 
     void UndoRedo::EndComponentScope()
     {
-        if (!m_InInteraction)
+        if (m_CommitPending)
+            FinishInteraction();
+
+        if (!m_Transaction.IsActive())
         {
             m_Factory = nullptr;
             m_RetainedFactory = nullptr;
         }
+        m_ComponentScopeOpen = false;
     }
 
     void UndoRedo::OnItemInteract() { OnItemInteract(ImGui::IsItemEdited()); }
@@ -155,72 +231,82 @@ namespace Crowny
 
     void UndoRedo::OnItemInteract(const UndoItemInteraction& interaction)
     {
-        if (!HasComponentActionFactory() || interaction.ItemId == 0u)
+        if ((!HasPendingActionFactory() && !m_Transaction.IsActive()) || interaction.ItemId == 0u)
             return;
 
         if (m_RetainedFactory != nullptr)
             m_RetainedFactory->BeforeItemInteraction(interaction);
 
-        if (m_InInteraction)
+        if (m_Transaction.IsActive())
         {
-            if (interaction.ItemId != m_InteractionItemId)
+            if (!m_Transaction.Owns(interaction.ItemId))
                 return;
 
-            m_InteractionChanged |= interaction.Changed;
+            m_Transaction.Update(interaction.ItemId, interaction.Changed);
             if (interaction.DeactivatedAfterEdit || (!interaction.Active && !interaction.Activated))
-                FinishInteraction();
+            {
+                if (m_ComponentScopeOpen)
+                    m_CommitPending = true;
+                else
+                    FinishInteraction();
+            }
             return;
         }
 
         if (interaction.Activated && interaction.Active)
         {
-            m_InInteraction = true;
-            m_InteractionItemId = interaction.ItemId;
-            m_InteractionChanged = interaction.Changed;
+            if (!BeginPendingTransaction(interaction.ItemId))
+                return;
+            m_Transaction.Update(interaction.ItemId, interaction.Changed);
             if (interaction.DeactivatedAfterEdit)
-                FinishInteraction();
+                m_CommitPending = true;
         }
         else if (interaction.Changed)
         {
-            RegisterAction(CreateComponentAction());
+            if (!BeginPendingTransaction(interaction.ItemId))
+                return;
+            m_Transaction.Update(interaction.ItemId);
+            m_CommitPending = true;
         }
     }
 
-    bool UndoRedo::HasComponentActionFactory() const { return m_RetainedFactory != nullptr || static_cast<bool>(m_Factory); }
+    bool UndoRedo::HasPendingActionFactory() const { return m_RetainedFactory != nullptr || static_cast<bool>(m_Factory); }
 
-    Ref<UndoAction> UndoRedo::CreateComponentAction() const
+    bool UndoRedo::BeginPendingTransaction(uint32_t itemId)
     {
         if (m_RetainedFactory != nullptr)
-            return m_RetainedFactory->Build();
-        return m_Factory ? m_Factory() : Ref<UndoAction>{};
+            return m_Transaction.Begin(itemId, m_RetainedFactory);
+        return m_Transaction.Begin(itemId, std::move(m_Factory));
     }
 
     void UndoRedo::FinishComponentScope(const Ref<RetainedUndoActionFactory>& factory)
     {
-        if (m_RetainedFactory == factory)
+        if (m_Transaction.Owns(factory))
             FinishInteraction();
     }
 
     void UndoRedo::CancelComponentScope(const Ref<RetainedUndoActionFactory>& factory)
     {
-        if (m_RetainedFactory == factory)
+        if (m_Transaction.Owns(factory))
             CancelInteraction();
     }
 
     void UndoRedo::FinishInteraction()
     {
-        if (m_InteractionChanged && HasComponentActionFactory())
-            RegisterAction(CreateComponentAction());
-        CancelInteraction();
+        RegisterAction(m_Transaction.Commit(m_Transaction.IsActive() ? m_Transaction.GetId() : 0u));
+        m_Factory = nullptr;
+        m_RetainedFactory = nullptr;
+        m_ComponentScopeOpen = false;
+        m_CommitPending = false;
     }
 
     void UndoRedo::CancelInteraction()
     {
+        m_Transaction.Cancel();
         m_Factory = nullptr;
         m_RetainedFactory = nullptr;
-        m_InteractionItemId = 0u;
-        m_InInteraction = false;
-        m_InteractionChanged = false;
+        m_ComponentScopeOpen = false;
+        m_CommitPending = false;
     }
 
     ChangeScriptComponentAction::ChangeScriptComponentAction(Entity entity, State oldState, String name)
