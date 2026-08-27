@@ -799,18 +799,14 @@ namespace Crowny
     MonoScript* MonoScriptComponent::FindScript(uint64_t runtimeInstanceId)
     {
         const auto script = std::find_if(Scripts.begin(), Scripts.end(),
-                                         [runtimeInstanceId](const MonoScript& candidate) {
-                                             return candidate.InstanceId == runtimeInstanceId;
-                                         });
+                                         [runtimeInstanceId](const MonoScript& candidate) { return candidate.InstanceId == runtimeInstanceId; });
         return script == Scripts.end() ? nullptr : &*script;
     }
 
     const MonoScript* MonoScriptComponent::FindScript(uint64_t runtimeInstanceId) const
     {
         const auto script = std::find_if(Scripts.begin(), Scripts.end(),
-                                         [runtimeInstanceId](const MonoScript& candidate) {
-                                             return candidate.InstanceId == runtimeInstanceId;
-                                         });
+                                         [runtimeInstanceId](const MonoScript& candidate) { return candidate.InstanceId == runtimeInstanceId; });
         return script == Scripts.end() ? nullptr : &*script;
     }
 

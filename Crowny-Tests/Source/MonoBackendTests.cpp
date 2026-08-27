@@ -32,16 +32,36 @@ TEST_CASE("Mono binding metadata registration is idempotent", "[Scripting][Manag
 
 TEST_CASE("Mono schema preserves non-null reflected fields", "[Scripting][Managed][Mono]")
 {
-    Ref<SerializableTypeInfoPrimitive> type = CreateRef<SerializableTypeInfoPrimitive>();
-    type->m_Type = ScriptPrimitiveType::String;
-    Ref<SerializableFieldInfo> member = CreateRef<SerializableFieldInfo>();
-    member->m_TypeInfo = type;
-    member->m_Flags = ScriptFieldFlagBits::Serializable | ScriptFieldFlagBits::Inspectable | ScriptFieldFlagBits::NotNull;
+    SECTION("NotNull suppresses nullable for a reference field")
+    {
+        Ref<SerializableTypeInfoPrimitive> type = CreateRef<SerializableTypeInfoPrimitive>();
+        type->m_Type = ScriptPrimitiveType::String;
+        Ref<SerializableFieldInfo> member = CreateRef<SerializableFieldInfo>();
+        member->m_TypeInfo = type;
+        member->m_Flags = ScriptFieldFlagBits::Serializable | ScriptFieldFlagBits::Inspectable | ScriptFieldFlagBits::NotNull;
 
-    const ScriptSchemaFieldFlags flags = MonoBackendDetail::GetSchemaFieldFlags(member);
-    CHECK((flags & ScriptSchemaFieldFlags::Serializable) == ScriptSchemaFieldFlags::Serializable);
-    CHECK((flags & ScriptSchemaFieldFlags::Inspectable) == ScriptSchemaFieldFlags::Inspectable);
-    CHECK((flags & ScriptSchemaFieldFlags::Nullable) == ScriptSchemaFieldFlags::None);
+        const ScriptSchemaFieldFlags flags = MonoBackendDetail::GetSchemaFieldFlags(member);
+        CHECK((flags & ScriptSchemaFieldFlags::Serializable) == ScriptSchemaFieldFlags::Serializable);
+        CHECK((flags & ScriptSchemaFieldFlags::Inspectable) == ScriptSchemaFieldFlags::Inspectable);
+        CHECK((flags & ScriptSchemaFieldFlags::Nullable) == ScriptSchemaFieldFlags::None);
+    }
+
+    SECTION("value types are not marked nullable")
+    {
+        Ref<SerializableTypeInfoPrimitive> characterType = CreateRef<SerializableTypeInfoPrimitive>();
+        characterType->m_Type = ScriptPrimitiveType::Char;
+        Ref<SerializableFieldInfo> character = CreateRef<SerializableFieldInfo>();
+        character->m_TypeInfo = characterType;
+        character->m_Flags = ScriptFieldFlagBits::Serializable;
+        CHECK((MonoBackendDetail::GetSchemaFieldFlags(character) & ScriptSchemaFieldFlags::Nullable) == ScriptSchemaFieldFlags::None);
+
+        Ref<SerializableTypeInfoObject> structType = CreateRef<SerializableTypeInfoObject>();
+        structType->m_ValueType = true;
+        Ref<SerializableFieldInfo> structure = CreateRef<SerializableFieldInfo>();
+        structure->m_TypeInfo = structType;
+        structure->m_Flags = ScriptFieldFlagBits::Serializable;
+        CHECK((MonoBackendDetail::GetSchemaFieldFlags(structure) & ScriptSchemaFieldFlags::Nullable) == ScriptSchemaFieldFlags::None);
+    }
 }
 
 TEST_CASE("Mono failed creation rolls back only its added occurrence", "[Scripting][Managed][Mono]")
@@ -93,8 +113,7 @@ TEST_CASE("Mono reload reports state rollback failure", "[Scripting][Managed][Mo
         const ManagedOperationResult stateFailure =
           ManagedOperationResult::Failure("managed.test.state_restore_failed", "State restoration failed.", ManagedBackendId::Mono);
 
-        const ManagedOperationResult result =
-          MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(replacementFailure), true, stateFailure);
+        const ManagedOperationResult result = MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(replacementFailure), true, stateFailure);
         CHECK_FALSE(result.Succeeded);
         CHECK(result.HasDiagnosticCode("managed.test.replacement_failed"));
         CHECK(result.HasDiagnosticCode("managed.test.state_restore_failed"));
@@ -105,8 +124,8 @@ TEST_CASE("Mono reload reports state rollback failure", "[Scripting][Managed][Mo
     {
         ManagedOperationResult replacementFailure =
           ManagedOperationResult::Failure("managed.test.replacement_failed", "Replacement failed.", ManagedBackendId::Mono);
-        const ManagedOperationResult result = MonoBackendDetail::AddReloadRollbackDiagnostics(
-          std::move(replacementFailure), false, ManagedOperationResult::Success());
+        const ManagedOperationResult result =
+          MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(replacementFailure), false, ManagedOperationResult::Success());
         CHECK_FALSE(result.Succeeded);
         CHECK(result.HasDiagnosticCode("managed.mono.reload_rollback_failed"));
     }

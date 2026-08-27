@@ -667,8 +667,7 @@ namespace Crowny
                     const bool assembliesRestored = RefreshAssemblies(previous);
                     if (!assembliesRestored)
                     {
-                        valid = MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), false,
-                                                                                ManagedOperationResult::Success());
+                        valid = MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), false, ManagedOperationResult::Success());
                         InvalidateProgram();
                     }
                     else
@@ -711,8 +710,8 @@ namespace Crowny
                 if (script == nullptr && request.RuntimeInstanceId == 0)
                 {
                     componentAdded = !entity.HasComponent<MonoScriptComponent>();
-                    MonoScriptComponent& component = componentAdded ? entity.AddComponent<MonoScriptComponent>()
-                                                                     : entity.GetComponent<MonoScriptComponent>();
+                    MonoScriptComponent& component =
+                      componentAdded ? entity.AddComponent<MonoScriptComponent>() : entity.GetComponent<MonoScriptComponent>();
                     component.Scripts.emplace_back(request.Identity);
                     script = &component.Scripts.back();
                     occurrenceAdded = true;
@@ -1044,9 +1043,12 @@ namespace Crowny
             flags = flags | ScriptSchemaFieldFlags::ReadOnly;
 
         const ScriptValueKind kind = GetValueKind(member->m_TypeInfo);
-        const bool referenceType = kind == ScriptValueKind::String || kind == ScriptValueKind::Entity || kind == ScriptValueKind::Asset ||
-                                   kind == ScriptValueKind::Object || kind == ScriptValueKind::Array || kind == ScriptValueKind::List ||
-                                   kind == ScriptValueKind::Dictionary;
+        bool referenceType = kind == ScriptValueKind::Entity || kind == ScriptValueKind::Asset || kind == ScriptValueKind::Array ||
+                             kind == ScriptValueKind::List || kind == ScriptValueKind::Dictionary;
+        if (member->m_TypeInfo != nullptr && member->m_TypeInfo->GetType() == SerializableType::Primitive)
+            referenceType = StaticRefCast<SerializableTypeInfoPrimitive>(member->m_TypeInfo)->m_Type == ScriptPrimitiveType::String;
+        else if (member->m_TypeInfo != nullptr && member->m_TypeInfo->GetType() == SerializableType::Object)
+            referenceType = !StaticRefCast<SerializableTypeInfoObject>(member->m_TypeInfo)->m_ValueType;
         if (referenceType && !member->m_Flags.IsSet(ScriptFieldFlagBits::NotNull))
             flags = flags | ScriptSchemaFieldFlags::Nullable;
         return flags;
@@ -1059,9 +1061,7 @@ namespace Crowny
 
         MonoScriptComponent& component = entity.GetComponent<MonoScriptComponent>();
         const auto script = std::find_if(component.Scripts.begin(), component.Scripts.end(),
-                                         [runtimeInstanceId](const MonoScript& candidate) {
-                                             return candidate.InstanceId == runtimeInstanceId;
-                                         });
+                                         [runtimeInstanceId](const MonoScript& candidate) { return candidate.InstanceId == runtimeInstanceId; });
         if (script != component.Scripts.end())
         {
             if (ScriptSceneObjectManager::IsStartedUp())
@@ -1078,17 +1078,26 @@ namespace Crowny
         failure.Succeeded = false;
         if (!assembliesRestored)
         {
-            failure.Diagnostics.push_back({ ManagedDiagnosticSeverity::Error, "managed.mono.reload_rollback_failed",
-                                            "Mono could not restore the last working assemblies; the managed program was invalidated.", {},
-                                            ManagedBackendId::Mono, {}, {} });
+            failure.Diagnostics.push_back({ ManagedDiagnosticSeverity::Error,
+                                            "managed.mono.reload_rollback_failed",
+                                            "Mono could not restore the last working assemblies; the managed program was invalidated.",
+                                            {},
+                                            ManagedBackendId::Mono,
+                                            {},
+                                            {} });
             return failure;
         }
         if (!stateRestoration.Succeeded)
         {
             failure.Diagnostics.insert(failure.Diagnostics.end(), stateRestoration.Diagnostics.begin(), stateRestoration.Diagnostics.end());
-            failure.Diagnostics.push_back({ ManagedDiagnosticSeverity::Error, "managed.mono.reload_state_rollback_failed",
-                                            "Mono restored the last working assemblies but not all live script state; the managed program was invalidated.",
-                                            {}, ManagedBackendId::Mono, {}, {} });
+            failure.Diagnostics.push_back(
+              { ManagedDiagnosticSeverity::Error,
+                "managed.mono.reload_state_rollback_failed",
+                "Mono restored the last working assemblies but not all live script state; the managed program was invalidated.",
+                {},
+                ManagedBackendId::Mono,
+                {},
+                {} });
         }
         return failure;
     }

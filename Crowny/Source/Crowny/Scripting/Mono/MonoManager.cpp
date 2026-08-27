@@ -366,8 +366,8 @@ namespace Crowny
             return false;
 
         Vector<ScriptMetaInfo>& registrations = GetScriptMetaData()[localMetaData.Assembly];
-        const auto existing = std::find_if(registrations.begin(), registrations.end(),
-                                           [metaData](const ScriptMetaInfo& entry) { return entry.MetaData == metaData; });
+        const auto existing =
+          std::find_if(registrations.begin(), registrations.end(), [metaData](const ScriptMetaInfo& entry) { return entry.MetaData == metaData; });
         if (existing != registrations.end())
         {
             existing->LocalMetaData = localMetaData;
