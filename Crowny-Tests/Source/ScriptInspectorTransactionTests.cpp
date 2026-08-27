@@ -57,16 +57,14 @@ namespace
 
 TEST_CASE("Managed inspector edits retained state without constructing a script", "[Editor][Scripting][Inspector]")
 {
-    const ScriptTypeIdentity identity{ "Missing.Assembly", "Missing.Namespace", "InspectorBehaviour" };
-    MonoScript script(identity);
-    ScriptState retained;
-    retained.Identity = identity;
-    retained.Root = ScriptValue::Object({ { "Value", ScriptValue::Signed(10) } }, identity);
-    script.SetManagedState(retained);
+    const TestScriptState retained = MakeScriptState(10);
+    MonoScript script(retained.State.Identity);
+    REQUIRE(script.ApplyPersistedState(retained.State));
 
     REQUIRE_FALSE(script.GetRuntimeHandle().IsValid());
     ScriptInspectorModel model(script);
-    REQUIRE(model.GetState() == retained);
+    REQUIRE(model.GetState().Identity == retained.State.Identity);
+    REQUIRE(model.GetState().Root.Members.at("Value") == ScriptValue::Signed(10));
     model.GetState().Root.Members.at("Value") = ScriptValue::Signed(20);
     REQUIRE(model.Commit());
 

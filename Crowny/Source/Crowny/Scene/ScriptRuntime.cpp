@@ -104,13 +104,7 @@ namespace Crowny
         request.Identity = script.GetTypeIdentity();
         request.Entity = entity.GetUuid();
         request.RuntimeInstanceId = script.InstanceId;
-        request.InitialState = script.GetManagedState();
-        if (!request.InitialState.Identity.IsValid())
-        {
-            request.InitialState = ConvertLegacyScriptState(script.CapturePersistedState());
-            if (request.InitialState.Identity.IsValid())
-                script.SetManagedState(request.InitialState);
-        }
+        request.InitialState = CaptureState(script);
         ScriptCreateResult created = managed->CreateScript(request);
         if (!created.Result.Succeeded)
         {
@@ -160,7 +154,16 @@ namespace Crowny
     {
         ManagedScripting* managed = GetManagedScripting();
         if (managed == nullptr || !managed->IsStarted() || !script.GetRuntimeHandle().IsValid())
-            return script.GetManagedState();
+        {
+            ScriptState state = script.GetManagedState();
+            if (!state.Identity.IsValid())
+            {
+                state = ConvertLegacyScriptState(script.CapturePersistedState());
+                if (state.Identity.IsValid())
+                    script.SetManagedState(state);
+            }
+            return state;
+        }
         ScriptStateResult captured = managed->CaptureState(script.GetRuntimeHandle());
         if (!captured.Result.Succeeded)
         {
