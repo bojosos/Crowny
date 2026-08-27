@@ -57,7 +57,15 @@ try {
         try {
             if ($ProcessIsolated) {
                 Write-Host "Running the hidden process-isolated test lane..."
-                Invoke-CrownyChecked -FilePath $testExecutable -ArgumentList @("[.ProcessIsolated]")
+                $isolatedTests = @(& $testExecutable --list-tests "[.ProcessIsolated]" --verbosity quiet)
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Failed to enumerate the hidden process-isolated test lane."
+                }
+                foreach ($isolatedTest in $isolatedTests) {
+                    if ([string]::IsNullOrWhiteSpace($isolatedTest)) { continue }
+                    Write-Host "Running isolated test: $isolatedTest"
+                    Invoke-CrownyChecked -FilePath $testExecutable -ArgumentList @($isolatedTest)
+                }
             }
 
             $testArguments = @()
