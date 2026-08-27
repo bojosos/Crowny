@@ -50,6 +50,108 @@ namespace Crowny
             return Transform(position, glm::normalize(rotation), scale);
         }
 
+        struct MeshInstanceTransform
+        {
+            glm::mat4 NodeToScene{ 1.0f };
+            glm::mat3 Linear{ 1.0f };
+            glm::mat3 Normal{ 1.0f };
+            float ScaleFactor = 1.0f;
+            bool Mirrored = false;
+            bool HasNodeTransform = false;
+        };
+
+        bool IsFinite(const glm::vec3& value)
+        {
+            return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
+        }
+
+        bool IsFinite(const glm::mat4& value)
+        {
+            for (uint32_t column = 0; column < 4; column++)
+            {
+                for (uint32_t row = 0; row < 4; row++)
+                {
+                    if (!std::isfinite(value[column][row]))
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        bool IsFinite(const glm::mat3& value)
+        {
+            for (uint32_t column = 0; column < 3; column++)
+            {
+                for (uint32_t row = 0; row < 3; row++)
+                {
+                    if (!std::isfinite(value[column][row]))
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        bool IsIdentity(const glm::mat4& value)
+        {
+            constexpr float tolerance = 1e-5f;
+            for (uint32_t column = 0; column < 4; column++)
+            {
+                for (uint32_t row = 0; row < 4; row++)
+                {
+                    const float expected = column == row ? 1.0f : 0.0f;
+                    if (std::abs(value[column][row] - expected) > tolerance)
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        bool NormalizeDirection(glm::vec3& value)
+        {
+            const float lengthSquared = glm::dot(value, value);
+            if (!std::isfinite(lengthSquared) || lengthSquared <= std::numeric_limits<float>::epsilon())
+                return false;
+            value /= std::sqrt(lengthSquared);
+            return IsFinite(value);
+        }
+
+        bool BuildInstanceTransform(const glm::mat4& nodeToScene, float scaleFactor, StringView instanceName,
+                                    MeshInstanceTransform& transform)
+        {
+            constexpr float affineTolerance = 1e-5f;
+            if (!IsFinite(nodeToScene) || std::abs(nodeToScene[0][3]) > affineTolerance || std::abs(nodeToScene[1][3]) > affineTolerance ||
+                std::abs(nodeToScene[2][3]) > affineTolerance || std::abs(nodeToScene[3][3] - 1.0f) > affineTolerance)
+            {
+                CW_ENGINE_WARN("Skipping mesh instance '{}' because its node transform is non-finite or non-affine.", instanceName);
+                return false;
+            }
+
+            const glm::mat3 nodeLinear(nodeToScene);
+            const float determinant = glm::determinant(nodeLinear);
+            const float basisScale = glm::length(nodeLinear[0]) * glm::length(nodeLinear[1]) * glm::length(nodeLinear[2]);
+            if (!std::isfinite(determinant) || !std::isfinite(basisScale) || basisScale <= std::numeric_limits<float>::min() ||
+                std::abs(determinant) <= basisScale * 1e-6f)
+            {
+                CW_ENGINE_WARN("Skipping mesh instance '{}' because its node transform collapses an axis.", instanceName);
+                return false;
+            }
+
+            transform.NodeToScene = nodeToScene;
+            transform.Linear = nodeLinear * scaleFactor;
+            transform.Normal = glm::transpose(glm::inverse(nodeLinear));
+            if (scaleFactor < 0.0f)
+                transform.Normal *= -1.0f;
+            transform.ScaleFactor = scaleFactor;
+            transform.Mirrored = (determinant < 0.0f) != (scaleFactor < 0.0f);
+            transform.HasNodeTransform = !IsIdentity(nodeToScene);
+            if (!IsFinite(transform.Linear) || !IsFinite(transform.Normal))
+            {
+                CW_ENGINE_WARN("Skipping mesh instance '{}' because its direction transforms are non-finite.", instanceName);
+                return false;
+            }
+            return true;
+        }
+
         DrawMode GetDrawMode(const aiMesh& mesh)
         {
             switch (mesh.mPrimitiveTypes)
@@ -319,7 +421,8 @@ namespace Crowny
         }
 
         Ref<MeshData> ReadMesh(const aiMesh& mesh, const MeshImportOptions& options,
-                               const UnorderedMap<String, uint32_t, StringHash, StringEqual>& boneIndices, DrawMode& drawMode)
+                               const UnorderedMap<String, uint32_t, StringHash, StringEqual>& boneIndices,
+                               const MeshInstanceTransform& instanceTransform, StringView instanceName, DrawMode& drawMode)
         {
             if (!mesh.HasPositions() || !mesh.HasFaces() || mesh.mNumVertices == 0)
             {
@@ -331,6 +434,11 @@ namespace Crowny
             Vector<uint32_t> indices;
             if (!ReadIndices(mesh, drawMode, indices))
                 return nullptr;
+            if (instanceTransform.Mirrored && drawMode == DrawMode::TRIANGLE_LIST)
+            {
+                for (size_t index = 0; index < indices.size(); index += 3)
+                    std::swap(indices[index + 1], indices[index + 2]);
+            }
 
             BufferLayout layout = { BufferElement(ShaderDataType::Float3, VertexAttribute::Position) };
             if (mesh.HasNormals())
@@ -370,17 +478,32 @@ namespace Crowny
             const Ref<MeshData> data = MeshData::Create(mesh.mNumVertices, static_cast<uint32_t>(indices.size()), layout, indexType);
 
             Vector<glm::vec3> positions(mesh.mNumVertices);
-            const float scaleFactor = GetScaleFactor(options);
             for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
-                positions[vertex] = ToGlm(mesh.mVertices[vertex]) * scaleFactor;
+            {
+                positions[vertex] = glm::vec3(instanceTransform.NodeToScene * glm::vec4(ToGlm(mesh.mVertices[vertex]), 1.0f)) *
+                                    instanceTransform.ScaleFactor;
+                if (!IsFinite(positions[vertex]))
+                {
+                    CW_ENGINE_WARN("Skipping mesh instance '{}' because transformed position {} is non-finite.", instanceName, vertex);
+                    return nullptr;
+                }
+            }
             data->SetPositions(positions);
             data->SetIndices(indices);
 
+            Vector<glm::vec3> normals;
             if (mesh.HasNormals())
             {
-                Vector<glm::vec3> normals(mesh.mNumVertices);
+                normals.resize(mesh.mNumVertices);
                 for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
-                    normals[vertex] = ToGlm(mesh.mNormals[vertex]);
+                {
+                    normals[vertex] = instanceTransform.Normal * ToGlm(mesh.mNormals[vertex]);
+                    if (!NormalizeDirection(normals[vertex]))
+                    {
+                        CW_ENGINE_WARN("Skipping mesh instance '{}' because transformed normal {} is invalid.", instanceName, vertex);
+                        return nullptr;
+                    }
+                }
                 data->SetNormals(normals);
             }
             if (mesh.HasTangentsAndBitangents())
@@ -389,8 +512,35 @@ namespace Crowny
                 Vector<glm::vec3> bitangents(mesh.mNumVertices);
                 for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
                 {
-                    tangents[vertex] = ToGlm(mesh.mTangents[vertex]);
-                    bitangents[vertex] = ToGlm(mesh.mBitangents[vertex]);
+                    const glm::vec3 sourceTangent = ToGlm(mesh.mTangents[vertex]);
+                    const glm::vec3 sourceBitangent = ToGlm(mesh.mBitangents[vertex]);
+                    tangents[vertex] = instanceTransform.Linear * sourceTangent;
+
+                    if (mesh.HasNormals())
+                    {
+                        const glm::vec3 sourceNormal = ToGlm(mesh.mNormals[vertex]);
+                        const glm::vec3& normal = normals[vertex];
+                        const float sourceOrientation = glm::dot(glm::cross(sourceNormal, sourceTangent), sourceBitangent);
+                        tangents[vertex] -= normal * glm::dot(normal, tangents[vertex]);
+                        if (!std::isfinite(sourceOrientation) || std::abs(sourceOrientation) <= std::numeric_limits<float>::epsilon() ||
+                            !NormalizeDirection(tangents[vertex]))
+                        {
+                            CW_ENGINE_WARN("Skipping mesh instance '{}' because tangent basis {} is degenerate.", instanceName, vertex);
+                            return nullptr;
+                        }
+                        bitangents[vertex] = glm::cross(normal, tangents[vertex]);
+                        bitangents[vertex] *= sourceOrientation < 0.0f ? -1.0f : 1.0f;
+                        bitangents[vertex] *= instanceTransform.Mirrored ? -1.0f : 1.0f;
+                    }
+                    else
+                    {
+                        bitangents[vertex] = instanceTransform.Linear * sourceBitangent;
+                        if (!NormalizeDirection(tangents[vertex]) || !NormalizeDirection(bitangents[vertex]))
+                        {
+                            CW_ENGINE_WARN("Skipping mesh instance '{}' because tangent basis {} is degenerate.", instanceName, vertex);
+                            return nullptr;
+                        }
+                    }
                 }
                 data->SetTangents(tangents);
                 data->SetBitangents(bitangents);
@@ -442,8 +592,8 @@ namespace Crowny
             Vector<MorphData> Vertices;
         };
 
-        void ReadMorphs(const aiMesh& source, uint32_t vertexOffset, float scaleFactor, Vector<MorphChannelBuilder>& morphs,
-                        UnorderedMap<String, uint32_t, StringHash, StringEqual>& morphIndices)
+        void ReadMorphs(const aiMesh& source, uint32_t vertexOffset, const MeshInstanceTransform& instanceTransform,
+                        Vector<MorphChannelBuilder>& morphs, UnorderedMap<String, uint32_t, StringHash, StringEqual>& morphIndices)
         {
             for (uint32_t morphIndex = 0; morphIndex < source.mNumAnimMeshes; morphIndex++)
             {
@@ -457,12 +607,34 @@ namespace Crowny
 
                 Vector<MorphData> changes;
                 const bool hasNormals = source.HasNormals() && target.HasNormals();
+                bool validTarget = true;
                 for (uint32_t vertex = 0; vertex < target.mNumVertices; vertex++)
                 {
-                    const glm::vec3 vertexDelta = ToGlm(target.mVertices[vertex] - source.mVertices[vertex]) * scaleFactor;
-                    const glm::vec3 normalDelta = hasNormals ? ToGlm(target.mNormals[vertex] - source.mNormals[vertex]) : glm::vec3(0.0f);
+                    const glm::vec3 vertexDelta = instanceTransform.Linear * ToGlm(target.mVertices[vertex] - source.mVertices[vertex]);
+                    glm::vec3 normalDelta(0.0f);
+                    if (hasNormals)
+                    {
+                        glm::vec3 sourceNormal = instanceTransform.Normal * ToGlm(source.mNormals[vertex]);
+                        glm::vec3 targetNormal = instanceTransform.Normal * ToGlm(target.mNormals[vertex]);
+                        if (!NormalizeDirection(sourceNormal) || !NormalizeDirection(targetNormal))
+                        {
+                            validTarget = false;
+                            break;
+                        }
+                        normalDelta = targetNormal - sourceNormal;
+                    }
+                    if (!IsFinite(vertexDelta) || !IsFinite(normalDelta))
+                    {
+                        validTarget = false;
+                        break;
+                    }
                     if (glm::length2(vertexDelta) > 1e-10f || glm::length2(normalDelta) > 1e-10f)
                         changes.push_back({ vertexDelta, normalDelta, vertexOffset + vertex });
+                }
+                if (!validTarget)
+                {
+                    CW_ENGINE_WARN("Skipping morph target '{}' because its transformed vertex data is invalid.", target.mName.C_Str());
+                    continue;
                 }
 
                 String name = target.mName.C_Str();
@@ -495,25 +667,69 @@ namespace Crowny
             Vector<MorphChannelBuilder> morphs;
             UnorderedMap<String, uint32_t, StringHash, StringEqual> morphIndices;
             uint32_t vertexOffset = 0;
+            const float scaleFactor = GetScaleFactor(options);
 
             meshes.reserve(scene.mNumMeshes);
             meshSubMeshes.reserve(scene.mNumMeshes);
             result.MaterialIndices.reserve(scene.mNumMeshes);
-            for (uint32_t meshIndex = 0; meshIndex < scene.mNumMeshes; meshIndex++)
-            {
+            Vector<uint8_t> referencedMeshes(scene.mNumMeshes, 0);
+
+            const auto appendInstance = [&](uint32_t meshIndex, const glm::mat4& nodeToScene, StringView instanceName) {
+                if (meshIndex >= scene.mNumMeshes)
+                {
+                    CW_ENGINE_WARN("Skipping mesh instance '{}' because it references missing mesh {}.", instanceName, meshIndex);
+                    return;
+                }
+
+                referencedMeshes[meshIndex] = 1;
                 const aiMesh& source = *scene.mMeshes[meshIndex];
+                MeshInstanceTransform instanceTransform;
+                if (!BuildInstanceTransform(nodeToScene, scaleFactor, instanceName, instanceTransform))
+                    return;
+                if (options.ImportBones && source.HasBones() && instanceTransform.HasNodeTransform)
+                {
+                    CW_ENGINE_WARN("Skipping transformed skinned mesh instance '{}' because Crowny stores one inverse bind pose per bone.",
+                                   instanceName);
+                    return;
+                }
+
                 DrawMode drawMode = DrawMode::TRIANGLE_LIST;
-                Ref<MeshData> mesh = ReadMesh(source, options, boneIndices, drawMode);
+                Ref<MeshData> mesh = ReadMesh(source, options, boneIndices, instanceTransform, instanceName, drawMode);
                 if (!mesh)
-                    continue;
+                    return;
+
+                if (mesh->GetVertexCount() > std::numeric_limits<uint32_t>::max() - vertexOffset)
+                {
+                    CW_ENGINE_WARN("Skipping mesh instance '{}' because combined vertex offsets exceed 32-bit storage.", instanceName);
+                    return;
+                }
 
                 if (options.ImportMorphMeshes)
-                    ReadMorphs(source, vertexOffset, GetScaleFactor(options), morphs, morphIndices);
+                    ReadMorphs(source, vertexOffset, instanceTransform, morphs, morphIndices);
 
                 meshSubMeshes.push_back({ SubMesh(0, mesh->GetIndexCount(), drawMode) });
                 result.MaterialIndices.push_back(source.mMaterialIndex);
                 vertexOffset += mesh->GetVertexCount();
                 meshes.push_back(std::move(mesh));
+            };
+
+            std::function<void(const aiNode*, const glm::mat4&)> visitNode = [&](const aiNode* node, const glm::mat4& parentToScene) {
+                const glm::mat4 nodeToScene = parentToScene * ToGlm(node->mTransformation);
+                for (uint32_t nodeMeshIndex = 0; nodeMeshIndex < node->mNumMeshes; nodeMeshIndex++)
+                    appendInstance(node->mMeshes[nodeMeshIndex], nodeToScene, node->mName.C_Str());
+                for (uint32_t child = 0; child < node->mNumChildren; child++)
+                    visitNode(node->mChildren[child], nodeToScene);
+            };
+            visitNode(scene.mRootNode, glm::mat4(1.0f));
+
+            for (uint32_t meshIndex = 0; meshIndex < scene.mNumMeshes; meshIndex++)
+            {
+                if (referencedMeshes[meshIndex] != 0)
+                    continue;
+                const aiMesh& source = *scene.mMeshes[meshIndex];
+                CW_ENGINE_WARN("Mesh '{}' is not referenced by the imported scene hierarchy; importing it once without a node transform.",
+                               source.mName.C_Str());
+                appendInstance(meshIndex, glm::mat4(1.0f), source.mName.C_Str());
             }
 
             if (meshes.empty())

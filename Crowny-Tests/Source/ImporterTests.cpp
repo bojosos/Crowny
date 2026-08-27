@@ -43,10 +43,11 @@ namespace
     class TemporaryMeshFile
     {
     public:
-        explicit TemporaryMeshFile(StringView contents)
+        explicit TemporaryMeshFile(StringView contents, StringView extension = "obj")
         {
             const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
-            m_Path = std::filesystem::temp_directory_path() / ("crowny_mesh_" + std::to_string(unique) + ".obj");
+            m_Path = std::filesystem::temp_directory_path() /
+                     ("crowny_mesh_" + std::to_string(unique) + "." + String(extension));
             std::ofstream stream(m_Path, std::ios::binary);
             stream << contents;
         }
@@ -151,6 +152,112 @@ l 5 6
     for (const glm::vec2& uv : uvs)
         foundFlippedCoordinate |= glm::epsilonEqual(uv.y, 0.75f, 0.001f);
     CHECK(foundFlippedCoordinate);
+}
+
+TEST_CASE("Mesh parser expands transformed scene instances", "[Assets][Importer][Mesh]")
+{
+    const TemporaryMeshFile source(R"GLTF({
+  "asset": { "version": "2.0" },
+  "buffers": [ {
+    "byteLength": 126,
+    "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AACAPwAAAAAAAAAAAACAPwAAgD8AAAAAAAAAAAAAgD8AAIA/AAAAAAAAAAAAAIA/AAABAAIA"
+  } ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 36, "target": 34962 },
+    { "buffer": 0, "byteOffset": 36, "byteLength": 36, "target": 34962 },
+    { "buffer": 0, "byteOffset": 72, "byteLength": 48, "target": 34962 },
+    { "buffer": 0, "byteOffset": 120, "byteLength": 6, "target": 34963 }
+  ],
+  "accessors": [
+    { "bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [ 0, 0, 0 ], "max": [ 1, 1, 0 ] },
+    { "bufferView": 1, "componentType": 5126, "count": 3, "type": "VEC3" },
+    { "bufferView": 2, "componentType": 5126, "count": 3, "type": "VEC4" },
+    { "bufferView": 3, "componentType": 5123, "count": 3, "type": "SCALAR" }
+  ],
+  "materials": [ { "name": "Shared" } ],
+  "meshes": [ {
+    "name": "Triangle",
+    "primitives": [ {
+      "attributes": { "POSITION": 0, "NORMAL": 1, "TANGENT": 2 },
+      "indices": 3,
+      "material": 0,
+      "mode": 4
+    } ]
+  } ],
+  "nodes": [
+    { "name": "ScaledParent", "translation": [ 10, 0, 0 ], "children": [ 1 ] },
+    { "name": "Scaled", "mesh": 0, "scale": [ 2, 3, 1 ] },
+    { "name": "Mirrored", "mesh": 0, "translation": [ -4, 0, 0 ], "scale": [ -1, 2, 1 ] }
+  ],
+  "scenes": [ { "nodes": [ 0, 2 ] } ],
+  "scene": 0
+})GLTF",
+                                   "gltf");
+
+    MeshImportOptions options;
+    options.ImportMaterials = false;
+    const MeshImportResult result = MeshImporter::Parse(source.GetPath(), options);
+
+    REQUIRE(result);
+    REQUIRE(result.Data != nullptr);
+    CHECK(result.Data->GetVertexCount() == 6);
+    CHECK(result.Data->GetIndexCount() == 6);
+    REQUIRE(result.SubMeshes.size() == 2);
+    REQUIRE(result.MaterialIndices.size() == result.SubMeshes.size());
+
+    const Vector<glm::vec3> positions = result.Data->GetPositions();
+    const Vector<glm::vec3> normals = result.Data->GetNormals();
+    const Vector<glm::vec3> tangents = result.Data->GetTangents();
+    const Vector<glm::vec3> bitangents = result.Data->GetBitangents();
+    const Vector<uint32_t> indices = result.Data->GetIndices();
+    REQUIRE(normals.size() == positions.size());
+    REQUIRE(tangents.size() == positions.size());
+    REQUIRE(bitangents.size() == positions.size());
+
+    bool foundScaled = false;
+    bool foundMirrored = false;
+    for (uint32_t materialSlot = 0; materialSlot < result.SubMeshes.size(); materialSlot++)
+    {
+        const SubMesh& subMesh = result.SubMeshes[materialSlot];
+        REQUIRE(subMesh.MeshDrawMode == DrawMode::TRIANGLE_LIST);
+        REQUIRE(subMesh.IndexCount == 3);
+        REQUIRE(subMesh.IndexOffset <= indices.size());
+        REQUIRE(subMesh.IndexCount <= indices.size() - subMesh.IndexOffset);
+        CHECK(result.MaterialIndices[materialSlot] == 0);
+
+        const uint32_t first = indices[subMesh.IndexOffset];
+        const uint32_t second = indices[subMesh.IndexOffset + 1];
+        const uint32_t third = indices[subMesh.IndexOffset + 2];
+        REQUIRE(first < positions.size());
+        REQUIRE(second < positions.size());
+        REQUIRE(third < positions.size());
+
+        const glm::vec3 centroid = (positions[first] + positions[second] + positions[third]) / 3.0f;
+        glm::vec3 geometricNormal = glm::cross(positions[second] - positions[first], positions[third] - positions[first]);
+        geometricNormal = glm::normalize(geometricNormal);
+        CHECK_THAT(geometricNormal.z, Catch::Matchers::WithinAbs(1.0f, 0.001f));
+
+        const bool mirrored = centroid.x < 0.0f;
+        foundMirrored |= mirrored;
+        foundScaled |= !mirrored;
+        for (uint32_t vertex : { first, second, third })
+        {
+            CHECK_THAT(normals[vertex].z, Catch::Matchers::WithinAbs(1.0f, 0.001f));
+            CHECK_THAT(tangents[vertex].x, Catch::Matchers::WithinAbs(mirrored ? -1.0f : 1.0f, 0.001f));
+            CHECK_THAT(bitangents[vertex].y, Catch::Matchers::WithinAbs(1.0f, 0.001f));
+        }
+    }
+    CHECK(foundScaled);
+    CHECK(foundMirrored);
+
+    AABox bounds;
+    SphereBounds sphereBounds;
+    result.Data->CalculateBounds(bounds, sphereBounds);
+    CHECK_THAT(bounds.GetMin().x, Catch::Matchers::WithinAbs(-5.0f, 0.001f));
+    CHECK_THAT(bounds.GetMin().y, Catch::Matchers::WithinAbs(0.0f, 0.001f));
+    CHECK_THAT(bounds.GetMax().x, Catch::Matchers::WithinAbs(12.0f, 0.001f));
+    CHECK_THAT(bounds.GetMax().y, Catch::Matchers::WithinAbs(3.0f, 0.001f));
+    CHECK(sphereBounds.GetRadius() > 0.0f);
 }
 
 TEST_CASE("Mesh import options survive metadata round trip", "[Assets][Importer][Mesh]")

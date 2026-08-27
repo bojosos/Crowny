@@ -91,6 +91,7 @@ This is the durable record of the requested engine work. A checked item is merge
 
 - [ ] Expand mesh import and parsing: attributes, index widths, submeshes, topology, tangents, skin data, morph targets, bounds, LODs, meshlets, validation, corrupt-input diagnostics, and round-trip asset serialization.
 - [x] Validate mesh-processing submesh ranges, triangle alignment, vertex references, and finite positions before passing imported or deserialized geometry to meshoptimizer.
+- [x] Expand static Assimp scene mesh instances through their accumulated node transforms, including non-uniform normal transforms, mirrored winding and tangent handedness, bounds, morph deltas, and material-slot duplication. Reject transformed skinned instances until per-instance bind transforms exist.
 - [ ] Add asset-backed and runtime mesh primitives: cube, plane, sphere, cylinder, cone, capsule, quad, and configurable tessellation with safe upper bounds.
 - [ ] Finish morph animation, then implement skeletal animation: skeleton assets, bones, bind/inverse-bind poses, clips, channels, interpolation, blending, layers, masks, root motion, events, retarget-ready IDs, GPU/CPU skinning, bounds, serialization, import, editor inspection, and C# APIs.
 - [x] Dispatch ping-pong animation events in traversal order across both reflected clip boundaries without double-firing endpoint events.

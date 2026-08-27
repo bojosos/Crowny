@@ -21,7 +21,7 @@ namespace Crowny
     {
         Ref<MeshData> Data;
         Vector<SubMesh> SubMeshes;
-        Vector<uint32_t> MaterialIndices;
+        Vector<uint32_t> MaterialIndices; // Parallel to SubMeshes, including repeated scene-node instances.
         Vector<MeshImportedBone> Bones;
         Ref<Skeleton> MeshSkeleton;
         Ref<MeshMorph> Morph;
