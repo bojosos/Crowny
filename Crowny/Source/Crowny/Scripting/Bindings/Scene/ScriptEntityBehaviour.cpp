@@ -24,47 +24,41 @@ namespace Crowny
     {
         // Back up only the matching MonoScript for this behaviour (not the whole component)
         MonoScriptComponent& msc = m_Entity.GetComponent<MonoScriptComponent>();
-        for (auto& script : msc.Scripts)
-        {
-            if (script.GetTypeIdentity() == ScriptTypeIdentity{ m_Assembly, m_Namespace, m_TypeName })
-            {
-                const PersistedScriptState state = script.CapturePersistedState();
-                ScriptObjectBackupData data;
-                if (state.Fields == nullptr)
-                    return data;
-                Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>();
-                BinaryDataStreamOutputArchive archive(stream);
-                archive(state.Fields);
-                data.Data.resize(stream->Size());
-                if (!data.Data.empty())
-                    std::memcpy(data.Data.data(), stream->Data(), data.Data.size());
-                return data;
-            }
-        }
-        return {};
+        MonoScript* script = msc.FindScript(m_ScriptInstanceId);
+        if (script == nullptr)
+            return {};
+
+        const PersistedScriptState state = script->CapturePersistedState();
+        ScriptObjectBackupData data;
+        if (state.Fields == nullptr)
+            return data;
+        Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>();
+        BinaryDataStreamOutputArchive archive(stream);
+        archive(state.Fields);
+        data.Data.resize(stream->Size());
+        if (!data.Data.empty())
+            std::memcpy(data.Data.data(), stream->Data(), data.Data.size());
+        return data;
     }
 
     void ScriptEntityBehaviour::EndRefresh(const ScriptObjectBackupData& data)
     {
         // Restore only the matching MonoScript for this behaviour
         MonoScriptComponent& msc = m_Entity.GetComponent<MonoScriptComponent>();
-        for (auto& script : msc.Scripts)
+        MonoScript* script = msc.FindScript(m_ScriptInstanceId);
+        if (script == nullptr)
+            return;
+
+        script->OnInitialize(this);
+        Ref<SerializableObject> fields;
+        if (!data.Data.empty())
         {
-            if (script.GetTypeIdentity() == ScriptTypeIdentity{ m_Assembly, m_Namespace, m_TypeName })
-            {
-                script.OnInitialize(this);
-                Ref<SerializableObject> fields;
-                if (!data.Data.empty())
-                {
-                    ScriptSerializationSceneScope sceneScope(m_Entity.GetScene());
-                    Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>(const_cast<uint8_t*>(data.Data.data()), data.Data.size());
-                    BinaryDataStreamInputArchive archive(stream);
-                    archive(fields);
-                }
-                script.ApplyPersistedState({ script.GetTypeIdentity(), fields });
-                return;
-            }
+            ScriptSerializationSceneScope sceneScope(m_Entity.GetScene());
+            Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>(const_cast<uint8_t*>(data.Data.data()), data.Data.size());
+            BinaryDataStreamInputArchive archive(stream);
+            archive(fields);
         }
+        script->ApplyPersistedState({ script->GetTypeIdentity(), fields });
     }
 
     MonoObject* ScriptEntityBehaviour::CreateManagedInstance(bool construct)

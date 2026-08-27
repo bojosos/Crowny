@@ -701,6 +701,9 @@ namespace Crowny
         MonoScriptComponent() : ComponentBase() {}
         MonoScriptComponent(const MonoScriptComponent&) = default;
 
+        MonoScript* FindScript(uint64_t runtimeInstanceId);
+        const MonoScript* FindScript(uint64_t runtimeInstanceId) const;
+
         Vector<MonoScript> Scripts;
     };
 

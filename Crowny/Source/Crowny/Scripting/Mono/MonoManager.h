@@ -37,7 +37,7 @@ namespace Crowny
 
         void UnloadScriptDomain();
 
-        static void RegisterScriptType(ScriptMeta* metaData, const ScriptMeta& localMetaData);
+        static bool RegisterScriptType(ScriptMeta* metaData, const ScriptMeta& localMetaData);
 
     private:
         struct ScriptMetaInfo

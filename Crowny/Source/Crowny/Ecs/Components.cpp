@@ -796,6 +796,24 @@ namespace Crowny
         return m_ScriptEntityBehaviour != nullptr ? m_ScriptEntityBehaviour->GetManagedInstance() : nullptr;
     }
 
+    MonoScript* MonoScriptComponent::FindScript(uint64_t runtimeInstanceId)
+    {
+        const auto script = std::find_if(Scripts.begin(), Scripts.end(),
+                                         [runtimeInstanceId](const MonoScript& candidate) {
+                                             return candidate.InstanceId == runtimeInstanceId;
+                                         });
+        return script == Scripts.end() ? nullptr : &*script;
+    }
+
+    const MonoScript* MonoScriptComponent::FindScript(uint64_t runtimeInstanceId) const
+    {
+        const auto script = std::find_if(Scripts.begin(), Scripts.end(),
+                                         [runtimeInstanceId](const MonoScript& candidate) {
+                                             return candidate.InstanceId == runtimeInstanceId;
+                                         });
+        return script == Scripts.end() ? nullptr : &*script;
+    }
+
     void Rigidbody3DComponent::CopySettings(const Rigidbody3DComponent& other)
     {
         m_Type = other.m_Type;

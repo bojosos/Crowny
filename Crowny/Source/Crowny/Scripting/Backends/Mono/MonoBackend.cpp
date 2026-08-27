@@ -1,5 +1,7 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Backends/Mono/MonoBackend.h"
+
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/PhysicsCollision.h"
@@ -104,23 +106,6 @@ namespace Crowny
             return ScriptValueKind::Null;
         }
 
-        ScriptSchemaFieldFlags GetFieldFlags(const Ref<SerializableMemberInfo>& member)
-        {
-            ScriptSchemaFieldFlags flags = ScriptSchemaFieldFlags::None;
-            if (member->m_Flags.IsSet(ScriptFieldFlagBits::Serializable))
-                flags = flags | ScriptSchemaFieldFlags::Serializable;
-            if (member->m_Flags.IsSet(ScriptFieldFlagBits::Inspectable))
-                flags = flags | ScriptSchemaFieldFlags::Inspectable;
-            if (member->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly))
-                flags = flags | ScriptSchemaFieldFlags::ReadOnly;
-            const ScriptValueKind kind = GetValueKind(member->m_TypeInfo);
-            if (kind == ScriptValueKind::String || kind == ScriptValueKind::Entity || kind == ScriptValueKind::Asset ||
-                kind == ScriptValueKind::Object || kind == ScriptValueKind::Array || kind == ScriptValueKind::List ||
-                kind == ScriptValueKind::Dictionary)
-                flags = flags | ScriptSchemaFieldFlags::Nullable;
-            return flags;
-        }
-
         void AppendFields(const Ref<SerializableObjectInfo>& objectInfo, Vector<ScriptFieldSchema>& fields)
         {
             if (objectInfo == nullptr)
@@ -145,7 +130,7 @@ namespace Crowny
                 field.StableId = member->m_FieldId != 0 ? member->m_FieldId : StableHash(member->m_Name);
                 field.Name = member->m_Name;
                 field.ValueKind = valueKind;
-                field.Flags = GetFieldFlags(member);
+                field.Flags = MonoBackendDetail::GetSchemaFieldFlags(member);
                 field.DeclaredType = GetTypeIdentity(member->m_TypeInfo);
                 if (member->m_TypeInfo->GetType() == SerializableType::Array)
                     field.ElementKind = GetValueKind(StaticRefCast<SerializableTypeInfoArray>(member->m_TypeInfo)->m_ElementType);
@@ -560,13 +545,12 @@ namespace Crowny
             Entity entity = ResolveEntity(entityId);
             if (!entity || !entity.HasComponent<MonoScriptComponent>())
                 return nullptr;
-            Vector<MonoScript>& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-            const auto script = std::find_if(scripts.begin(), scripts.end(), [&](MonoScript& candidate) {
-                if (runtimeInstanceId != 0)
-                    return candidate.InstanceId == runtimeInstanceId;
-                return identity != nullptr && candidate.GetTypeIdentity() == *identity;
-            });
-            return script == scripts.end() ? nullptr : &*script;
+            MonoScriptComponent& component = entity.GetComponent<MonoScriptComponent>();
+            if (runtimeInstanceId != 0)
+                return component.FindScript(runtimeInstanceId);
+            const auto script = std::find_if(component.Scripts.begin(), component.Scripts.end(),
+                                             [&](MonoScript& candidate) { return identity != nullptr && candidate.GetTypeIdentity() == *identity; });
+            return script == component.Scripts.end() ? nullptr : &*script;
         }
 
         Ref<SerializableObjectInfo> ResolveObjectInfo(MonoScript& script, const PersistedScriptState& persisted)
@@ -680,13 +664,22 @@ namespace Crowny
                     valid = RestoreSnapshots(snapshots, replacementCatalog);
                 if (!valid.Succeeded)
                 {
-                    if (!RefreshAssemblies(previous))
-                        valid.Diagnostics.push_back({ ManagedDiagnosticSeverity::Error, "managed.mono.reload_rollback_failed",
-                                                      "Mono could not restore the last working assemblies.", {}, ManagedBackendId::Mono, {}, {} });
+                    const bool assembliesRestored = RefreshAssemblies(previous);
+                    if (!assembliesRestored)
+                    {
+                        valid = MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), false,
+                                                                                ManagedOperationResult::Success());
+                        InvalidateProgram();
+                    }
                     else
                     {
                         m_Catalog = BuildCatalog();
-                        RestoreSnapshots(snapshots, m_Catalog);
+                        ManagedOperationResult stateRestoration = RestoreSnapshots(snapshots, m_Catalog);
+                        if (!stateRestoration.Succeeded)
+                        {
+                            valid = MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), true, stateRestoration);
+                            InvalidateProgram();
+                        }
                     }
                     return { std::move(valid), {} };
                 }
@@ -711,41 +704,61 @@ namespace Crowny
                 Entity entity = ResolveEntity(request.Entity);
                 if (!entity)
                     return { Failure("managed.mono.entity_missing", "The script entity is no longer in the active scene."), 0 };
+                bool componentAdded = false;
+                bool occurrenceAdded = false;
+                bool createAttempted = false;
                 MonoScript* script = FindScript(request.Entity, request.RuntimeInstanceId, &request.Identity);
                 if (script == nullptr && request.RuntimeInstanceId == 0)
                 {
-                    MonoScriptComponent& component = entity.HasComponent<MonoScriptComponent>()
-                                                      ? entity.GetComponent<MonoScriptComponent>()
-                                                      : entity.AddComponent<MonoScriptComponent>();
+                    componentAdded = !entity.HasComponent<MonoScriptComponent>();
+                    MonoScriptComponent& component = componentAdded ? entity.AddComponent<MonoScriptComponent>()
+                                                                     : entity.GetComponent<MonoScriptComponent>();
                     component.Scripts.emplace_back(request.Identity);
                     script = &component.Scripts.back();
+                    occurrenceAdded = true;
                 }
                 if (script == nullptr)
                     return { Failure("managed.mono.script_occurrence_missing", "The persisted Mono script occurrence was not found."), 0 };
+                const uint64_t runtimeInstanceId = script->InstanceId;
+                const auto rollbackCreate = [&]() {
+                    if (!occurrenceAdded && createAttempted && ScriptSceneObjectManager::IsStartedUp())
+                        ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, script);
+                    MonoBackendDetail::RollbackAddedScriptOccurrence(entity, runtimeInstanceId, occurrenceAdded, componentAdded);
+                };
                 if (m_NextHandle == 0)
+                {
+                    rollbackCreate();
                     return { Failure("managed.mono.handle_exhausted", "Mono script handles are exhausted."), 0 };
+                }
                 if (std::any_of(m_Instances.begin(), m_Instances.end(), [&](const auto& entry) {
-                        return entry.second.Entity == request.Entity && entry.second.RuntimeInstanceId == script->InstanceId;
+                        return entry.second.Entity == request.Entity && entry.second.RuntimeInstanceId == runtimeInstanceId;
                     }))
+                {
+                    rollbackCreate();
                     return { Failure("managed.mono.script_occurrence_active", "The persisted Mono script occurrence is already active."), 0 };
+                }
+                createAttempted = true;
                 script->Create(entity);
                 if (script->GetManagedInstance() == nullptr)
+                {
+                    rollbackCreate();
                     return { Failure("managed.mono.create_failed", "Mono could not create the managed script instance."), 0 };
+                }
                 Instance instance;
                 instance.Entity = request.Entity;
-                instance.RuntimeInstanceId = script->InstanceId;
+                instance.RuntimeInstanceId = runtimeInstanceId;
                 if (request.InitialState.Identity.IsValid())
                 {
                     ScriptStateResult migrated = MigrateScriptState(request.InitialState, *schema, ManagedBackendId::Mono);
                     if (!migrated.Result.Succeeded)
                     {
-                        ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, script);
+                        rollbackCreate();
                         return { std::move(migrated.Result), 0 };
                     }
                     ManagedOperationResult applied = ApplyState(*script, migrated.State);
                     if (!applied.Succeeded)
                     {
-                        ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, script);
+                        rollbackCreate();
                         return { std::move(applied), 0 };
                     }
                     instance.OrphanedMembers = std::move(migrated.State.OrphanedMembers);
@@ -978,6 +991,16 @@ namespace Crowny
                     ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, script);
             }
 
+            void InvalidateProgram()
+            {
+                for (const auto& [handle, instance] : m_Instances)
+                    DestroyRuntimeInstance(instance);
+                m_Instances.clear();
+                m_Catalog = {};
+                m_CurrentProgram = {};
+                m_ProgramLoaded = false;
+            }
+
             ManagedOperationResult StaleHandle() const
             {
                 return Failure("managed.mono.stale_handle", "The Mono script handle is stale.");
@@ -1006,6 +1029,68 @@ namespace Crowny
         state.Identity = persisted.Identity;
         state.Root = ReadLegacyObject(persisted.Fields, persisted.Fields->GetObjectInfo());
         return state;
+    }
+
+    ScriptSchemaFieldFlags MonoBackendDetail::GetSchemaFieldFlags(const Ref<SerializableMemberInfo>& member)
+    {
+        ScriptSchemaFieldFlags flags = ScriptSchemaFieldFlags::None;
+        if (member == nullptr)
+            return flags;
+        if (member->m_Flags.IsSet(ScriptFieldFlagBits::Serializable))
+            flags = flags | ScriptSchemaFieldFlags::Serializable;
+        if (member->m_Flags.IsSet(ScriptFieldFlagBits::Inspectable))
+            flags = flags | ScriptSchemaFieldFlags::Inspectable;
+        if (member->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly))
+            flags = flags | ScriptSchemaFieldFlags::ReadOnly;
+
+        const ScriptValueKind kind = GetValueKind(member->m_TypeInfo);
+        const bool referenceType = kind == ScriptValueKind::String || kind == ScriptValueKind::Entity || kind == ScriptValueKind::Asset ||
+                                   kind == ScriptValueKind::Object || kind == ScriptValueKind::Array || kind == ScriptValueKind::List ||
+                                   kind == ScriptValueKind::Dictionary;
+        if (referenceType && !member->m_Flags.IsSet(ScriptFieldFlagBits::NotNull))
+            flags = flags | ScriptSchemaFieldFlags::Nullable;
+        return flags;
+    }
+
+    void MonoBackendDetail::RollbackAddedScriptOccurrence(Entity entity, uint64_t runtimeInstanceId, bool occurrenceAdded, bool componentAdded)
+    {
+        if (!occurrenceAdded || !entity || !entity.HasComponent<MonoScriptComponent>())
+            return;
+
+        MonoScriptComponent& component = entity.GetComponent<MonoScriptComponent>();
+        const auto script = std::find_if(component.Scripts.begin(), component.Scripts.end(),
+                                         [runtimeInstanceId](const MonoScript& candidate) {
+                                             return candidate.InstanceId == runtimeInstanceId;
+                                         });
+        if (script != component.Scripts.end())
+        {
+            if (ScriptSceneObjectManager::IsStartedUp())
+                ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, &*script);
+            component.Scripts.erase(script);
+        }
+        if (componentAdded && component.Scripts.empty())
+            entity.RemoveComponent<MonoScriptComponent>();
+    }
+
+    ManagedOperationResult MonoBackendDetail::AddReloadRollbackDiagnostics(ManagedOperationResult failure, bool assembliesRestored,
+                                                                           const ManagedOperationResult& stateRestoration)
+    {
+        failure.Succeeded = false;
+        if (!assembliesRestored)
+        {
+            failure.Diagnostics.push_back({ ManagedDiagnosticSeverity::Error, "managed.mono.reload_rollback_failed",
+                                            "Mono could not restore the last working assemblies; the managed program was invalidated.", {},
+                                            ManagedBackendId::Mono, {}, {} });
+            return failure;
+        }
+        if (!stateRestoration.Succeeded)
+        {
+            failure.Diagnostics.insert(failure.Diagnostics.end(), stateRestoration.Diagnostics.begin(), stateRestoration.Diagnostics.end());
+            failure.Diagnostics.push_back({ ManagedDiagnosticSeverity::Error, "managed.mono.reload_state_rollback_failed",
+                                            "Mono restored the last working assemblies but not all live script state; the managed program was invalidated.",
+                                            {}, ManagedBackendId::Mono, {}, {} });
+        }
+        return failure;
     }
 
     Scope<ManagedBackend> CreateMonoBackend() { return CreateScope<MonoBackend>(); }

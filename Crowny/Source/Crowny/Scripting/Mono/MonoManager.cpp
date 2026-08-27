@@ -360,10 +360,22 @@ namespace Crowny
         return nullptr;
     }
 
-    void MonoManager::RegisterScriptType(ScriptMeta* metaData, const ScriptMeta& localMetaData)
+    bool MonoManager::RegisterScriptType(ScriptMeta* metaData, const ScriptMeta& localMetaData)
     {
-        // Dont write code like this.
-        GetScriptMetaData()[localMetaData.Assembly].push_back({ metaData, localMetaData });
+        if (metaData == nullptr)
+            return false;
+
+        Vector<ScriptMetaInfo>& registrations = GetScriptMetaData()[localMetaData.Assembly];
+        const auto existing = std::find_if(registrations.begin(), registrations.end(),
+                                           [metaData](const ScriptMetaInfo& entry) { return entry.MetaData == metaData; });
+        if (existing != registrations.end())
+        {
+            existing->LocalMetaData = localMetaData;
+            return false;
+        }
+
+        registrations.push_back({ metaData, localMetaData });
+        return true;
     }
 
     void MonoManager::UnloadScriptDomain()
