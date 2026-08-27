@@ -44,6 +44,7 @@ namespace Crowny
         InstanceSlot* Resolve(ScriptInstanceHandle handle);
         const InstanceSlot* Resolve(ScriptInstanceHandle handle) const;
         ScriptInstanceHandle AllocateHandle(uint64_t backendHandle, const UUID& entity);
+        void InvalidateInstanceSlots();
         static ManagedOperationResult StaleHandle(ManagedBackendId backend);
 
         Scope<ManagedBackend> m_Backend;

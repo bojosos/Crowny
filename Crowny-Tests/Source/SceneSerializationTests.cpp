@@ -412,7 +412,7 @@ TEST_CASE("Retained script state applies when its managed type becomes available
 
     Vector<AssemblyRefreshInfo> engineOnly;
     engineOnly.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
-    REQUIRE(ScriptObjectManager::Get().RefreshAssemblies(engineOnly));
+    REQUIRE(ScriptObjectManager::Get().RefreshAssemblies(engineOnly).Succeeded());
     CHECK(MonoManager::Get().FindClass(identity.Assembly, identity.Namespace, identity.TypeName) == nullptr);
 
     Ref<Scene> scene = CreateRef<Scene>(false);
@@ -425,7 +425,7 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     Vector<AssemblyRefreshInfo> withGame;
     withGame.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
     withGame.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
-    REQUIRE(ScriptObjectManager::Get().RefreshAssemblies(withGame));
+    REQUIRE(ScriptObjectManager::Get().RefreshAssemblies(withGame).Succeeded());
     REQUIRE(script.GetManagedClass() != nullptr);
     REQUIRE(script.GetManagedInstance() != nullptr);
 

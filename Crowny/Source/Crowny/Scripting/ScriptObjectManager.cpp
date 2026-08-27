@@ -21,7 +21,7 @@ namespace Crowny
         m_ScriptObjects.erase(instance);
     }
 
-    bool ScriptObjectManager::RefreshAssemblies(const Vector<AssemblyRefreshInfo>& assemblies)
+    AssemblyRefreshResult ScriptObjectManager::RefreshAssemblies(const Vector<AssemblyRefreshInfo>& assemblies)
     {
         Vector<AssemblyRefreshInfo> previousAssemblies;
         Vector<Path> validationPaths;
@@ -31,7 +31,7 @@ namespace Crowny
         if (!MonoManager::Get().ValidateAssemblies(validationPaths))
         {
             CW_ENGINE_ERROR("Managed assembly refresh cancelled because validation failed. The current domain remains active.");
-            return false;
+            return { AssemblyRefreshStatus::CurrentDomainKept };
         }
 
         for (const AssemblyRefreshInfo& entry : assemblies)
@@ -86,6 +86,7 @@ namespace Crowny
             ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
         }
 
+        bool previousDomainRestored = !previousAssemblies.empty();
         if (!loaded)
         {
             CW_ENGINE_ERROR("Managed assembly refresh failed after validation. Restoring the previous domain.");
@@ -97,9 +98,18 @@ namespace Crowny
                 if (!assembly.IsLoaded())
                 {
                     CW_ENGINE_CRITICAL("Could not restore the last working managed assembly {0} from {1}.", entry.Name, entry.Filepath.string());
-                    continue;
+                    previousDomainRestored = false;
+                    break;
                 }
                 ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
+            }
+
+            if (!previousDomainRestored)
+            {
+                ScriptInfoManager::Get().ClearAssemblyInfo();
+                MonoManager::Get().UnloadScriptDomain();
+                ProcessFinalizedObjects(true);
+                return { AssemblyRefreshStatus::PreviousDomainRestoreFailed };
             }
         }
 
@@ -115,7 +125,7 @@ namespace Crowny
         }
 
         // OnRefreshComplete();
-        return loaded;
+        return { loaded ? AssemblyRefreshStatus::ReplacementLoaded : AssemblyRefreshStatus::PreviousDomainRestored };
     }
 
     void ScriptObjectManager::NotifyObjectFinalized(ScriptObjectBase* instance)

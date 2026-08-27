@@ -353,7 +353,7 @@ namespace Crowny
                                                         "The last working CoreCLR program could not be restored.", {},
                                                         ManagedBackendId::CoreCLR, {}, {} });
                 }
-                return { replacement, {} };
+                return { replacement, {}, !restored.Succeeded };
             }
 
             const ScriptCatalog& GetScriptCatalog() const override { return m_Catalog; }

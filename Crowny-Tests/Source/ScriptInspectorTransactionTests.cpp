@@ -5,6 +5,7 @@
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 #include "Editor/ScriptInspectorTransaction.h"
+#include "Panels/ScriptInspectorModel.h"
 
 using namespace Crowny;
 
@@ -53,6 +54,25 @@ namespace
         return StaticRefCast<SerializableFieldI32>(state.Fields->GetFieldData(field));
     }
 } // namespace
+
+TEST_CASE("Managed inspector edits retained state without constructing a script", "[Editor][Scripting][Inspector]")
+{
+    const ScriptTypeIdentity identity{ "Missing.Assembly", "Missing.Namespace", "InspectorBehaviour" };
+    MonoScript script(identity);
+    ScriptState retained;
+    retained.Identity = identity;
+    retained.Root = ScriptValue::Object({ { "Value", ScriptValue::Signed(10) } }, identity);
+    script.SetManagedState(retained);
+
+    REQUIRE_FALSE(script.GetRuntimeHandle().IsValid());
+    ScriptInspectorModel model(script);
+    REQUIRE(model.GetState() == retained);
+    model.GetState().Root.Members.at("Value") = ScriptValue::Signed(20);
+    REQUIRE(model.Commit());
+
+    CHECK_FALSE(script.GetRuntimeHandle().IsValid());
+    CHECK(script.GetManagedState().Root.Members.at("Value") == ScriptValue::Signed(20));
+}
 
 TEST_CASE("Managed inspector warm frames do not capture or allocate", "[Editor][Undo][Scripting][Memory]")
 {

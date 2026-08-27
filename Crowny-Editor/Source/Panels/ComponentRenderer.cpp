@@ -7,6 +7,7 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
+#include "Panels/ScriptInspectorModel.h"
 #include "UI/Properties.h"
 
 #include <imgui.h>
@@ -197,10 +198,8 @@ namespace Crowny
                 ImGui::TextUnformatted(script.GetTypeIdentity().GetFullName().c_str());
                 UI::Post();
 
-                if (!script.GetRuntimeHandle().IsValid())
-                    ScriptRuntime::CreateScript(entity, script, false);
                 const ScriptTypeSchema* schema = managed != nullptr ? managed->GetScriptCatalog().FindType(script.GetTypeIdentity()) : nullptr;
-                if (schema == nullptr || !script.GetRuntimeHandle().IsValid())
+                if (schema == nullptr)
                 {
                     UI::Pre("Status");
                     ImGui::TextDisabled("Script type unavailable; serialized data is retained");
@@ -208,9 +207,9 @@ namespace Crowny
                 }
                 else
                 {
-                    ScriptState state = ScriptRuntime::CaptureState(script);
-                    if (DrawScriptState(*schema, state))
-                        ScriptRuntime::ApplyState(script, state);
+                    ScriptInspectorModel model(script);
+                    if (DrawScriptState(*schema, model.GetState()))
+                        model.Commit();
                 }
 
                 UI::EndPropertyGrid();

@@ -27,6 +27,7 @@ namespace Crowny
     {
         ManagedOperationResult Result;
         Vector<uint64_t> ReplacementHandles;
+        bool ProgramInvalidated = false;
     };
 
     class ManagedBackend

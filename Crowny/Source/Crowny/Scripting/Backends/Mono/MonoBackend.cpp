@@ -656,19 +656,28 @@ namespace Crowny
                 if (!m_ProgramLoaded)
                     return { Failure("managed.mono.program_not_loaded", "No Mono program is loaded."), {} };
                 const ManagedProgramDefinition previous = m_CurrentProgram;
-                if (!RefreshAssemblies(program))
-                    return { Failure("managed.mono.reload_failed", "Mono rejected the replacement assemblies and kept the current domain."), {} };
+                const AssemblyRefreshResult replacement = RefreshAssemblies(program);
+                if (!replacement.Succeeded())
+                {
+                    ManagedBackendReloadResult failure = MonoBackendDetail::BuildAssemblyRefreshFailure(replacement);
+                    if (failure.ProgramInvalidated)
+                        InvalidateProgram();
+                    return failure;
+                }
                 ScriptCatalog replacementCatalog = BuildCatalog();
                 ManagedOperationResult valid = ValidateScriptCatalog(replacementCatalog, ManagedBackendId::Mono);
                 if (valid.Succeeded)
                     valid = RestoreSnapshots(snapshots, replacementCatalog);
                 if (!valid.Succeeded)
                 {
-                    const bool assembliesRestored = RefreshAssemblies(previous);
+                    const bool assembliesRestored = RefreshAssemblies(previous).Succeeded();
                     if (!assembliesRestored)
                     {
-                        valid = MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), false, ManagedOperationResult::Success());
-                        InvalidateProgram();
+                        ManagedBackendReloadResult failure =
+                          MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), false, ManagedOperationResult::Success());
+                        if (failure.ProgramInvalidated)
+                            InvalidateProgram();
+                        return failure;
                     }
                     else
                     {
@@ -676,8 +685,11 @@ namespace Crowny
                         ManagedOperationResult stateRestoration = RestoreSnapshots(snapshots, m_Catalog);
                         if (!stateRestoration.Succeeded)
                         {
-                            valid = MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), true, stateRestoration);
-                            InvalidateProgram();
+                            ManagedBackendReloadResult failure =
+                              MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), true, stateRestoration);
+                            if (failure.ProgramInvalidated)
+                                InvalidateProgram();
+                            return failure;
                         }
                     }
                     return { std::move(valid), {} };
@@ -935,10 +947,11 @@ namespace Crowny
                 return assemblies;
             }
 
-            bool RefreshAssemblies(const ManagedProgramDefinition& program)
+            AssemblyRefreshResult RefreshAssemblies(const ManagedProgramDefinition& program)
             {
                 const Vector<AssemblyRefreshInfo> assemblies = GetRefreshAssemblies(program);
-                return !assemblies.empty() && ScriptObjectManager::Get().RefreshAssemblies(assemblies);
+                return assemblies.empty() ? AssemblyRefreshResult{ AssemblyRefreshStatus::CurrentDomainKept }
+                                          : ScriptObjectManager::Get().RefreshAssemblies(assemblies);
             }
 
             ManagedOperationResult RestoreSnapshots(const Vector<ManagedBackendReloadInstance>& snapshots, const ScriptCatalog& catalog)
@@ -986,8 +999,12 @@ namespace Crowny
             {
                 Entity entity = ResolveEntity(instance.Entity);
                 MonoScript* script = FindScript(instance.Entity, instance.RuntimeInstanceId);
-                if (entity && script != nullptr && ScriptSceneObjectManager::IsStartedUp())
-                    ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, script);
+                if (entity && script != nullptr)
+                {
+                    if (ScriptSceneObjectManager::IsStartedUp())
+                        ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, script);
+                    script->ClearRuntimeHandle();
+                }
             }
 
             void InvalidateProgram()
@@ -1072,10 +1089,40 @@ namespace Crowny
             entity.RemoveComponent<MonoScriptComponent>();
     }
 
-    ManagedOperationResult MonoBackendDetail::AddReloadRollbackDiagnostics(ManagedOperationResult failure, bool assembliesRestored,
-                                                                           const ManagedOperationResult& stateRestoration)
+    ManagedBackendReloadResult MonoBackendDetail::BuildAssemblyRefreshFailure(const AssemblyRefreshResult& refresh)
+    {
+        switch (refresh.Status)
+        {
+        case AssemblyRefreshStatus::CurrentDomainKept:
+            return { ManagedOperationResult::Failure("managed.mono.reload_failed",
+                                                     "Mono rejected the replacement assemblies before unloading the current domain.",
+                                                     ManagedBackendId::Mono),
+                     {},
+                     false };
+        case AssemblyRefreshStatus::PreviousDomainRestored:
+            return { ManagedOperationResult::Failure("managed.mono.reload_failed",
+                                                     "Mono could not load the replacement assemblies; the previous domain was restored.",
+                                                     ManagedBackendId::Mono),
+                     {},
+                     false };
+        case AssemblyRefreshStatus::PreviousDomainRestoreFailed:
+            return AddReloadRollbackDiagnostics(
+              ManagedOperationResult::Failure("managed.mono.reload_failed",
+                                              "Mono could not load the replacement assemblies or restore the previous domain.",
+                                              ManagedBackendId::Mono),
+              false, ManagedOperationResult::Success());
+        case AssemblyRefreshStatus::ReplacementLoaded: break;
+        }
+        return { ManagedOperationResult::Failure("managed.mono.reload_failed", "Mono reload failed unexpectedly.", ManagedBackendId::Mono),
+                 {},
+                 false };
+    }
+
+    ManagedBackendReloadResult MonoBackendDetail::AddReloadRollbackDiagnostics(ManagedOperationResult failure, bool assembliesRestored,
+                                                                                const ManagedOperationResult& stateRestoration)
     {
         failure.Succeeded = false;
+        const bool programInvalidated = !assembliesRestored || !stateRestoration.Succeeded;
         if (!assembliesRestored)
         {
             failure.Diagnostics.push_back({ ManagedDiagnosticSeverity::Error,
@@ -1085,7 +1132,7 @@ namespace Crowny
                                             ManagedBackendId::Mono,
                                             {},
                                             {} });
-            return failure;
+            return { std::move(failure), {}, programInvalidated };
         }
         if (!stateRestoration.Succeeded)
         {
@@ -1099,7 +1146,7 @@ namespace Crowny
                 {},
                 {} });
         }
-        return failure;
+        return { std::move(failure), {}, programInvalidated };
     }
 
     Scope<ManagedBackend> CreateMonoBackend() { return CreateScope<MonoBackend>(); }

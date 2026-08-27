@@ -109,7 +109,11 @@ namespace Crowny
 
         ManagedBackendReloadResult result = m_Backend->ReloadProgram(program, instances);
         if (!result.Result.Succeeded)
+        {
+            if (result.ProgramInvalidated)
+                InvalidateInstanceSlots();
             return result.Result;
+        }
         if (result.ReplacementHandles.size() != publicSlots.size())
             return ManagedOperationResult::Failure("managed.reload.handle_count_mismatch",
                                                    "The backend returned an invalid replacement-handle count.", m_Config.Backend);
@@ -225,6 +229,20 @@ namespace Crowny
         slot.Active = true;
         const uint64_t value = (static_cast<uint64_t>(slot.Generation) << 32u) | static_cast<uint64_t>(slotIndex);
         return ScriptInstanceHandle(value);
+    }
+
+    void ManagedScripting::InvalidateInstanceSlots()
+    {
+        for (size_t index = 1; index < m_Instances.size(); ++index)
+        {
+            InstanceSlot& slot = m_Instances[index];
+            if (!slot.Active)
+                continue;
+            slot.Active = false;
+            slot.BackendHandle = 0;
+            slot.Entity = {};
+            slot.Generation = NextGeneration(slot.Generation);
+        }
     }
 
     ManagedOperationResult ManagedScripting::StaleHandle(ManagedBackendId backend)

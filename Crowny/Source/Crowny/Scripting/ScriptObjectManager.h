@@ -21,6 +21,22 @@ namespace Crowny
         // const BuiltinTypeMappings* TypeMappings = nullptr;
     };
 
+    enum class AssemblyRefreshStatus : uint8_t
+    {
+        ReplacementLoaded,
+        CurrentDomainKept,
+        PreviousDomainRestored,
+        PreviousDomainRestoreFailed
+    };
+
+    struct AssemblyRefreshResult
+    {
+        AssemblyRefreshStatus Status = AssemblyRefreshStatus::CurrentDomainKept;
+
+        bool Succeeded() const { return Status == AssemblyRefreshStatus::ReplacementLoaded; }
+        bool HasUsableDomain() const { return Status != AssemblyRefreshStatus::PreviousDomainRestoreFailed; }
+    };
+
     class ScriptObjectManager : public Module<ScriptObjectManager>
     {
     public:
@@ -30,7 +46,7 @@ namespace Crowny
         void RegisterScriptObject(ScriptObjectBase* instance);
         void UnregisterScriptObject(ScriptObjectBase* instance);
 
-        bool RefreshAssemblies(const Vector<AssemblyRefreshInfo>& assemblies);
+        AssemblyRefreshResult RefreshAssemblies(const Vector<AssemblyRefreshInfo>& assemblies);
         void Update();
         void NotifyObjectFinalized(ScriptObjectBase* instance);
         void ProcessFinalizedObjects(bool assemblyRefresh = false);
