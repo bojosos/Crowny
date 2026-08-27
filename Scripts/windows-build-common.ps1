@@ -440,7 +440,22 @@ function Get-CrownyProjectFingerprint {
         $files.Add($_.FullName)
     }
     $files.Add((Join-Path $RepositoryRoot "3rdparty\premake\premake5.lua"))
-    return Get-CrownyHash -Files $files.ToArray() -Values @("vs2022", "with-nodes", $Simd.ToLowerInvariant())
+
+    # Premake expands Source/** globs while generating the workspace. Hash the
+    # matched file names (not their contents) so adding, removing, or renaming a
+    # source invalidates the generated projects without regenerating after every
+    # edit.
+    $sourceLayout = [Collections.Generic.List[string]]::new()
+    foreach ($directory in @("Crowny", "Crowny-Editor", "Crowny-Builder", "Crowny-RenderTests", "Crowny-Tests", "Crowny-Sharp", "Crowny-Sandbox")) {
+        $sourceRoot = Join-Path $RepositoryRoot "$directory\Source"
+        if (-not (Test-Path -LiteralPath $sourceRoot)) { continue }
+        Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | ForEach-Object {
+            $sourceLayout.Add($_.FullName)
+        }
+    }
+
+    $fingerprintValues = @("vs2022", "with-nodes", $Simd.ToLowerInvariant()) + @($sourceLayout | Sort-Object)
+    return Get-CrownyHash -Files $files.ToArray() -Values $fingerprintValues
 }
 
 function Ensure-CrownyProjects {
