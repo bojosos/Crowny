@@ -81,6 +81,10 @@ namespace
 
 TEST_CASE("RenderGraph rebuild and compile reuse warm scratch storage", "[Memory][Frame][Renderer][RenderGraph]")
 {
+#if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL > 0
+    SKIP("MSVC debug iterators allocate bookkeeping storage during container reuse.");
+#endif
+
     RenderGraph graph;
     bool compiledSuccessfully = true;
     auto rebuild = [&](bool fullTopology) {

@@ -48,6 +48,10 @@ TEST_CASE("Mesh upload results publish once across the thread handoff", "[Render
 
 TEST_CASE("Mesh upload command storage allocates nothing after warm-up", "[Renderer][Resources][MeshUpload][Memory][Frame]")
 {
+#if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL > 0
+    SKIP("MSVC debug iterators allocate bookkeeping storage during vector moves.");
+#endif
+
     constexpr std::array<uint32_t, 3> commandCounts{ 1u, 1000u, 10000u };
     constexpr uint32_t frameCount = 120u;
 

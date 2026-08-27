@@ -47,12 +47,12 @@ project "Crowny-RenderTests"
         buildoptions { "/utf-8" }
         defines { "CW", "CW_WINDOWS", "CW_PLATFORM_WIN32" }
 
-    filter "configurations:Debug"
+    filter "configurations:Debug or DebugASan"
         defines { "CW_DEBUG" }
         runtime "Debug"
         symbols "on"
 
-    filter "configurations:Release"
+    filter "configurations:Release or ReleaseASan"
         defines { "CW_RELEASE" }
         runtime "Release"
         optimize "on"

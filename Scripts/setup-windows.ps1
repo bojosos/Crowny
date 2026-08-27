@@ -9,6 +9,8 @@ param(
     [string]$Sanitizer = "None",
     [ValidateSet("SSE4.1", "AVX2")]
     [string]$Simd = "AVX2",
+    [ValidateRange(0, 64)]
+    [int]$Jobs = 0,
     [string]$VulkanVersion = "1.4.357.0"
 )
 
@@ -53,21 +55,6 @@ function Install-WinGetPackage {
     )
 }
 
-function Find-Premake {
-    $repositoryPremake = Join-Path $repositoryRoot "3rdparty\premake\bin\premake5.exe"
-    if (Test-Path -LiteralPath $repositoryPremake) { return $repositoryPremake }
-
-    $command = Get-Command "premake5.exe" -ErrorAction SilentlyContinue
-    if ($command) { return $command.Source }
-
-    $wingetPackageRoot = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
-    $candidate = Get-ChildItem -LiteralPath $wingetPackageRoot -Filter "premake5.exe" -File -Recurse -ErrorAction SilentlyContinue |
-        Select-Object -First 1
-    if ($candidate) { return $candidate.FullName }
-
-    throw "Premake was not found in the repository or PATH."
-}
-
 function Find-SevenZip {
     $command = Get-Command "7z.exe" -ErrorAction SilentlyContinue
     if ($command) { return $command.Source }
@@ -76,14 +63,6 @@ function Find-SevenZip {
     if (Test-Path -LiteralPath $candidate) { return $candidate }
 
     throw "7-Zip was installed but 7z.exe could not be found."
-}
-
-function Find-MSBuild {
-    $vswhere = Join-Path $repositoryRoot "3rdparty\vswhere\vswhere.exe"
-    $candidate = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" |
-        Select-Object -First 1
-    if (-not $candidate) { throw "Visual Studio 2022 Build Tools with C++ support is required." }
-    return $candidate
 }
 
 function Install-VulkanSDK {
@@ -161,20 +140,6 @@ if (-not (Get-Command "winget" -ErrorAction SilentlyContinue)) {
     throw "Windows Package Manager (winget) is required to bootstrap Mono, 7-Zip, and CMake."
 }
 
-function Get-MonoCompatibleFastNoiseSource {
-    $source = Join-Path $repositoryRoot "Crowny\Dependencies\FastNoiseLite\CSharp\FastNoiseLite.cs"
-    $contents = [IO.File]::ReadAllText($source)
-    $unsupported = "private const short OPTIMISE = 512;"
-    if (-not $contents.Contains($unsupported)) { return $source }
-
-    $generatedRoot = Join-Path $dependencyRoot "generated"
-    $generated = Join-Path $generatedRoot "FastNoiseLite.Mono.cs"
-    New-Item -ItemType Directory -Force -Path $generatedRoot | Out-Null
-    [IO.File]::WriteAllText($generated, $contents.Replace($unsupported, "private const short OPTIMISE = 0;"),
-        [Text.UTF8Encoding]::new($false))
-    return $generated
-}
-
 Push-Location $repositoryRoot
 try {
     Write-Host "Initializing Git submodules..."
@@ -221,97 +186,19 @@ try {
     $env:CROWNY_PHYSICS_ROOT = Join-Path $dependencyRoot "physics\install"
     $env:CROWNY_SPIRV_CROSS_ROOT = Join-Path $dependencyRoot "spirv-cross\install"
 
-    $premake = Find-Premake
-    Write-Host "Generating Visual Studio 2022 projects..."
-    $premakeArguments = @("vs2022", "--with-nodes", "--simd=$($Simd.ToLowerInvariant())")
-    if ($Sanitizer -eq "Address") {
-        $premakeArguments += "--sanitizer=address"
-    }
-    Invoke-Checked -FilePath $premake -ArgumentList $premakeArguments
-    $outputConfiguration = if ($Sanitizer -eq "Address") { "$Configuration-address" } else { $Configuration }
+    . (Join-Path $PSScriptRoot "windows-build-common.ps1")
+    Ensure-CrownyProjects -RepositoryRoot $repositoryRoot -Simd $Simd -Force
 
     if ($Build) {
-        $msbuild = Find-MSBuild
-        Write-Host "Building Crowny-Editor ($Configuration|Win64)..."
-        Invoke-Checked -FilePath $msbuild -ArgumentList @(
-            "Crowny-Editor\Crowny-Editor.vcxproj", "/nologo", "/v:minimal", "/m:1", "/nodeReuse:false", "/p:CL_MPCount=1",
-            "/p:Configuration=$Configuration Win64", "/p:Platform=x64"
-        )
-
-        Write-Host "Building Crowny-Tests ($Configuration|Win64)..."
-        Invoke-Checked -FilePath $msbuild -ArgumentList @(
-            "Crowny-Tests\Crowny-Tests.vcxproj", "/nologo", "/v:minimal", "/m:1", "/nodeReuse:false", "/p:CL_MPCount=1",
-            "/p:Configuration=$Configuration Win64", "/p:Platform=x64"
-        )
-
-        $assemblyRoot = Join-Path $repositoryRoot "Crowny-Editor\Resources\Assemblies"
-        New-Item -ItemType Directory -Force -Path $assemblyRoot | Out-Null
-        $mcs = Join-Path $monoRoot "bin\mcs.bat"
-        $engineAssembly = Join-Path $repositoryRoot "Crowny-Sharp\CrownySharp.dll"
-        $engineSources = Get-ChildItem -LiteralPath (Join-Path $repositoryRoot "Crowny-Sharp\Source") -Filter "*.cs" -File -Recurse |
-            ForEach-Object { $_.FullName }
-        $engineSources += Get-MonoCompatibleFastNoiseSource
-        Write-Host "Building CrownySharp.dll..."
-        Invoke-Checked -FilePath $mcs -ArgumentList (@(
-            "-debug+", "-o-", "-unsafe", "-define:CROWNY_MONO", "-target:library", "-out:$engineAssembly"
-        ) + $engineSources)
-        Copy-Item -LiteralPath $engineAssembly, "$engineAssembly.mdb" -Destination $assemblyRoot -Force
-
-        $gameAssembly = Join-Path $repositoryRoot "Crowny-Sandbox\GameAssembly.dll"
-        $gameSources = Get-ChildItem -LiteralPath (Join-Path $repositoryRoot "Crowny-Sandbox\Source") -Filter "*.cs" -File -Recurse |
-            ForEach-Object { $_.FullName }
-        Write-Host "Building GameAssembly.dll..."
-        Invoke-Checked -FilePath $mcs -ArgumentList (@(
-            "-debug+", "-o-", "-target:library", "-lib:$(Split-Path -Parent $engineAssembly)",
-            "-reference:CrownySharp.dll", "-out:$gameAssembly"
-        ) + $gameSources)
-        Copy-Item -LiteralPath $gameAssembly, "$gameAssembly.mdb" -Destination $assemblyRoot -Force
-
-        $editorOutput = Join-Path $repositoryRoot "bin\$outputConfiguration-windows-x86_64\Crowny-Editor"
-        Copy-Item -LiteralPath (Join-Path $vulkanRoot "Bin\shaderc_shared.dll") -Destination $editorOutput -Force
-        Copy-Item -LiteralPath (Join-Path $monoRoot "bin\mono-2.0-sgen.dll") -Destination $editorOutput -Force
-        Copy-Item -LiteralPath (Join-Path $openALRoot "bin\OpenAL32.dll") -Destination $editorOutput -Force
-
-        $editorExecutable = Join-Path $editorOutput "Crowny-Editor.exe"
-        Push-Location (Join-Path $repositoryRoot "Crowny-Editor")
-        $originalAsanOptions = $env:ASAN_OPTIONS
-        try {
-            if ($Sanitizer -eq "Address") {
-                $env:ASAN_OPTIONS = "abort_on_error=1:halt_on_error=1:strict_string_checks=1"
-            }
-            Write-Host "Cooking serialized editor built-ins..."
-            Invoke-Checked -FilePath $editorExecutable -ArgumentList @("--cook-builtins")
+        if ($Sanitizer -eq "None") {
+            & (Join-Path $PSScriptRoot "build-windows.ps1") -Target Editor -Configuration $Configuration -Jobs $Jobs -Simd $Simd
         }
-        finally {
-            $env:ASAN_OPTIONS = $originalAsanOptions
-            Pop-Location
-        }
-        Invoke-Checked -FilePath "powershell" -ArgumentList @(
-            "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", (Join-Path $PSScriptRoot "pack-builtins.ps1"),
-            "-RepositoryRoot", $repositoryRoot
-        )
-        $editorResourceOutput = Join-Path $editorOutput "Resources"
-        New-Item -ItemType Directory -Force -Path $editorResourceOutput | Out-Null
-        Copy-Item -LiteralPath (Join-Path $repositoryRoot "Crowny-Editor\Resources\Builtin.cwpack") -Destination $editorResourceOutput -Force
 
         if ($Test) {
-            $testExecutable = Join-Path $repositoryRoot "bin\$outputConfiguration-windows-x86_64\Crowny-Tests\Crowny-Tests.exe"
-            $originalPath = $env:PATH
-            $originalAsanOptions = $env:ASAN_OPTIONS
-            try {
-                $env:PATH = "$(Join-Path $vulkanRoot 'Bin');$(Join-Path $monoRoot 'bin');$editorOutput;$originalPath"
-                if ($Sanitizer -eq "Address") {
-                    $env:ASAN_OPTIONS = "abort_on_error=1:halt_on_error=1:strict_string_checks=1"
-                }
-                Push-Location (Join-Path $repositoryRoot "Crowny-Editor")
-                Write-Host "Running Crowny-Tests ($Configuration|Win64, sanitizer: $Sanitizer)..."
-                Invoke-Checked -FilePath $testExecutable -ArgumentList @()
-            }
-            finally {
-                Pop-Location
-                $env:PATH = $originalPath
-                $env:ASAN_OPTIONS = $originalAsanOptions
-            }
+            & (Join-Path $PSScriptRoot "test-windows.ps1") -Configuration $Configuration -Sanitizer $Sanitizer -Jobs $Jobs -Simd $Simd
+        }
+        else {
+            & (Join-Path $PSScriptRoot "build-windows.ps1") -Target Tests -Configuration $Configuration -Sanitizer $Sanitizer -Jobs $Jobs -Simd $Simd
         }
     }
 

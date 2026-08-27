@@ -1,0 +1,68 @@
+name: Windows ASan
+
+env:
+  MONO_VERSION: "6.12.0.206"
+  VULKAN_SDK_VERSION: "1.4.357.0"
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: ASan build configuration
+        required: true
+        default: Release
+        type: choice
+        options:
+          - Release
+          - Debug
+
+jobs:
+  test-windows-asan:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      ASAN_CONFIGURATION: ${{ github.event.inputs.configuration || 'Release' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install Mono
+        shell: powershell
+        run: |
+          choco install mono --version $env:MONO_VERSION --yes --no-progress
+          $chocoExitCode = $LASTEXITCODE
+          if ($chocoExitCode -notin @(0, 1641, 3010)) { exit $chocoExitCode }
+          $monoRoot = Join-Path $env:ProgramFiles "Mono"
+          "CROWNY_MONO_ROOT=$monoRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install Vulkan SDK
+        shell: powershell
+        run: |
+          $installer = "vulkansdk-windows-X64-$env:VULKAN_SDK_VERSION.exe"
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/$installer" -OutFile $installer
+          Start-Process -FilePath ".\$installer" -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait
+          $sdkPath = "C:\VulkanSDK\$env:VULKAN_SDK_VERSION"
+          "VULKAN_SDK=$sdkPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "$sdkPath\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build native dependencies
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path .deps\VulkanSDK\Include\vma | Out-Null
+          Invoke-WebRequest -Uri https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/v3.4.0/include/vk_mem_alloc.h -OutFile .deps\VulkanSDK\Include\vma\vk_mem_alloc.h
+          $env:CROWNY_OPENAL_ROOT = Join-Path $PWD ".deps\openal"
+          "CROWNY_OPENAL_ROOT=$env:CROWNY_OPENAL_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          & Scripts/setup-openal.ps1 -Configuration $env:ASAN_CONFIGURATION -Simd AVX2
+          & Scripts/setup-physics.ps1 -Configuration $env:ASAN_CONFIGURATION -Simd AVX2
+          & Scripts/setup-spirv-cross.ps1 -Configuration $env:ASAN_CONFIGURATION -VulkanVersion $env:VULKAN_SDK_VERSION -Simd AVX2
+
+      - name: Build and run ASan tests
+        shell: powershell
+        run: |
+          & Scripts/test-windows.ps1 -Configuration $env:ASAN_CONFIGURATION -Sanitizer Address -Jobs 4 -ProcessIsolated

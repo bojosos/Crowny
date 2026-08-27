@@ -15,9 +15,9 @@ git submodule update --init --recursive
 
 - `Scripts\setup-windows.ps1 -Build -Test` bootstraps local SDKs, generates VS2022 projects, builds Release, and runs Catch2.
 - `Scripts\setup-windows.ps1 -Build -Test -Configuration Debug -Sanitizer Address` builds ASan-instrumented tests and enables the Windows CRT leak checker.
+- `Scripts\build-windows.ps1 -Target Engine|Editor|Tests|RenderTests|All` is the Windows daily-build entrypoint; `Scripts\test-windows.ps1` builds and runs Catch2. Agents must use these commands instead of raw MSBuild. Auto scheduling gives the first build 8 of 12 compiler workers, leaves four for another output family, serializes overlapping output writes, and permits concurrent test readers. Pass `-Jobs` to request a fixed share; `-Jobs 12` waits for exclusive compiler capacity.
 - `Scripts\genprojects.bat` regenerates `Crowny.sln` with node-editor support.
 - `Scripts\run-render-tests.ps1` builds the render harness, checks Vulkan and OpenGL against shared references, and compares both outputs.
-- `msbuild Crowny.sln /m /p:Configuration=Release /p:Platform=Win64` builds all Windows targets once projects exist.
 - `./Scripts/genprojects.sh && make Crowny-Editor Crowny-Tests -j2 config=release_linux64 CXX=clang++` generates and builds on Linux.
 - `./bin/Release-linux-x86_64/Crowny-Tests/Crowny-Tests` runs the Linux test binary. The Windows executable uses the same path pattern with `Release-windows-x86_64`.
 

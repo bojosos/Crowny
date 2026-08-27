@@ -302,6 +302,7 @@ TEST_CASE("TaskGroup cancellation is atomic with completion publication", "[Thre
 
     workerGate.Open();
     blocker->Wait();
+    system.Drain();
 }
 
 TEST_CASE("Running tasks observe cooperative cancellation", "[Threading][TaskSystem]")

@@ -126,7 +126,7 @@ project "Crowny"
 			"GLFW_INCLUDE_NONE"
 		}
 
-	filter "configurations:Debug"
+	filter "configurations:Debug or DebugASan"
 		includedirs
 		{
 			path.join(PhysicsRoot, "Debug/include"),
@@ -136,7 +136,7 @@ project "Crowny"
 		defines { "CW_DEBUG" }
 		runtime "Debug"
 		symbols "on"
-	filter "configurations:Release"
+	filter "configurations:Release or ReleaseASan"
 		includedirs
 		{
 			path.join(PhysicsRoot, "Release/include"),

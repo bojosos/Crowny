@@ -32,16 +32,17 @@ newoption {
 	}
 }
 
+local workspaceConfigurations = { "Debug", "Release", "Dist" }
+if os.host() == "windows" then
+	table.insert(workspaceConfigurations, "DebugASan")
+	table.insert(workspaceConfigurations, "ReleaseASan")
+end
+
 workspace "Crowny"
 	architecture "x86_64"
 	startproject "Crowny-Editor"
 
-	configurations
-	{
-		"Debug",
-		"Release",
-		"Dist"
-	}
+	configurations(workspaceConfigurations)
 
 	platforms
 	{
@@ -80,29 +81,35 @@ filter {}
 
 -- Sanitizer helper — call from project premake files
 function applySanitizer(instrumentTarget)
-	if not instrumentTarget or not _OPTIONS["sanitizer"] then return end
+	if not instrumentTarget then return end
 	local sanitizer = _OPTIONS["sanitizer"]
-	if os.host() == "windows" and sanitizer ~= "address" then
+	if os.host() == "windows" and sanitizer and sanitizer ~= "address" then
 		error("Visual Studio supports only --sanitizer=address; use clang on Linux for " .. sanitizer)
 	end
-	filter "toolset:msc*"
-		buildoptions { "/fsanitize=address", "/Zi", "/Oy-" }
-		defines { "_DISABLE_VECTOR_ANNOTATION", "_DISABLE_STRING_ANNOTATION" }
-		defines { "CW_ADDRESS_SANITIZER" }
-		incrementallink "Off"
-		runtimechecks "Off"
-		multiprocessorcompile "On"
-	filter { "toolset:msc*", "configurations:Debug" }
-		defines { "CW_ENABLE_CRT_LEAK_CHECKS" }
-	filter { "toolset:msc*", "kind:ConsoleApp or WindowedApp", "configurations:Debug" }
-		postbuildcommands {
-			'{COPYFILE} "$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dynamic-x86_64.dll" "%{cfg.buildtarget.directory}"',
-			'{COPYFILE} "$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dbg_dynamic-x86_64.dll" "%{cfg.buildtarget.directory}"'
-		}
-	filter { "toolset:msc*", "kind:ConsoleApp or WindowedApp", "configurations:not Debug" }
-		postbuildcommands {
-			'{COPYFILE} "$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dynamic-x86_64.dll" "%{cfg.buildtarget.directory}"'
-		}
+
+	if os.host() == "windows" then
+		filter { "toolset:msc*", "configurations:DebugASan or ReleaseASan" }
+			buildoptions { "/fsanitize=address", "/Zi", "/Oy-" }
+			defines { "_DISABLE_VECTOR_ANNOTATION", "_DISABLE_STRING_ANNOTATION", "CW_ADDRESS_SANITIZER" }
+			incrementallink "Off"
+			runtimechecks "Off"
+			multiprocessorcompile "On"
+		filter { "toolset:msc*", "configurations:DebugASan" }
+			defines { "CW_ENABLE_CRT_LEAK_CHECKS" }
+		filter { "toolset:msc*", "kind:ConsoleApp or WindowedApp", "configurations:DebugASan" }
+			postbuildcommands {
+				'{COPYFILE} "$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dynamic-x86_64.dll" "%{cfg.buildtarget.directory}"',
+				'{COPYFILE} "$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dbg_dynamic-x86_64.dll" "%{cfg.buildtarget.directory}"'
+			}
+		filter { "toolset:msc*", "kind:ConsoleApp or WindowedApp", "configurations:ReleaseASan" }
+			postbuildcommands {
+				'{COPYFILE} "$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dynamic-x86_64.dll" "%{cfg.buildtarget.directory}"'
+			}
+		filter {}
+		return
+	end
+
+	if not sanitizer then return end
 	filter "toolset:not msc*"
 		local san = "-fsanitize=" .. sanitizer
 		buildoptions { san, "-fno-omit-frame-pointer" }
@@ -119,9 +126,17 @@ filter "toolset:msc*"
 	buildoptions { "/FS" }
 filter {}
 
-local sanitizerOutputSuffix = _OPTIONS["sanitizer"] and ("-" .. _OPTIONS["sanitizer"]) or ""
+function getEngineOutputConfiguration(buildConfiguration)
+	if buildConfiguration == "DebugASan" then return "Debug-address" end
+	if buildConfiguration == "ReleaseASan" then return "Release-address" end
+	if os.host() ~= "windows" and _OPTIONS["sanitizer"] then
+		return buildConfiguration .. "-" .. _OPTIONS["sanitizer"]
+	end
+	return buildConfiguration
+end
+
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-engineoutputdir = "%{cfg.buildcfg}" .. sanitizerOutputSuffix .. "-%{cfg.system}-%{cfg.architecture}"
+engineoutputdir = "%{getEngineOutputConfiguration(cfg.buildcfg)}-%{cfg.system}-%{cfg.architecture}"
 
 PhysicsRoot = os.getenv("CROWNY_PHYSICS_ROOT") or "%{wks.location}/.deps/physics/install"
 VulkanRoot = os.getenv("VULKAN_SDK") or "%{wks.location}/.deps/VulkanSDK"
@@ -212,13 +227,13 @@ function linkCrownyFinalDependencies()
 			"freetype",
 		}
 
-	filter { "platforms:not Web", "configurations:Debug" }
+	filter { "platforms:not Web", "configurations:Debug or DebugASan" }
 		libdirs { path.join(PhysicsRoot, "Debug/lib") }
 
-	filter { "platforms:not Web", "configurations:Release or Dist" }
+	filter { "platforms:not Web", "configurations:Release or ReleaseASan or Dist" }
 		libdirs { path.join(PhysicsRoot, "Release/lib") }
 
-	filter { "platforms:not Web", "system:windows", "configurations:Debug" }
+	filter { "platforms:not Web", "system:windows", "configurations:Debug or DebugASan" }
 		libdirs { path.join(SpirvCrossRoot, "Debug/lib") }
 		links
 		{
@@ -227,7 +242,7 @@ function linkCrownyFinalDependencies()
 			path.join(SpirvCrossRoot, "Debug/lib/spirv-cross-glsld.lib"),
 		}
 
-	filter { "platforms:not Web", "system:windows", "configurations:Release or Dist" }
+	filter { "platforms:not Web", "system:windows", "configurations:Release or ReleaseASan or Dist" }
 		libdirs { path.join(SpirvCrossRoot, "Release/lib") }
 		links
 		{
@@ -351,3 +366,27 @@ include "Crowny-Sandbox"
 include "Crowny-Sharp"
 include "Crowny-Tests"
 include "Crowny-RenderTests"
+
+-- Vendored and managed projects keep their normal ABI-compatible builds in
+-- ASan workspaces. Only Crowny and its native executables are instrumented.
+if os.host() == "windows" then
+	local baseConfigurationProjects = {
+		"Box2D", "ImGuizmo", "assimp", "basis_universal", "catch2", "freetype",
+		"glad", "glfw", "imgui", "libogg", "libvorbis", "mbedtls",
+		"meshoptimizer", "msdf-atlas-gen", "msdfgen", "tinyxml2", "tracy",
+		"yaml-cpp", "Crowny-Sharp", "Crowny-Sandbox"
+	}
+	if _OPTIONS["with-nodes"] then
+		table.insert(baseConfigurationProjects, "ImNodeFlow")
+		table.insert(baseConfigurationProjects, "imgui-node-editor")
+	end
+
+	for _, projectName in ipairs(baseConfigurationProjects) do
+		project(projectName)
+			configmap {
+				["DebugASan"] = "Debug",
+				["ReleaseASan"] = "Release"
+			}
+	end
+	filter {}
+end

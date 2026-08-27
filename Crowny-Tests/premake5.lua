@@ -6,9 +6,13 @@ project "Crowny-Tests"
 
 	targetdir ("%{wks.location}/bin/" .. engineoutputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. engineoutputdir .. "/%{prj.name}")
-	debugdir ("%{wks.location}/Crowny-Editor")
+	debugdir ("%{wks.location}")
 
 	applySanitizer(true)
+
+	pchheader "cwtpch.h"
+	pchsource "Source/cwtpch.cpp"
+	forceincludes { "cwtpch.h" }
 
 	files
 	{
@@ -80,12 +84,12 @@ project "Crowny-Tests"
 			"CW_PLATFORM_WIN32",
 		}
 
-	filter "configurations:Debug"
+	filter "configurations:Debug or DebugASan"
 		defines { "CW_DEBUG" }
 		runtime "Debug"
 		symbols "on"
 
-	filter "configurations:Release"
+	filter "configurations:Release or ReleaseASan"
 		defines "CW_RELEASE"
 		runtime "Release"
 		optimize "on"

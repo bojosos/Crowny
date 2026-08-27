@@ -4,6 +4,10 @@ param(
     [string]$Configuration = "Release",
     [ValidateSet("All", "Vulkan", "OpenGL")]
     [string]$Backend = "All",
+    [ValidateSet("None", "Address")]
+    [string]$Sanitizer = "None",
+    [ValidateRange(0, 64)]
+    [int]$Jobs = 0,
     [string]$Filter = "",
     [string]$ReferenceRoot = "Crowny-RenderTests/References",
     [string]$ArtifactRoot = "artifacts/render-tests",
@@ -13,6 +17,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
+$buildCommon = Join-Path $PSScriptRoot "windows-build-common.ps1"
+. $buildCommon
 
 function Invoke-Checked {
     param(
@@ -26,29 +32,20 @@ function Invoke-Checked {
     }
 }
 
-function Find-MSBuild {
-    $vswhere = Join-Path $repositoryRoot "3rdparty\vswhere\vswhere.exe"
-    $candidate = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" |
-        Select-Object -First 1
-    if (-not $candidate) { throw "Visual Studio 2022 Build Tools with C++ support is required." }
-    return $candidate
-}
-
+$outputReadLock = $null
+$runtimeLock = $null
 Push-Location $repositoryRoot
 try {
     if (-not $NoBuild) {
-        if (-not (Test-Path -LiteralPath "Crowny-RenderTests\Crowny-RenderTests.vcxproj")) {
-            Invoke-Checked -FilePath (Join-Path $PSScriptRoot "genprojects.bat") -ArgumentList @()
-        }
-        $msbuild = Find-MSBuild
-        Invoke-Checked -FilePath $msbuild -ArgumentList @(
-            "Crowny-RenderTests\Crowny-RenderTests.vcxproj", "/nologo", "/v:minimal", "/m:1", "/nodeReuse:false",
-            "/p:BuildInParallel=false", "/p:MultiProcessorCompilation=false", "/p:UseMultiToolTask=false",
-            "/p:Configuration=$Configuration Win64", "/p:Platform=x64"
-        )
+        & (Join-Path $PSScriptRoot "build-windows.ps1") -Target RenderTests -Configuration $Configuration -Sanitizer $Sanitizer -Jobs $Jobs
     }
 
-    $executable = Join-Path $repositoryRoot "bin\$Configuration-windows-x86_64\Crowny-RenderTests\Crowny-RenderTests.exe"
+    $workspaceConfiguration = Get-CrownyWorkspaceConfiguration -Configuration $Configuration -Sanitizer $Sanitizer
+    $outputReadLock = Enter-CrownyOutputReadLock -RepositoryRoot $repositoryRoot -Configuration $workspaceConfiguration -Wait
+    $runtimeLock = Enter-CrownyExclusiveLock -RepositoryRoot $repositoryRoot -Name "render-test-runtime" -Wait
+
+    $outputConfiguration = if ($Sanitizer -eq "Address") { "$Configuration-address" } else { $Configuration }
+    $executable = Join-Path $repositoryRoot "bin\$outputConfiguration-windows-x86_64\Crowny-RenderTests\Crowny-RenderTests.exe"
     if (-not (Test-Path -LiteralPath $executable)) { throw "Render test executable was not found: $executable" }
 
     $selectedBackends = switch ($Backend) {
@@ -85,5 +82,7 @@ try {
     }
 }
 finally {
+    Exit-CrownyExclusiveLock -Lock $runtimeLock
+    Exit-CrownyOutputLock -Lock $outputReadLock
     Pop-Location
 }
