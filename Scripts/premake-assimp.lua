@@ -12,6 +12,11 @@ project "assimp"
         "ASSIMP_BUILD_NO_OWN_ZLIB",
 
         "_CRT_SECURE_NO_WARNINGS",
+        -- Crowny also links a newer RapidJSON release. Keep Assimp's bundled
+        -- templates in a distinct namespace so COMDAT folding cannot mix the
+        -- two incompatible class layouts in the final executable.
+        "RAPIDJSON_NAMESPACE=AssimpRapidJson",
+        "rapidjson=AssimpRapidJson",
         "RAPIDJSON_NOMEMBERITERATORCLASS",
         "RAPIDJSON_HAS_STDSTRING",
 
