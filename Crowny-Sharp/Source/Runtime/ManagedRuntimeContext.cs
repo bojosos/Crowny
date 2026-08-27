@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Crowny
 {
-    internal static class ManagedRuntimeContext
+    internal static unsafe class ManagedRuntimeContext
     {
         [ThreadStatic]
         private static float callbackDeltaTime;
@@ -16,6 +16,9 @@ namespace Crowny
         private static Action<UUID> destroyEntity;
         private static Func<ManagedBindingId, UUID, byte[], byte[]> hostBindingHandler;
         private static Func<UUID, Type, Component> scriptResolver;
+#if !CROWNY_MONO
+        private static ManagedNativeHostApi nativeHostApi;
+#endif
 
         internal static float DeltaTime => callbackDeltaTime;
 
@@ -51,6 +54,13 @@ namespace Crowny
         {
             hostBindingHandler = handler;
         }
+
+#if !CROWNY_MONO
+        internal static void SetNativeHostApi(ManagedNativeHostApi api)
+        {
+            nativeHostApi = api;
+        }
+#endif
 
         internal static void SetScriptResolver(Func<UUID, Type, Component> resolver)
         {
@@ -248,12 +258,25 @@ namespace Crowny
 
         internal static Matrix4 GetMatrix4(ManagedBindingId binding, UUID entity)
         {
-            byte[] value = Invoke(binding, entity, Array.Empty<byte>());
-            RequireLength(value, 64);
-            return new Matrix4(new Vector4(ReadSingle(value, 0), ReadSingle(value, 4), ReadSingle(value, 8), ReadSingle(value, 12)),
-                               new Vector4(ReadSingle(value, 16), ReadSingle(value, 20), ReadSingle(value, 24), ReadSingle(value, 28)),
-                               new Vector4(ReadSingle(value, 32), ReadSingle(value, 36), ReadSingle(value, 40), ReadSingle(value, 44)),
-                               new Vector4(ReadSingle(value, 48), ReadSingle(value, 52), ReadSingle(value, 56), ReadSingle(value, 60)));
+            return DecodeMatrix(Invoke(binding, entity, Array.Empty<byte>()));
+        }
+
+        internal static float GetBindingFloat(ManagedBindingId binding, Matrix4 matrix)
+        {
+            byte[] value = Invoke(binding, UUID.Empty, Encode(matrix));
+            RequireLength(value, sizeof(float));
+            return ReadSingle(value, 0);
+        }
+
+        internal static Matrix4 GetBindingMatrix4(ManagedBindingId binding, Matrix4 matrix)
+        {
+            return DecodeMatrix(Invoke(binding, UUID.Empty, Encode(matrix)));
+        }
+
+        internal static Matrix4 GetBindingMatrix4(ManagedBindingId binding, Vector3 from, Vector3 to, Vector3 up)
+        {
+            return DecodeMatrix(Invoke(binding, UUID.Empty,
+                                       Encode(from.x, from.y, from.z, to.x, to.y, to.z, up.x, up.y, up.z)));
         }
 
         internal static bool GetInputBoolean(ManagedBindingId binding, uint code) =>
@@ -303,6 +326,14 @@ namespace Crowny
             return result;
         }
 
+        private static byte[] Encode(Matrix4 value)
+        {
+            byte[] result = new byte[16 * sizeof(float)];
+            for (int index = 0; index < 16; ++index)
+                Buffer.BlockCopy(BitConverter.GetBytes(value[index]), 0, result, index * sizeof(float), sizeof(float));
+            return result;
+        }
+
         private static byte[] Encode(Vector2 value, int mode)
         {
             byte[] result = new byte[2 * sizeof(float) + sizeof(int)];
@@ -342,6 +373,15 @@ namespace Crowny
         private static UUID DecodeUuid(byte[] value)
         {
             return new UUID(ReadBigEndian(value, 0), ReadBigEndian(value, 4), ReadBigEndian(value, 8), ReadBigEndian(value, 12));
+        }
+
+        private static Matrix4 DecodeMatrix(byte[] value)
+        {
+            RequireLength(value, 16 * sizeof(float));
+            return new Matrix4(new Vector4(ReadSingle(value, 0), ReadSingle(value, 4), ReadSingle(value, 8), ReadSingle(value, 12)),
+                               new Vector4(ReadSingle(value, 16), ReadSingle(value, 20), ReadSingle(value, 24), ReadSingle(value, 28)),
+                               new Vector4(ReadSingle(value, 32), ReadSingle(value, 36), ReadSingle(value, 40), ReadSingle(value, 44)),
+                               new Vector4(ReadSingle(value, 48), ReadSingle(value, 52), ReadSingle(value, 56), ReadSingle(value, 60)));
         }
 
         private static uint ReadBigEndian(byte[] value, int offset)

@@ -16,6 +16,7 @@
 #include <limits>
 
 #include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -1447,6 +1448,27 @@ namespace Crowny
                         else
                             source.SetTime(value);
                         return CW_MANAGED_STATUS_OK;
+                    }
+                    case CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT:
+                    case CW_MANAGED_BINDING_MATH_MATRIX_INVERSE:
+                    case CW_MANAGED_BINDING_MATH_MATRIX_AFFINE_INVERSE: {
+                        glm::mat4 matrix(1.0f);
+                        if (!ReadBindingFloats(input, glm::value_ptr(matrix), 16))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        if (binding == CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT)
+                            return WriteBindingResult(output, glm::determinant(matrix));
+                        const glm::mat4 result = binding == CW_MANAGED_BINDING_MATH_MATRIX_INVERSE ? glm::inverse(matrix)
+                                                                                                   : glm::affineInverse(matrix);
+                        return WriteBindingResult(output, glm::value_ptr(result), sizeof(result));
+                    }
+                    case CW_MANAGED_BINDING_MATH_LOOK_AT: {
+                        float value[9]{};
+                        if (!ReadBindingFloats(input, value, 9))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        const glm::mat4 result = glm::lookAt(glm::vec3(value[0], value[1], value[2]),
+                                                             glm::vec3(value[3], value[4], value[5]),
+                                                             glm::vec3(value[6], value[7], value[8]));
+                        return WriteBindingResult(output, glm::value_ptr(result), sizeof(result));
                     }
                     default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                     }

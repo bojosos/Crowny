@@ -16,6 +16,7 @@ NATIVE_ABI_OUTPUT = ROOT / "Crowny" / "Source" / "Crowny" / "Scripting" / "Manag
 AOT_OUTPUT = ROOT / "Crowny-Managed" / "Crowny.ManagedHost" / "Generated" / "ManagedAotRoots.g.cs"
 TRIM_OUTPUT = ROOT / "Crowny-Managed" / "Crowny.ManagedHost" / "Generated" / "ILLink.Descriptors.xml"
 BINDINGS_OUTPUT = ROOT / "Crowny-Sharp" / "Source" / "Runtime" / "Generated" / "ManagedBindingIds.g.cs"
+TYPED_HOST_OUTPUT = ROOT / "Crowny-Sharp" / "Source" / "Runtime" / "Generated" / "ManagedHostApi.g.cs"
 
 
 def enum_members(values: dict[str, int]) -> str:
@@ -30,6 +31,117 @@ def native_name(value: str) -> str:
 
 def native_enum_members(values: dict[str, int], prefix: str) -> str:
     return "\n".join(f"    {prefix}{native_name(name)} = {value}," for name, value in values.items())
+
+
+def typed_native_name(value: str) -> str:
+    value = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", value)
+    value = re.sub(r"([a-z])([A-Z])", r"\1_\2", value)
+    return value.lower()
+
+
+NATIVE_TYPES = {
+    "bool": "uint8_t",
+    "f32": "float",
+    "i32": "int32_t",
+    "u32": "uint32_t",
+    "uuid": "cw_managed_uuid",
+    "string": "cw_managed_string_view",
+    "vec2": "cw_managed_vec2",
+    "vec3": "cw_managed_vec3",
+    "quat": "cw_managed_quat",
+    "mat4": "cw_managed_mat4",
+}
+
+HOST_CS_TYPES = {
+    "bool": "byte",
+    "f32": "float",
+    "i32": "int",
+    "u32": "uint",
+    "uuid": "NativeUuid",
+    "string": "NativeStringView",
+    "vec2": "NativeVec2",
+    "vec3": "NativeVec3",
+    "quat": "NativeQuaternion",
+    "mat4": "NativeMatrix4",
+}
+
+SHARP_CS_TYPES = {
+    "bool": "byte",
+    "f32": "float",
+    "i32": "int",
+    "u32": "uint",
+    "uuid": "ManagedNativeUuid",
+    "string": "ManagedNativeStringView",
+    "vec2": "ManagedNativeVec2",
+    "vec3": "ManagedNativeVec3",
+    "quat": "ManagedNativeQuaternion",
+    "mat4": "ManagedNativeMatrix4",
+}
+
+POINTER_INPUT_TYPES = {"vec2", "vec3", "quat", "mat4"}
+
+
+def native_host_function_typedefs(functions: dict) -> str:
+    lines: list[str] = []
+    for name, function in functions.items():
+        arguments = ["void* context"]
+        for parameter in function.get("parameters", []):
+            native_type = NATIVE_TYPES[parameter["type"]]
+            if parameter["type"] in POINTER_INPUT_TYPES:
+                arguments.append(f"const {native_type}* {parameter['name']}")
+            else:
+                arguments.append(f"{native_type} {parameter['name']}")
+        if result := function.get("result"):
+            arguments.append(f"{NATIVE_TYPES[result]}* result")
+        lines.append(
+            f"typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_{typed_native_name(name)}_fn)({', '.join(arguments)});"
+        )
+    return "\n".join(lines)
+
+
+def native_host_function_fields(functions: dict) -> str:
+    return "\n".join(
+        f"    cw_managed_{typed_native_name(name)}_fn {typed_native_name(name)};" for name in functions
+    )
+
+
+def native_host_function_list(functions: dict) -> str:
+    entries = list(functions)
+    lines = []
+    for index, name in enumerate(entries):
+        suffix = " \\" if index + 1 != len(entries) else ""
+        lines.append(f"    X({name}, {typed_native_name(name)}){suffix}")
+    return "\n".join(lines)
+
+
+def cs_function_pointer(function: dict, type_map: dict[str, str], status_type: str) -> str:
+    arguments = ["void*"]
+    for parameter in function.get("parameters", []):
+        parameter_type = type_map[parameter["type"]]
+        arguments.append(f"{parameter_type}*" if parameter["type"] in POINTER_INPUT_TYPES else parameter_type)
+    if result := function.get("result"):
+        arguments.append(f"{type_map[result]}*")
+    arguments.append(status_type)
+    return f"delegate* unmanaged[Cdecl]<{', '.join(arguments)}>"
+
+
+def host_cs_function_fields(functions: dict) -> str:
+    return "\n".join(
+        f"        public {cs_function_pointer(function, HOST_CS_TYPES, 'NativeStatus')} {name};"
+        for name, function in functions.items()
+    )
+
+
+def host_cs_function_validation(functions: dict) -> str:
+    conditions = " &&\n                   ".join(f"{name} != null" for name in functions)
+    return f"        public readonly bool HasCompleteBindings() =>\n            {conditions};"
+
+
+def sharp_cs_function_fields(functions: dict) -> str:
+    return "\n".join(
+        f"        internal {cs_function_pointer(function, SHARP_CS_TYPES, 'int')} {name};"
+        for name, function in functions.items()
+    )
 
 
 def generate_native_abi(manifest: dict) -> str:
@@ -91,6 +203,32 @@ typedef struct cw_managed_uuid
     uint8_t bytes[16];
 }} cw_managed_uuid;
 
+typedef struct cw_managed_vec2
+{{
+    float x;
+    float y;
+}} cw_managed_vec2;
+
+typedef struct cw_managed_vec3
+{{
+    float x;
+    float y;
+    float z;
+}} cw_managed_vec3;
+
+typedef struct cw_managed_quat
+{{
+    float x;
+    float y;
+    float z;
+    float w;
+}} cw_managed_quat;
+
+typedef struct cw_managed_mat4
+{{
+    float values[16];
+}} cw_managed_mat4;
+
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_write_blob_fn)(void* context, const uint8_t* data, uint64_t length);
 
 typedef struct cw_managed_blob_writer
@@ -134,6 +272,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_entity_fn)(void* c
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_invoke_host_binding_fn)(void* context, uint32_t binding,
                                                                              cw_managed_uuid entity, cw_managed_blob input,
                                                                              cw_managed_blob* output);
+{native_host_function_typedefs(manifest['hostFunctions'])}
 
 typedef struct cw_managed_host_api
 {{
@@ -148,7 +287,11 @@ typedef struct cw_managed_host_api
     cw_managed_set_entity_parent_fn set_entity_parent;
     cw_managed_destroy_entity_fn destroy_entity;
     cw_managed_invoke_host_binding_fn invoke_host_binding;
+{native_host_function_fields(manifest['hostFunctions'])}
 }} cw_managed_host_api;
+
+#define CW_MANAGED_HOST_FUNCTION_LIST(X) \
+{native_host_function_list(manifest['hostFunctions'])}
 
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_initialize_fn)(const cw_managed_host_api* host);
 typedef void(CW_MANAGED_CALL* cw_managed_shutdown_fn)(void);
@@ -191,6 +334,10 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_api_fn)(cw_managed_pro
 }}
 
 static_assert(sizeof(cw_managed_uuid) == 16, "Managed UUID ABI layout changed.");
+static_assert(sizeof(cw_managed_vec2) == 8, "Managed Vector2 ABI layout changed.");
+static_assert(sizeof(cw_managed_vec3) == 12, "Managed Vector3 ABI layout changed.");
+static_assert(sizeof(cw_managed_quat) == 16, "Managed quaternion ABI layout changed.");
+static_assert(sizeof(cw_managed_mat4) == 64, "Managed Matrix4 ABI layout changed.");
 static_assert(sizeof(cw_managed_contact_point) == 32, "Managed contact ABI layout changed.");
 #endif
 """
@@ -244,6 +391,36 @@ namespace Crowny.ManagedHost.Interop
     }}
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct NativeVec2
+    {{
+        public float X;
+        public float Y;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeVec3
+    {{
+        public float X;
+        public float Y;
+        public float Z;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeQuaternion
+    {{
+        public float X;
+        public float Y;
+        public float Z;
+        public float W;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct NativeMatrix4
+    {{
+        public fixed float Values[16];
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct NativeBlobWriter
     {{
         public uint Size;
@@ -289,6 +466,9 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SetEntityParent;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> DestroyEntity;
         public delegate* unmanaged[Cdecl]<void*, NativeHostBinding, NativeUuid, NativeBlob, NativeBlob*, NativeStatus> InvokeHostBinding;
+{host_cs_function_fields(manifest['hostFunctions'])}
+
+{host_cs_function_validation(manifest['hostFunctions'])}
     }}
 
     [StructLayout(LayoutKind.Sequential)]
@@ -348,6 +528,80 @@ namespace Crowny
 """
 
 
+def generate_typed_host_api(manifest: dict) -> str:
+    return f"""// <auto-generated />
+#if !CROWNY_MONO
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+namespace Crowny
+{{
+    [StructLayout(LayoutKind.Sequential)]
+    internal readonly unsafe struct ManagedNativeStringView
+    {{
+        internal readonly byte* Data;
+        internal readonly uint Length;
+
+        internal ManagedNativeStringView(byte* data, uint length) {{ Data = data; Length = length; }}
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal unsafe struct ManagedNativeUuid
+    {{
+        internal fixed byte Bytes[16];
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativeVec2
+    {{
+        internal float X;
+        internal float Y;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativeVec3
+    {{
+        internal float X;
+        internal float Y;
+        internal float Z;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativeQuaternion
+    {{
+        internal float X;
+        internal float Y;
+        internal float Z;
+        internal float W;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal unsafe struct ManagedNativeMatrix4
+    {{
+        internal fixed float Values[16];
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal unsafe struct ManagedNativeHostApi
+    {{
+        internal uint Size;
+        internal uint AbiVersion;
+        internal void* Context;
+        internal void* Log;
+        internal void* GetEntityName;
+        internal void* SetEntityName;
+        internal void* FindEntityByName;
+        internal void* GetEntityParent;
+        internal void* SetEntityParent;
+        internal void* DestroyEntity;
+        internal void* InvokeHostBinding;
+{sharp_cs_function_fields(manifest['hostFunctions'])}
+    }}
+}}
+#endif
+"""
+
+
 def generate_trim_roots(manifest: dict) -> str:
     types = "\n".join(f'    <type fullname="{name}" preserve="all" />' for name in manifest["aotRoots"])
     return f"""<?xml version="1.0" encoding="utf-8"?>
@@ -383,6 +637,7 @@ def main() -> int:
         update(AOT_OUTPUT, generate_aot_roots(manifest), arguments.check),
         update(TRIM_OUTPUT, generate_trim_roots(manifest), arguments.check),
         update(BINDINGS_OUTPUT, generate_binding_ids(manifest), arguments.check),
+        update(TYPED_HOST_OUTPUT, generate_typed_host_api(manifest), arguments.check),
     )
     return 0 if all(outputs) else 1
 

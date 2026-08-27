@@ -134,6 +134,10 @@ namespace Crowny.ManagedHost.Interop
         AudioSourcePlay = 119,
         AudioSourcePause = 120,
         AudioSourceStop = 121,
+        MathMatrixDeterminant = 130,
+        MathMatrixInverse = 131,
+        MathMatrixAffineInverse = 132,
+        MathLookAt = 133,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -158,6 +162,36 @@ namespace Crowny.ManagedHost.Interop
     public unsafe struct NativeUuid
     {
         public fixed byte Bytes[16];
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeVec2
+    {
+        public float X;
+        public float Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeVec3
+    {
+        public float X;
+        public float Y;
+        public float Z;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeQuaternion
+    {
+        public float X;
+        public float Y;
+        public float Z;
+        public float W;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct NativeMatrix4
+    {
+        public fixed float Values[16];
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -206,6 +240,204 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SetEntityParent;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> DestroyEntity;
         public delegate* unmanaged[Cdecl]<void*, NativeHostBinding, NativeUuid, NativeBlob, NativeBlob*, NativeStatus> InvokeHostBinding;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, byte*, NativeStatus> EntityHasComponent;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStatus> EntityAddComponent;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStatus> EntityRemoveComponent;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetPosition;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetPosition;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetLocalPosition;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetLocalPosition;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetScale;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetScale;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetLocalScale;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetLocalScale;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeQuaternion*, NativeStatus> TransformGetRotation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeQuaternion*, NativeStatus> TransformSetRotation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeQuaternion*, NativeStatus> TransformGetLocalRotation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeQuaternion*, NativeStatus> TransformSetLocalRotation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeMatrix4*, NativeStatus> TransformGetLocalToWorldMatrix;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeMatrix4*, NativeStatus> TransformGetWorldToLocalMatrix;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetEulerAngles;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetEulerAngles;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetLocalEulerAngles;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetLocalEulerAngles;
+        public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetKey;
+        public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetKeyDown;
+        public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetKeyUp;
+        public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetMouseButton;
+        public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetMouseButtonDown;
+        public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetMouseButtonUp;
+        public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> InputGetMouseScrollX;
+        public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> InputGetMouseScrollY;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> InputGetMousePosition;
+        public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetTime;
+        public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetFixedDeltaTime;
+        public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetSmoothDeltaTime;
+        public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetRealtimeSinceStartup;
+        public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> TimeGetFrameCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody2DSetMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody2DGetBodyType;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> Rigidbody2DSetBodyType;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody2DGetSleepMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> Rigidbody2DSetSleepMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody2DGetCollisionDetectionMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> Rigidbody2DSetCollisionDetectionMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody2DGetInterpolation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> Rigidbody2DSetInterpolation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Rigidbody2DGetAutoMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Rigidbody2DSetAutoMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody2DGetLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> Rigidbody2DSetLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetLinearDrag;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody2DSetLinearDrag;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetAngularDrag;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody2DSetAngularDrag;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetGravityScale;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody2DSetGravityScale;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> Rigidbody2DGetCenterOfMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> Rigidbody2DSetCenterOfMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetInertia;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody2DSetInertia;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> Rigidbody2DGetConstraints;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> Rigidbody2DSetConstraints;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetRotation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> Rigidbody2DGetPosition;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> Rigidbody2DGetLinearVelocity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> Rigidbody2DSetLinearVelocity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetAngularVelocity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody2DSetAngularVelocity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Rigidbody2DGetAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Rigidbody2DSetAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, int, NativeStatus> Rigidbody2DAddForce;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeVec2*, int, NativeStatus> Rigidbody2DAddForceAtPosition;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, int, NativeStatus> Rigidbody2DAddTorque;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AudioSourceGetVolume;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> AudioSourceSetVolume;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AudioSourceGetPitch;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> AudioSourceSetPitch;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AudioSourceGetMinDistance;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> AudioSourceSetMinDistance;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AudioSourceGetMaxDistance;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> AudioSourceSetMaxDistance;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AudioSourceGetLoop;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> AudioSourceSetLoop;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AudioSourceGetMuted;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> AudioSourceSetMuted;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AudioSourceGetPlayOnAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> AudioSourceSetPlayOnAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AudioSourceGetTime;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> AudioSourceSetTime;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> AudioSourceGetClip;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> AudioSourceSetClip;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AudioSourceGetState;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourcePlay;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourcePause;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourceStop;
+        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, float*, NativeStatus> MathMatrixDeterminant;
+        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixInverse;
+        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixAffineInverse;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec3*, NativeVec3*, NativeVec3*, NativeMatrix4*, NativeStatus> MathLookAt;
+
+        public readonly bool HasCompleteBindings() =>
+            EntityHasComponent != null &&
+                   EntityAddComponent != null &&
+                   EntityRemoveComponent != null &&
+                   TransformGetPosition != null &&
+                   TransformSetPosition != null &&
+                   TransformGetLocalPosition != null &&
+                   TransformSetLocalPosition != null &&
+                   TransformGetScale != null &&
+                   TransformSetScale != null &&
+                   TransformGetLocalScale != null &&
+                   TransformSetLocalScale != null &&
+                   TransformGetRotation != null &&
+                   TransformSetRotation != null &&
+                   TransformGetLocalRotation != null &&
+                   TransformSetLocalRotation != null &&
+                   TransformGetLocalToWorldMatrix != null &&
+                   TransformGetWorldToLocalMatrix != null &&
+                   TransformGetEulerAngles != null &&
+                   TransformSetEulerAngles != null &&
+                   TransformGetLocalEulerAngles != null &&
+                   TransformSetLocalEulerAngles != null &&
+                   InputGetKey != null &&
+                   InputGetKeyDown != null &&
+                   InputGetKeyUp != null &&
+                   InputGetMouseButton != null &&
+                   InputGetMouseButtonDown != null &&
+                   InputGetMouseButtonUp != null &&
+                   InputGetMouseScrollX != null &&
+                   InputGetMouseScrollY != null &&
+                   InputGetMousePosition != null &&
+                   TimeGetTime != null &&
+                   TimeGetFixedDeltaTime != null &&
+                   TimeGetSmoothDeltaTime != null &&
+                   TimeGetRealtimeSinceStartup != null &&
+                   TimeGetFrameCount != null &&
+                   Rigidbody2DGetMass != null &&
+                   Rigidbody2DSetMass != null &&
+                   Rigidbody2DGetBodyType != null &&
+                   Rigidbody2DSetBodyType != null &&
+                   Rigidbody2DGetSleepMode != null &&
+                   Rigidbody2DSetSleepMode != null &&
+                   Rigidbody2DGetCollisionDetectionMode != null &&
+                   Rigidbody2DSetCollisionDetectionMode != null &&
+                   Rigidbody2DGetInterpolation != null &&
+                   Rigidbody2DSetInterpolation != null &&
+                   Rigidbody2DGetAutoMass != null &&
+                   Rigidbody2DSetAutoMass != null &&
+                   Rigidbody2DGetLayer != null &&
+                   Rigidbody2DSetLayer != null &&
+                   Rigidbody2DGetLinearDrag != null &&
+                   Rigidbody2DSetLinearDrag != null &&
+                   Rigidbody2DGetAngularDrag != null &&
+                   Rigidbody2DSetAngularDrag != null &&
+                   Rigidbody2DGetGravityScale != null &&
+                   Rigidbody2DSetGravityScale != null &&
+                   Rigidbody2DGetCenterOfMass != null &&
+                   Rigidbody2DSetCenterOfMass != null &&
+                   Rigidbody2DGetInertia != null &&
+                   Rigidbody2DSetInertia != null &&
+                   Rigidbody2DGetConstraints != null &&
+                   Rigidbody2DSetConstraints != null &&
+                   Rigidbody2DGetRotation != null &&
+                   Rigidbody2DGetPosition != null &&
+                   Rigidbody2DGetLinearVelocity != null &&
+                   Rigidbody2DSetLinearVelocity != null &&
+                   Rigidbody2DGetAngularVelocity != null &&
+                   Rigidbody2DSetAngularVelocity != null &&
+                   Rigidbody2DGetAwake != null &&
+                   Rigidbody2DSetAwake != null &&
+                   Rigidbody2DAddForce != null &&
+                   Rigidbody2DAddForceAtPosition != null &&
+                   Rigidbody2DAddTorque != null &&
+                   AudioSourceGetVolume != null &&
+                   AudioSourceSetVolume != null &&
+                   AudioSourceGetPitch != null &&
+                   AudioSourceSetPitch != null &&
+                   AudioSourceGetMinDistance != null &&
+                   AudioSourceSetMinDistance != null &&
+                   AudioSourceGetMaxDistance != null &&
+                   AudioSourceSetMaxDistance != null &&
+                   AudioSourceGetLoop != null &&
+                   AudioSourceSetLoop != null &&
+                   AudioSourceGetMuted != null &&
+                   AudioSourceSetMuted != null &&
+                   AudioSourceGetPlayOnAwake != null &&
+                   AudioSourceSetPlayOnAwake != null &&
+                   AudioSourceGetTime != null &&
+                   AudioSourceSetTime != null &&
+                   AudioSourceGetClip != null &&
+                   AudioSourceSetClip != null &&
+                   AudioSourceGetState != null &&
+                   AudioSourcePlay != null &&
+                   AudioSourcePause != null &&
+                   AudioSourceStop != null &&
+                   MathMatrixDeterminant != null &&
+                   MathMatrixInverse != null &&
+                   MathMatrixAffineInverse != null &&
+                   MathLookAt != null;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -228,7 +460,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 3;
+        public const uint Version = 5;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

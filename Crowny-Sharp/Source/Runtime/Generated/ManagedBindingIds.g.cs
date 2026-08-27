@@ -97,5 +97,9 @@ namespace Crowny
         AudioSourcePlay = 119,
         AudioSourcePause = 120,
         AudioSourceStop = 121,
+        MathMatrixDeterminant = 130,
+        MathMatrixInverse = 131,
+        MathMatrixAffineInverse = 132,
+        MathLookAt = 133,
     }
 }

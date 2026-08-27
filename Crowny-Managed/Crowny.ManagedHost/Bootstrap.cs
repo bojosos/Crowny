@@ -47,7 +47,7 @@ public static unsafe class Bootstrap
             return NativeStatus.AbiMismatch;
         if (host->Log == null || host->GetEntityName == null || host->SetEntityName == null || host->FindEntityByName == null ||
             host->GetEntityParent == null || host->SetEntityParent == null || host->DestroyEntity == null ||
-            host->InvokeHostBinding == null)
+            host->InvokeHostBinding == null || !host->HasCompleteBindings())
             return NativeStatus.AbiMismatch;
         if (_initialized)
             return NativeStatus.InvalidArgument;
@@ -57,6 +57,7 @@ public static unsafe class Bootstrap
         ManagedRuntimeContext.SetEntityHandlers(GetEntityName, SetEntityName, FindEntityByName, GetEntityParent, SetEntityParent,
                                                 DestroyEntity);
         ManagedRuntimeContext.SetHostBindingHandler(InvokeHostBinding);
+        ManagedRuntimeContext.SetNativeHostApi(*(ManagedNativeHostApi*)host);
         ManagedRuntimeContext.SetScriptResolver(Program.ResolveScriptComponent);
         ManagedAotRoots.Preserve();
         return NativeStatus.Ok;
@@ -78,6 +79,7 @@ public static unsafe class Bootstrap
         ManagedRuntimeContext.SetLogHandler(null);
         ManagedRuntimeContext.SetEntityHandlers(null, null, null, null, null, null);
         ManagedRuntimeContext.SetHostBindingHandler(null);
+        ManagedRuntimeContext.SetNativeHostApi(default);
         ManagedRuntimeContext.SetScriptResolver(null);
         _host = default;
         lock (DiagnosticLock)
