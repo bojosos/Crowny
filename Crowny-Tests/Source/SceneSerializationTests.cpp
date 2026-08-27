@@ -16,7 +16,7 @@
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
-#include "Crowny/Scripting/ScriptBindings.h"
+#include "Crowny/Scripting/Bindings/ScriptBindings.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
