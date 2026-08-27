@@ -17,8 +17,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Check runtime asset API boundaries
-        run: python Scripts/check_asset_api.py --self-test
+      - name: Check generated interop and runtime asset API boundaries
+        run: |
+          python Scripts/managed/generate_managed_interop.py --check
+          python Scripts/check_asset_api.py --self-test
 
       - name: Install dependencies
         run: |
@@ -85,8 +87,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Check runtime asset API boundaries
-        run: python Scripts/check_asset_api.py --self-test
+      - name: Check generated interop and runtime asset API boundaries
+        run: |
+          python Scripts/managed/generate_managed_interop.py --check
+          python Scripts/check_asset_api.py --self-test
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2

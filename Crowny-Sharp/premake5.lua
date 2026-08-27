@@ -6,7 +6,7 @@ project "Crowny-Sharp"
 	clr "Unsafe"
 	defines "CROWNY_MONO"
 
-	targetdir ("%{wks.location}/Crowny-Sharp")
+	targetdir ("%{wks.location}/.deps/generated/managed/%{cfg.buildcfg}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
 	files

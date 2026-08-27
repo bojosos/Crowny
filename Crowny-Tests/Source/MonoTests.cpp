@@ -1,10 +1,11 @@
-#include <catch2/catch_test_macros.hpp>
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Log.h"
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
+#include "ManagedTestPaths.h"
+#include <catch2/catch_test_macros.hpp>
 #include <cstdio>
 #include <filesystem>
 #include <stdexcept>
@@ -34,11 +35,10 @@ namespace
         PrintMonoStartupPhase("resolving runtime paths");
         const MonoRuntimePaths monoPaths = ResolveMonoRuntimePaths(fs::current_path());
         if (!monoPaths.HasRuntime())
-            throw std::runtime_error(
-              "Unable to resolve a Mono runtime for Crowny tests. Set CROWNY_MONO_ROOT to a valid Mono installation.");
+            throw std::runtime_error("Unable to resolve a Mono runtime for Crowny tests. Set CROWNY_MONO_ROOT to a valid Mono installation.");
 
-        std::fprintf(stderr, "[Crowny-Tests][Mono] starting runtime (lib=%s, etc=%s)\n",
-                     monoPaths.LibraryDirectory.string().c_str(), monoPaths.EtcDirectory.string().c_str());
+        std::fprintf(stderr, "[Crowny-Tests][Mono] starting runtime (lib=%s, etc=%s)\n", monoPaths.LibraryDirectory.string().c_str(),
+                     monoPaths.EtcDirectory.string().c_str());
         std::fflush(stderr);
         MonoManager::StartUp(monoPaths.LibraryDirectory, monoPaths.EtcDirectory, 0);
 
@@ -155,7 +155,7 @@ TEST_CASE("Managed animation API exposes clip identity and playback controls", "
     Crowny::MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
     if (assembly == nullptr)
     {
-        const Path assemblyPath = fs::absolute("Crowny-Sharp/CrownySharp.dll");
+        const Path assemblyPath = Crowny::Test::ResolveManagedAssembly("CrownySharp.dll", "Crowny-Sharp/CrownySharp.dll");
         REQUIRE(fs::is_regular_file(assemblyPath));
         assembly = &MonoManager::Get().LoadAssembly(assemblyPath, CROWNY_ASSEMBLY);
     }

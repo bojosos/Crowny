@@ -554,14 +554,32 @@ function Build-CrownyManagedAssemblies {
         $gameSources = @(Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot "Crowny-Sandbox\Source") -Filter "*.cs" -File -Recurse |
             ForEach-Object { $_.FullName })
 
-        $engineAssembly = Join-Path $RepositoryRoot "Crowny-Sharp\CrownySharp.dll"
-        $gameAssembly = Join-Path $RepositoryRoot "Crowny-Sandbox\GameAssembly.dll"
-        $assemblyRoot = Join-Path $RepositoryRoot "Crowny-Editor\Resources\Assemblies"
-        $outputs = @($engineAssembly, "$engineAssembly.mdb", $gameAssembly, "$gameAssembly.mdb",
-            (Join-Path $assemblyRoot "CrownySharp.dll"), (Join-Path $assemblyRoot "CrownySharp.dll.mdb"),
-            (Join-Path $assemblyRoot "GameAssembly.dll"), (Join-Path $assemblyRoot "GameAssembly.dll.mdb"))
+        # Managed assemblies are build products. Keep them under the ignored dependency cache so
+        # compiling the editor or process-isolated tests never rewrites committed fallback binaries.
+        $managedOutputRoot = Join-Path $RepositoryRoot ".deps\generated\managed\$Configuration"
+        $engineAssembly = Join-Path $managedOutputRoot "CrownySharp.dll"
+        $gameAssembly = Join-Path $managedOutputRoot "GameAssembly.dll"
+        $managedDefine = switch ($Configuration) {
+            "Debug" { "CW_DEBUG" }
+            "Release" { "CW_RELEASE" }
+            "Dist" { "CW_DIST" }
+            default { throw "Unsupported managed configuration: $Configuration" }
+        }
+        $emitDebugSymbols = $Configuration -eq "Debug"
+        $debugArgument = if ($emitDebugSymbols) { "-debug+" } else { "-debug-" }
+        $optimizeArgument = if ($emitDebugSymbols) { "-optimize-" } else { "-optimize+" }
+        $outputs = @($engineAssembly, $gameAssembly)
+        if ($emitDebugSymbols) { $outputs += @("$engineAssembly.mdb", "$gameAssembly.mdb") }
+        $releaseStaleSymbols = @("$engineAssembly.mdb", "$gameAssembly.mdb", "$engineAssembly.pdb", "$gameAssembly.pdb")
+        if (-not $emitDebugSymbols) {
+            foreach ($staleSymbols in $releaseStaleSymbols) {
+                if (Test-Path -LiteralPath $staleSymbols) { Remove-Item -LiteralPath $staleSymbols -Force }
+            }
+        }
+        $env:CROWNY_MANAGED_ASSEMBLY_ROOT = $managedOutputRoot
         $fingerprint = Get-CrownyHash -Files (@($mcs, $monoExecutable, $mcsExecutable) + $engineSources + $gameSources) -Values @(
-            "configuration=$Configuration", "define=CROWNY_MONO", "unsafe=true", "debug=true"
+            "configuration=$Configuration", "defines=CROWNY_MONO,$managedDefine", "unsafe=true",
+            "debug=$emitDebugSymbols", "optimize=$(-not $emitDebugSymbols)"
         )
         $stampRoot = Join-Path $RepositoryRoot ".deps\stamps"
         $stampPath = Join-Path $stampRoot "managed-$($Configuration.ToLowerInvariant()).json"
@@ -576,20 +594,21 @@ function Build-CrownyManagedAssemblies {
             catch { }
         }
 
-        New-Item -ItemType Directory -Force -Path $assemblyRoot | Out-Null
+        New-Item -ItemType Directory -Force -Path $managedOutputRoot | Out-Null
         Write-Host "Building CrownySharp.dll..."
         Invoke-CrownyChecked -FilePath $mcs -ArgumentList (@(
-            "-debug+", "-o-", "-unsafe", "-define:CROWNY_MONO", "-target:library", "-out:$engineAssembly"
+            $debugArgument, $optimizeArgument, "-unsafe", "-define:CROWNY_MONO,$managedDefine", "-target:library", "-out:$engineAssembly"
         ) + $engineSources)
-        Copy-Item -LiteralPath $engineAssembly, "$engineAssembly.mdb" -Destination $assemblyRoot -Force
-
         Write-Host "Building GameAssembly.dll..."
         Invoke-CrownyChecked -FilePath $mcs -ArgumentList (@(
-            "-debug+", "-o-", "-target:library", "-lib:$(Split-Path -Parent $engineAssembly)",
+            $debugArgument, $optimizeArgument, "-define:$managedDefine", "-target:library", "-lib:$(Split-Path -Parent $engineAssembly)",
             "-reference:CrownySharp.dll", "-out:$gameAssembly"
         ) + $gameSources)
-        Copy-Item -LiteralPath $gameAssembly, "$gameAssembly.mdb" -Destination $assemblyRoot -Force
-
+        if (-not $emitDebugSymbols) {
+            foreach ($staleSymbols in $releaseStaleSymbols) {
+                if (Test-Path -LiteralPath $staleSymbols) { Remove-Item -LiteralPath $staleSymbols -Force }
+            }
+        }
         New-Item -ItemType Directory -Force -Path $stampRoot | Out-Null
         [ordered]@{ fingerprint = $fingerprint; builtUtc = [DateTime]::UtcNow.ToString("o") } |
             ConvertTo-Json | Set-Content -LiteralPath $stampPath -Encoding UTF8
