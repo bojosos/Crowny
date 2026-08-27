@@ -267,6 +267,7 @@ namespace Crowny
     {
         ScriptTypeIdentity Identity;
         UUID Entity;
+        uint64_t RuntimeInstanceId = 0;
         ScriptState InitialState;
     };
 

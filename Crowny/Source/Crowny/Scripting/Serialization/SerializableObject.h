@@ -26,6 +26,7 @@ namespace Crowny
         MonoObject* Deserialize();
         void Deserialize(MonoObject* instance, const Ref<SerializableObjectInfo>& objInfo);
         MonoObject* GetManagedInstance() const;
+        const Ref<SerializableObjectInfo>& GetObjectInfo() const { return m_ObjectInfo; }
 
         SerializableObject() = default;
         SerializableObject(const Ref<SerializableObjectInfo>& objInfo);

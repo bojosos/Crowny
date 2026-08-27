@@ -50,6 +50,7 @@ namespace Crowny
     };
 
     Scope<ManagedBackend> CreateManagedBackend(ManagedBackendId backend);
+    Scope<ManagedBackend> CreateMonoBackend();
     Scope<ManagedBackend> CreateCoreClrBackend();
     Scope<ManagedBackend> CreateGeneratedMetadataBackend();
 } // namespace Crowny

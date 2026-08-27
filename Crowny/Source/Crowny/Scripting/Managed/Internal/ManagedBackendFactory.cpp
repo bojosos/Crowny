@@ -8,9 +8,9 @@ namespace Crowny
     {
         switch (backend)
         {
+        case ManagedBackendId::Mono: return CreateMonoBackend();
         case ManagedBackendId::CoreCLR: return CreateCoreClrBackend();
         case ManagedBackendId::GeneratedMetadata: return CreateGeneratedMetadataBackend();
-        case ManagedBackendId::Mono:
         case ManagedBackendId::DotNetWasm:
         case ManagedBackendId::NativeAOT: return nullptr;
         }
