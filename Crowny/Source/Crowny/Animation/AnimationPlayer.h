@@ -11,6 +11,16 @@ namespace Crowny
         Paused
     };
 
+    /** Transient skeletal overlay evaluated after the player's base clip and cross-fade. */
+    struct SkeletalAnimationLayer
+    {
+        Ref<AnimationClip> Clip;
+        SkeletonMask Mask;
+        float Weight = 1.0f;
+        float Speed = 1.0f;
+        AnimationWrapMode WrapMode = AnimationWrapMode::Loop;
+    };
+
     /** Runtime clip playback, cross-fading, event dispatch, pose evaluation, and morph-weight evaluation. */
     class AnimationPlayer : public RefCounted
     {
@@ -23,6 +33,16 @@ namespace Crowny
         void Pause();
         void Resume();
         void Seek(float time);
+
+        /**
+         * Replaces the skeletal overlay stack and synchronizes each layer to the current base time. Layers are composed in
+         *
+         * array order. Additive clips apply deltas; other clips override through their mask. Layer events, morphs, and root
+         * motion are
+         * intentionally not evaluated by this skeletal-only stack.
+         */
+        void SetSkeletalLayers(Vector<SkeletalAnimationLayer> layers);
+        const Vector<SkeletalAnimationLayer>& GetSkeletalLayers() const { return m_SkeletalLayers; }
 
         void SetSpeed(float speed) { m_Speed = std::isfinite(speed) ? speed : 1.0f; }
         float GetSpeed() const { return m_Speed; }
@@ -45,10 +65,18 @@ namespace Crowny
 
     private:
         void Evaluate(const Ref<Skeleton>& skeleton, const Ref<MeshMorph>& morph);
+        void EvaluateSkeletalLayers(const Ref<Skeleton>& skeleton);
         void EvaluateMorphWeights(const AnimationClip& clip, float time, const MeshMorph& morph, Vector<float>& weights) const;
         void DispatchEvents(const AnimationClip& clip, float previousTime, float currentTime) const;
         void CalculateRootMotion(const AnimationClip& clip, float previousTime, float currentTime);
+        void SynchronizeSkeletalLayerTimes(float baseTime);
         static float NormalizeTime(const AnimationClip& clip, float time, AnimationWrapMode wrapMode);
+
+        struct SkeletalLayerState
+        {
+            float Time = 0.0f;
+            SkeletonPose Pose;
+        };
 
         Ref<AnimationClip> m_Clip;
         Ref<AnimationClip> m_FadeFromClip;
@@ -66,6 +94,8 @@ namespace Crowny
         Vector<float> m_MorphWeights;
         Vector<float> m_CurrentMorphWeights;
         Vector<float> m_FadeMorphWeights;
+        Vector<SkeletalAnimationLayer> m_SkeletalLayers;
+        Vector<SkeletalLayerState> m_SkeletalLayerStates;
         Transform m_RootMotionDelta;
         EventCallback m_EventCallback;
     };

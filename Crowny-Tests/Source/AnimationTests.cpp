@@ -157,6 +157,50 @@ TEST_CASE("Looping root motion remains continuous across clip boundaries", "[Ani
     CHECK(player.GetRootMotionDelta().GetPosition().x == Approx(0.5f));
 }
 
+TEST_CASE("Animation player composes masked override and additive skeletal layers", "[Animation][Player][Layers]")
+{
+    Ref<Skeleton> skeleton = Skeleton::Create({ { "Root", INVALID_BONE_INDEX, Transform(), glm::mat4(1.0f) },
+                                                { "Upper", 0, Transform(), glm::mat4(1.0f) },
+                                                { "Lower", 1, Transform(), glm::mat4(1.0f) } });
+    REQUIRE(skeleton->IsValid());
+
+    AnimationTransformTrack baseRoot;
+    baseRoot.Name = "Root";
+    baseRoot.Position = AnimationCurve<glm::vec3>({ { 0.0f, glm::vec3(0.0f) }, { 1.0f, glm::vec3(0.0f) } });
+    Ref<AnimationClip> base = AnimationClip::Create({ baseRoot });
+
+    AnimationTransformTrack overrideUpper;
+    overrideUpper.Name = "Upper";
+    overrideUpper.Position = AnimationCurve<glm::vec3>({ { 0.0f, glm::vec3(0.0f) }, { 1.0f, glm::vec3(8.0f, 0.0f, 0.0f) } });
+    AnimationTransformTrack overrideLower;
+    overrideLower.Name = "Lower";
+    overrideLower.Position = AnimationCurve<glm::vec3>({ { 0.0f, glm::vec3(0.0f) }, { 1.0f, glm::vec3(10.0f, 0.0f, 0.0f) } });
+    Ref<AnimationClip> overrideClip = AnimationClip::Create({ overrideUpper, overrideLower });
+
+    AnimationTransformTrack additiveUpper;
+    additiveUpper.Name = "Upper";
+    additiveUpper.Position = AnimationCurve<glm::vec3>({ { 0.0f, glm::vec3(0.0f) }, { 1.0f, glm::vec3(4.0f, 0.0f, 0.0f) } });
+    Ref<AnimationClip> additiveClip = AnimationClip::Create({ additiveUpper }, {}, {}, {}, 30.0f, true);
+
+    SkeletonMask overrideMask(3, 0.0f);
+    overrideMask.SetWeight(1, 0.5f);
+    overrideMask.SetWeight(2, 1.0f);
+    SkeletonMask additiveMask(3, 0.0f);
+    additiveMask.SetWeight(1, 1.0f);
+
+    AnimationPlayer player;
+    player.SetWrapMode(AnimationWrapMode::Clamp);
+    player.Play(base);
+    player.SetSkeletalLayers({ { overrideClip, overrideMask, 0.5f, 1.0f, AnimationWrapMode::Clamp },
+                               { additiveClip, additiveMask, 0.25f, 0.5f, AnimationWrapMode::Clamp } });
+    player.Update(1.0f, skeleton);
+
+    REQUIRE(player.GetSkeletalLayers().size() == 2);
+    CHECK(ApproxVec3(player.GetPose().GetLocalTransform(0).GetPosition(), glm::vec3(0.0f)));
+    CHECK(ApproxVec3(player.GetPose().GetLocalTransform(1).GetPosition(), glm::vec3(2.5f, 0.0f, 0.0f)));
+    CHECK(ApproxVec3(player.GetPose().GetLocalTransform(2).GetPosition(), glm::vec3(5.0f, 0.0f, 0.0f)));
+}
+
 TEST_CASE("Animation clips preserve all track types during asset round trips", "[Animation][Assets]")
 {
     const Path assetPath = fs::temp_directory_path() / "crowny-animation-roundtrip.asset";
@@ -317,8 +361,8 @@ TEST_CASE("Mesh deformer applies morph targets before skeletal skinning", "[Anim
     mesh->SetVertexData(VertexAttribute::BlendWeights, &weights, sizeof(weights));
     mesh->SetVertexData(VertexAttribute::BlendIndices, &indices, sizeof(indices));
 
-    Ref<MeshMorph> morph = MeshMorph::Create(
-      { MorphChannel::Create("Offset", { MorphShape::Create("Offset", 1.0f, { { glm::vec3(1.0f, 0.0f, 0.0f), {}, 0 } }) }) }, 1);
+    Ref<MeshMorph> morph =
+      MeshMorph::Create({ MorphChannel::Create("Offset", { MorphShape::Create("Offset", 1.0f, { { glm::vec3(1.0f, 0.0f, 0.0f), {}, 0 } }) }) }, 1);
     Ref<Skeleton> skeleton = Skeleton::Create({ { "Root", INVALID_BONE_INDEX, Transform(), glm::mat4(1.0f) } });
     AnimationTransformTrack root;
     root.Name = "Root";
