@@ -112,7 +112,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Key runtime camera history by stable generational entity identity so ECS camera-storage relocation cannot reset TAA or Hi-Z history, age retention by distinct frames rather than camera count, and retire it when a scene remains camera-less.
 - [x] Consume queued camera-history releases even after the view loses its render target.
 - [x] Isolate temporal history between renderer/view owners that render the same scene camera.
-- [x] Give view owners monotonic identities and defer their remaining history releases to the render thread when they are destroyed.
+- [x] Give view owners monotonic identities and queue namespace-only teardown releases directly to the render thread behind a submission watermark, so destruction does not depend on another snapshot.
 - [x] Ping-pong temporal resources per camera/history entry rather than global frame parity, preserving history when cameras skip or interleave frames.
 - [x] Invalidate per-camera TAA and Hi-Z history when its resolved Forward+/Deferred+ path changes or it falls back through compatibility rendering.
 - [x] Keep process-wide renderer helper ownership with the renderer that initialized it; preview-renderer destruction no longer invalidates editor grid resources.

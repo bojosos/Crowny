@@ -17,6 +17,14 @@ using namespace Crowny;
 
 namespace
 {
+    class RecordingHistoryReleaseSink final : public RenderHistoryReleaseSink
+    {
+    public:
+        void QueueHistoryRelease(uint64_t historyNamespace) override { ReleasedNamespaces.push_back(historyNamespace); }
+
+        Vector<uint64_t> ReleasedNamespaces;
+    };
+
     template <typename T> struct AllocationCounter
     {
         static inline std::atomic<size_t> Allocations{ 0 };
@@ -282,6 +290,29 @@ TEST_CASE("Camera-less frames retire inactive scene history", "[Memory][Frame][R
 
     REQUIRE(snapshot.ReleasedHistoryNamespaces.Size() == 1);
     CHECK(snapshot.ReleasedHistoryNamespaces[0] == historyNamespace);
+}
+
+TEST_CASE("Renderer destruction releases history without another snapshot", "[Memory][Frame][Renderer][SceneSync]")
+{
+    const Ref<Scene> firstScene = CreateRef<Scene>(false);
+    const Ref<Scene> secondScene = CreateRef<Scene>(false);
+    RecordingHistoryReleaseSink releases;
+    uint64_t firstNamespace = 0;
+
+    {
+        SceneRenderer renderer(firstScene, nullptr, &releases);
+        RenderSnapshot snapshot;
+        Camera camera;
+        renderer.ExtractSnapshot(snapshot, camera, glm::mat4(1.0f), false);
+        firstNamespace = snapshot.HistoryNamespace;
+        REQUIRE(firstNamespace != 0);
+
+        renderer.SetScene(secondScene);
+        CHECK(releases.ReleasedNamespaces.empty());
+    }
+
+    REQUIRE(releases.ReleasedNamespaces.size() == 1);
+    CHECK(releases.ReleasedNamespaces[0] == firstNamespace);
 }
 
 TEST_CASE("Thread allocation snapshots cover standard allocation families", "[Memory][Frame]")

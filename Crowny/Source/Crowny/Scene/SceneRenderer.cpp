@@ -43,8 +43,6 @@ namespace Crowny
     namespace
     {
         std::atomic<uint64_t> s_NextHistoryOwnerId{ 1 };
-        std::mutex s_OrphanedHistoryMutex;
-        Vector<uint64_t> s_OrphanedHistoryReleases;
 
         uint64_t AllocateHistoryOwnerId()
         {
@@ -1384,7 +1382,6 @@ namespace Crowny
             PointShadowLayerAllocator PointShadowLayers;
             UnorderedSet<uint32_t> PreviousSpotLights;
             UnorderedMap<uint64_t, RenderingPath> HistoryPaths;
-            Vector<uint64_t> OrphanedHistoryReleases;
         };
 
         thread_local Scope<SceneRendererThreadResources> s_RenderThreadResources;
@@ -1469,23 +1466,16 @@ namespace Crowny
         }
     } // namespace
 
-    SceneRenderer::SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget)
-      : m_RenderTarget(renderTarget), m_Scene(scene), m_HistoryOwnerId(AllocateHistoryOwnerId())
+    SceneRenderer::SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget,
+                                 RenderHistoryReleaseSink* historyReleaseSink)
+      : m_RenderTarget(renderTarget), m_Scene(scene), m_HistoryReleaseSink(historyReleaseSink),
+        m_HistoryOwnerId(AllocateHistoryOwnerId())
     {
     }
 
     SceneRenderer::~SceneRenderer()
     {
-        if (!m_CameraHistory.empty() || !m_PendingHistoryReleases.empty())
-        {
-            std::scoped_lock lock(s_OrphanedHistoryMutex);
-            s_OrphanedHistoryReleases.reserve(s_OrphanedHistoryReleases.size() + m_CameraHistory.size() +
-                                              m_PendingHistoryReleases.size());
-            for (const auto& [historyNamespace, _] : m_CameraHistory)
-                s_OrphanedHistoryReleases.push_back(historyNamespace);
-            s_OrphanedHistoryReleases.insert(s_OrphanedHistoryReleases.end(), m_PendingHistoryReleases.begin(),
-                                             m_PendingHistoryReleases.end());
-        }
+        DispatchHistoryReleases();
         if (m_OwnsSharedData)
         {
             CW_ENGINE_ASSERT(s_DataUsers != 0, "Scene renderer shared-data ownership is unbalanced");
@@ -2586,35 +2576,28 @@ namespace Crowny
     void SceneRenderer::ShutdownRenderThreadResources()
     {
         s_RenderThreadResources.reset();
-        std::scoped_lock lock(s_OrphanedHistoryMutex);
-        s_OrphanedHistoryReleases.clear();
+    }
+
+    void SceneRenderer::ReleaseRenderThreadHistory(uint64_t historyNamespace)
+    {
+        if (historyNamespace == 0 || !s_RenderThreadResources)
+            return;
+
+        s_RenderThreadResources->GraphResources.ReleaseHistory(historyNamespace);
+        s_RenderThreadResources->HistoryPaths.erase(historyNamespace);
     }
 
     void SceneRenderer::RenderFromSnapshot(const RenderSnapshot& snapshot)
     {
         ZoneScopedN("RenderGraphFrame");
+        for (uint64_t historyNamespace : snapshot.ReleasedHistoryNamespaces)
+            ReleaseRenderThreadHistory(historyNamespace);
         if (!snapshot.Target && !s_RenderThreadResources)
             return;
 
         SceneRendererThreadResources& threadResources = GetSceneRendererThreadResources();
         RenderGraph& renderGraph = threadResources.Graph;
         RenderGraphResourceRegistry& graphResources = threadResources.GraphResources;
-        auto releaseHistory = [&](uint64_t historyNamespace) {
-            graphResources.ReleaseHistory(historyNamespace);
-            threadResources.HistoryPaths.erase(historyNamespace);
-        };
-        for (uint64_t historyNamespace : snapshot.ReleasedHistoryNamespaces)
-            releaseHistory(historyNamespace);
-        {
-            std::scoped_lock lock(s_OrphanedHistoryMutex);
-            threadResources.OrphanedHistoryReleases.clear();
-            threadResources.OrphanedHistoryReleases.swap(s_OrphanedHistoryReleases);
-        }
-        for (uint64_t historyNamespace : threadResources.OrphanedHistoryReleases)
-        {
-            releaseHistory(historyNamespace);
-        }
-        threadResources.OrphanedHistoryReleases.clear();
         if (!snapshot.Target)
             return;
         renderGraph.Reset();
@@ -3072,6 +3055,32 @@ namespace Crowny
         for (uint64_t historyNamespace : m_PendingHistoryReleases)
             snapshot.ReleasedHistoryNamespaces.Acquire() = historyNamespace;
         m_PendingHistoryReleases.clear();
+    }
+
+    void SceneRenderer::DispatchHistoryReleases()
+    {
+        RenderHistoryReleaseSink* releaseSink = m_HistoryReleaseSink;
+        if (releaseSink == nullptr)
+        {
+            Application* application = Application::TryGet();
+            RenderThread* renderThread = application != nullptr ? application->GetRenderThread() : nullptr;
+            if (renderThread != nullptr && renderThread->IsRunning())
+                releaseSink = renderThread;
+        }
+
+        auto release = [&](uint64_t historyNamespace) {
+            if (releaseSink != nullptr)
+                releaseSink->QueueHistoryRelease(historyNamespace);
+            else
+                ReleaseRenderThreadHistory(historyNamespace);
+        };
+        for (uint64_t historyNamespace : m_PendingHistoryReleases)
+            release(historyNamespace);
+        for (const auto& [historyNamespace, _] : m_CameraHistory)
+            release(historyNamespace);
+
+        m_PendingHistoryReleases.clear();
+        m_CameraHistory.clear();
     }
 
     void SceneRenderer::SetScene(const Ref<Scene>& scene)

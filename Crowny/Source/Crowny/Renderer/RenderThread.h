@@ -1,17 +1,18 @@
 #pragma once
 
 #include "Crowny/Renderer/FrameContext.h"
+#include "Crowny/Renderer/RenderHistoryReleaseSink.h"
 
 namespace Crowny
 {
 
     class SceneRenderer;
 
-    class RenderThread
+    class RenderThread : public RenderHistoryReleaseSink
     {
     public:
         explicit RenderThread(uint32_t frameContextCount = 2);
-        ~RenderThread();
+        ~RenderThread() override;
 
         void Start();
         void Stop();
@@ -31,11 +32,20 @@ namespace Crowny
         // Called by the simulation thread. The command owns its inputs until the render thread executes it.
         void EnqueueMeshUpload(MeshUploadCommand command);
 
+        // Releases history after every frame submitted before this call has finished.
+        void QueueHistoryRelease(uint64_t historyNamespace) override;
+
         bool IsRunning() const { return m_Running.load(std::memory_order_acquire); }
         uint32_t GetFrameContextCount() const { return static_cast<uint32_t>(m_FrameContexts.size()); }
 
     private:
         void RenderLoop();
+
+        struct HistoryReleaseCommand
+        {
+            uint64_t HistoryNamespace = 0;
+            uint64_t AfterSubmissionValue = 0;
+        };
 
         enum class ContextState : uint8_t
         {
@@ -49,6 +59,7 @@ namespace Crowny
         Vector<FrameContext> m_FrameContexts;
         Vector<ContextState> m_ContextStates;
         Deque<uint32_t> m_ReadyContexts;
+        Deque<HistoryReleaseCommand> m_PendingHistoryReleases;
         Mutex m_ContextMutex;
         Signal m_ContextReady;
         Signal m_ContextAvailable;
@@ -61,6 +72,7 @@ namespace Crowny
         uint32_t m_RecordingContext = 0;
         uint32_t m_RenderingContexts = 0;
         uint64_t m_NextSubmissionValue = 1;
+        uint64_t m_LastCompletedSubmissionValue = 0;
         bool m_FrameOpen = false;
     };
 

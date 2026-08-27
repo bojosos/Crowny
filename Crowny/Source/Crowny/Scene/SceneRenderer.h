@@ -1,12 +1,14 @@
 #pragma once
 
 #include "Crowny/Renderer/EditorCamera.h"
+#include "Crowny/Renderer/RenderHistoryReleaseSink.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
 #include "Crowny/Renderer/RenderWorld.h"
 #include "Crowny/Scene/Scene.h"
 
 namespace Crowny
 {
+    class RenderThread;
 
     struct SceneRenderStatistics
     {
@@ -30,7 +32,9 @@ namespace Crowny
     class SceneRenderer
     {
     public:
-        SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget);
+        // An injected sink must outlive this renderer. A null sink uses the active render thread.
+        SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget,
+                      RenderHistoryReleaseSink* historyReleaseSink = nullptr);
         ~SceneRenderer();
 
         void Init();
@@ -57,11 +61,15 @@ namespace Crowny
         static void DrawGrid(const glm::mat4& viewProjection, const glm::vec3& cameraPos, const GridSettings& settings = {});
 
     private:
+        friend class RenderThread;
+
         void Render(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid = false, const GridSettings& gridSettings = {});
         void ExtractSnapshotWithHistory(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform,
                                         uint64_t historyNamespace, bool drawGrid) const;
         static void RenderLegacySnapshot(const RenderSnapshot& snapshot);
         static void RenderLegacyOverlays(const RenderSnapshot& snapshot);
+        static void ReleaseRenderThreadHistory(uint64_t historyNamespace);
+        void DispatchHistoryReleases();
         void SyncRenderWorld(RenderSnapshot& snapshot) const;
         void ResetTrackedRenderWorld();
 
@@ -179,6 +187,7 @@ namespace Crowny
         Ref<RenderTarget> m_RenderTarget;
         Ref<Scene> m_Scene;
         Ref<CommandBuffer> m_CommandBuffer;
+        RenderHistoryReleaseSink* m_HistoryReleaseSink = nullptr;
         mutable RenderWorld m_RenderWorld;
         mutable RenderLightWorld m_RenderLightWorld;
         mutable UnorderedMap<uint64_t, TrackedRenderInstance> m_TrackedRenderInstances;

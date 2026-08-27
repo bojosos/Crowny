@@ -110,24 +110,58 @@ namespace Crowny
         m_PendingMeshUploads.push_back(std::move(command));
     }
 
+    void RenderThread::QueueHistoryRelease(uint64_t historyNamespace)
+    {
+        if (historyNamespace == 0)
+            return;
+
+        {
+            ScopedLock lock(m_ContextMutex);
+            const uint64_t lastSubmittedValue = m_NextSubmissionValue - 1u;
+            const uint64_t afterSubmissionValue = m_FrameOpen ? m_NextSubmissionValue : lastSubmittedValue;
+            m_PendingHistoryReleases.push_back({ historyNamespace, afterSubmissionValue });
+        }
+        m_ContextReady.notify_one();
+    }
+
     void RenderThread::RenderLoop()
     {
         tracy::SetThreadName("RenderThread");
 
         for (;;)
         {
-            uint32_t contextIndex;
+            uint32_t contextIndex = 0;
+            uint64_t historyNamespace = 0;
             {
                 Lock lock(m_ContextMutex);
-                m_ContextReady.wait(lock,
-                                    [&]() { return !m_Running.load(std::memory_order_acquire) || !m_ReadyContexts.empty(); });
+                m_ContextReady.wait(lock, [&]() {
+                    const bool historyReleaseReady = !m_PendingHistoryReleases.empty() &&
+                                                     m_PendingHistoryReleases.front().AfterSubmissionValue <=
+                                                       m_LastCompletedSubmissionValue;
+                    return !m_Running.load(std::memory_order_acquire) || !m_ReadyContexts.empty() || historyReleaseReady;
+                });
                 if (!m_Running.load(std::memory_order_acquire) && m_ReadyContexts.empty())
                     break;
 
-                contextIndex = m_ReadyContexts.front();
-                m_ReadyContexts.pop_front();
-                m_ContextStates[contextIndex] = ContextState::Rendering;
-                m_RenderingContexts++;
+                if (!m_PendingHistoryReleases.empty() &&
+                    m_PendingHistoryReleases.front().AfterSubmissionValue <= m_LastCompletedSubmissionValue)
+                {
+                    historyNamespace = m_PendingHistoryReleases.front().HistoryNamespace;
+                    m_PendingHistoryReleases.pop_front();
+                }
+                else
+                {
+                    contextIndex = m_ReadyContexts.front();
+                    m_ReadyContexts.pop_front();
+                    m_ContextStates[contextIndex] = ContextState::Rendering;
+                    m_RenderingContexts++;
+                }
+            }
+
+            if (historyNamespace != 0)
+            {
+                SceneRenderer::ReleaseRenderThreadHistory(historyNamespace);
+                continue;
             }
 
             FrameContext& context = m_FrameContexts[contextIndex];
@@ -151,6 +185,7 @@ namespace Crowny
             {
                 ScopedLock lock(m_ContextMutex);
                 context.CompletionValue = context.SubmissionValue;
+                m_LastCompletedSubmissionValue = context.CompletionValue;
                 m_ContextStates[contextIndex] = ContextState::Available;
                 m_RenderingContexts--;
             }
