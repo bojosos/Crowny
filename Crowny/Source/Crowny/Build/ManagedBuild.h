@@ -112,4 +112,40 @@ namespace Crowny
     };
 
     ManagedCompileResult CompileManagedAssembly(const ManagedBuildRequest& request, const ManagedToolchain& toolchain);
+
+    struct DotNetSdk
+    {
+        Path Executable;
+        String Version;
+        Vector<ManagedBuildDiagnostic> Diagnostics;
+
+        bool IsValid() const { return Diagnostics.empty(); }
+    };
+
+    DotNetSdk LocateDotNetSdk(const Path& root = {});
+
+    struct ManagedSdkBuildRequest
+    {
+        Path ProjectFile;
+        Path OutputDirectory;
+        String TargetFramework = "net10.0";
+        BuildConfiguration Configuration = BuildConfiguration::Development;
+        std::chrono::milliseconds Timeout = std::chrono::minutes(5);
+        size_t MaxCapturedOutputBytes = 4 * 1024 * 1024;
+        std::function<bool()> Cancellation;
+    };
+
+    struct ManagedSdkBuildResult
+    {
+        Vector<ManagedBuildDiagnostic> Diagnostics;
+        String StandardOutput;
+        String StandardError;
+        int ExitCode = -1;
+        bool ProcessStarted = false;
+        bool Cancelled = false;
+
+        bool Succeeded() const { return ProcessStarted && !Cancelled && ExitCode == 0 && Diagnostics.empty(); }
+    };
+
+    ManagedSdkBuildResult BuildManagedSdkProject(const ManagedSdkBuildRequest& request, const DotNetSdk& sdk);
 } // namespace Crowny

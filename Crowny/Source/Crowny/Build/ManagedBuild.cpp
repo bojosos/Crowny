@@ -1752,4 +1752,105 @@ namespace Crowny
         RemoveStagingOutput(stagingAssembly);
         return result;
     }
+
+    DotNetSdk LocateDotNetSdk(const Path& root)
+    {
+        DotNetSdk result;
+#ifdef CW_PLATFORM_WIN32
+        constexpr const char* executableName = "dotnet.exe";
+#else
+        constexpr const char* executableName = "dotnet";
+#endif
+        Vector<Path> candidates;
+        if (!root.empty())
+            candidates.push_back(root / executableName);
+        if (const char* configuredRoot = std::getenv("CROWNY_DOTNET_ROOT"))
+            candidates.emplace_back(Path(configuredRoot) / executableName);
+        const Path fromPath = FindOnPath(executableName);
+        if (!fromPath.empty())
+            candidates.push_back(fromPath);
+
+        for (const Path& candidate : candidates)
+        {
+            if (!fs::is_regular_file(candidate))
+                continue;
+            const ProcessResult version = RunProcess(candidate, { "--version" }, std::chrono::seconds(10), 64 * 1024);
+            const String versionText = Trim(!version.StandardOutput.empty() ? version.StandardOutput : version.StandardError);
+            if (!version.Started || version.ExitCode != 0 || versionText.empty())
+                continue;
+            result.Executable = NormalizePath(candidate);
+            result.Version = versionText.substr(0, versionText.find_first_of("\r\n"));
+            return result;
+        }
+
+        AddDiagnostic(result.Diagnostics, "MB600",
+                      "No usable .NET SDK was found. Run Scripts/setup-dotnet.ps1 or set CROWNY_DOTNET_ROOT.", root);
+        return result;
+    }
+
+    ManagedSdkBuildResult BuildManagedSdkProject(const ManagedSdkBuildRequest& request, const DotNetSdk& sdk)
+    {
+        ManagedSdkBuildResult result;
+        if (!sdk.Diagnostics.empty())
+            result.Diagnostics.insert(result.Diagnostics.end(), sdk.Diagnostics.begin(), sdk.Diagnostics.end());
+        if (!fs::is_regular_file(sdk.Executable))
+            AddDiagnostic(result.Diagnostics, "MB601", "The .NET SDK executable does not exist.", sdk.Executable);
+        if (!fs::is_regular_file(request.ProjectFile))
+            AddDiagnostic(result.Diagnostics, "MB602", "The SDK-style managed project does not exist.", request.ProjectFile);
+        if (request.OutputDirectory.empty())
+            AddDiagnostic(result.Diagnostics, "MB603", "The SDK-style managed output directory is empty.");
+        if (request.TargetFramework.empty() ||
+            std::any_of(request.TargetFramework.begin(), request.TargetFramework.end(), [](unsigned char character) {
+                return std::isalnum(character) == 0 && character != '.' && character != '-';
+            }))
+            AddDiagnostic(result.Diagnostics, "MB604", "The managed target framework is invalid.");
+        if (request.Timeout <= std::chrono::milliseconds::zero() || request.Timeout > std::chrono::minutes(30))
+            AddDiagnostic(result.Diagnostics, "MB605", "The SDK build timeout must be between 1 ms and 30 minutes.");
+        if (request.MaxCapturedOutputBytes == 0 || request.MaxCapturedOutputBytes > 64 * 1024 * 1024)
+            AddDiagnostic(result.Diagnostics, "MB606", "The SDK build output limit must be between 1 byte and 64 MiB.");
+        if (!result.Diagnostics.empty())
+            return result;
+
+        std::error_code error;
+        fs::create_directories(request.OutputDirectory, error);
+        if (error)
+        {
+            AddDiagnostic(result.Diagnostics, "MB607", "The SDK build output directory could not be created: " + error.message(),
+                          request.OutputDirectory);
+            return result;
+        }
+
+        const String configuration = request.Configuration == BuildConfiguration::Shipping ? "Release" : "Debug";
+        const Vector<String> arguments = {
+            "build",
+            PathArgument(request.ProjectFile),
+            "--nologo",
+            "--disable-build-servers",
+            "--configuration",
+            configuration,
+            "--framework",
+            request.TargetFramework,
+            "--output",
+            PathArgument(request.OutputDirectory),
+            "--property:UseAppHost=false",
+            "--property:GenerateDependencyFile=true",
+        };
+        const ProcessResult process =
+          RunProcess(sdk.Executable, arguments, request.Timeout, request.MaxCapturedOutputBytes, request.Cancellation);
+        result.StandardOutput = process.StandardOutput;
+        result.StandardError = process.StandardError;
+        result.ExitCode = process.ExitCode;
+        result.ProcessStarted = process.Started;
+        result.Cancelled = process.Cancelled;
+        if (!process.Error.empty())
+            AddDiagnostic(result.Diagnostics, "MB608", process.Error, sdk.Executable);
+        if (process.TimedOut)
+            AddDiagnostic(result.Diagnostics, "MB609", "The SDK build exceeded its timeout.", request.ProjectFile);
+        if (process.OutputTruncated)
+            AddDiagnostic(result.Diagnostics, "MB610", "The SDK build output exceeded the configured capture limit.", request.ProjectFile);
+        if (process.Error.empty() && !process.TimedOut && !process.Cancelled && process.ExitCode != 0)
+            AddDiagnostic(result.Diagnostics, "MB611", "The SDK build exited with code " + std::to_string(process.ExitCode) + ".",
+                          request.ProjectFile);
+        return result;
+    }
 } // namespace Crowny
