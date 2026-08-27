@@ -140,11 +140,20 @@ namespace Crowny
                                                        m_LastCompletedSubmissionValue;
                     return !m_Running.load(std::memory_order_acquire) || !m_ReadyContexts.empty() || historyReleaseReady;
                 });
-                if (!m_Running.load(std::memory_order_acquire) && m_ReadyContexts.empty())
-                    break;
+                const bool stopping = !m_Running.load(std::memory_order_acquire);
+                if (stopping && m_ReadyContexts.empty())
+                {
+                    if (m_PendingHistoryReleases.empty())
+                        break;
 
-                if (!m_PendingHistoryReleases.empty() &&
-                    m_PendingHistoryReleases.front().AfterSubmissionValue <= m_LastCompletedSubmissionValue)
+                    // No submitted frame remains. Drain every release on this thread
+                    // before its renderer resources are destroyed, even when a command
+                    // was waiting for a recording frame that will never be submitted.
+                    historyNamespace = m_PendingHistoryReleases.front().HistoryNamespace;
+                    m_PendingHistoryReleases.pop_front();
+                }
+                else if (!stopping && !m_PendingHistoryReleases.empty() &&
+                         m_PendingHistoryReleases.front().AfterSubmissionValue <= m_LastCompletedSubmissionValue)
                 {
                     historyNamespace = m_PendingHistoryReleases.front().HistoryNamespace;
                     m_PendingHistoryReleases.pop_front();
