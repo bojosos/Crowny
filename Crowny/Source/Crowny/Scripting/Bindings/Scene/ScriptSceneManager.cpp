@@ -45,7 +45,7 @@ namespace Crowny
     {
         if (SceneManager::TryGet() == nullptr || sceneId == nullptr)
             return false;
-        const Vector<UUID> scenes = SceneManager::TryGet()->GetLoadedScenes();
+        const std::span<const UUID> scenes = SceneManager::TryGet()->GetLoadedScenes();
         if (index >= scenes.size())
             return false;
         *sceneId = scenes[index];

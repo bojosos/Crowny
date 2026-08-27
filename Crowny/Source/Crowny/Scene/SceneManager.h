@@ -3,6 +3,8 @@
 #include "Crowny/Common/Module.h"
 #include "Crowny/Scene/Scene.h"
 
+#include <span>
+
 namespace Crowny
 {
     enum class SceneExecutionState : uint8_t
@@ -66,7 +68,7 @@ namespace Crowny
 
         Ref<Scene> GetActiveScene() const;
         Ref<Scene> GetLoadedScene(const UUID& sceneId) const;
-        Vector<UUID> GetLoadedScenes() const;
+        std::span<const UUID> GetLoadedScenes() const { return { m_LoadedSceneIds.data(), m_LoadedSceneIds.size() }; }
         const UUID& GetActiveSceneId() const { return m_ActiveSceneId; }
         SceneExecutionState GetExecutionState() const { return m_ExecutionState; }
         const UUID& GetEditSelection() const { return m_EditSelection; }
@@ -131,6 +133,8 @@ namespace Crowny
         SceneOperationStatus ApplyStop();
 
         Ref<Scene> DeserializeSceneAsset(const UUID& sceneId) const;
+        void TrackLoadedScene(const UUID& sceneId);
+        void UntrackLoadedScene(const UUID& sceneId);
         void SetActiveSceneInternal(const Ref<Scene>& scene, const UUID& sceneId);
         void Emit(SceneLifecycleEventType type, const UUID& sceneId);
         void BeginCallbackDispatch();
@@ -141,6 +145,7 @@ namespace Crowny
         Ref<Scene> m_EditScene;
         Ref<Scene> m_RuntimeScene;
         UnorderedMap<UUID, Ref<Scene>> m_LoadedScenes;
+        Vector<UUID> m_LoadedSceneIds;
         UUID m_ActiveSceneId;
         UUID m_EditSceneId;
         UUID m_EditSelection;

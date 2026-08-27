@@ -45,6 +45,7 @@ namespace Crowny
         m_EditScene = nullptr;
         m_RuntimeScene = nullptr;
         m_LoadedScenes.clear();
+        m_LoadedSceneIds.clear();
         m_PendingOperations.clear();
         m_LifecycleListeners.clear();
         m_ManagedLifecycleEvents.clear();
@@ -56,16 +57,6 @@ namespace Crowny
     {
         const auto iter = m_LoadedScenes.find(sceneId);
         return iter != m_LoadedScenes.end() ? iter->second : nullptr;
-    }
-
-    Vector<UUID> SceneManager::GetLoadedScenes() const
-    {
-        Vector<UUID> scenes;
-        scenes.reserve(m_LoadedScenes.size());
-        for (const auto& [sceneId, scene] : m_LoadedScenes)
-            scenes.push_back(sceneId);
-        std::sort(scenes.begin(), scenes.end());
-        return scenes;
     }
 
     void SceneManager::SetActiveScene(const Ref<Scene>& scene) { SetActiveScene(scene, UUID::EMPTY); }
@@ -210,6 +201,7 @@ namespace Crowny
         m_EditSelection = UUID::EMPTY;
         if (!sceneId.Empty() && scene != nullptr)
         {
+            TrackLoadedScene(sceneId);
             m_LoadedScenes[sceneId] = scene;
             Emit(SceneLifecycleEventType::Loaded, sceneId);
         }
@@ -241,6 +233,7 @@ namespace Crowny
             scene = DeserializeSceneAsset(sceneId);
             if (scene == nullptr)
                 return SceneOperationStatus::Failed;
+            TrackLoadedScene(sceneId);
             m_LoadedScenes[sceneId] = scene;
             Emit(SceneLifecycleEventType::Loaded, sceneId);
         }
@@ -274,6 +267,7 @@ namespace Crowny
             }
         }
         m_LoadedScenes.erase(iter);
+        UntrackLoadedScene(sceneId);
         Emit(SceneLifecycleEventType::Unloaded, sceneId);
         return SceneOperationStatus::Completed;
     }
@@ -423,6 +417,20 @@ namespace Crowny
             return nullptr;
         scene->SetEditorScene(false);
         return scene;
+    }
+
+    void SceneManager::TrackLoadedScene(const UUID& sceneId)
+    {
+        const auto position = std::lower_bound(m_LoadedSceneIds.begin(), m_LoadedSceneIds.end(), sceneId);
+        if (position == m_LoadedSceneIds.end() || *position != sceneId)
+            m_LoadedSceneIds.insert(position, sceneId);
+    }
+
+    void SceneManager::UntrackLoadedScene(const UUID& sceneId)
+    {
+        const auto position = std::lower_bound(m_LoadedSceneIds.begin(), m_LoadedSceneIds.end(), sceneId);
+        if (position != m_LoadedSceneIds.end() && *position == sceneId)
+            m_LoadedSceneIds.erase(position);
     }
 
     void SceneManager::SetActiveSceneInternal(const Ref<Scene>& scene, const UUID& sceneId)

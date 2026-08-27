@@ -2,6 +2,7 @@
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Serialization/SceneSerializer.h"
@@ -96,6 +97,44 @@ TEST_CASE("Scene changes requested in callback scopes are deferred", "[Scene][Li
     CHECK(callbackStatus == SceneOperationStatus::Deferred);
     CHECK(manager.GetActiveSceneId() == secondId);
     manager.RemoveLifecycleListener(listener);
+}
+
+TEST_CASE("Loaded scene enumeration is sorted and allocation-free after mutation", "[Scene][Lifecycle][Memory]")
+{
+    SceneManager manager;
+    const UUID firstId(1, 0, 0, 0);
+    const UUID secondId(2, 0, 0, 0);
+    const UUID thirdId(3, 0, 0, 0);
+    manager.SetActiveScene(CreateRef<Scene>("Third"), thirdId);
+    manager.SetActiveScene(CreateRef<Scene>("First"), firstId);
+    manager.SetActiveScene(CreateRef<Scene>("Second"), secondId);
+
+    const std::span<const UUID> loaded = manager.GetLoadedScenes();
+    REQUIRE(loaded.size() == 3);
+    CHECK(loaded[0] == firstId);
+    CHECK(loaded[1] == secondId);
+    CHECK(loaded[2] == thirdId);
+
+    uint32_t observed = 0;
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120; ++frame)
+    {
+        const std::span<const UUID> scenes = manager.GetLoadedScenes();
+        observed += static_cast<uint32_t>(scenes.size());
+    }
+    const Memory::ThreadAllocationSnapshot delta =
+      Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+    CHECK(observed == 360);
+    CHECK(delta.AllocationCount == 0);
+
+    manager.SetActiveScene(CreateRef<Scene>("Second replacement"), secondId);
+    CHECK(manager.GetLoadedScenes().size() == 3);
+    REQUIRE(manager.UnloadScene(secondId) == SceneOperationStatus::Completed);
+    const std::span<const UUID> remaining = manager.GetLoadedScenes();
+    REQUIRE(remaining.size() == 2);
+    CHECK(remaining[0] == firstId);
+    CHECK(remaining[1] == thirdId);
 }
 
 TEST_CASE("Runtime scene changes preserve play mode and the original edit scene", "[Scene][Lifecycle][Scripting]")

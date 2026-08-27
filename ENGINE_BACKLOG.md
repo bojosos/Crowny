@@ -59,6 +59,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Native 2D and 3D collision callback payloads keep their fixed two-entity collider pair inline. Box2D snapshot/copy and scene-to-script dispatch paths perform zero native allocations for 10,000 warm contacts.
 - [x] The render blackboard retains named resource entries across frame clears and uses generation-stamped heterogeneous CityHash lookup. Stable 1, 1,000, and 10,000-resource rebuilds allocate nothing across 120 warm frames.
 - [x] Subtree duplication attaches each clone to its final parent once, preserves local and world transforms under transformed ancestors, and leaves source child storage untouched instead of allocating snapshots and performing transient reparent operations.
+- [x] Scene lifecycle keeps a retained sorted loaded-scene index; native and C# enumeration no longer rebuild and sort a UUID vector for every count and element query.
 
 ## Physics and ECS
 
@@ -68,7 +69,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Complete C# bindings for 2D and 3D bodies, colliders, materials, layers, queries, contacts, callbacks, joints, assets, and serialization.
 - [x] C# can create UUID-bearing, path-free 2D and 3D physics materials with backend-neutral properties and inline scene serialization. Managed-created material and mesh wrappers use collectible weak ownership and are drained safely at scripting shutdown.
 - [ ] Serialize physics materials and collider overrides without raw paths. Define fallback/default material behavior and version migrations.
-- [ ] Draw collider shapes in the viewport when physics overlays are enabled.
+- [x] Draw Box2D box/circle and 3D box/sphere/capsule collider shapes in the viewport when physics overlays are enabled, using the same transform and scale rules as the active backends.
 - [ ] Add Play, Simulate Physics, pause, and step behavior using an isolated temporary scene while preserving the edit scene.
 - [ ] Continue ECS performance work: benchmark component access and iteration, remove accidental ownership churn, and preserve data-oriented storage.
 - [ ] Replace recursive hierarchy invalidation with measured generation or topological transform propagation. Preserve physics/audio notification order and optimize parenting, reparenting, subtree deletion, and scene copying.
