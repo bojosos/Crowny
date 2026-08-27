@@ -15,9 +15,12 @@
 #include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scripting/ManagedReload.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
+#include "Crowny/Scripting/ScriptBindings.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
@@ -365,6 +368,15 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     }
     REQUIRE(MonoManager::Get().GetDomain() != nullptr);
     mono_thread_attach(MonoManager::Get().GetDomain());
+    ScriptBindings::Register();
+    if (!ScriptInfoManager::IsStartedUp())
+        ScriptInfoManager::StartUp();
+    if (!ScriptSceneObjectManager::IsStartedUp())
+        ScriptSceneObjectManager::StartUp();
+    if (!ScriptObjectManager::IsStartedUp())
+        ScriptObjectManager::StartUp();
+    if (!ScriptAssetManager::IsStartedUp())
+        ScriptAssetManager::StartUp();
 
     const Path engineAssemblyPath = fs::absolute("Crowny-Sharp/CrownySharp.dll");
     const Path gameAssemblyPath = fs::absolute("Crowny-Sandbox/GameAssembly.dll");

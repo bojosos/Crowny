@@ -175,9 +175,13 @@ namespace Crowny
 
         private static T CreateComponent<T>(UUID entity) where T : Component
         {
+#if CROWNY_MONO
+            throw new NotSupportedException("Host-managed component proxies are unavailable in the Mono runtime.");
+#else
             T component = Activator.CreateInstance<T>();
             component.m_ManagedEntity = new Entity { m_ManagedUuid = entity };
             return component;
+#endif
         }
 
         private static byte[] Invoke(ManagedBindingId binding, UUID entity, byte[] input)
