@@ -18,6 +18,7 @@
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/ManagedReload.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Crowny/Scripting/Mono/MonoArray.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
@@ -59,7 +60,6 @@
 #include "Crowny/Scripting/Bindings/Utils/ScriptJSON.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
-#include "Crowny/Scripting/ScriptObjectManager.h"
 
 #include "Crowny/Renderer/Font.h"
 
@@ -488,13 +488,27 @@ namespace Crowny
             return false;
         }
 
-        Vector<AssemblyRefreshInfo> refreshInfos;
-        refreshInfos.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
-        refreshInfos.emplace_back(GAME_ASSEMBLY, &stagedGameAssembly);
         if (m_InspectorPanel)
             m_InspectorPanel->ResetUndoTransactions(false);
-        if (!ScriptObjectManager::Get().RefreshAssemblies(refreshInfos))
+        ManagedScripting* managed = Application::TryGet()->GetRuntime().GetManagedScripting();
+        if (managed == nullptr)
+        {
+            CW_ENGINE_ERROR("Managed runtime is unavailable; the compiled game assembly was not loaded.");
             return false;
+        }
+        ManagedProgramDefinition program;
+        program.Generation = std::max<uint64_t>(generation, 1);
+        program.Artifacts = {
+            { ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, engineAssemblyPath },
+            { ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, stagedGameAssembly },
+        };
+        ManagedOperationResult reloaded = managed->ReloadProgram(program);
+        if (!reloaded.Succeeded)
+        {
+            for (const ManagedDiagnostic& diagnostic : reloaded.Diagnostics)
+                CW_ENGINE_ERROR("Managed reload [{}]: {}", diagnostic.Code, diagnostic.Message);
+            return false;
+        }
 
         const Path gameAssemblyPath = assemblyDirectory / "GameAssembly.dll";
         String publishError;
