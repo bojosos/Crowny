@@ -50,17 +50,17 @@ namespace Crowny
             return *this;
         }
 
-        Flags<Enum, Storage> operator|(Enum rhs)
+        Flags<Enum, Storage> operator|(Enum rhs) const
         {
             Flags<Enum, Storage> out = *this;
-            out |= static_cast<Storage>(rhs);
+            out.m_Bits |= static_cast<Storage>(rhs);
             return out;
         }
 
-        Flags<Enum, Storage> operator|(const Flags<Enum, Storage>& rhs)
+        Flags<Enum, Storage> operator|(const Flags<Enum, Storage>& rhs) const
         {
             Flags<Enum, Storage> out = *this;
-            out |= rhs.m_Bits;
+            out.m_Bits |= rhs.m_Bits;
             return out;
         }
 

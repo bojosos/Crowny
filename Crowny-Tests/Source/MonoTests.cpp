@@ -152,7 +152,7 @@ TEST_CASE("Managed animation API exposes clip identity and playback controls", "
 {
     AttachThread();
 
-    MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+    Crowny::MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
     if (assembly == nullptr)
     {
         const Path assemblyPath = fs::absolute("Crowny-Sharp/CrownySharp.dll");
@@ -160,10 +160,10 @@ TEST_CASE("Managed animation API exposes clip identity and playback controls", "
         assembly = &MonoManager::Get().LoadAssembly(assemblyPath, CROWNY_ASSEMBLY);
     }
 
-    MonoClass* asset = assembly->GetClass(CROWNY_NS, "Asset");
-    MonoClass* component = assembly->GetClass(CROWNY_NS, "Component");
-    MonoClass* clip = assembly->GetClass(CROWNY_NS, "AnimationClip");
-    MonoClass* animation = assembly->GetClass(CROWNY_NS, "AnimationComponent");
+    Crowny::MonoClass* asset = assembly->GetClass(CROWNY_NS, "Asset");
+    Crowny::MonoClass* component = assembly->GetClass(CROWNY_NS, "Component");
+    Crowny::MonoClass* clip = assembly->GetClass(CROWNY_NS, "AnimationClip");
+    Crowny::MonoClass* animation = assembly->GetClass(CROWNY_NS, "AnimationComponent");
     REQUIRE(asset != nullptr);
     REQUIRE(component != nullptr);
     REQUIRE(clip != nullptr);
