@@ -36,6 +36,15 @@ namespace Crowny
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativeVec4
+    {
+        internal float X;
+        internal float Y;
+        internal float Z;
+        internal float W;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal struct ManagedNativeQuaternion
     {
         internal float X;
@@ -158,6 +167,74 @@ namespace Crowny
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int> AudioSourcePlay;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int> AudioSourcePause;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int> AudioSourceStop;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeStringView*, int> TextGetText;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeStringView, int> TextSetText;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeUuid*, int> TextGetFont;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeUuid, int> TextSetFont;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec4*, int> TextGetColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec4*, int> TextSetColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetSize;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetSize;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte*, int> TextGetAutoSize;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte, int> TextSetAutoSize;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetAutoSizeMin;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetAutoSizeMin;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetAutoSizeMax;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetAutoSizeMax;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec2*, int> TextGetLayoutSize;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec2*, int> TextSetLayoutSize;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte*, int> TextGetWrapping;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte, int> TextSetWrapping;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int*, int> TextGetWrapMode;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int, int> TextSetWrapMode;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int*, int> TextGetOverflow;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int, int> TextSetOverflow;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte*, int> TextGetClipToBounds;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte, int> TextSetClipToBounds;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint*, int> TextGetMaxLines;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint, int> TextSetMaxLines;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int*, int> TextGetHorizontalAlignment;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int, int> TextSetHorizontalAlignment;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int*, int> TextGetVerticalAlignment;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int, int> TextSetVerticalAlignment;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint*, int> TextGetFontStyle;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint, int> TextSetFontStyle;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec4*, int> TextGetOutlineColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec4*, int> TextSetOutlineColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetOutlineWidth;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetOutlineWidth;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec4*, int> TextGetShadowColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec4*, int> TextSetShadowColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec2*, int> TextGetShadowOffset;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec2*, int> TextSetShadowOffset;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetShadowSoftness;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetShadowSoftness;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetCharacterSpacing;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetCharacterSpacing;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetWordSpacing;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetWordSpacing;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetLineSpacing;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetLineSpacing;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetParagraphSpacing;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetParagraphSpacing;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint*, int> TextGetTabWidth;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint, int> TextSetTabWidth;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte*, int> TextGetUseCustomDecorationColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte, int> TextSetUseCustomDecorationColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec4*, int> TextGetDecorationColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeVec4*, int> TextSetDecorationColor;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetDecorationThickness;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetDecorationThickness;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetUnderlineOffset;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetUnderlineOffset;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> TextGetStrikethroughOffset;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float, int> TextSetStrikethroughOffset;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte*, int> TextGetUseKerning;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte, int> TextSetUseKerning;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int*, int> TextGetSortingLayer;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int, int> TextSetSortingLayer;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int*, int> TextGetOrderInLayer;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int, int> TextSetOrderInLayer;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeMatrix4*, float*, int> MathMatrixDeterminant;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeMatrix4*, ManagedNativeMatrix4*, int> MathMatrixInverse;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeMatrix4*, ManagedNativeMatrix4*, int> MathMatrixAffineInverse;

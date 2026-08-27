@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 5u
+#define CW_MANAGED_ABI_VERSION 6u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -152,6 +152,74 @@ enum cw_managed_host_binding
     CW_MANAGED_BINDING_AUDIO_SOURCE_PLAY = 119,
     CW_MANAGED_BINDING_AUDIO_SOURCE_PAUSE = 120,
     CW_MANAGED_BINDING_AUDIO_SOURCE_STOP = 121,
+    CW_MANAGED_BINDING_TEXT_GET_TEXT = 200,
+    CW_MANAGED_BINDING_TEXT_SET_TEXT = 201,
+    CW_MANAGED_BINDING_TEXT_GET_FONT = 202,
+    CW_MANAGED_BINDING_TEXT_SET_FONT = 203,
+    CW_MANAGED_BINDING_TEXT_GET_COLOR = 204,
+    CW_MANAGED_BINDING_TEXT_SET_COLOR = 205,
+    CW_MANAGED_BINDING_TEXT_GET_SIZE = 206,
+    CW_MANAGED_BINDING_TEXT_SET_SIZE = 207,
+    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE = 208,
+    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE = 209,
+    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE_MIN = 210,
+    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE_MIN = 211,
+    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE_MAX = 212,
+    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE_MAX = 213,
+    CW_MANAGED_BINDING_TEXT_GET_LAYOUT_SIZE = 214,
+    CW_MANAGED_BINDING_TEXT_SET_LAYOUT_SIZE = 215,
+    CW_MANAGED_BINDING_TEXT_GET_WRAPPING = 216,
+    CW_MANAGED_BINDING_TEXT_SET_WRAPPING = 217,
+    CW_MANAGED_BINDING_TEXT_GET_WRAP_MODE = 218,
+    CW_MANAGED_BINDING_TEXT_SET_WRAP_MODE = 219,
+    CW_MANAGED_BINDING_TEXT_GET_OVERFLOW = 220,
+    CW_MANAGED_BINDING_TEXT_SET_OVERFLOW = 221,
+    CW_MANAGED_BINDING_TEXT_GET_CLIP_TO_BOUNDS = 222,
+    CW_MANAGED_BINDING_TEXT_SET_CLIP_TO_BOUNDS = 223,
+    CW_MANAGED_BINDING_TEXT_GET_MAX_LINES = 224,
+    CW_MANAGED_BINDING_TEXT_SET_MAX_LINES = 225,
+    CW_MANAGED_BINDING_TEXT_GET_HORIZONTAL_ALIGNMENT = 226,
+    CW_MANAGED_BINDING_TEXT_SET_HORIZONTAL_ALIGNMENT = 227,
+    CW_MANAGED_BINDING_TEXT_GET_VERTICAL_ALIGNMENT = 228,
+    CW_MANAGED_BINDING_TEXT_SET_VERTICAL_ALIGNMENT = 229,
+    CW_MANAGED_BINDING_TEXT_GET_FONT_STYLE = 230,
+    CW_MANAGED_BINDING_TEXT_SET_FONT_STYLE = 231,
+    CW_MANAGED_BINDING_TEXT_GET_OUTLINE_COLOR = 232,
+    CW_MANAGED_BINDING_TEXT_SET_OUTLINE_COLOR = 233,
+    CW_MANAGED_BINDING_TEXT_GET_OUTLINE_WIDTH = 234,
+    CW_MANAGED_BINDING_TEXT_SET_OUTLINE_WIDTH = 235,
+    CW_MANAGED_BINDING_TEXT_GET_SHADOW_COLOR = 236,
+    CW_MANAGED_BINDING_TEXT_SET_SHADOW_COLOR = 237,
+    CW_MANAGED_BINDING_TEXT_GET_SHADOW_OFFSET = 238,
+    CW_MANAGED_BINDING_TEXT_SET_SHADOW_OFFSET = 239,
+    CW_MANAGED_BINDING_TEXT_GET_SHADOW_SOFTNESS = 240,
+    CW_MANAGED_BINDING_TEXT_SET_SHADOW_SOFTNESS = 241,
+    CW_MANAGED_BINDING_TEXT_GET_CHARACTER_SPACING = 242,
+    CW_MANAGED_BINDING_TEXT_SET_CHARACTER_SPACING = 243,
+    CW_MANAGED_BINDING_TEXT_GET_WORD_SPACING = 244,
+    CW_MANAGED_BINDING_TEXT_SET_WORD_SPACING = 245,
+    CW_MANAGED_BINDING_TEXT_GET_LINE_SPACING = 246,
+    CW_MANAGED_BINDING_TEXT_SET_LINE_SPACING = 247,
+    CW_MANAGED_BINDING_TEXT_GET_PARAGRAPH_SPACING = 248,
+    CW_MANAGED_BINDING_TEXT_SET_PARAGRAPH_SPACING = 249,
+    CW_MANAGED_BINDING_TEXT_GET_TAB_WIDTH = 250,
+    CW_MANAGED_BINDING_TEXT_SET_TAB_WIDTH = 251,
+    CW_MANAGED_BINDING_TEXT_GET_USE_CUSTOM_DECORATION_COLOR = 252,
+    CW_MANAGED_BINDING_TEXT_SET_USE_CUSTOM_DECORATION_COLOR = 253,
+    CW_MANAGED_BINDING_TEXT_GET_DECORATION_COLOR = 254,
+    CW_MANAGED_BINDING_TEXT_SET_DECORATION_COLOR = 255,
+    CW_MANAGED_BINDING_TEXT_GET_DECORATION_THICKNESS = 256,
+    CW_MANAGED_BINDING_TEXT_SET_DECORATION_THICKNESS = 257,
+    CW_MANAGED_BINDING_TEXT_GET_UNDERLINE_OFFSET = 258,
+    CW_MANAGED_BINDING_TEXT_SET_UNDERLINE_OFFSET = 259,
+    CW_MANAGED_BINDING_TEXT_GET_STRIKETHROUGH_OFFSET = 260,
+    CW_MANAGED_BINDING_TEXT_SET_STRIKETHROUGH_OFFSET = 261,
+    CW_MANAGED_BINDING_TEXT_GET_USE_KERNING = 262,
+    CW_MANAGED_BINDING_TEXT_SET_USE_KERNING = 263,
+    CW_MANAGED_BINDING_TEXT_GET_SORTING_LAYER = 264,
+    CW_MANAGED_BINDING_TEXT_SET_SORTING_LAYER = 265,
+    CW_MANAGED_BINDING_TEXT_GET_ORDER_IN_LAYER = 266,
+    CW_MANAGED_BINDING_TEXT_SET_ORDER_IN_LAYER = 267,
     CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT = 130,
     CW_MANAGED_BINDING_MATH_MATRIX_INVERSE = 131,
     CW_MANAGED_BINDING_MATH_MATRIX_AFFINE_INVERSE = 132,
@@ -187,6 +255,14 @@ typedef struct cw_managed_vec3
     float y;
     float z;
 } cw_managed_vec3;
+
+typedef struct cw_managed_vec4
+{
+    float x;
+    float y;
+    float z;
+    float w;
+} cw_managed_vec4;
 
 typedef struct cw_managed_quat
 {
@@ -338,6 +414,74 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_source_get_state_fn)
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_source_play_fn)(void* context, cw_managed_uuid entity);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_source_pause_fn)(void* context, cw_managed_uuid entity);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_source_stop_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_text_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_text_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_font_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_font_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_size_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_size_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_auto_size_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_auto_size_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_auto_size_min_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_auto_size_min_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_auto_size_max_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_auto_size_max_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_layout_size_fn)(void* context, cw_managed_uuid entity, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_layout_size_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_wrapping_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_wrapping_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_wrap_mode_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_wrap_mode_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_overflow_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_overflow_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_clip_to_bounds_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_clip_to_bounds_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_max_lines_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_max_lines_fn)(void* context, cw_managed_uuid entity, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_horizontal_alignment_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_horizontal_alignment_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_vertical_alignment_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_vertical_alignment_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_font_style_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_font_style_fn)(void* context, cw_managed_uuid entity, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_outline_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_outline_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_outline_width_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_outline_width_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_shadow_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_shadow_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_shadow_offset_fn)(void* context, cw_managed_uuid entity, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_shadow_offset_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_shadow_softness_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_shadow_softness_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_character_spacing_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_character_spacing_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_word_spacing_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_word_spacing_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_line_spacing_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_line_spacing_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_paragraph_spacing_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_paragraph_spacing_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_tab_width_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_tab_width_fn)(void* context, cw_managed_uuid entity, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_use_custom_decoration_color_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_use_custom_decoration_color_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_decoration_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_decoration_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_decoration_thickness_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_decoration_thickness_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_underline_offset_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_underline_offset_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_strikethrough_offset_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_strikethrough_offset_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_use_kerning_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_use_kerning_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_determinant_fn)(void* context, const cw_managed_mat4* matrix, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_inverse_fn)(void* context, const cw_managed_mat4* matrix, cw_managed_mat4* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_affine_inverse_fn)(void* context, const cw_managed_mat4* matrix, cw_managed_mat4* result);
@@ -450,6 +594,74 @@ typedef struct cw_managed_host_api
     cw_managed_audio_source_play_fn audio_source_play;
     cw_managed_audio_source_pause_fn audio_source_pause;
     cw_managed_audio_source_stop_fn audio_source_stop;
+    cw_managed_text_get_text_fn text_get_text;
+    cw_managed_text_set_text_fn text_set_text;
+    cw_managed_text_get_font_fn text_get_font;
+    cw_managed_text_set_font_fn text_set_font;
+    cw_managed_text_get_color_fn text_get_color;
+    cw_managed_text_set_color_fn text_set_color;
+    cw_managed_text_get_size_fn text_get_size;
+    cw_managed_text_set_size_fn text_set_size;
+    cw_managed_text_get_auto_size_fn text_get_auto_size;
+    cw_managed_text_set_auto_size_fn text_set_auto_size;
+    cw_managed_text_get_auto_size_min_fn text_get_auto_size_min;
+    cw_managed_text_set_auto_size_min_fn text_set_auto_size_min;
+    cw_managed_text_get_auto_size_max_fn text_get_auto_size_max;
+    cw_managed_text_set_auto_size_max_fn text_set_auto_size_max;
+    cw_managed_text_get_layout_size_fn text_get_layout_size;
+    cw_managed_text_set_layout_size_fn text_set_layout_size;
+    cw_managed_text_get_wrapping_fn text_get_wrapping;
+    cw_managed_text_set_wrapping_fn text_set_wrapping;
+    cw_managed_text_get_wrap_mode_fn text_get_wrap_mode;
+    cw_managed_text_set_wrap_mode_fn text_set_wrap_mode;
+    cw_managed_text_get_overflow_fn text_get_overflow;
+    cw_managed_text_set_overflow_fn text_set_overflow;
+    cw_managed_text_get_clip_to_bounds_fn text_get_clip_to_bounds;
+    cw_managed_text_set_clip_to_bounds_fn text_set_clip_to_bounds;
+    cw_managed_text_get_max_lines_fn text_get_max_lines;
+    cw_managed_text_set_max_lines_fn text_set_max_lines;
+    cw_managed_text_get_horizontal_alignment_fn text_get_horizontal_alignment;
+    cw_managed_text_set_horizontal_alignment_fn text_set_horizontal_alignment;
+    cw_managed_text_get_vertical_alignment_fn text_get_vertical_alignment;
+    cw_managed_text_set_vertical_alignment_fn text_set_vertical_alignment;
+    cw_managed_text_get_font_style_fn text_get_font_style;
+    cw_managed_text_set_font_style_fn text_set_font_style;
+    cw_managed_text_get_outline_color_fn text_get_outline_color;
+    cw_managed_text_set_outline_color_fn text_set_outline_color;
+    cw_managed_text_get_outline_width_fn text_get_outline_width;
+    cw_managed_text_set_outline_width_fn text_set_outline_width;
+    cw_managed_text_get_shadow_color_fn text_get_shadow_color;
+    cw_managed_text_set_shadow_color_fn text_set_shadow_color;
+    cw_managed_text_get_shadow_offset_fn text_get_shadow_offset;
+    cw_managed_text_set_shadow_offset_fn text_set_shadow_offset;
+    cw_managed_text_get_shadow_softness_fn text_get_shadow_softness;
+    cw_managed_text_set_shadow_softness_fn text_set_shadow_softness;
+    cw_managed_text_get_character_spacing_fn text_get_character_spacing;
+    cw_managed_text_set_character_spacing_fn text_set_character_spacing;
+    cw_managed_text_get_word_spacing_fn text_get_word_spacing;
+    cw_managed_text_set_word_spacing_fn text_set_word_spacing;
+    cw_managed_text_get_line_spacing_fn text_get_line_spacing;
+    cw_managed_text_set_line_spacing_fn text_set_line_spacing;
+    cw_managed_text_get_paragraph_spacing_fn text_get_paragraph_spacing;
+    cw_managed_text_set_paragraph_spacing_fn text_set_paragraph_spacing;
+    cw_managed_text_get_tab_width_fn text_get_tab_width;
+    cw_managed_text_set_tab_width_fn text_set_tab_width;
+    cw_managed_text_get_use_custom_decoration_color_fn text_get_use_custom_decoration_color;
+    cw_managed_text_set_use_custom_decoration_color_fn text_set_use_custom_decoration_color;
+    cw_managed_text_get_decoration_color_fn text_get_decoration_color;
+    cw_managed_text_set_decoration_color_fn text_set_decoration_color;
+    cw_managed_text_get_decoration_thickness_fn text_get_decoration_thickness;
+    cw_managed_text_set_decoration_thickness_fn text_set_decoration_thickness;
+    cw_managed_text_get_underline_offset_fn text_get_underline_offset;
+    cw_managed_text_set_underline_offset_fn text_set_underline_offset;
+    cw_managed_text_get_strikethrough_offset_fn text_get_strikethrough_offset;
+    cw_managed_text_set_strikethrough_offset_fn text_set_strikethrough_offset;
+    cw_managed_text_get_use_kerning_fn text_get_use_kerning;
+    cw_managed_text_set_use_kerning_fn text_set_use_kerning;
+    cw_managed_text_get_sorting_layer_fn text_get_sorting_layer;
+    cw_managed_text_set_sorting_layer_fn text_set_sorting_layer;
+    cw_managed_text_get_order_in_layer_fn text_get_order_in_layer;
+    cw_managed_text_set_order_in_layer_fn text_set_order_in_layer;
     cw_managed_math_matrix_determinant_fn math_matrix_determinant;
     cw_managed_math_matrix_inverse_fn math_matrix_inverse;
     cw_managed_math_matrix_affine_inverse_fn math_matrix_affine_inverse;
@@ -550,6 +762,74 @@ typedef struct cw_managed_host_api
     X(AudioSourcePlay, audio_source_play) \
     X(AudioSourcePause, audio_source_pause) \
     X(AudioSourceStop, audio_source_stop) \
+    X(TextGetText, text_get_text) \
+    X(TextSetText, text_set_text) \
+    X(TextGetFont, text_get_font) \
+    X(TextSetFont, text_set_font) \
+    X(TextGetColor, text_get_color) \
+    X(TextSetColor, text_set_color) \
+    X(TextGetSize, text_get_size) \
+    X(TextSetSize, text_set_size) \
+    X(TextGetAutoSize, text_get_auto_size) \
+    X(TextSetAutoSize, text_set_auto_size) \
+    X(TextGetAutoSizeMin, text_get_auto_size_min) \
+    X(TextSetAutoSizeMin, text_set_auto_size_min) \
+    X(TextGetAutoSizeMax, text_get_auto_size_max) \
+    X(TextSetAutoSizeMax, text_set_auto_size_max) \
+    X(TextGetLayoutSize, text_get_layout_size) \
+    X(TextSetLayoutSize, text_set_layout_size) \
+    X(TextGetWrapping, text_get_wrapping) \
+    X(TextSetWrapping, text_set_wrapping) \
+    X(TextGetWrapMode, text_get_wrap_mode) \
+    X(TextSetWrapMode, text_set_wrap_mode) \
+    X(TextGetOverflow, text_get_overflow) \
+    X(TextSetOverflow, text_set_overflow) \
+    X(TextGetClipToBounds, text_get_clip_to_bounds) \
+    X(TextSetClipToBounds, text_set_clip_to_bounds) \
+    X(TextGetMaxLines, text_get_max_lines) \
+    X(TextSetMaxLines, text_set_max_lines) \
+    X(TextGetHorizontalAlignment, text_get_horizontal_alignment) \
+    X(TextSetHorizontalAlignment, text_set_horizontal_alignment) \
+    X(TextGetVerticalAlignment, text_get_vertical_alignment) \
+    X(TextSetVerticalAlignment, text_set_vertical_alignment) \
+    X(TextGetFontStyle, text_get_font_style) \
+    X(TextSetFontStyle, text_set_font_style) \
+    X(TextGetOutlineColor, text_get_outline_color) \
+    X(TextSetOutlineColor, text_set_outline_color) \
+    X(TextGetOutlineWidth, text_get_outline_width) \
+    X(TextSetOutlineWidth, text_set_outline_width) \
+    X(TextGetShadowColor, text_get_shadow_color) \
+    X(TextSetShadowColor, text_set_shadow_color) \
+    X(TextGetShadowOffset, text_get_shadow_offset) \
+    X(TextSetShadowOffset, text_set_shadow_offset) \
+    X(TextGetShadowSoftness, text_get_shadow_softness) \
+    X(TextSetShadowSoftness, text_set_shadow_softness) \
+    X(TextGetCharacterSpacing, text_get_character_spacing) \
+    X(TextSetCharacterSpacing, text_set_character_spacing) \
+    X(TextGetWordSpacing, text_get_word_spacing) \
+    X(TextSetWordSpacing, text_set_word_spacing) \
+    X(TextGetLineSpacing, text_get_line_spacing) \
+    X(TextSetLineSpacing, text_set_line_spacing) \
+    X(TextGetParagraphSpacing, text_get_paragraph_spacing) \
+    X(TextSetParagraphSpacing, text_set_paragraph_spacing) \
+    X(TextGetTabWidth, text_get_tab_width) \
+    X(TextSetTabWidth, text_set_tab_width) \
+    X(TextGetUseCustomDecorationColor, text_get_use_custom_decoration_color) \
+    X(TextSetUseCustomDecorationColor, text_set_use_custom_decoration_color) \
+    X(TextGetDecorationColor, text_get_decoration_color) \
+    X(TextSetDecorationColor, text_set_decoration_color) \
+    X(TextGetDecorationThickness, text_get_decoration_thickness) \
+    X(TextSetDecorationThickness, text_set_decoration_thickness) \
+    X(TextGetUnderlineOffset, text_get_underline_offset) \
+    X(TextSetUnderlineOffset, text_set_underline_offset) \
+    X(TextGetStrikethroughOffset, text_get_strikethrough_offset) \
+    X(TextSetStrikethroughOffset, text_set_strikethrough_offset) \
+    X(TextGetUseKerning, text_get_use_kerning) \
+    X(TextSetUseKerning, text_set_use_kerning) \
+    X(TextGetSortingLayer, text_get_sorting_layer) \
+    X(TextSetSortingLayer, text_set_sorting_layer) \
+    X(TextGetOrderInLayer, text_get_order_in_layer) \
+    X(TextSetOrderInLayer, text_set_order_in_layer) \
     X(MathMatrixDeterminant, math_matrix_determinant) \
     X(MathMatrixInverse, math_matrix_inverse) \
     X(MathMatrixAffineInverse, math_matrix_affine_inverse) \
@@ -598,6 +878,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_api_fn)(cw_managed_pro
 static_assert(sizeof(cw_managed_uuid) == 16, "Managed UUID ABI layout changed.");
 static_assert(sizeof(cw_managed_vec2) == 8, "Managed Vector2 ABI layout changed.");
 static_assert(sizeof(cw_managed_vec3) == 12, "Managed Vector3 ABI layout changed.");
+static_assert(sizeof(cw_managed_vec4) == 16, "Managed Vector4 ABI layout changed.");
 static_assert(sizeof(cw_managed_quat) == 16, "Managed quaternion ABI layout changed.");
 static_assert(sizeof(cw_managed_mat4) == 64, "Managed Matrix4 ABI layout changed.");
 static_assert(sizeof(cw_managed_contact_point) == 32, "Managed contact ABI layout changed.");

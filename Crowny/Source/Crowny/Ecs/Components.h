@@ -11,8 +11,8 @@
 #include "Crowny/Common/Math.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
-#include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Physics/Physics3DTypes.h"
+#include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/RenderLight.h"
 
@@ -338,10 +338,15 @@ namespace Crowny
         glm::vec4 OutlineColor{ 0.0f, 0.0f, 0.0f, 0.0f };
         float Thickness = 0.8f;
 
+        glm::vec4 ShadowColor{ 0.0f, 0.0f, 0.0f, 0.0f };
+        glm::vec2 ShadowOffset{ 1.0f, -1.0f };
+        float ShadowSoftness = 0.0f;
+
         float CharacterSpacing = 0.0f;
         float WordSpacing = 0.0f;
         float LineSpacing = 0.0f;
         float ParagraphSpacing = 0.0f;
+        uint32_t TabWidth = 4;
 
         bool UseCustomDecorationColor = false;
         glm::vec4 DecorationColor{ 1.0f };

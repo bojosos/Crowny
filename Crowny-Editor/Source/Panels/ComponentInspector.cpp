@@ -486,11 +486,23 @@ namespace Crowny
           entities, "Text", "Thickness", [](Entity entity) { return entity.GetComponent<TextComponent>().Thickness; },
           [](Entity entity, float value) { entity.GetComponent<TextComponent>().Thickness = std::max(value, 0.0f); },
           [](float& value) { return UI::Property("Outline Width", value, 0.05f, 0.0f, 0.0f); });
+        MultiColor("Shadow Color", entities, "Text", "ShadowColor", &TextComponent::ShadowColor);
+        MultiVector<glm::vec2>(
+          "Shadow Offset", entities, "Text", "ShadowOffset", [](Entity entity) { return entity.GetComponent<TextComponent>().ShadowOffset; },
+          [](Entity entity, const glm::vec2& value) { entity.GetComponent<TextComponent>().ShadowOffset = value; }, 0.05f);
+        MultiValue<float>(
+          entities, "Text", "ShadowSoftness", [](Entity entity) { return entity.GetComponent<TextComponent>().ShadowSoftness; },
+          [](Entity entity, float value) { entity.GetComponent<TextComponent>().ShadowSoftness = std::max(value, 0.0f); },
+          [](float& value) { return UI::Property("Shadow Softness", value, 0.05f, 0.0f, 0.0f); });
         MultiMember("Use Kerning", entities, "Text", "UseKerning", &TextComponent::UseKerning);
         MultiMember("Character Spacing", entities, "Text", "CharacterSpacing", &TextComponent::CharacterSpacing);
         MultiMember("Word Spacing", entities, "Text", "WordSpacing", &TextComponent::WordSpacing);
         MultiMember("Line Spacing", entities, "Text", "LineSpacing", &TextComponent::LineSpacing);
         MultiMember("Paragraph Spacing", entities, "Text", "ParagraphSpacing", &TextComponent::ParagraphSpacing);
+        MultiValue<uint32_t>(
+          entities, "Text", "TabWidth", [](Entity entity) { return entity.GetComponent<TextComponent>().TabWidth; },
+          [](Entity entity, uint32_t value) { entity.GetComponent<TextComponent>().TabWidth = std::max(1u, value); },
+          [](uint32_t& value) { return UI::Property("Tab Width", value); });
         MultiMember("Sorting Layer", entities, "Text", "SortingLayer", &TextComponent::SortingLayer);
         MultiMember("Order In Layer", entities, "Text", "OrderInLayer", &TextComponent::OrderInLayer);
 
@@ -919,9 +931,8 @@ namespace Crowny
                       break;
                   }
               }
-              if (!UI::PropertyDropdown("Bus", busOptionCount, selected, [&](size_t index) {
-                      return index == 0 ? "(None)" : (*busDescs)[index - 1u].Name.c_str();
-                  }))
+              if (!UI::PropertyDropdown("Bus", busOptionCount, selected,
+                                        [&](size_t index) { return index == 0 ? "(None)" : (*busDescs)[index - 1u].Name.c_str(); }))
                   return false;
               value = selected == 0 ? String() : (*busDescs)[static_cast<size_t>(selected) - 1u].Name;
               return true;
