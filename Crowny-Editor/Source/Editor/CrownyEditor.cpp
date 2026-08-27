@@ -54,10 +54,13 @@ namespace Crowny
 
         virtual void OnPreRendererInit() override
         {
-#ifndef CW_DIST
+#ifdef CW_DIST
+            const Vector<String>& args = CommandLineArgs::Get();
+            if (std::find(args.begin(), args.end(), "--cook-builtins") == args.end())
+                return;
+#endif
             BuiltInShaderCompiler::CompileAll();
             EditorBuiltInAssetCompiler::CompileChangedAssets();
-#endif
         }
 
         virtual void OnStartUp() override

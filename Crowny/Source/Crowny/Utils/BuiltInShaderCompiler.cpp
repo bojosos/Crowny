@@ -31,6 +31,34 @@ namespace Crowny
             return latest;
         }
 
+        bool SynchronizeAssetWriteTime(const Path& assetPath, const Path& root, const Vector<Path>& dependencies)
+        {
+            std::error_code error;
+            fs::file_time_type latestSourceTime = fs::last_write_time(root, error);
+            if (error)
+                return false;
+
+            for (const Path& dependency : dependencies)
+            {
+                const fs::file_time_type dependencyTime = fs::last_write_time(dependency, error);
+                if (error)
+                {
+                    error.clear();
+                    continue;
+                }
+                latestSourceTime = std::max(latestSourceTime, dependencyTime);
+            }
+
+            const fs::file_time_type assetTime = fs::last_write_time(assetPath, error);
+            if (error || assetTime >= latestSourceTime)
+                return !error;
+
+            fs::last_write_time(assetPath, latestSourceTime, error);
+            if (error)
+                CW_ENGINE_WARN("BuiltInShaderCompiler: Failed to synchronize asset timestamp for '{}'", assetPath.string());
+            return !error;
+        }
+
         void LogDiagnostics(const Path& root, const Vector<ShaderDiagnostic>& diagnostics)
         {
             for (const ShaderDiagnostic& diagnostic : diagnostics)
@@ -177,13 +205,23 @@ namespace Crowny
             }
             if (!NeedsRecompile(assetPath, preprocessed.ContentHash))
             {
-                stats.Skipped++;
+                // Packaging retains a cheap timestamp check. Keep it in sync with
+                // the content-hash result without recompiling unchanged shaders.
+                if (SynchronizeAssetWriteTime(assetPath, glslPath, preprocessed.Dependencies))
+                    stats.Skipped++;
+                else
+                    stats.Failed++;
                 continue;
             }
 
             CW_ENGINE_INFO("Compiling built-in shader: {}", glslPath.filename().string());
             if (CompileAndSave(glslPath, assetPath, source))
-                stats.Compiled++;
+            {
+                if (SynchronizeAssetWriteTime(assetPath, glslPath, preprocessed.Dependencies))
+                    stats.Compiled++;
+                else
+                    stats.Failed++;
+            }
             else
                 stats.Failed++;
         }

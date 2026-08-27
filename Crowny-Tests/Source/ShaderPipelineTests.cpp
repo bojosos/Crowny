@@ -1,5 +1,7 @@
 #include "Crowny/Assets/AssetCodecs.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/BuiltInResourcePack.h"
+#include "Crowny/Common/Constants.h"
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/Renderer/ShaderVariation.h"
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
@@ -446,15 +448,26 @@ void main() { outColor = SharedColor(); }
     CHECK(touched.Compiled == 0);
     CHECK(touched.Skipped == 1);
     CHECK(touched.Failed == 0);
+    const auto touchedIncludeTime = std::filesystem::last_write_time(include, error);
+    REQUIRE_FALSE(error);
+    const auto synchronizedAssetTime = std::filesystem::last_write_time(asset, error);
+    REQUIRE_FALSE(error);
+    CHECK(synchronizedAssetTime >= touchedIncludeTime);
 
     {
         std::ofstream stream(include, std::ios::binary | std::ios::trunc);
         stream << "vec4 SharedColor() { return vec4(0.25); }\n";
     }
+    const auto changedIncludeTime = std::filesystem::last_write_time(include, error) + std::chrono::hours(2);
+    std::filesystem::last_write_time(include, changedIncludeTime, error);
+    REQUIRE_FALSE(error);
     const BuiltInShaderCompileStats changed = BuiltInShaderCompiler::CompileAll(directory);
     CHECK(changed.Compiled == 1);
     CHECK(changed.Skipped == 0);
     CHECK(changed.Failed == 0);
+    const auto changedAssetTime = std::filesystem::last_write_time(asset, error);
+    REQUIRE_FALSE(error);
+    CHECK(changedAssetTime >= changedIncludeTime);
     AssetFileHeader changedHeader;
     REQUIRE(PeekAssetHeader(asset, changedHeader));
     CHECK(changedHeader.SourceContentHash != firstHash);
@@ -467,6 +480,47 @@ void main() { outColor = SharedColor(); }
     AssetFileHeader preservedHeader;
     REQUIRE(PeekAssetHeader(asset, preservedHeader));
     CHECK(preservedHeader.SourceContentHash == changedHeader.SourceContentHash);
+
+    std::filesystem::remove_all(directory, error);
+}
+
+TEST_CASE("Built-in pack contains current Toon and Unlit shader assets", "[Shader][Assets]")
+{
+    const Path repositoryRoot = std::filesystem::current_path();
+    const Path sourcePack = repositoryRoot / "Crowny-Editor/Resources/Builtin.cwpack";
+    REQUIRE(std::filesystem::is_regular_file(sourcePack));
+
+    const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
+    const Path directory = std::filesystem::temp_directory_path() / ("crowny_builtin_pack_" + std::to_string(unique));
+    const Path copiedPack = directory / "Resources/Builtin.cwpack";
+    std::error_code error;
+    std::filesystem::create_directories(copiedPack.parent_path(), error);
+    REQUIRE_FALSE(error);
+    std::filesystem::copy_file(sourcePack, copiedPack, std::filesystem::copy_options::overwrite_existing, error);
+    REQUIRE_FALSE(error);
+
+    BuiltInResourcePack pack(copiedPack);
+    REQUIRE(pack.IsValid());
+    for (const Path shaderPath : { Path(TOON_SHADER_PATH), Path(UNLIT_SHADER_PATH) })
+    {
+        INFO(shaderPath.string());
+        REQUIRE(pack.Contains(shaderPath));
+        const Ref<DataStream> packedStream = pack.Open(shaderPath);
+        REQUIRE(packedStream);
+        const Vector<uint8_t> packedBytes = packedStream->ReadAll();
+
+        const Path loosePath = repositoryRoot / "Crowny-Editor" / shaderPath;
+        AssetFileHeader header;
+        REQUIRE(PeekAssetHeader(loosePath, header));
+        CHECK(header.Type == AssetType::Shader);
+        CHECK(header.Version == SHADER_FORMAT_VERSION);
+        CHECK(header.SourceContentHash != 0);
+
+        std::ifstream looseStream(loosePath, std::ios::binary);
+        REQUIRE(looseStream);
+        const Vector<uint8_t> looseBytes((std::istreambuf_iterator<char>(looseStream)), std::istreambuf_iterator<char>());
+        CHECK(packedBytes == looseBytes);
+    }
 
     std::filesystem::remove_all(directory, error);
 }

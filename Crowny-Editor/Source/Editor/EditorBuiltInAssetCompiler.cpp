@@ -50,6 +50,23 @@ namespace Crowny
             return Hashing::CityHash64(reinterpret_cast<const char*>(bytes.data()), bytes.size());
         }
 
+        bool SynchronizeAssetWriteTime(const Path& assetPath, const Path& sourcePath)
+        {
+            std::error_code error;
+            const fs::file_time_type sourceTime = fs::last_write_time(sourcePath, error);
+            if (error)
+                return false;
+
+            const fs::file_time_type assetTime = fs::last_write_time(assetPath, error);
+            if (error || assetTime >= sourceTime)
+                return !error;
+
+            fs::last_write_time(assetPath, sourceTime, error);
+            if (error)
+                CW_ENGINE_WARN("Failed to synchronize built-in asset timestamp for '{}'", assetPath.string());
+            return !error;
+        }
+
         bool ReadEmbeddedAssetHeader(const Path& path, AssetFileHeader& header)
         {
             std::ifstream stream(path, std::ios::binary);
@@ -101,7 +118,11 @@ namespace Crowny
             const bool isCurrent = ReadEmbeddedAssetHeader(assetPath, header) && header.Version == TEXTURE_FORMAT_VERSION &&
                                    header.Type == AssetType::Texture && header.SourceContentHash == sourceHash;
             if (isCurrent)
+            {
+                if (!SynchronizeAssetWriteTime(assetPath, sourcePath))
+                    failed++;
                 continue;
+            }
 
             Ref<Texture> texture = Importer::Get().Import<Texture>(sourcePath);
             if (!texture)
@@ -113,7 +134,10 @@ namespace Crowny
             texture->SetSourceTimestamp(GetTimestamp(sourcePath));
             texture->SetSourceContentHash(sourceHash);
             AssetManager::TryGet()->Save(texture, assetPath);
-            cooked++;
+            if (SynchronizeAssetWriteTime(assetPath, sourcePath))
+                cooked++;
+            else
+                failed++;
         }
 
         const Path fontSourcePath = editorRoot / "Resources/Fonts/Roboto/roboto-thin.ttf";
@@ -123,7 +147,12 @@ namespace Crowny
         AssetFileHeader fontHeader;
         const bool fontIsCurrent = ReadEmbeddedAssetHeader(fontAssetPath, fontHeader) && fontHeader.Version == FONT_FORMAT_VERSION &&
                                    fontHeader.Type == AssetType::Font && fontHeader.SourceContentHash == fontSourceHash;
-        if (!fontIsCurrent)
+        if (fontIsCurrent)
+        {
+            if (!SynchronizeAssetWriteTime(fontAssetPath, fontSourcePath))
+                failed++;
+        }
+        else
         {
             const Ref<FontImportOptions> options = CreateRef<FontImportOptions>();
             options->AutomaticFontSampling = true;
@@ -134,7 +163,10 @@ namespace Crowny
                 font->SetSourceTimestamp(GetTimestamp(fontSourcePath));
                 font->SetSourceContentHash(fontSourceHash);
                 AssetManager::TryGet()->Save(font, fontAssetPath);
-                cooked++;
+                if (SynchronizeAssetWriteTime(fontAssetPath, fontSourcePath))
+                    cooked++;
+                else
+                    failed++;
             }
             else
                 failed++;

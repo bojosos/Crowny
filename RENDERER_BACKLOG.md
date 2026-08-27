@@ -83,7 +83,8 @@ Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-dri
 - [x] Preserve shared skinning/morph deformation, depth, velocity, object-ID, shadow, alpha, and material-index paths around the new shading model.
 - [x] Add bindless diffuse-ramp and view-space matcap texture modes with strength, offset, and rotation controls shared by Forward+ and Deferred+.
 - [x] Preserve the existing opt-in inverted-hull pass in the legacy toon shader and expose its outline controls.
-- [ ] Cook and pack the legacy `Toon.asset` and `Unlit.asset` with the material-model-aware compiler. Their sources are now language-tagged so the built-in cooker no longer skips them.
+- [x] Cook and pack the legacy `Toon.asset` and `Unlit.asset` with the material-model-aware compiler. Their sources are now language-tagged so the built-in cooker no longer skips them.
+- [x] Keep successfully cooked or content-hash-valid built-in shader, icon, and font asset timestamps synchronized with their sources, including future-dated inputs, and allow explicit Dist cooker runs so strict packaging works after a fresh checkout.
 - [ ] Move inverted-hull silhouettes onto GPU-driven indirect submission, then add managed convenience APIs/editor presets, asset migration, and dedicated toon golden images.
 
 ## 3. GPU resource allocation and caches
