@@ -37,6 +37,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Render-graph transient physical-ID lookup retains its hash scratch after warm-up and reports capacity growth instead of allocating a fresh map each frame.
 - [x] Render-graph setup callbacks use an immediate, non-owning template path, avoiding standard-library-dependent heap allocation for large captures while deferred execution callbacks retain owning lifetime semantics.
 - [x] Local-shadow scheduling retains candidate scratch and uses ordinal tie-breaking with allocation-free sorting; stable 1, 1,000, and 10,000-request schedules allocate nothing after warm-up.
+- [x] CPU clustered-light reference and compatibility builds retain cluster-count and projected-bounds scratch; stable 1, 1,000, and 10,000-light builds allocate nothing after warm-up.
 - [x] Combined Windows ASan verification passed 25,832 assertions in 403 cases; focused console, render-graph, and shader suites passed 51/91/177 assertions respectively.
 - [x] Re-cooked 32 shader assets for the transitive fingerprint migration and repacked 54 built-in resources; a repeat ASan cook-only launch found no stale assets and exited cleanly in 3.64 seconds. Vulkan, OpenGL, and cross-backend reference checks passed 4/4 each.
 - [x] Thread-local allocation telemetry covers standard, aligned, sized, array, and nothrow allocation families without the heavy leak tracker's map/mutex. Render-graph construction and compilation retain graph/result/compiler scratch and perform zero calling-thread allocations across 120 identical frames after warm-up.
@@ -60,6 +61,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] The render blackboard retains named resource entries across frame clears and uses generation-stamped heterogeneous CityHash lookup. Stable 1, 1,000, and 10,000-resource rebuilds allocate nothing across 120 warm frames.
 - [x] Subtree duplication attaches each clone to its final parent once, preserves local and world transforms under transformed ancestors, and leaves source child storage untouched instead of allocating snapshots and performing transient reparent operations.
 - [x] Scene lifecycle keeps a retained sorted loaded-scene index; native and C# enumeration no longer rebuild and sort a UUID vector for every count and element query.
+- [x] Windows and Premake managed builds emit configuration-correct assemblies under the ignored `.deps/generated/managed` tree; editor and isolated tests resolve those outputs without rewriting committed fallback DLLs.
 
 ## Physics and ECS
 
@@ -94,6 +96,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Expand static Assimp scene mesh instances through their accumulated node transforms, including non-uniform normal transforms, mirrored winding and tangent handedness, bounds, morph deltas, and material-slot duplication. Reject transformed skinned instances until per-instance bind transforms exist.
 - [ ] Add asset-backed and runtime mesh primitives: cube, plane, sphere, cylinder, cone, capsule, quad, and configurable tessellation with safe upper bounds.
 - [ ] Finish morph animation, then implement skeletal animation: skeleton assets, bones, bind/inverse-bind poses, clips, channels, interpolation, blending, layers, masks, root motion, events, retarget-ready IDs, GPU/CPU skinning, bounds, serialization, import, editor inspection, and C# APIs.
+- [x] Compose transient skeletal override and additive layers in deterministic stack order with independent speed/wrap settings, reusable poses, layer weights, and per-bone masks. Layer events, morphs, root motion, serialization, and C# control remain separate work.
 - [x] Dispatch ping-pong animation events in traversal order across both reflected clip boundaries without double-firing endpoint events.
 - [x] Expose animation clips and backend-safe component playback controls to C#, preserving requested state and time when renderer runtime objects are recreated.
 - [ ] Improve geometry-node evaluation, node catalog, type conversion, caching, invalidation, diagnostics, previews, serialization, undo, and large-graph performance.
