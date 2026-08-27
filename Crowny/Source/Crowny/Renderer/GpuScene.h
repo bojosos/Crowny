@@ -91,6 +91,7 @@ namespace Crowny
         const Ref<GenericGpuBuffer>& GetMeshletBuffer() const { return m_MeshletBuffer; }
         const Ref<GenericGpuBuffer>& GetMaterialBuffer() const { return m_MaterialBuffer; }
         uint32_t GetMaterialCount() const { return static_cast<uint32_t>(m_Materials.size()); }
+        bool HasForwardOnlyOpaqueMaterials() const { return m_ForwardOnlyOpaqueMaterialCount != 0; }
         Ref<VertexBuffer> GetGeometryVertexBuffer(uint32_t geometryBinding) const;
         Ref<IndexBuffer> GetGeometryIndexBuffer(uint32_t geometryBinding) const;
         DrawMode GetGeometryDrawMode(uint32_t geometryBinding) const;
@@ -198,6 +199,8 @@ namespace Crowny
         GpuGeometryTableAllocator m_LodTableAllocator;
         GpuGeometryTableAllocator m_MeshletTableAllocator;
         Vector<GpuMaterialData> m_Materials;
+        Vector<MaterialRenderClassification> m_MaterialClassifications;
+        uint32_t m_ForwardOnlyOpaqueMaterialCount = 0;
         Vector<Ref<IndexBuffer>> m_MeshIndexBuffers;
         Vector<Ref<Texture>> m_BindlessTextureResources;
         uint64_t m_BindlessTextureVersion = 0;

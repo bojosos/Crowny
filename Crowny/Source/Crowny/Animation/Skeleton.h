@@ -115,6 +115,7 @@ namespace Crowny
         const SphereBounds& GetSphereBounds() const { return m_SphereBounds; }
         const AABox& GetBounds() const { return m_Bounds; }
         bool IsInitialized() const { return m_OutputMeshData != nullptr; }
+        bool WasLastDeformChanged() const { return m_LastDeformChanged; }
 
     private:
         Ref<MeshData> m_OutputMeshData;
@@ -131,7 +132,12 @@ namespace Crowny
         Vector<glm::vec3> m_Bitangents;
         Vector<glm::vec4> m_BlendWeights;
         Vector<glm::ivec4> m_BlendIndices;
+        Vector<glm::mat4> m_LastSkinningMatrices;
+        Vector<float> m_LastMorphWeights;
         AABox m_Bounds;
         SphereBounds m_SphereBounds;
+        bool m_HasDeformationState = false;
+        bool m_DeformationStateSettled = false;
+        bool m_LastDeformChanged = false;
     };
 } // namespace Crowny

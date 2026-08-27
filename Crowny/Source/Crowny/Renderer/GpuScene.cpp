@@ -61,19 +61,22 @@ namespace Crowny
             return nullptr;
         }
 
-        AlphaMode GetMaterialAlpha(const Vector<GpuMaterialData>& materials, uint32_t materialIndex)
+        const MaterialRenderClassification& GetMaterialClassification(const Vector<MaterialRenderClassification>& materials,
+                                                                      uint32_t materialIndex)
         {
+            static const MaterialRenderClassification fallback;
             if (materialIndex >= materials.size())
-                return AlphaMode::Opaque;
-            const uint32_t packedAlpha = (materials[materialIndex].TextureIndices1.w >> 8u) & 0xffu;
-            return packedAlpha <= static_cast<uint32_t>(AlphaMode::WeightedOIT) ? static_cast<AlphaMode>(packedAlpha) : AlphaMode::Opaque;
+                return fallback;
+            return materials[materialIndex];
         }
 
-        GpuDrawBinKey StandardDrawBin(AlphaMode alpha, uint32_t geometryHeap)
+        GpuDrawBinKey DrawBinForMaterial(const MaterialRenderClassification& material, uint32_t geometryHeap)
         {
             GpuDrawBinKey key;
-            key.Phase = alpha == AlphaMode::Opaque || alpha == AlphaMode::Mask ? RenderDrawPhase::Opaque : RenderDrawPhase::Transparent;
-            key.Alpha = alpha;
+            const bool opaque = material.Alpha == AlphaMode::Opaque || material.Alpha == AlphaMode::Mask;
+            key.Phase = opaque ? (material.UsesStandardGpuRecord() ? RenderDrawPhase::Opaque : RenderDrawPhase::ForwardOpaque)
+                               : RenderDrawPhase::Transparent;
+            key.Alpha = material.Alpha;
             key.GeometryHeap = geometryHeap;
             return key;
         }
@@ -294,6 +297,8 @@ namespace Crowny
         m_LodTableAllocator.Reset();
         m_MeshletTableAllocator.Reset();
         m_Materials.clear();
+        m_MaterialClassifications.clear();
+        m_ForwardOnlyOpaqueMaterialCount = 0;
         m_MeshIndexBuffers.clear();
         m_BindlessTextureResources.clear();
         m_BindlessTextures.reset();
@@ -503,10 +508,11 @@ namespace Crowny
                 if (meshlet.Draw.y == 0)
                     continue;
                 const uint32_t materialIndex = RenderWorld::GetMaterialHandle(instance.Draw) + meshlet.Draw.z;
-                const AlphaMode alpha = GetMaterialAlpha(m_Materials, materialIndex);
-                if (alpha != AlphaMode::Opaque && alpha != AlphaMode::Mask)
+                const MaterialRenderClassification& material =
+                  GetMaterialClassification(m_MaterialClassifications, materialIndex);
+                if (!material.UsesStandardGpuRecord() || (material.Alpha != AlphaMode::Opaque && material.Alpha != AlphaMode::Mask))
                     continue;
-                output.push_back(StandardDrawBin(alpha, meshlet.Geometry.z));
+                output.push_back(DrawBinForMaterial(material, meshlet.Geometry.z));
             }
         }
     }
@@ -572,9 +578,12 @@ namespace Crowny
                 if (meshlet.Draw.y == 0)
                     continue;
                 const uint32_t materialIndex = RenderWorld::GetMaterialHandle(instance.Draw) + meshlet.Draw.z;
-                const AlphaMode alpha = GetMaterialAlpha(m_Materials, materialIndex);
+                const MaterialRenderClassification& material =
+                  GetMaterialClassification(m_MaterialClassifications, materialIndex);
+                if (!material.UsesStandardGpuRecord() && !material.IsForwardOnlyOpaque())
+                    continue;
                 GpuDrawCandidate candidate;
-                candidate.Bin = StandardDrawBin(alpha, meshlet.Geometry.z);
+                candidate.Bin = DrawBinForMaterial(material, meshlet.Geometry.z);
                 candidate.InstanceID = instanceIndex;
                 candidate.MaterialIndex = materialIndex;
                 candidate.IndexCount = meshlet.Draw.y;
@@ -954,6 +963,9 @@ namespace Crowny
     {
         m_Materials.clear();
         m_Materials.resize(std::max<size_t>(m_MaterialResources.size(), 1u));
+        m_MaterialClassifications.clear();
+        m_MaterialClassifications.resize(m_Materials.size());
+        m_ForwardOnlyOpaqueMaterialCount = 0;
         const Ref<Texture> fallback = Texture::MISSING ? Texture::MISSING : Texture::WHITE;
         const uint32_t capacity = std::min<uint32_t>(BindlessResourceHandle::MaxResources,
                                                      std::max<uint32_t>(1024u, static_cast<uint32_t>(m_MaterialResources.size() * 5u + 4u)));
@@ -988,7 +1000,18 @@ namespace Crowny
             if (!materialHandle)
                 continue;
             const Material& material = *materialHandle;
+            const MaterialRenderClassification classification = MaterialRenderClassifier::Classify(material);
+            m_MaterialClassifications[materialIndex] = classification;
+            if (classification.IsForwardOnlyOpaque())
+                m_ForwardOnlyOpaqueMaterialCount++;
+            if (!classification.UsesStandardGpuRecord())
+            {
+                m_Materials[materialIndex] = GpuMaterialPacker::PackUnsupported();
+                continue;
+            }
             StandardMaterialDesc desc;
+            desc.Model = classification.Model;
+            desc.Alpha = classification.Alpha;
             ReadMaterialValue(material, { "baseColor", "albedo", "tint" }, desc.BaseColor);
             if (!ReadMaterialValue(material, { "emissive", "emissionColor" }, desc.Emissive))
             {
@@ -1003,20 +1026,8 @@ namespace Crowny
             ReadMaterialValue(material, { "normalScale", "normalStrength" }, desc.NormalScale);
             ReadMaterialValue(material, { "ambientOcclusion", "ao" }, desc.AmbientOcclusion);
 
-            const AssetHandle<Shader> shader = material.GetShader();
-            if (shader && shader->GetName().find("Unlit") != String::npos)
-                desc.Model = MaterialModel::Unlit;
-            else if ((shader && shader->GetName().find("Toon") != String::npos) ||
-                     (material.GetVariation().Has("TOON") && material.GetVariation().GetBool("TOON")))
+            if (material.GetVariation().Has("TOON") && material.GetVariation().GetBool("TOON"))
                 desc.Model = MaterialModel::Toon;
-            if (shader)
-            {
-                const Ref<ShaderTechnique>& technique = shader->GetTechnique(material.GetVariation());
-                if (technique && !technique->GetRenderPasses().empty() && technique->GetRenderPasses()[0]->HasBlending())
-                    desc.Alpha = AlphaMode::Premultiplied;
-            }
-            if (material.GetVariation().Has("ALPHA_MASK") && material.GetVariation().GetBool("ALPHA_MASK"))
-                desc.Alpha = AlphaMode::Mask;
 
             desc.BaseColorTexture =
               registerTexture(FindMaterialTexture(material, { "baseColorTexture", "baseColorMap", "albedoMap", "mainTexture" }), Texture::WHITE);

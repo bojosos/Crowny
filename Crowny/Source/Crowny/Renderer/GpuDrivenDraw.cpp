@@ -79,84 +79,67 @@ namespace Crowny
         }
 
         const uint32_t sourceBinCount = static_cast<uint32_t>(uniqueKeys.size());
-        const uint32_t activeBinCount = std::min({ sourceBinCount, desc.MaximumBins, desc.MaximumCommands });
         Vector<GpuDrawBin> bins;
         Vector<GpuDrawBinLookupEntry> lookupEntries;
         uint32_t commandCapacity = 0;
-        if (activeBinCount != 0 && desc.MaximumDrawsPerCall != 0)
+        if (sourceBinCount != 0 && desc.MaximumBins != 0 && desc.MaximumCommands != 0 && desc.MaximumDrawsPerCall != 0)
         {
-            const uint64_t maximumCapacity64 =
-              std::min<uint64_t>(desc.MaximumCommands, static_cast<uint64_t>(activeBinCount) * desc.MaximumDrawsPerCall);
-            commandCapacity = static_cast<uint32_t>(maximumCapacity64);
-            Vector<uint32_t> capacities(activeBinCount, 1u);
-            Vector<uint32_t> remainingDemand(activeBinCount, 0u);
-            uint64_t totalDemand = 0;
-            for (uint32_t index = 0; index < activeBinCount; index++)
+            Vector<uint32_t> admissionOrder;
+            admissionOrder.reserve(sourceBinCount);
+            for (uint32_t index = 0; index < sourceBinCount; index++)
+                admissionOrder.push_back(index);
+            std::sort(admissionOrder.begin(), admissionOrder.end(), [&](uint32_t first, uint32_t second) {
+                if (binDemand[first] != binDemand[second])
+                    return binDemand[first] > binDemand[second];
+                return first < second;
+            });
+
+            Vector<uint32_t> admitted;
+            admitted.reserve(std::min(sourceBinCount, desc.MaximumBins));
+            uint32_t remainingCapacity = desc.MaximumCommands;
+            for (const uint32_t sourceIndex : admissionOrder)
             {
-                const uint32_t desired = std::min(binDemand[index], desc.MaximumDrawsPerCall);
-                remainingDemand[index] = desired - 1u;
-                totalDemand += desired;
+                if (admitted.size() >= desc.MaximumBins)
+                    break;
+                const uint32_t demand = binDemand[sourceIndex];
+                if (demand > desc.MaximumDrawsPerCall || demand > remainingCapacity)
+                    continue;
+                admitted.push_back(sourceIndex);
+                remainingCapacity -= demand;
             }
-            if (totalDemand <= commandCapacity)
-            {
-                for (uint32_t index = 0; index < activeBinCount; index++)
-                    capacities[index] += remainingDemand[index];
-                commandCapacity = static_cast<uint32_t>(totalDemand);
-            }
-            else
-            {
-                uint32_t remainingCapacity = commandCapacity - activeBinCount;
-                const uint64_t extraDemand = totalDemand - activeBinCount;
-                uint32_t assignedCapacity = 0;
-                for (uint32_t index = 0; index < activeBinCount; index++)
-                {
-                    const uint32_t share =
-                      static_cast<uint32_t>(static_cast<uint64_t>(remainingCapacity) * remainingDemand[index] / std::max<uint64_t>(extraDemand, 1u));
-                    capacities[index] += std::min(share, remainingDemand[index]);
-                    assignedCapacity += std::min(share, remainingDemand[index]);
-                }
-                uint32_t leftover = remainingCapacity - assignedCapacity;
-                while (leftover != 0)
-                {
-                    bool assigned = false;
-                    for (uint32_t index = 0; index < activeBinCount && leftover != 0; index++)
-                    {
-                        if (capacities[index] >= std::min(binDemand[index], desc.MaximumDrawsPerCall))
-                            continue;
-                        capacities[index]++;
-                        leftover--;
-                        assigned = true;
-                    }
-                    if (!assigned)
-                        break;
-                }
-            }
-            bins.reserve(activeBinCount);
+            // Submission order and fixed offsets stay stable regardless of the
+            // admission heuristic used under a constrained command budget.
+            std::sort(admitted.begin(), admitted.end());
+            bins.reserve(admitted.size());
             uint32_t firstCommand = 0;
-            for (uint32_t index = 0; index < activeBinCount; index++)
+            for (const uint32_t sourceIndex : admitted)
             {
-                const uint32_t capacity = capacities[index];
-                bins.push_back({ uniqueKeys[index], firstCommand, capacity, index });
+                const uint32_t capacity = binDemand[sourceIndex];
+                bins.push_back({ uniqueKeys[sourceIndex], firstCommand, capacity, static_cast<uint32_t>(bins.size()) });
                 firstCommand += capacity;
             }
+            commandCapacity = firstCommand;
 
-            const uint32_t lookupCapacity = std::bit_ceil(std::max(activeBinCount * 2u, 2u));
-            lookupEntries.resize(lookupCapacity);
-            const uint32_t lookupMask = lookupCapacity - 1u;
-            for (uint32_t binIndex = 0; binIndex < bins.size(); binIndex++)
+            if (!bins.empty())
             {
-                const GpuDrawBin& bin = bins[binIndex];
-                uint32_t lookupIndex = Hash(bin.Key) & lookupMask;
-                while (lookupEntries[lookupIndex].BinIndex != GpuDrawBinLookupEntry::InvalidBin)
-                    lookupIndex = (lookupIndex + 1u) & lookupMask;
-                lookupEntries[lookupIndex] = { static_cast<uint32_t>(bin.Key.Phase),
-                                               static_cast<uint32_t>(bin.Key.Alpha),
-                                               bin.Key.Pipeline,
-                                               bin.Key.GeometryHeap,
-                                               bin.Key.MaterialTemplate,
-                                               binIndex,
-                                               bin.FirstCommand,
-                                               bin.CommandCapacity };
+                const uint32_t lookupCapacity = std::bit_ceil(std::max(static_cast<uint32_t>(bins.size()) * 2u, 2u));
+                lookupEntries.resize(lookupCapacity);
+                const uint32_t lookupMask = lookupCapacity - 1u;
+                for (uint32_t binIndex = 0; binIndex < bins.size(); binIndex++)
+                {
+                    const GpuDrawBin& bin = bins[binIndex];
+                    uint32_t lookupIndex = Hash(bin.Key) & lookupMask;
+                    while (lookupEntries[lookupIndex].BinIndex != GpuDrawBinLookupEntry::InvalidBin)
+                        lookupIndex = (lookupIndex + 1u) & lookupMask;
+                    lookupEntries[lookupIndex] = { static_cast<uint32_t>(bin.Key.Phase),
+                                                   static_cast<uint32_t>(bin.Key.Alpha),
+                                                   bin.Key.Pipeline,
+                                                   bin.Key.GeometryHeap,
+                                                   bin.Key.MaterialTemplate,
+                                                   binIndex,
+                                                   bin.FirstCommand,
+                                                   bin.CommandCapacity };
+                }
             }
         }
 

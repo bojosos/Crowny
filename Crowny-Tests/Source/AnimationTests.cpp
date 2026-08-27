@@ -218,6 +218,7 @@ TEST_CASE("Mesh deformer skins vertices using a reusable output mesh", "[Animati
     MeshDeformer deformer;
     REQUIRE(deformer.Initialize(mesh, skeleton));
     REQUIRE(deformer.Deform(&pose));
+    CHECK(deformer.WasLastDeformChanged());
     REQUIRE(deformer.GetOutputMeshData()->GetBufferLayout().HasAttribute(VertexAttribute::PreviousPosition));
     CHECK(ApproxVec3(deformer.GetOutputMeshData()->GetPositions()[0], glm::vec3(1.0f, 0.0f, 0.0f)));
     CHECK(deformer.GetOutputMeshData()->GetUVs(0)[0] == glm::vec2(0.25f, 0.75f));
@@ -226,8 +227,17 @@ TEST_CASE("Mesh deformer skins vertices using a reusable output mesh", "[Animati
     CHECK(ApproxVec3(previousPosition, glm::vec3(0.0f)));
     const Ref<MeshData> output = deformer.GetOutputMeshData();
 
+    REQUIRE(deformer.Deform(&pose));
+    CHECK(deformer.WasLastDeformChanged());
+    CHECK(deformer.GetOutputMeshData() == output);
+    deformer.GetOutputMeshData()->GetVertexData(VertexAttribute::PreviousPosition, &previousPosition, sizeof(previousPosition));
+    CHECK(ApproxVec3(previousPosition, glm::vec3(1.0f, 0.0f, 0.0f)));
+    REQUIRE(deformer.Deform(&pose));
+    CHECK_FALSE(deformer.WasLastDeformChanged());
+
     pose.Evaluate(*clip, 1.0f, AnimationWrapMode::Clamp);
     REQUIRE(deformer.Deform(&pose));
+    CHECK(deformer.WasLastDeformChanged());
     CHECK(deformer.GetOutputMeshData() == output);
     CHECK(ApproxVec3(deformer.GetOutputMeshData()->GetPositions()[0], glm::vec3(2.0f, 0.0f, 0.0f)));
     deformer.GetOutputMeshData()->GetVertexData(VertexAttribute::PreviousPosition, &previousPosition, sizeof(previousPosition));
@@ -263,5 +273,13 @@ TEST_CASE("Mesh deformer applies morph targets before skeletal skinning", "[Anim
     MeshDeformer deformer;
     REQUIRE(deformer.Initialize(mesh, skeleton, morph));
     REQUIRE(deformer.Deform(&pose, { 1.0f }));
+    CHECK(deformer.WasLastDeformChanged());
     CHECK(ApproxVec3(deformer.GetOutputMeshData()->GetPositions()[0], glm::vec3(3.0f, 0.0f, 0.0f)));
+    REQUIRE(deformer.Deform(&pose, { 1.0f }));
+    CHECK(deformer.WasLastDeformChanged());
+    REQUIRE(deformer.Deform(&pose, { 1.0f }));
+    CHECK_FALSE(deformer.WasLastDeformChanged());
+    REQUIRE(deformer.Deform(&pose, { 0.5f }));
+    CHECK(deformer.WasLastDeformChanged());
+    CHECK(ApproxVec3(deformer.GetOutputMeshData()->GetPositions()[0], glm::vec3(2.5f, 0.0f, 0.0f)));
 }

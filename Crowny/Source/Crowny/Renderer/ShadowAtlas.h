@@ -70,6 +70,12 @@ namespace Crowny
         uint64_t MaximumPixels = 4ull * 1024ull * 1024ull;
     };
 
+    inline bool RequiresShadowCacheRedraw(const LightShadowSettings& settings, bool lightOrSettingsChanged, uint64_t casterRevision,
+                                          uint64_t cachedCasterRevision)
+    {
+        return !settings.CacheStaticCasters || lightOrSettingsChanged || casterRevision != cachedCasterRevision;
+    }
+
     class ShadowUpdateScheduler
     {
     public:

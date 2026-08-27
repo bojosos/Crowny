@@ -216,6 +216,11 @@ namespace Crowny
         if (!meshData || !meshData->GetBufferLayout().HasAttribute(VertexAttribute::Position))
             return false;
 
+        m_HasDeformationState = false;
+        m_DeformationStateSettled = false;
+        m_LastDeformChanged = false;
+        m_LastSkinningMatrices.clear();
+        m_LastMorphWeights.clear();
         m_Skeleton = skeleton;
         m_Morph = morph;
         m_BasePositions = meshData->GetPositions();
@@ -277,7 +282,49 @@ namespace Crowny
     bool MeshDeformer::Deform(const SkeletonPose* pose, const Vector<float>& morphWeights)
     {
         if (!m_OutputMeshData)
+        {
+            m_LastDeformChanged = false;
             return false;
+        }
+
+        const Vector<glm::mat4>* skinningMatrices =
+          pose != nullptr && pose->GetSkeleton() == m_Skeleton && !m_BlendWeights.empty() ? &pose->GetSkinningMatrices() : nullptr;
+        const Vector<float>* effectiveMorphWeights = m_Morph ? &morphWeights : nullptr;
+        bool matricesMatch = skinningMatrices == nullptr ? m_LastSkinningMatrices.empty()
+                                                         : skinningMatrices->size() == m_LastSkinningMatrices.size();
+        if (matricesMatch && skinningMatrices != nullptr)
+        {
+            for (uint32_t matrixIndex = 0; matrixIndex < skinningMatrices->size() && matricesMatch; matrixIndex++)
+            {
+                for (uint32_t column = 0; column < 4 && matricesMatch; column++)
+                {
+                    for (uint32_t row = 0; row < 4; row++)
+                    {
+                        if ((*skinningMatrices)[matrixIndex][column][row] != m_LastSkinningMatrices[matrixIndex][column][row])
+                        {
+                            matricesMatch = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        const bool morphWeightsMatch = effectiveMorphWeights == nullptr ? m_LastMorphWeights.empty()
+                                                                         : *effectiveMorphWeights == m_LastMorphWeights;
+        if (m_HasDeformationState && matricesMatch && morphWeightsMatch)
+        {
+            if (!m_DeformationStateSettled)
+            {
+                std::copy(m_Positions.begin(), m_Positions.end(), m_PreviousPositions.begin());
+                m_OutputMeshData->SetVertexData(VertexAttribute::PreviousPosition, m_PreviousPositions.data(),
+                                                static_cast<uint32_t>(m_PreviousPositions.size() * sizeof(glm::vec3)));
+                m_DeformationStateSettled = true;
+                m_LastDeformChanged = true;
+            }
+            else
+                m_LastDeformChanged = false;
+            return true;
+        }
 
         std::copy(m_Positions.begin(), m_Positions.end(), m_PreviousPositions.begin());
         if (m_Morph)
@@ -290,9 +337,9 @@ namespace Crowny
         std::copy(m_BaseTangents.begin(), m_BaseTangents.end(), m_Tangents.begin());
         std::copy(m_BaseBitangents.begin(), m_BaseBitangents.end(), m_Bitangents.begin());
 
-        if (pose != nullptr && pose->GetSkeleton() == m_Skeleton && !m_BlendWeights.empty())
+        if (skinningMatrices != nullptr)
         {
-            const Vector<glm::mat4>& matrices = pose->GetSkinningMatrices();
+            const Vector<glm::mat4>& matrices = *skinningMatrices;
             for (uint32_t vertex = 0; vertex < m_Positions.size(); vertex++)
             {
                 glm::mat4 skin(0.0f);
@@ -348,6 +395,17 @@ namespace Crowny
         if (!m_Bitangents.empty())
             m_OutputMeshData->SetBitangents(m_Bitangents);
         m_OutputMeshData->CalculateBounds(m_Bounds, m_SphereBounds);
+        if (skinningMatrices != nullptr)
+            m_LastSkinningMatrices = *skinningMatrices;
+        else
+            m_LastSkinningMatrices.clear();
+        if (effectiveMorphWeights != nullptr)
+            m_LastMorphWeights = *effectiveMorphWeights;
+        else
+            m_LastMorphWeights.clear();
+        m_HasDeformationState = true;
+        m_DeformationStateSettled = false;
+        m_LastDeformChanged = true;
         return true;
     }
 } // namespace Crowny

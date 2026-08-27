@@ -45,6 +45,7 @@ namespace Crowny
         uint32_t Width = 0;
         uint32_t Height = 0;
         uint32_t Depth = 1;
+        uint32_t Layers = 1;
         uint32_t Faces = 1;
         uint32_t MipLevels = 1;
         uint32_t Channels = 0;
@@ -56,6 +57,8 @@ namespace Crowny
         bool IsFloat = false;
         bool IsCompressed = false;
         bool SRGB = false;
+
+        TextureShape GetRuntimeShape() const { return Faces == 6 ? TextureShape::TEXTURE_CUBE : TextureShape::TEXTURE_2D; }
     };
 
     struct ImageLoadOptions

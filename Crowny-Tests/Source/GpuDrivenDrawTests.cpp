@@ -115,17 +115,35 @@ TEST_CASE("GPU draw-bin capacity rejects excess bins and preserves zero-count sl
     CHECK(counts[overflowIndex] == 3);
 }
 
-TEST_CASE("GPU draw-bin capacity favors persistent hot bins when the command budget is clamped", "[Renderer][GpuDriven][DrawBins]")
+TEST_CASE("GPU draw-bin admission never accepts a partial bin", "[Renderer][GpuDriven][DrawBins]")
 {
     const GpuDrawBinKey hot = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 1, 0);
     const GpuDrawBinKey cold = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 2, 0);
     const Vector<GpuDrawBinKey> keys = { hot, hot, hot, hot, hot, hot, cold, cold };
     GpuDrawBinLayout layout;
     REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 4, 8, 3 }));
-    REQUIRE(layout.GetBins().size() == 2);
+    REQUIRE(layout.GetBins().size() == 1);
+    CHECK(layout.GetBins()[0].Key == cold);
+    CHECK(layout.GetBins()[0].CommandCapacity == 2);
+    CHECK(layout.GetStats().CommandCapacity == 2);
+    CHECK(layout.GetStats().RejectedBinCount == 1);
+    CHECK_FALSE(layout.Contains(hot));
+    CHECK(layout.Contains(cold));
+}
+
+TEST_CASE("GPU draw-bin budget admits whole hot bins and leaves the rest for CPU fallback", "[Renderer][GpuDriven][DrawBins]")
+{
+    const GpuDrawBinKey hot = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 1, 0);
+    const GpuDrawBinKey cold = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 2, 0);
+    const Vector<GpuDrawBinKey> keys = { hot, hot, hot, cold, cold };
+    GpuDrawBinLayout layout;
+    REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 4, 8, 8 }));
+    REQUIRE(layout.GetBins().size() == 1);
+    CHECK(layout.GetBins()[0].Key == hot);
     CHECK(layout.GetBins()[0].CommandCapacity == 3);
-    CHECK(layout.GetBins()[1].CommandCapacity == 1);
-    CHECK(layout.GetStats().CommandCapacity == 4);
+    CHECK(layout.GetStats().CommandCapacity == 3);
+    CHECK(layout.Contains(hot));
+    CHECK_FALSE(layout.Contains(cold));
 }
 
 TEST_CASE("GPU draw generation batches material records sharing a template", "[Renderer][GpuDriven]")
@@ -151,6 +169,25 @@ TEST_CASE("GPU draw generation batches material records sharing a template", "[R
     CHECK(output.Instances[1].InstanceID == 7);
     CHECK(output.Instances[1].MaterialIndex == 9);
     CHECK(output.Runs[0].CommandCount == 2);
+}
+
+TEST_CASE("Forward-only opaque draws remain outside standard opaque runs", "[Renderer][GpuDriven][Materials]")
+{
+    Vector<GpuDrawCandidate> candidates = {
+        Candidate(1, 0, 1, 1, 0, 1.0f),
+        Candidate(2, 0, 1, 2, 36, 2.0f),
+    };
+    candidates[1].Bin.Phase = RenderDrawPhase::ForwardOpaque;
+
+    GpuDrawListBuilder builder;
+    GpuDrawList output;
+    builder.Build(candidates.data(), static_cast<uint32_t>(candidates.size()), output);
+
+    REQUIRE(output.Runs.size() == 2);
+    CHECK(output.Runs[0].Bin.Phase == RenderDrawPhase::Opaque);
+    CHECK(output.Runs[1].Bin.Phase == RenderDrawPhase::ForwardOpaque);
+    CHECK(output.Runs[0].CommandCount == 1);
+    CHECK(output.Runs[1].CommandCount == 1);
 }
 
 TEST_CASE("Strict transparent draw generation preserves render-layer and depth order", "[Renderer][GpuDriven]")

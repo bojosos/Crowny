@@ -3,6 +3,8 @@
 #include "Crowny/RenderAPI/RenderCapabilities.h"
 #include "Crowny/Renderer/RenderPipeline.h"
 
+#include <array>
+
 using namespace Crowny;
 
 namespace
@@ -13,10 +15,9 @@ namespace
         desc.Width = width;
         desc.Height = height;
         desc.Format = TextureFormat::RGBA8;
-        return graph.ImportTexture("Output", desc, 1, RenderGraphResourceState::ColorAttachment,
-                                   RenderGraphResourceState::Present);
+        return graph.ImportTexture("Output", desc, 1, RenderGraphResourceState::ColorAttachment, RenderGraphResourceState::Present);
     }
-}
+} // namespace
 
 namespace
 {
@@ -35,7 +36,7 @@ namespace
 
         bool Called = false;
     };
-}
+} // namespace
 
 TEST_CASE("Render pipeline honors camera path overrides", "[Renderer][Pipeline]")
 {
@@ -54,8 +55,8 @@ TEST_CASE("Render features add passes only at their insertion point", "[Renderer
     RenderGraph graph;
     RenderBlackboard blackboard;
     RenderView view;
-    const RenderGraphResourceHandle color = graph.ImportTexture("SceneColor", {}, 1, RenderGraphResourceState::ShaderRead,
-                                                                RenderGraphResourceState::ShaderRead);
+    const RenderGraphResourceHandle color =
+      graph.ImportTexture("SceneColor", {}, 1, RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
     blackboard.Set("SceneColor", color);
 
     Ref<TestRenderFeature> feature = CreateRef<TestRenderFeature>();
@@ -83,6 +84,7 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     desc.DrawBinCount = 3;
     desc.DrawBinLookupCapacity = 8;
     desc.EnableGpuDrawBins = true;
+    desc.EnableObjectID = true;
 
     const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
     const RenderGraphCompileResult& compiled = graph.Compile();
@@ -146,6 +148,62 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     };
     CHECK(transitionsToIndirect(commands));
     CHECK(transitionsToIndirect(counts));
+    CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
+        return barrier.Resource == output.ObjectID &&
+               barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
+               graph.GetPassName(barrier.BeforePass) == "ForwardPlusOpaque";
+    }));
+}
+
+TEST_CASE("Depth prepass configures motion-vector and object-ID outputs independently", "[Renderer][Pipeline]")
+{
+    struct OutputCase
+    {
+        bool MotionVectors;
+        bool ObjectID;
+        DepthPrepassOutputMode ExpectedMode;
+        uint32_t ExpectedColorAttachmentCount;
+        uint32_t ExpectedMotionVectorAttachment;
+        uint32_t ExpectedObjectIDAttachment;
+    };
+    constexpr std::array<OutputCase, 4> cases = {
+        OutputCase{ false, false, DepthPrepassOutputMode::DepthOnly, 0, DepthPrepassOutputLayout::NoAttachment,
+                    DepthPrepassOutputLayout::NoAttachment },
+        OutputCase{ true, false, DepthPrepassOutputMode::MotionVectors, 1, 0, DepthPrepassOutputLayout::NoAttachment },
+        OutputCase{ false, true, DepthPrepassOutputMode::ObjectID, 1, DepthPrepassOutputLayout::NoAttachment, 0 },
+        OutputCase{ true, true, DepthPrepassOutputMode::MotionVectorsAndObjectID, 2, 0, 1 },
+    };
+
+    for (const OutputCase& outputCase : cases)
+    {
+        CAPTURE(outputCase.MotionVectors, outputCase.ObjectID);
+        RenderGraph graph;
+        RenderBlackboard blackboard;
+        RenderView view;
+        RenderPipelineAsset pipeline;
+        RenderPipelineGraphDesc desc;
+        desc.Width = 320;
+        desc.Height = 180;
+        desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+        desc.EnableMotionVectors = outputCase.MotionVectors;
+        desc.EnableObjectID = outputCase.ObjectID;
+        desc.EnablePostProcessing = false;
+
+        const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+        const RenderGraphCompileResult& compiled = graph.Compile();
+
+        INFO(compiled.Error);
+        REQUIRE(compiled.Succeeded);
+        CHECK(output.DepthPrepassLayout.Mode == outputCase.ExpectedMode);
+        CHECK(output.DepthPrepassLayout.ColorAttachmentCount == outputCase.ExpectedColorAttachmentCount);
+        CHECK(output.DepthPrepassLayout.MotionVectorAttachment == outputCase.ExpectedMotionVectorAttachment);
+        CHECK(output.DepthPrepassLayout.ObjectIDAttachment == outputCase.ExpectedObjectIDAttachment);
+        CHECK(blackboard.Contains("Velocity") == outputCase.MotionVectors);
+        CHECK(output.ObjectID.IsValid() == outputCase.ObjectID);
+        CHECK(blackboard.Contains("ObjectID") == outputCase.ObjectID);
+        if (outputCase.ObjectID)
+            CHECK(blackboard.Get("ObjectID") == output.ObjectID);
+    }
 }
 
 TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency", "[Renderer][Pipeline]")
@@ -159,8 +217,9 @@ TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency"
     desc.Height = 720;
     desc.Path = RenderingPath::DeferredPlus;
     desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+    desc.EnableObjectID = true;
 
-    pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+    const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
     const RenderGraphCompileResult& compiled = graph.Compile();
     INFO(compiled.Error);
     REQUIRE(compiled.Succeeded);
@@ -175,6 +234,45 @@ TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency"
     CHECK(blackboard.Contains("GBufferNormalRoughMetal"));
     CHECK(blackboard.Contains("GBufferEmissive"));
     CHECK(blackboard.Contains("GBufferMaterialFlags"));
+    CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
+        return barrier.Resource == output.ObjectID &&
+               barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
+               graph.GetPassName(barrier.BeforePass) == "DeferredGBuffer";
+    }));
+}
+
+TEST_CASE("Render pipeline cluster buffers follow non-default runtime settings", "[Renderer][Pipeline][Lights][Clusters]")
+{
+    RenderGraph graph;
+    RenderBlackboard blackboard;
+    RenderView view;
+    RenderPipelineSettings settings;
+    settings.ClusterTileSize = 7;
+    settings.ClusterDepthSlices = 3;
+    settings.MaxLightsPerCluster = 2;
+    settings.MaxDirectionalLights = 3;
+    RenderPipelineAsset pipeline(settings);
+    RenderPipelineGraphDesc desc;
+    desc.Width = 17;
+    desc.Height = 9;
+    desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+    desc.EnablePostProcessing = false;
+
+    pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+    const RenderGraphCompileResult& compiled = graph.Compile();
+    INFO(compiled.Error);
+    REQUIRE(compiled.Succeeded);
+
+    constexpr uint64_t clusterCount = 3ull * 2ull * 3ull;
+    const RenderGraphResourceHandle cells = blackboard.Get("ClusterCells");
+    const RenderGraphResourceHandle indices = blackboard.Get("ClusterLightIndices");
+    const RenderGraphResourceHandle directionals = blackboard.Get("DirectionalLightIndices");
+    REQUIRE(cells.IsValid());
+    REQUIRE(indices.IsValid());
+    REQUIRE(directionals.IsValid());
+    CHECK(compiled.Resources[cells.Index].Desc.Buffer.Size == clusterCount * 8ull);
+    CHECK(compiled.Resources[indices.Index].Desc.Buffer.Size == clusterCount * 2ull * sizeof(uint32_t));
+    CHECK(compiled.Resources[directionals.Index].Desc.Buffer.Size == 3ull * sizeof(uint32_t));
 }
 
 TEST_CASE("Render pipeline compatibility bridge executes after its prerequisite", "[Renderer][Pipeline]")
@@ -185,8 +283,7 @@ TEST_CASE("Render pipeline compatibility bridge executes after its prerequisite"
     RenderPipelineAsset pipeline;
     Vector<uint32_t> executionOrder;
     const RenderGraphPassHandle prerequisite = graph.AddPass(
-      "ApplyPersistentChanges", RenderGraphQueue::Transfer,
-      [](RenderGraphPassBuilder& builder) { builder.SetSideEffect(); },
+      "ApplyPersistentChanges", RenderGraphQueue::Transfer, [](RenderGraphPassBuilder& builder) { builder.SetSideEffect(); },
       [&](RenderGraphContext&) { executionOrder.push_back(1); });
 
     RenderPipelineGraphDesc desc;

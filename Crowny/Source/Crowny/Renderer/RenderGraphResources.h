@@ -5,6 +5,7 @@
 #include "Crowny/RenderAPI/RenderTarget.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/GpuBufferPool.h"
+#include "Crowny/Renderer/GpuTexturePool.h"
 #include "Crowny/Renderer/RenderGraph.h"
 
 #include <array>
@@ -18,6 +19,11 @@ namespace Crowny
         virtual void BeginFrame(uint64_t frameNumber) { static_cast<void>(frameNumber); }
         virtual Ref<Texture> CreateTexture(StringView name, const RenderGraphTextureDesc& desc) = 0;
         virtual Ref<GenericGpuBuffer> CreateBuffer(StringView name, const RenderGraphBufferDesc& desc) = 0;
+        virtual void ReleaseTexture(const RenderGraphTextureDesc& desc, Ref<Texture>&& texture)
+        {
+            static_cast<void>(desc);
+            static_cast<void>(texture);
+        }
         virtual void ReleaseBuffer(const RenderGraphBufferDesc& desc, Ref<GenericGpuBuffer>&& buffer)
         {
             static_cast<void>(desc);
@@ -29,19 +35,25 @@ namespace Crowny
     {
     public:
         explicit RenderGraphGpuResourceAllocator(uint32_t framesInFlight = 2,
-                                                 uint64_t retainedBufferBudget = 64ull * 1024ull * 1024ull)
-          : m_BufferPool(framesInFlight, retainedBufferBudget)
+                                                 uint64_t retainedBufferBudget = 64ull * 1024ull * 1024ull,
+                                                 uint64_t retainedTextureBudget = 64ull * 1024ull * 1024ull)
+          : m_BufferPool(framesInFlight, retainedBufferBudget), m_TexturePool(framesInFlight, retainedTextureBudget)
         {
         }
 
         void BeginFrame(uint64_t frameNumber) override;
         Ref<Texture> CreateTexture(StringView name, const RenderGraphTextureDesc& desc) override;
         Ref<GenericGpuBuffer> CreateBuffer(StringView name, const RenderGraphBufferDesc& desc) override;
+        void ReleaseTexture(const RenderGraphTextureDesc& desc, Ref<Texture>&& texture) override;
         void ReleaseBuffer(const RenderGraphBufferDesc& desc, Ref<GenericGpuBuffer>&& buffer) override;
         GpuBufferPoolStats GetBufferPoolStats() const { return m_BufferPool.GetStats(); }
+        GpuTexturePoolStats GetTexturePoolStats() const { return m_TexturePool.GetStats(); }
 
     private:
+        static TextureDesc MakeTextureDesc(StringView name, const RenderGraphTextureDesc& desc);
+
         GpuBufferPool m_BufferPool;
+        GpuTexturePool m_TexturePool;
     };
 
     struct RenderGraphResourceBinding

@@ -5,11 +5,42 @@
 
 namespace Crowny
 {
+    class Material;
+
     enum class MaterialModel : uint8_t
     {
         Standard,
         Unlit,
         Toon
+    };
+
+    enum class MaterialRenderRoute : uint8_t
+    {
+        StandardGpu,
+        ForwardOnly,
+        Unsupported
+    };
+
+    struct MaterialRenderClassification
+    {
+        MaterialModel Model = MaterialModel::Standard;
+        AlphaMode Alpha = AlphaMode::Opaque;
+        MaterialRenderRoute Route = MaterialRenderRoute::StandardGpu;
+
+        bool UsesStandardGpuRecord() const { return Route == MaterialRenderRoute::StandardGpu; }
+        bool IsForwardOnlyOpaque() const { return Route == MaterialRenderRoute::ForwardOnly && Alpha == AlphaMode::Opaque; }
+        bool IsUnsupported() const { return Route == MaterialRenderRoute::Unsupported; }
+    };
+
+    // Converts explicit shader metadata into one deterministic render route.
+    // Unmarked third-party shaders fail closed as unsupported rather than being
+    // interpreted as the engine's standard layout or a reverse-Z compatible pass.
+    class MaterialRenderClassifier
+    {
+    public:
+        static MaterialRenderClassification Classify(StringView shaderName, const Vector<String>& techniqueTags, bool hasBlending,
+                                                     bool alphaMasked);
+        static MaterialRenderClassification Classify(const Material& material);
     };
 
     enum class ToonPatternMapping : uint8_t
@@ -113,7 +144,10 @@ namespace Crowny
     class GpuMaterialPacker
     {
     public:
+        static constexpr uint32_t UnsupportedModelAndAlpha = 0xffffffffu;
+
         static GpuMaterialData Pack(const StandardMaterialDesc& desc);
+        static GpuMaterialData PackUnsupported();
         static uint32_t PackModelAndAlpha(MaterialModel model, AlphaMode alpha)
         {
             return static_cast<uint32_t>(model) | (static_cast<uint32_t>(alpha) << 8u);

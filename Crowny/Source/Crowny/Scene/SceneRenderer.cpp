@@ -11,6 +11,7 @@
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/RenderAPI/SamplerState.h"
 #include "Crowny/RenderAPI/VertexBuffer.h"
+#include "Crowny/Renderer/ClusteredLightGrid.h"
 #include "Crowny/Renderer/ComputeMaterial.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
@@ -142,14 +143,17 @@ namespace Crowny
         {
         public:
             void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
-                            const GpuDrawBinLayout* drawBinLayout, const Ref<EnvironmentMap>& environment)
+                            const GpuDrawBinLayout* drawBinLayout, const RenderSnapshot& snapshot,
+                            const Ref<EnvironmentMap>& environment, const RenderPipelineSettings& settings)
             {
                 m_View = view;
                 m_Blackboard = &blackboard;
                 m_Scene = &scene;
                 m_DepthDrawList = &depthDrawList;
                 m_DrawBinLayout = drawBinLayout;
+                m_Snapshot = &snapshot;
                 m_Environment = environment;
+                m_Settings = settings;
                 m_GpuInstanceCullingReady = false;
                 m_GpuMeshletExpansionReady = false;
                 m_GpuMeshletCullingReady = false;
@@ -195,7 +199,7 @@ namespace Crowny
                 else if (name == "ToonOutlines")
                     RenderToonOutlines(context);
                 else if (name == "SkyAndForwardOnlyOpaque")
-                    RenderSky(context);
+                    RenderSkyAndForwardOnlyOpaque(context);
                 else if (name == "ForwardPlusTransparencyAndWorld2D")
                     RenderTransparency(context);
                 else if (name == "TemporalResolve")
@@ -247,7 +251,7 @@ namespace Crowny
                     RenderAPI::TryGet()->SetRenderTarget(target);
                     RenderAPI::TryGet()->SetViewport(view.Viewport.x, view.Viewport.y, view.Viewport.z, view.Viewport.w);
                     RenderAPI::TryGet()->ClearViewport(FBT_DEPTH, glm::vec4(0.0f), 0.0f);
-                    DrawCpuOpaqueRuns(m_ShadowDepth, commands, view.DrawList, false);
+                    DrawCpuOpaqueRuns(m_ShadowDepth, commands, view.DrawList, false, true);
                 }
             }
 
@@ -616,23 +620,23 @@ namespace Crowny
             {
                 if (!Ensure(m_BuildClusters, m_BuildClustersAttempted, "Resources/Shaders/BuildClusteredLights.asset"))
                     return;
-                constexpr uint32_t tileSize = 16;
-                constexpr uint32_t depthSlices = 24;
                 const uint32_t width = std::max(static_cast<uint32_t>(m_View.ViewportSize.x), 1u);
                 const uint32_t height = std::max(static_cast<uint32_t>(m_View.ViewportSize.y), 1u);
-                const uint32_t clusterX = (width + tileSize - 1u) / tileSize;
-                const uint32_t clusterY = (height + tileSize - 1u) / tileSize;
-                const uint32_t clusterCount = clusterX * clusterY * depthSlices;
+                const ClusteredLightGridDesc clusterDesc =
+                  ClusteredLightBuilder::ResolveDesc(m_Settings, width, height, NearPlane(), 1000.0f, m_View.VisibilityMask);
+                const glm::uvec3 dimensions = ClusteredLightBuilder::GetDimensions(clusterDesc);
+                const uint64_t clusterCount = ClusteredLightBuilder::GetClusterCount(clusterDesc);
                 const Ref<GenericGpuBuffer> lightIndices = Buffer(context, "ClusterLightIndices");
-                if (!lightIndices)
+                if (!lightIndices || clusterCount > std::numeric_limits<uint32_t>::max())
                     return;
                 ClusterConstants constants;
                 constants.View = m_View.View;
                 constants.InverseProjection = glm::inverse(m_View.Projection);
-                constants.DimensionsAndLightCount = { clusterX, clusterY, depthSlices, m_Scene->GetStats().LightCapacity };
-                constants.ViewportTileAndLimit = { width, height, tileSize, 64u };
-                constants.DepthAndScale = { NearPlane(), 1000.0f, 0.0f, 0.0f };
-                constants.VisibilityLayerMask = m_View.VisibilityMask.Value;
+                constants.DimensionsAndLightCount = { dimensions.x, dimensions.y, dimensions.z, m_Scene->GetStats().LightCapacity };
+                constants.ViewportTileAndLimit = { width, height, clusterDesc.TileSize, clusterDesc.MaxLightsPerCluster };
+                constants.DepthAndScale = { clusterDesc.NearPlane, clusterDesc.FarPlane, 0.0f, 0.0f };
+                constants.VisibilityLayerMask = clusterDesc.VisibilityMask.Value;
+                constants.MaximumDirectionalLights = clusterDesc.MaxDirectionalLights;
                 constants.MaximumLightIndices = lightIndices->GetSize() / sizeof(uint32_t);
                 m_BuildClusters.WriteUniformBlock(0, 0, &constants, sizeof(constants));
                 m_BuildClusters.SetBuffer(0, 1, Buffer(context, "LightTable"));
@@ -640,7 +644,7 @@ namespace Crowny
                 m_BuildClusters.SetBuffer(0, 3, lightIndices);
                 m_BuildClusters.SetBuffer(0, 4, Buffer(context, "DirectionalLightIndices"));
                 m_BuildClusters.SetBuffer(0, 5, Buffer(context, "ClusterLightCounters"));
-                m_BuildClusters.Dispatch((clusterCount + 63u) / 64u);
+                m_BuildClusters.Dispatch((static_cast<uint32_t>(clusterCount) + 63u) / 64u);
             }
 
             void RenderGtao(RenderGraphContext& context)
@@ -663,8 +667,7 @@ namespace Crowny
 
             void RenderDepth(RenderGraphContext& context)
             {
-                if (m_DepthDrawList == nullptr || m_DepthDrawList->Commands.empty() ||
-                    !Ensure(m_Depth, m_DepthAttempted, "Resources/Shaders/GpuDepthOnly.asset"))
+                if (m_DepthDrawList == nullptr || m_DepthDrawList->Commands.empty())
                     return;
                 const Ref<GenericGpuBuffer> instances = Buffer(context, "InstanceTable");
                 const Ref<GenericGpuBuffer> instanceIds = Buffer(context, "DepthInstanceIds");
@@ -672,24 +675,33 @@ namespace Crowny
                 if (!instances || !instanceIds || !commands)
                     return;
 
+                DepthPrepassOutputLayout outputLayout =
+                  ResolveDepthPrepassOutputLayout(Resource("Velocity").IsValid(), Resource("ObjectID").IsValid());
+                const bool objectIdOnly = outputLayout.Mode == DepthPrepassOutputMode::ObjectID;
+                const bool objectIdOnlyShadersReady =
+                  objectIdOnly && Ensure(m_DepthObjectID, m_DepthObjectIDAttempted, "Resources/Shaders/GpuDepthObjectID.asset") &&
+                  Ensure(m_AnimatedDepthObjectID, m_AnimatedDepthObjectIDAttempted, "Resources/Shaders/GpuAnimatedDepthObjectID.asset");
+                GraphicsMaterial* staticDepthMaterial = objectIdOnlyShadersReady ? &m_DepthObjectID : &m_Depth;
+                if (!objectIdOnlyShadersReady && !Ensure(m_Depth, m_DepthAttempted, "Resources/Shaders/GpuDepthOnly.asset"))
+                    return;
+                // Missing object-ID-only assets must not disable depth or bind
+                // the velocity shader to an integer color attachment.
+                if (objectIdOnly && !objectIdOnlyShadersReady)
+                    outputLayout = {};
+
                 RenderGraphRenderTargetDesc attachments;
                 attachments.Depth = Resource("SceneDepth");
                 DepthViewConstants view;
                 view.ViewProjection = m_View.Projection * m_View.View;
                 view.PreviousViewProjection = m_View.PreviousViewProjection;
-                m_Depth.WriteUniformBlock(0, 0, &view, sizeof(view));
-                m_Depth.SetBuffer(0, 1, instances);
-                m_Depth.SetBuffer(0, 2, instanceIds);
-                if (Resource("Velocity"))
-                {
-                    attachments.Colors[0] = Resource("Velocity");
-                    attachments.ColorCount = 1;
-                    if (Resource("ObjectID"))
-                    {
-                        attachments.Colors[1] = Resource("ObjectID");
-                        attachments.ColorCount = 2;
-                    }
-                }
+                staticDepthMaterial->WriteUniformBlock(0, 0, &view, sizeof(view));
+                staticDepthMaterial->SetBuffer(0, 1, instances);
+                staticDepthMaterial->SetBuffer(0, 2, instanceIds);
+                attachments.ColorCount = outputLayout.ColorAttachmentCount;
+                if (outputLayout.MotionVectorAttachment != DepthPrepassOutputLayout::NoAttachment)
+                    attachments.Colors[outputLayout.MotionVectorAttachment] = Resource("Velocity");
+                if (outputLayout.ObjectIDAttachment != DepthPrepassOutputLayout::NoAttachment)
+                    attachments.Colors[outputLayout.ObjectIDAttachment] = Resource("ObjectID");
                 const Ref<RenderTarget> target = context.GetRenderTarget(attachments);
                 if (!target)
                     return;
@@ -700,21 +712,27 @@ namespace Crowny
                 GraphicsMaterial* boundMaterial = nullptr;
                 for (const GpuDrawRun& run : m_DepthDrawList->Runs)
                 {
-                    if (run.Bin.Phase != RenderDrawPhase::Opaque || run.Bin.Alpha != AlphaMode::Opaque || run.CommandCount == 0)
+                    const bool depthPhase = run.Bin.Phase == RenderDrawPhase::Opaque || run.Bin.Phase == RenderDrawPhase::ForwardOpaque;
+                    if (!depthPhase || run.Bin.Alpha != AlphaMode::Opaque || run.CommandCount == 0)
                         continue;
                     const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
                     const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
                     if (!vertexBuffer || !indexBuffer)
                         continue;
-                    GraphicsMaterial* depthMaterial = &m_Depth;
+                    GraphicsMaterial* depthMaterial = staticDepthMaterial;
                     if (vertexBuffer->GetLayout()->HasAttribute(VertexAttribute::PreviousPosition))
                     {
-                        if (!Ensure(m_AnimatedDepth, m_AnimatedDepthAttempted, "Resources/Shaders/GpuAnimatedDepthOnly.asset"))
-                            continue;
-                        m_AnimatedDepth.WriteUniformBlock(0, 0, &view, sizeof(view));
-                        m_AnimatedDepth.SetBuffer(0, 1, instances);
-                        m_AnimatedDepth.SetBuffer(0, 2, instanceIds);
-                        depthMaterial = &m_AnimatedDepth;
+                        if (objectIdOnlyShadersReady)
+                            depthMaterial = &m_AnimatedDepthObjectID;
+                        else
+                        {
+                            if (!Ensure(m_AnimatedDepth, m_AnimatedDepthAttempted, "Resources/Shaders/GpuAnimatedDepthOnly.asset"))
+                                continue;
+                            depthMaterial = &m_AnimatedDepth;
+                        }
+                        depthMaterial->WriteUniformBlock(0, 0, &view, sizeof(view));
+                        depthMaterial->SetBuffer(0, 1, instances);
+                        depthMaterial->SetBuffer(0, 2, instanceIds);
                     }
                     if (depthMaterial != boundMaterial)
                     {
@@ -764,19 +782,20 @@ namespace Crowny
 
             LightingViewConstants BuildLightingViewConstants() const
             {
-                constexpr uint32_t tileSize = 16;
-                constexpr uint32_t depthSlices = 24;
                 const uint32_t width = std::max(static_cast<uint32_t>(m_View.ViewportSize.x), 1u);
                 const uint32_t height = std::max(static_cast<uint32_t>(m_View.ViewportSize.y), 1u);
+                const ClusteredLightGridDesc clusterDesc =
+                  ClusteredLightBuilder::ResolveDesc(m_Settings, width, height, NearPlane(), 1000.0f, m_View.VisibilityMask);
+                const glm::uvec3 dimensions = ClusteredLightBuilder::GetDimensions(clusterDesc);
                 LightingViewConstants constants;
                 constants.ViewProjection = m_View.Projection * m_View.View;
                 constants.View = m_View.View;
                 constants.InverseViewProjection = glm::inverse(constants.ViewProjection);
                 constants.CameraPositionPreExposure = glm::inverse(m_View.View)[3];
                 constants.CameraPositionPreExposure.w = 1.0f;
-                constants.ClusterDimensionsAndTileSize = { (width + tileSize - 1u) / tileSize, (height + tileSize - 1u) / tileSize, depthSlices,
-                                                           tileSize };
-                constants.ClusterDepthAndViewport = { NearPlane(), 1000.0f, static_cast<float>(width), static_cast<float>(height) };
+                constants.ClusterDimensionsAndTileSize = { dimensions.x, dimensions.y, dimensions.z, clusterDesc.TileSize };
+                constants.ClusterDepthAndViewport = { clusterDesc.NearPlane, clusterDesc.FarPlane, static_cast<float>(width),
+                                                      static_cast<float>(height) };
                 return constants;
             }
 
@@ -843,14 +862,16 @@ namespace Crowny
                 textureVersion = m_Scene->GetBindlessTextureVersion();
             }
 
-            void DrawCpuOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList, bool skipGpuBins)
+            void DrawCpuOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList,
+                                   bool skipGpuBins, bool includeForwardOnly = false)
             {
                 if (commands == nullptr || !material.Bind())
                     return;
                 for (const GpuDrawRun& run : drawList.Runs)
                 {
-                    if (run.Bin.Phase != RenderDrawPhase::Opaque || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) ||
-                        run.CommandCount == 0)
+                    const bool supportedPhase = run.Bin.Phase == RenderDrawPhase::Opaque ||
+                                                (includeForwardOnly && run.Bin.Phase == RenderDrawPhase::ForwardOpaque);
+                    if (!supportedPhase || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) || run.CommandCount == 0)
                         continue;
                     if (skipGpuBins && m_DrawBinLayout != nullptr && m_DrawBinLayout->Contains(run.Bin))
                         continue;
@@ -931,9 +952,13 @@ namespace Crowny
                 m_ForwardPlus.SetTexture(
                   0, 16, TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
                 BindMaterialTable(m_ForwardPlus, m_ForwardTextureVersion, context);
-                RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
+                const RenderSurfaceMask loadMask(
+                  static_cast<uint32_t>(RT_DEPTH_STENCIL) |
+                  (Resource("ObjectID") ? static_cast<uint32_t>(RT_COLOR2) : 0u));
+                RenderAPI::TryGet()->SetRenderTarget(target, 0, loadMask);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f);
+                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f, 0,
+                                                   static_cast<uint8_t>(RT_COLOR0 | RT_COLOR1));
                 const Ref<GenericGpuBuffer> gpuInstanceIds = Buffer(context, "VisibleDrawInstances");
                 const Ref<GenericGpuBuffer> gpuCommands = Buffer(context, "IndirectCommands");
                 const Ref<GenericGpuBuffer> gpuCounts = Buffer(context, "IndirectDrawCounts");
@@ -974,9 +999,15 @@ namespace Crowny
                 m_DeferredGBuffer.WriteUniformBlock(0, 0, &view, sizeof(view));
                 m_DeferredGBuffer.SetBuffer(0, 1, instances);
                 BindMaterialTable(m_DeferredGBuffer, m_DeferredTextureVersion, context);
-                RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
+                const RenderSurfaceMask loadMask(
+                  static_cast<uint32_t>(RT_DEPTH_STENCIL) |
+                  (Resource("ObjectID") ? static_cast<uint32_t>(RT_COLOR4) : 0u));
+                RenderAPI::TryGet()->SetRenderTarget(target, 0, loadMask);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f);
+                RenderAPI::TryGet()->ClearViewport(
+                  FBT_COLOR, glm::vec4(0.0f), 0.0f, 0,
+                  static_cast<uint8_t>(static_cast<uint32_t>(RT_COLOR0) | static_cast<uint32_t>(RT_COLOR1) |
+                                       static_cast<uint32_t>(RT_COLOR2) | static_cast<uint32_t>(RT_COLOR3)));
                 const Ref<GenericGpuBuffer> gpuInstanceIds = Buffer(context, "VisibleDrawInstances");
                 const Ref<GenericGpuBuffer> gpuCommands = Buffer(context, "IndirectCommands");
                 const Ref<GenericGpuBuffer> gpuCounts = Buffer(context, "IndirectDrawCounts");
@@ -1167,10 +1198,8 @@ namespace Crowny
                     RenderAPI::TryGet()->Draw(0, 3, 1);
             }
 
-            void RenderSky(RenderGraphContext& context)
+            void RenderSkyAndForwardOnlyOpaque(RenderGraphContext& context)
             {
-                if (!Ensure(m_Sky, m_SkyAttempted, "Resources/Shaders/Sky.asset"))
-                    return;
                 RenderGraphRenderTargetDesc attachments;
                 attachments.Colors[0] = Resource("HdrColor");
                 attachments.ColorCount = 1;
@@ -1178,16 +1207,34 @@ namespace Crowny
                 const Ref<RenderTarget> target = context.GetRenderTarget(attachments);
                 if (!target)
                     return;
-                SkyConstants constants;
-                constants.InverseViewProjection = glm::inverse(m_View.Projection * m_View.View);
-                constants.CameraPositionIntensity = glm::inverse(m_View.View)[3];
-                constants.CameraPositionIntensity.w = m_Environment && m_Environment->GetEnvironmentCubemap() ? 1.0f : 0.0f;
-                m_Sky.WriteUniformBlock(0, 0, &constants, sizeof(constants));
-                m_Sky.SetTexture(0, 1, m_Environment ? m_Environment->GetEnvironmentCubemap() : nullptr);
                 RenderAPI::TryGet()->SetRenderTarget(target, FBT_DEPTH, RT_ALL);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                if (m_Sky.Bind())
-                    RenderAPI::TryGet()->Draw(0, 3, 1);
+                if (Ensure(m_Sky, m_SkyAttempted, "Resources/Shaders/Sky.asset"))
+                {
+                    SkyConstants constants;
+                    constants.InverseViewProjection = glm::inverse(m_View.Projection * m_View.View);
+                    constants.CameraPositionIntensity = glm::inverse(m_View.View)[3];
+                    constants.CameraPositionIntensity.w = m_Environment && m_Environment->GetEnvironmentCubemap() ? 1.0f : 0.0f;
+                    m_Sky.WriteUniformBlock(0, 0, &constants, sizeof(constants));
+                    m_Sky.SetTexture(0, 1, m_Environment ? m_Environment->GetEnvironmentCubemap() : nullptr);
+                    if (m_Sky.Bind())
+                        RenderAPI::TryGet()->Draw(0, 3, 1);
+                }
+
+                if (m_Snapshot == nullptr || !m_Scene->HasForwardOnlyOpaqueMaterials())
+                    return;
+                ForwardRenderer::SetPolygonMode(m_Snapshot->OverridePolygonMode);
+                ForwardRenderer::Begin();
+                ForwardRenderer::BeginForwardOnlyScene(m_Snapshot->ProjectionMatrix, m_Snapshot->ViewMatrix,
+                                                       m_Snapshot->CameraPosition, m_Snapshot->Environment);
+                ForwardRenderer::SetLights(m_Snapshot->LegacyLights.begin(),
+                                           static_cast<uint32_t>(m_Snapshot->LegacyLights.Size()));
+                for (const RenderableObject& object : m_Snapshot->MeshObjects)
+                    ForwardRenderer::SubmitForwardOnlyOpaque(object.MeshHandle, object.Materials, object.WorldMatrix);
+                ForwardRenderer::Flush();
+                ForwardRenderer::EndScene();
+                ForwardRenderer::End();
+                ForwardRenderer::SetPolygonMode(PolygonMode::Solid);
             }
 
             float NearPlane() const
@@ -1201,7 +1248,9 @@ namespace Crowny
             GpuScene* m_Scene = nullptr;
             const GpuDrawList* m_DepthDrawList = nullptr;
             const GpuDrawBinLayout* m_DrawBinLayout = nullptr;
+            const RenderSnapshot* m_Snapshot = nullptr;
             Ref<EnvironmentMap> m_Environment;
+            RenderPipelineSettings m_Settings;
             ComputeMaterial m_CullInstances;
             ComputeMaterial m_ExpandMeshlets;
             ComputeMaterial m_CullMeshlets;
@@ -1215,6 +1264,8 @@ namespace Crowny
             ComputeMaterial m_Bloom;
             GraphicsMaterial m_Depth;
             GraphicsMaterial m_AnimatedDepth;
+            GraphicsMaterial m_DepthObjectID;
+            GraphicsMaterial m_AnimatedDepthObjectID;
             GraphicsMaterial m_ShadowDepth;
             GraphicsMaterial m_ForwardPlus;
             GraphicsMaterial m_ForwardPremultiplied;
@@ -1244,6 +1295,8 @@ namespace Crowny
             bool m_GtaoAttempted = false;
             bool m_DepthAttempted = false;
             bool m_AnimatedDepthAttempted = false;
+            bool m_DepthObjectIDAttempted = false;
+            bool m_AnimatedDepthObjectIDAttempted = false;
             bool m_ShadowDepthAttempted = false;
             bool m_ForwardPlusAttempted = false;
             bool m_ForwardPremultipliedAttempted = false;
@@ -1735,7 +1788,7 @@ namespace Crowny
                 continue;
 
             const SkeletonPose* pose = meshRenderer.MeshHandle->GetSkeleton() ? &animation.Player->GetPose() : nullptr;
-            if (!animation.Deformer->Deform(pose, animation.Player->GetMorphWeights()))
+            if (!animation.Deformer->Deform(pose, animation.Player->GetMorphWeights()) || !animation.Deformer->WasLastDeformChanged())
                 continue;
 
             const Ref<MeshData> output = animation.Deformer->GetOutputMeshData();
@@ -2063,6 +2116,9 @@ namespace Crowny
     void SceneRenderer::SyncRenderWorld(RenderSnapshot& snapshot) const
     {
         ZoneScopedN("SyncRenderWorld");
+        bool shadowCastersChanged = false;
+        const size_t meshChangesBefore = snapshot.MeshResourceChanges.Size();
+        const size_t materialChangesBefore = snapshot.MaterialResourceChanges.Size();
         m_RenderSyncEpoch++;
         if (m_RenderSyncEpoch == 0)
         {
@@ -2119,6 +2175,7 @@ namespace Crowny
                 instance.LodBias = lodBias;
                 instance.LastSeenEpoch = m_RenderSyncEpoch;
                 m_TrackedRenderInstances.emplace(sourceID, std::move(instance));
+                shadowCastersChanged = shadowCastersChanged || HasFlag(flags, RenderInstanceFlags::CastShadows);
                 return;
             }
 
@@ -2131,6 +2188,9 @@ namespace Crowny
             if (!transformChanged && !drawChanged)
                 return;
 
+            const bool wasShadowCaster = HasFlag(instance.Flags, RenderInstanceFlags::CastShadows);
+            const bool isShadowCaster = HasFlag(flags, RenderInstanceFlags::CastShadows);
+            shadowCastersChanged = shadowCastersChanged || wasShadowCaster || isShadowCaster;
             m_RenderWorld.UpdateInstance(instance.Handle, desc);
             instance.Transform = transform;
             instance.BoundingSphere = worldBounds;
@@ -2184,8 +2244,18 @@ namespace Crowny
                 ++tracked;
                 continue;
             }
+            shadowCastersChanged = shadowCastersChanged || HasFlag(tracked->second.Flags, RenderInstanceFlags::CastShadows);
             m_RenderWorld.DestroyInstance(tracked->second.Handle);
             tracked = m_TrackedRenderInstances.erase(tracked);
+        }
+
+        shadowCastersChanged = shadowCastersChanged || snapshot.MeshResourceChanges.Size() != meshChangesBefore ||
+                               snapshot.MaterialResourceChanges.Size() != materialChangesBefore;
+        if (shadowCastersChanged)
+        {
+            m_ShadowCasterRevision++;
+            if (m_ShadowCasterRevision == 0)
+                m_ShadowCasterRevision = 1;
         }
 
         const auto lightView = m_Scene->m_Registry.view<LightComponent, TransformComponent, RelationshipComponent>();
@@ -2232,6 +2302,7 @@ namespace Crowny
                 light.Handle = m_RenderLightWorld.CreateLight(desc);
                 light.Data = data;
                 light.Shadows = component.Shadows;
+                light.ShadowCasterRevision = m_ShadowCasterRevision;
                 light.LastSeenEpoch = m_RenderSyncEpoch;
                 lightHandle = light.Handle;
                 requiresShadowRedraw = true;
@@ -2243,6 +2314,8 @@ namespace Crowny
                 lightHandle = tracked->second.Handle;
                 const bool dataChanged = std::memcmp(&tracked->second.Data, &data, sizeof(RenderLightData)) != 0;
                 const bool shadowSettingsChanged = !(tracked->second.Shadows == component.Shadows);
+                requiresShadowRedraw = RequiresShadowCacheRedraw(component.Shadows, dataChanged || shadowSettingsChanged, m_ShadowCasterRevision,
+                                                                 tracked->second.ShadowCasterRevision);
                 if (dataChanged || shadowSettingsChanged)
                 {
                     m_RenderLightWorld.UpdateLight(tracked->second.Handle, desc);
@@ -2250,6 +2323,7 @@ namespace Crowny
                     tracked->second.Shadows = component.Shadows;
                     requiresShadowRedraw = true;
                 }
+                tracked->second.ShadowCasterRevision = m_ShadowCasterRevision;
             }
 
             if (component.Enabled && component.Type != LightType::Directional && component.Shadows.Mode != LightShadowMode::Disabled &&
@@ -2319,6 +2393,7 @@ namespace Crowny
         for (const auto& [_, light] : m_TrackedRenderLights)
             m_RenderLightWorld.DestroyLight(light.Handle);
         m_TrackedRenderLights.clear();
+        m_ShadowCasterRevision = 1;
     }
 
     void SceneRenderer::RenderLegacySnapshot(const RenderSnapshot& snapshot)
@@ -2732,8 +2807,9 @@ namespace Crowny
             graphDesc.FinalComposition = [&](RenderGraphContext&) { RenderLegacyOverlays(snapshot); };
         }
         pipeline.BuildFrameGraph(renderGraph, view, graphDesc, blackboard);
-        gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList, gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr,
-                                     snapshot.Environment);
+        gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList,
+                                     gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr, snapshot, snapshot.Environment,
+                                     pipeline.GetSettings());
 
         const RenderGraphCompileResult& compiledGraph = renderGraph.Compile();
         const bool resourceFrameBegun = graphResources.BeginFrame(compiledGraph, snapshot.FrameNumber, snapshot.HistoryNamespace, view.CameraCut);

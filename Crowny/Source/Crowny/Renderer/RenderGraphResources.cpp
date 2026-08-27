@@ -17,17 +17,12 @@ namespace Crowny
     void RenderGraphGpuResourceAllocator::BeginFrame(uint64_t frameNumber)
     {
         m_BufferPool.BeginFrame(frameNumber);
+        m_TexturePool.BeginFrame(frameNumber);
     }
 
-    Ref<Texture> RenderGraphGpuResourceAllocator::CreateTexture(StringView name, const RenderGraphTextureDesc& desc)
+    TextureDesc RenderGraphGpuResourceAllocator::MakeTextureDesc(StringView name, const RenderGraphTextureDesc& desc)
     {
-        if (RenderAPI::TryGet() == nullptr)
-            return nullptr;
-
         const uint32_t layers = std::max(desc.Layers, 1u);
-        if (RenderAPI::TryGet()->GetAPI() == RenderAPI::API::OpenGL && layers > 1)
-            return nullptr;
-
         TextureDesc textureDesc;
         textureDesc.Shape = desc.Shape;
         textureDesc.sRGB = false;
@@ -45,7 +40,25 @@ namespace Crowny
             textureDesc.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         else
             textureDesc.Usage = static_cast<TextureUsage>(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_LOADSTORE);
-        return Texture::Create(textureDesc);
+        return textureDesc;
+    }
+
+    Ref<Texture> RenderGraphGpuResourceAllocator::CreateTexture(StringView name, const RenderGraphTextureDesc& desc)
+    {
+        if (RenderAPI::TryGet() == nullptr)
+            return nullptr;
+
+        const uint32_t layers = std::max(desc.Layers, 1u);
+        if (RenderAPI::TryGet()->GetAPI() == RenderAPI::API::OpenGL && layers > 1)
+            return nullptr;
+
+        return m_TexturePool.Acquire(MakeTextureDesc(name, desc));
+    }
+
+    void RenderGraphGpuResourceAllocator::ReleaseTexture(const RenderGraphTextureDesc& desc, Ref<Texture>&& texture)
+    {
+        static_cast<void>(desc);
+        m_TexturePool.Release(std::move(texture));
     }
 
     Ref<GenericGpuBuffer> RenderGraphGpuResourceAllocator::CreateBuffer(StringView name, const RenderGraphBufferDesc& desc)
@@ -450,8 +463,13 @@ namespace Crowny
                 target = referencesResource ? m_RenderTargets.erase(target) : std::next(target);
             }
             const auto physical = m_PhysicalResources.find(physicalId);
-            if (physical != m_PhysicalResources.end() && m_Allocator != nullptr && physical->second.BufferResource)
-                m_Allocator->ReleaseBuffer(physical->second.Desc.Buffer, std::move(physical->second.BufferResource));
+            if (physical != m_PhysicalResources.end() && m_Allocator != nullptr)
+            {
+                if (physical->second.TextureResource)
+                    m_Allocator->ReleaseTexture(physical->second.Desc.Texture, std::move(physical->second.TextureResource));
+                if (physical->second.BufferResource)
+                    m_Allocator->ReleaseBuffer(physical->second.Desc.Buffer, std::move(physical->second.BufferResource));
+            }
             m_PhysicalResources.erase(physicalId);
         }
     }

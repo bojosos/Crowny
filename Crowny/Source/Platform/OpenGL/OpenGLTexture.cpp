@@ -16,9 +16,11 @@ namespace Crowny
             {
             case GL_TEXTURE_1D: return GL_TEXTURE_BINDING_1D;
             case GL_TEXTURE_2D: return GL_TEXTURE_BINDING_2D;
+            case GL_TEXTURE_2D_ARRAY: return GL_TEXTURE_BINDING_2D_ARRAY;
             case GL_TEXTURE_2D_MULTISAMPLE: return GL_TEXTURE_BINDING_2D_MULTISAMPLE;
             case GL_TEXTURE_3D: return GL_TEXTURE_BINDING_3D;
             case GL_TEXTURE_CUBE_MAP: return GL_TEXTURE_BINDING_CUBE_MAP;
+            case GL_TEXTURE_CUBE_MAP_ARRAY: return GL_TEXTURE_BINDING_CUBE_MAP_ARRAY;
             default: return GL_NONE;
             }
         }
@@ -94,12 +96,17 @@ namespace Crowny
             throw std::invalid_argument("Cannot create an OpenGL texture with an invalid format");
         if (m_Desc.Width == 0 || m_Desc.Height == 0 || m_Desc.Depth == 0 || m_Desc.Faces == 0)
             throw std::invalid_argument("Cannot create an OpenGL texture with a zero-sized dimension");
-        if (m_Desc.Shape == TextureShape::TEXTURE_CUBE && m_Desc.Faces != 6)
-            throw std::invalid_argument("OpenGL cube textures require exactly six faces");
-        if (m_Desc.Samples > 1 && (m_Desc.Shape != TextureShape::TEXTURE_2D || m_Desc.MipLevels != 0))
-            throw std::invalid_argument("Multisampled OpenGL textures must be 2D and cannot have mip levels");
+        if (m_Desc.Shape == TextureShape::TEXTURE_CUBE && m_Desc.Faces % 6u != 0)
+            throw std::invalid_argument("OpenGL cube textures require a multiple of six faces");
+        if (m_Desc.Samples > 1 &&
+            (m_Desc.Shape != TextureShape::TEXTURE_2D || m_Desc.MipLevels != 0 || m_Desc.Faces != 1))
+            throw std::invalid_argument("Multisampled OpenGL textures must be single-layer 2D textures without mip levels");
 
         m_Target = OpenGLUtils::TextureTargetToOpenGL(m_Desc.Shape, m_Desc.Samples);
+        if (m_Desc.Samples <= 1 && m_Desc.Shape == TextureShape::TEXTURE_2D && m_Desc.Faces > 1)
+            m_Target = GL_TEXTURE_2D_ARRAY;
+        else if (m_Desc.Shape == TextureShape::TEXTURE_CUBE && m_Desc.Faces > 6)
+            m_Target = GL_TEXTURE_CUBE_MAP_ARRAY;
         m_Format = OpenGLUtils::TextureFormatToOpenGL(m_Desc.Format, m_Desc.sRGB);
         glGenTextures(1, &m_RendererID);
         AllocateStorage();
@@ -122,7 +129,8 @@ namespace Crowny
         glTexParameteri(m_Target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         if (m_Target != GL_TEXTURE_1D)
             glTexParameteri(m_Target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        if (m_Target == GL_TEXTURE_3D || m_Target == GL_TEXTURE_CUBE_MAP)
+        if (m_Target == GL_TEXTURE_3D || m_Target == GL_TEXTURE_2D_ARRAY || m_Target == GL_TEXTURE_CUBE_MAP ||
+            m_Target == GL_TEXTURE_CUBE_MAP_ARRAY)
             glTexParameteri(m_Target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         glTexParameteri(m_Target, GL_TEXTURE_BASE_LEVEL, 0);
         glTexParameteri(m_Target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(m_Desc.MipLevels));
@@ -139,13 +147,16 @@ namespace Crowny
                 else
                     glTexImage1D(m_Target, mip, m_Format.InternalFormat, width, 0, m_Format.TransferFormat, m_Format.TransferType, nullptr);
             }
-            else if (m_Target == GL_TEXTURE_3D)
+            else if (m_Target == GL_TEXTURE_3D || m_Target == GL_TEXTURE_2D_ARRAY || m_Target == GL_TEXTURE_CUBE_MAP_ARRAY)
             {
+                const uint32_t storageDepth = m_Target == GL_TEXTURE_3D ? depth : m_Desc.Faces;
+                const GLsizei storageSize = static_cast<GLsizei>(
+                  PixelUtils::GetMemorySize(width, height, storageDepth, m_Desc.Format));
                 if (m_Format.Compressed)
-                    glCompressedTexImage3D(m_Target, mip, m_Format.InternalFormat, width, height, depth, 0, dataSize, nullptr);
+                    glCompressedTexImage3D(m_Target, mip, m_Format.InternalFormat, width, height, storageDepth, 0, storageSize, nullptr);
                 else
-                    glTexImage3D(m_Target, mip, m_Format.InternalFormat, width, height, depth, 0, m_Format.TransferFormat, m_Format.TransferType,
-                                 nullptr);
+                    glTexImage3D(m_Target, mip, m_Format.InternalFormat, width, height, storageDepth, 0,
+                                 m_Format.TransferFormat, m_Format.TransferType, nullptr);
             }
             else
             {
@@ -216,6 +227,19 @@ namespace Crowny
         CW_ENGINE_ASSERT(dest.IsValid(), "OpenGL texture read destination is invalid");
         TextureBinding binding(m_Target, m_RendererID);
         PixelStore pixelStore;
+        if (m_Target == GL_TEXTURE_2D_ARRAY || m_Target == GL_TEXTURE_CUBE_MAP_ARRAY)
+        {
+            const size_t surfaceSize = dest.GetSize();
+            if (surfaceSize == 0 || surfaceSize > std::numeric_limits<size_t>::max() / m_Desc.Faces)
+                return;
+            Vector<uint8_t> layers(surfaceSize * m_Desc.Faces);
+            if (m_Format.Compressed)
+                glGetCompressedTexImage(m_Target, mipLevel, layers.data());
+            else
+                glGetTexImage(m_Target, mipLevel, m_Format.TransferFormat, m_Format.TransferType, layers.data());
+            std::memcpy(dest.GetData(), layers.data() + surfaceSize * face, surfaceSize);
+            return;
+        }
         if (m_Format.Compressed)
             glGetCompressedTexImage(GetTransferTarget(face), mipLevel, dest.GetData());
         else
@@ -244,21 +268,26 @@ namespace Crowny
         PixelStore pixelStore;
         if (glad_glGetTextureSubImage != nullptr)
         {
-            const GLint zOffset = m_Desc.Shape == TextureShape::TEXTURE_CUBE ? static_cast<GLint>(face) : 0;
+            const GLint zOffset = m_Desc.Faces > 1 ? static_cast<GLint>(face) : 0;
             glGetTextureSubImage(m_RendererID, static_cast<GLint>(mipLevel), static_cast<GLint>(x), static_cast<GLint>(y), zOffset, 1, 1, 1,
                                  m_Format.TransferFormat, m_Format.TransferType, static_cast<GLsizei>(destSize), dest);
             return true;
         }
 
-        if (m_Target == GL_TEXTURE_2D || m_Target == GL_TEXTURE_CUBE_MAP)
+        if (m_Target == GL_TEXTURE_2D || m_Target == GL_TEXTURE_CUBE_MAP || m_Target == GL_TEXTURE_2D_ARRAY ||
+            m_Target == GL_TEXTURE_CUBE_MAP_ARRAY)
         {
             GLint previousFramebuffer = 0;
             glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previousFramebuffer);
             if (m_ReadFramebuffer == 0)
                 glGenFramebuffers(1, &m_ReadFramebuffer);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, m_ReadFramebuffer);
-            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GetTransferTarget(face), m_RendererID,
-                                   static_cast<GLint>(mipLevel));
+            if (m_Target == GL_TEXTURE_2D_ARRAY || m_Target == GL_TEXTURE_CUBE_MAP_ARRAY)
+                glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_RendererID,
+                                          static_cast<GLint>(mipLevel), static_cast<GLint>(face));
+            else
+                glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GetTransferTarget(face), m_RendererID,
+                                       static_cast<GLint>(mipLevel));
             glReadBuffer(GL_COLOR_ATTACHMENT0);
             const bool complete = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
             if (complete)
@@ -304,6 +333,15 @@ namespace Crowny
                                           static_cast<GLsizei>(src.GetSize()), src.GetData());
             else
                 glTexSubImage3D(target, mipLevel, 0, 0, 0, width, height, depth, m_Format.TransferFormat, m_Format.TransferType, src.GetData());
+        }
+        else if (m_Target == GL_TEXTURE_2D_ARRAY || m_Target == GL_TEXTURE_CUBE_MAP_ARRAY)
+        {
+            if (m_Format.Compressed)
+                glCompressedTexSubImage3D(target, mipLevel, 0, 0, face, width, height, 1, m_Format.InternalFormat,
+                                          static_cast<GLsizei>(src.GetSize()), src.GetData());
+            else
+                glTexSubImage3D(target, mipLevel, 0, 0, face, width, height, 1, m_Format.TransferFormat,
+                                m_Format.TransferType, src.GetData());
         }
         else if (m_Format.Compressed)
             glCompressedTexSubImage2D(target, mipLevel, 0, 0, width, height, m_Format.InternalFormat, static_cast<GLsizei>(src.GetSize()),

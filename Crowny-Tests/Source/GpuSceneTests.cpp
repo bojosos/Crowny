@@ -53,6 +53,10 @@ TEST_CASE("Stable GPU scenes produce no upload work", "[Renderer][GpuScene]")
     CHECK(scene.GetStats().GeometryHeapPages == 0);
     CHECK(scene.GetStats().GeometryHeapCapacityBytes == 0);
     CHECK(scene.GetStats().GeometryUploadBytes == 0);
+    CHECK_FALSE(scene.HasForwardOnlyOpaqueMaterials());
+
+    scene.Reset();
+    CHECK_FALSE(scene.HasForwardOnlyOpaqueMaterials());
 }
 
 TEST_CASE("GPU scene rejects stale and invalid sparse updates", "[Renderer][GpuScene]")

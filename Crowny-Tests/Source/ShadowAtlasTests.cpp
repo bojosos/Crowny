@@ -46,6 +46,18 @@ TEST_CASE("Shadow update scheduling honors update and pixel budgets", "[Renderer
     CHECK(pixels == 512ull * 512ull);
 }
 
+TEST_CASE("Cached local shadows invalidate when either the light or caster revision changes", "[Renderer][Lights][Shadows]")
+{
+    LightShadowSettings settings;
+    settings.CacheStaticCasters = true;
+    CHECK_FALSE(RequiresShadowCacheRedraw(settings, false, 7, 7));
+    CHECK(RequiresShadowCacheRedraw(settings, true, 7, 7));
+    CHECK(RequiresShadowCacheRedraw(settings, false, 8, 7));
+
+    settings.CacheStaticCasters = false;
+    CHECK(RequiresShadowCacheRedraw(settings, false, 7, 7));
+}
+
 TEST_CASE("Shadow update scheduling preserves equal-score input order and filters invalid work", "[Renderer][Lights][Shadows]")
 {
     const std::array requests{

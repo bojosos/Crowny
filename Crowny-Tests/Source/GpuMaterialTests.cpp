@@ -65,3 +65,55 @@ TEST_CASE("GPU toon materials pack bounded artistic controls", "[Renderer][Mater
     CHECK(packed.ToonStyle.z == 0.0f);
     CHECK(packed.ToonOutline.x == 0.0f);
 }
+
+TEST_CASE("Material render classification is explicit and fails closed", "[Renderer][Materials][Routing]")
+{
+    const MaterialRenderClassification standard =
+      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=standard" }, false, false);
+    CHECK(standard.UsesStandardGpuRecord());
+    CHECK(standard.Model == MaterialModel::Standard);
+    CHECK(standard.Alpha == AlphaMode::Opaque);
+
+    const MaterialRenderClassification unlit =
+      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=unlit" }, true, false);
+    CHECK(unlit.UsesStandardGpuRecord());
+    CHECK(unlit.Model == MaterialModel::Unlit);
+    CHECK(unlit.Alpha == AlphaMode::Premultiplied);
+
+    const MaterialRenderClassification toon =
+      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=toon" }, true, true);
+    CHECK(toon.UsesStandardGpuRecord());
+    CHECK(toon.Model == MaterialModel::Toon);
+    CHECK(toon.Alpha == AlphaMode::Mask);
+
+    const MaterialRenderClassification custom =
+      MaterialRenderClassifier::Classify("Pbribl.glsl", { "material_model=custom" }, false, false);
+    CHECK_FALSE(custom.UsesStandardGpuRecord());
+    CHECK(custom.IsForwardOnlyOpaque());
+
+    const MaterialRenderClassification customMask =
+      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=custom" }, false, true);
+    CHECK(customMask.Alpha == AlphaMode::Mask);
+    CHECK_FALSE(customMask.IsForwardOnlyOpaque());
+
+    const MaterialRenderClassification customTransparent =
+      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=custom" }, true, false);
+    CHECK(customTransparent.Alpha == AlphaMode::Premultiplied);
+    CHECK_FALSE(customTransparent.IsForwardOnlyOpaque());
+}
+
+TEST_CASE("Only exact built-in shader names use the compatibility material route", "[Renderer][Materials][Routing]")
+{
+    CHECK(MaterialRenderClassifier::Classify("Resources/Shaders/Pbribl.asset", {}, false, false).Model == MaterialModel::Standard);
+    CHECK(MaterialRenderClassifier::Classify("Unlit.glsl", {}, false, false).Model == MaterialModel::Unlit);
+    CHECK(MaterialRenderClassifier::Classify("Toon.asset", {}, false, false).Model == MaterialModel::Toon);
+
+    const MaterialRenderClassification lookalike = MaterialRenderClassifier::Classify("MyToonShader.asset", {}, false, false);
+    CHECK_FALSE(lookalike.UsesStandardGpuRecord());
+    CHECK_FALSE(lookalike.IsForwardOnlyOpaque());
+    CHECK(lookalike.IsUnsupported());
+
+    const GpuMaterialData unsupported = GpuMaterialPacker::PackUnsupported();
+    CHECK(unsupported.TextureIndices1.w == GpuMaterialPacker::UnsupportedModelAndAlpha);
+    CHECK(((unsupported.TextureIndices1.w >> 8u) & 0xffu) > static_cast<uint32_t>(AlphaMode::WeightedOIT));
+}

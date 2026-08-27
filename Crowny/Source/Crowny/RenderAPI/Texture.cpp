@@ -133,7 +133,7 @@ namespace Crowny
         }
         const TextureFormat target = BasisTextureCodec::SelectTarget(info, m_SourceFormat, RenderAPI::TryGet()->GetCapabilities());
         BasisTextureTranscodeResult result;
-        const uint32_t requestedLevels = m_Desc.MipLevels + 1u;
+        const uint32_t requestedLevels = std::min(m_Desc.MipLevels, info.Levels - 1u) + 1u;
         if (!BasisTextureCodec::Transcode(m_EncodedSourceData.data(), m_EncodedSourceData.size(), m_SourceFormat, target,
                                           requestedLevels, result, &error))
         {
@@ -141,11 +141,18 @@ namespace Crowny
             return false;
         }
 
+        const uint64_t expectedSubresources = static_cast<uint64_t>(result.Info.Levels) * result.Info.Layers * result.Info.Faces;
+        if (result.Info.GetSliceCount() == 0 || expectedSubresources != result.Subresources.size())
+        {
+            CW_ENGINE_ERROR("Basis texture '{}' produced an incomplete runtime subresource set", GetName());
+            return false;
+        }
+
         m_Desc.Width = result.Info.Width;
         m_Desc.Height = result.Info.Height;
         m_Desc.Depth = 1;
-        m_Desc.Faces = result.Info.Faces;
-        m_Desc.Shape = result.Info.Faces == 6 ? TextureShape::TEXTURE_CUBE : TextureShape::TEXTURE_2D;
+        m_Desc.Faces = result.Info.GetSliceCount();
+        m_Desc.Shape = result.Info.GetRuntimeShape();
         m_Desc.MipLevels = result.Info.Levels - 1u;
         m_Desc.Format = result.Format;
         m_Desc.sRGB = result.Info.SRGB;
@@ -153,13 +160,17 @@ namespace Crowny
 
         m_PendingSubresources.clear();
         m_PendingSubresources.reserve(result.Subresources.size());
-        for (uint32_t mip = 0; mip < result.Info.Levels; mip++)
+        for (BasisTextureSubresource& subresource : result.Subresources)
         {
-            for (uint32_t face = 0; face < result.Info.Faces; face++)
+            if (subresource.MipLevel >= result.Info.Levels || subresource.Layer >= result.Info.Layers ||
+                subresource.Face >= result.Info.Faces || !subresource.Pixels)
             {
-                const size_t index = static_cast<size_t>(mip) * result.Info.Faces + face;
-                m_PendingSubresources.push_back({ mip, face, std::move(result.Subresources[index]) });
+                CW_ENGINE_ERROR("Basis texture '{}' produced invalid runtime subresource metadata", GetName());
+                m_PendingSubresources.clear();
+                return false;
             }
+            const uint32_t slice = result.Info.GetSliceIndex(subresource.Layer, subresource.Face);
+            m_PendingSubresources.push_back({ subresource.MipLevel, slice, std::move(subresource.Pixels) });
         }
         return true;
     }

@@ -9,6 +9,26 @@ namespace Crowny
 {
     class RenderCapabilities;
 
+    enum class DepthPrepassOutputMode : uint8_t
+    {
+        DepthOnly,
+        MotionVectors,
+        ObjectID,
+        MotionVectorsAndObjectID
+    };
+
+    struct DepthPrepassOutputLayout
+    {
+        static constexpr uint32_t NoAttachment = std::numeric_limits<uint32_t>::max();
+
+        DepthPrepassOutputMode Mode = DepthPrepassOutputMode::DepthOnly;
+        uint32_t ColorAttachmentCount = 0;
+        uint32_t MotionVectorAttachment = NoAttachment;
+        uint32_t ObjectIDAttachment = NoAttachment;
+    };
+
+    DepthPrepassOutputLayout ResolveDepthPrepassOutputLayout(bool enableMotionVectors, bool enableObjectID);
+
     struct RenderPipelineGraphDesc
     {
         uint32_t Width = 1;
@@ -48,6 +68,7 @@ namespace Crowny
         RenderGraphResourceHandle ResolvedColor;
         RenderGraphResourceHandle ObjectID;
         RenderGraphResourceHandle FinalTarget;
+        DepthPrepassOutputLayout DepthPrepassLayout;
     };
 
     class RenderBlackboard

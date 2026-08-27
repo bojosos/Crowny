@@ -13,6 +13,17 @@ using namespace Crowny;
 
 namespace
 {
+    Ref<PixelData> MakeSolidTexture(uint32_t width, uint32_t height, const glm::vec4& color)
+    {
+        Ref<PixelData> pixels = PixelData::Create(width, height, 1, TextureFormat::RGBA8);
+        for (uint32_t y = 0; y < height; y++)
+        {
+            for (uint32_t x = 0; x < width; x++)
+                pixels->SetColorAt(x, y, color);
+        }
+        return pixels;
+    }
+
     class TemporaryImageFile
     {
     public:
@@ -174,9 +185,40 @@ TEST_CASE("Image loader retains KTX2 source data for file import requests", "[As
     CHECK(result.Info.FileFormat == ImageFileFormat::KTX2);
     CHECK(result.Info.Width == 4);
     CHECK(result.Info.Height == 4);
+    CHECK(result.Info.Layers == 1);
     CHECK(result.Info.DiskFormat == TextureDiskFormat::UASTC);
     CHECK(result.Pixels == nullptr);
     CHECK(result.SourceData == encoded);
+}
+
+TEST_CASE("Image loader reports KTX2 array topology without decoding", "[Assets][Importer][Image][Basis][Array]")
+{
+    BasisTextureSource source;
+    source.Layers = 2;
+    source.Faces = 1;
+    source.Levels = 2;
+    source.Subresources = {
+        MakeSolidTexture(4, 4, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)),
+        MakeSolidTexture(4, 4, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)),
+        MakeSolidTexture(2, 2, glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)),
+        MakeSolidTexture(2, 2, glm::vec4(1.0f, 1.0f, 0.0f, 1.0f))
+    };
+
+    Vector<uint8_t> encoded;
+    String error;
+    REQUIRE(BasisTextureCodec::Encode(source, TextureDiskFormat::UASTC, false, encoded, nullptr, &error));
+    INFO(error);
+
+    const ImageLoadResult result = ImageLoader::ProbeMemory(encoded.data(), encoded.size());
+    REQUIRE(result);
+    CHECK(result.Info.Container == ImageContainerFormat::KTX2);
+    CHECK(result.Info.Width == 4);
+    CHECK(result.Info.Height == 4);
+    CHECK(result.Info.Layers == 2);
+    CHECK(result.Info.Faces == 1);
+    CHECK(result.Info.MipLevels == 2);
+    CHECK(result.Info.GetRuntimeShape() == TextureShape::TEXTURE_2D);
+    CHECK(result.Pixels == nullptr);
 }
 
 TEST_CASE("Image loader recognizes common image signatures", "[Assets][Importer][Image]")

@@ -1,3 +1,4 @@
+#pragma material_model unlit
 #type vertex
 #version 450
 
