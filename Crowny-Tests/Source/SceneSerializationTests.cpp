@@ -443,6 +443,7 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     withGame.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
     withGame.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
     REQUIRE(ScriptObjectManager::Get().RefreshAssemblies(withGame).Succeeded());
+    script.Create(entity);
     REQUIRE(script.GetManagedClass() != nullptr);
     REQUIRE(script.GetManagedInstance() != nullptr);
 
