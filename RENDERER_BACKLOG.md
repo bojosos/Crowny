@@ -83,6 +83,7 @@ Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-dri
 - [x] Preserve shared skinning/morph deformation, depth, velocity, object-ID, shadow, alpha, and material-index paths around the new shading model.
 - [x] Add bindless diffuse-ramp and view-space matcap texture modes with strength, offset, and rotation controls shared by Forward+ and Deferred+.
 - [x] Preserve the existing opt-in inverted-hull pass in the legacy toon shader and expose its outline controls.
+- [ ] Cook and pack the legacy `Toon.asset` and `Unlit.asset` with the material-model-aware compiler. Their sources are now language-tagged so the built-in cooker no longer skips them.
 - [ ] Move inverted-hull silhouettes onto GPU-driven indirect submission, then add managed convenience APIs/editor presets, asset migration, and dedicated toon golden images.
 
 ## 3. GPU resource allocation and caches
@@ -111,7 +112,8 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Apply visibility, layer, and frustum culling to custom forward-only and compatibility draws; pin mixed custom-material instances to LOD zero until their forward pass consumes geometry-heap LOD ranges.
 - [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
-- [ ] Cook and verify the independent depth-prepass output matrix: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID.
+- [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
+- [ ] Verify the complete depth-prepass output matrix: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID.
 
 ## Validation
 

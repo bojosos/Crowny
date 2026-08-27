@@ -1,3 +1,4 @@
+#lang glsl
 #pragma material_model toon
 #pass 0
 #type vertex
