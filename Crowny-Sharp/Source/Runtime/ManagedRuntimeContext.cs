@@ -247,6 +247,7 @@ namespace Crowny
             Invoke(binding, entity, Encode(value));
         }
 
+#if !CROWNY_MONO
         internal static T CreateAsset<T>(UUID uuid) where T : Asset
         {
             if (uuid == UUID.Empty)
@@ -255,6 +256,7 @@ namespace Crowny
             asset.m_ManagedUuid = uuid;
             return asset;
         }
+#endif
 
         internal static Matrix4 GetMatrix4(ManagedBindingId binding, UUID entity)
         {
