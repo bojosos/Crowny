@@ -858,7 +858,7 @@ namespace Crowny
             scriptEvent.Contacts.reserve(event.Points.size());
             for (const PhysicsContactPoint3D& point : event.Points)
                 scriptEvent.Contacts.push_back(
-                  { point.Position, reverseNormal ? -point.Normal : point.Normal, point.Separation, point.Impulse });
+                  { point.Point, reverseNormal ? -point.Normal : point.Normal, point.Separation, point.NormalImpulse });
             for (auto& script : scripts)
                 ScriptRuntime::Dispatch(script, scriptEvent);
         };
