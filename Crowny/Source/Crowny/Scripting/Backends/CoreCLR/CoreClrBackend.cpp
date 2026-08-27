@@ -977,6 +977,8 @@ namespace Crowny
                                                           const void* inputData, size_t inputSize, void* resultData,
                                                           size_t resultSize)
             {
+                if (resultSize != 0 && resultData == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 cw_managed_blob input{ static_cast<const uint8_t*>(inputData), inputSize };
                 cw_managed_blob output{};
                 const cw_managed_status status = InvokeHostBinding(context, binding, entityId, input, &output);
