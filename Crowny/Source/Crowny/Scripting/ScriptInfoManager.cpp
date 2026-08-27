@@ -69,6 +69,8 @@ namespace Crowny
         const MonoAssembly* crownyAssembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
         if (crownyAssembly == nullptr)
             CW_ENGINE_ERROR("Crowny assembly not loaded.");
+        if (corlib == nullptr || crownyAssembly == nullptr)
+            return;
 
         m_Builtin.SystemGenericDictionaryClass = corlib->GetClass("System.Collections.Generic", "Dictionary`2");
         if (m_Builtin.SystemGenericDictionaryClass == nullptr)

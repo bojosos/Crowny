@@ -14,6 +14,7 @@
 #include "Crowny/Physics/Physics3D.h"
 #include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Scene/Scene.h"
+#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
@@ -24,6 +25,8 @@
 #include "Crowny/Serialization/SceneComponentCodec.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 #include "Crowny/Serialization/ScriptSerializer.h"
+
+#include <mono/metadata/threads.h>
 
 using namespace Crowny;
 
@@ -354,6 +357,15 @@ TEST_CASE("Retained script state applies when its managed type becomes available
           "[Serialization][Scripting][PersistedState][Reload][.ProcessIsolated]")
 {
     SerializationTestFixture fixture;
+    if (!MonoManager::IsStartedUp())
+    {
+        const MonoRuntimePaths monoPaths = ResolveMonoRuntimePaths(fs::current_path());
+        REQUIRE(monoPaths.HasRuntime());
+        MonoManager::StartUp(monoPaths.LibraryDirectory, monoPaths.EtcDirectory, 0);
+    }
+    REQUIRE(MonoManager::Get().GetDomain() != nullptr);
+    mono_thread_attach(MonoManager::Get().GetDomain());
+
     const Path engineAssemblyPath = fs::absolute("Crowny-Sharp/CrownySharp.dll");
     const Path gameAssemblyPath = fs::absolute("Crowny-Sandbox/GameAssembly.dll");
     REQUIRE(fs::is_regular_file(engineAssemblyPath));
