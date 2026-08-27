@@ -10,7 +10,7 @@ namespace Crowny
 #if CROWNY_MONO
             return Internal_Determinant(ref matrix);
 #else
-            return ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.MathMatrixDeterminant, matrix);
+            return ManagedRuntimeContext.MathMatrixDeterminant(matrix);
 #endif
         }
 
@@ -20,7 +20,7 @@ namespace Crowny
             Internal_Inverse(ref matrix, out Matrix4 outMatrix);
             return outMatrix;
 #else
-            return ManagedRuntimeContext.GetBindingMatrix4(ManagedBindingId.MathMatrixInverse, matrix);
+            return ManagedRuntimeContext.MathMatrixInverse(matrix);
 #endif
         }
 
@@ -30,7 +30,7 @@ namespace Crowny
             Internal_InverseAffine(ref matrix, out Matrix4 outMatrix);
             return outMatrix;
 #else
-            return ManagedRuntimeContext.GetBindingMatrix4(ManagedBindingId.MathMatrixAffineInverse, matrix);
+            return ManagedRuntimeContext.MathMatrixAffineInverse(matrix);
 #endif
         }
 
@@ -40,7 +40,7 @@ namespace Crowny
             Internal_LookAt(ref from, ref to, ref up, out Matrix4 outMatrix);
             return outMatrix;
 #else
-            return ManagedRuntimeContext.GetBindingMatrix4(ManagedBindingId.MathLookAt, from, to, up);
+            return ManagedRuntimeContext.MathLookAt(from, to, up);
 #endif
         }
 

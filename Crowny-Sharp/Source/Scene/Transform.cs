@@ -30,7 +30,7 @@ namespace Crowny
                 Internal_GetPosition(m_InternalPtr, out Vector3 tmp);
                 return tmp;
 #else
-                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetPosition, entity.uuid);
+                return ManagedRuntimeContext.TransformGetPosition(entity.uuid);
 #endif
             }
             set
@@ -38,7 +38,7 @@ namespace Crowny
 #if CROWNY_MONO
                 Internal_SetPosition(m_InternalPtr, ref value);
 #else
-                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetPosition, entity.uuid, value);
+                ManagedRuntimeContext.TransformSetPosition(entity.uuid, value);
 #endif
             }
         }
@@ -55,7 +55,7 @@ namespace Crowny
                 Internal_GetLocalPosition(m_InternalPtr, out Vector3 temp);
                 return temp;
 #else
-                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetLocalPosition, entity.uuid);
+                return ManagedRuntimeContext.TransformGetLocalPosition(entity.uuid);
 #endif
             }
             set
@@ -63,7 +63,7 @@ namespace Crowny
 #if CROWNY_MONO
                 Internal_SetLocalPosition(m_InternalPtr, ref value);
 #else
-                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetLocalPosition, entity.uuid, value);
+                ManagedRuntimeContext.TransformSetLocalPosition(entity.uuid, value);
 #endif
             }
         }
@@ -80,7 +80,7 @@ namespace Crowny
                 Internal_GetScale(m_InternalPtr, out Vector3 tmp);
                 return tmp;
 #else
-                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetScale, entity.uuid);
+                return ManagedRuntimeContext.TransformGetScale(entity.uuid);
 #endif
             }
             set
@@ -88,7 +88,7 @@ namespace Crowny
 #if CROWNY_MONO
                 Internal_SetScale(m_InternalPtr, ref value);
 #else
-                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetScale, entity.uuid, value);
+                ManagedRuntimeContext.TransformSetScale(entity.uuid, value);
 #endif
             }
         }
@@ -106,7 +106,7 @@ namespace Crowny
                 Internal_GetLocalScale(m_InternalPtr, out temp);
                 return temp;
 #else
-                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetLocalScale, entity.uuid);
+                return ManagedRuntimeContext.TransformGetLocalScale(entity.uuid);
 #endif
             }
             set
@@ -114,7 +114,7 @@ namespace Crowny
 #if CROWNY_MONO
                 Internal_SetLocalScale(m_InternalPtr, ref value);
 #else
-                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetLocalScale, entity.uuid, value);
+                ManagedRuntimeContext.TransformSetLocalScale(entity.uuid, value);
 #endif
             }
         }
@@ -131,7 +131,7 @@ namespace Crowny
                 Internal_GetRotation(m_InternalPtr, out Quaternion tmp);
                 return tmp;
 #else
-                return ManagedRuntimeContext.GetQuaternion(ManagedBindingId.TransformGetRotation, entity.uuid);
+                return ManagedRuntimeContext.TransformGetRotation(entity.uuid);
 #endif
             }
             set
@@ -139,7 +139,7 @@ namespace Crowny
 #if CROWNY_MONO
                 Internal_SetRotation(m_InternalPtr, ref value);
 #else
-                ManagedRuntimeContext.SetQuaternion(ManagedBindingId.TransformSetRotation, entity.uuid, value);
+                ManagedRuntimeContext.TransformSetRotation(entity.uuid, value);
 #endif
             }
         }
@@ -156,7 +156,7 @@ namespace Crowny
                 Internal_GetLocalRotation(m_InternalPtr, out Quaternion tmp);
                 return tmp;
 #else
-                return ManagedRuntimeContext.GetQuaternion(ManagedBindingId.TransformGetLocalRotation, entity.uuid);
+                return ManagedRuntimeContext.TransformGetLocalRotation(entity.uuid);
 #endif
             }
             set
@@ -164,7 +164,7 @@ namespace Crowny
 #if CROWNY_MONO
                 Internal_SetLocalRotation(m_InternalPtr, ref value);
 #else
-                ManagedRuntimeContext.SetQuaternion(ManagedBindingId.TransformSetLocalRotation, entity.uuid, value);
+                ManagedRuntimeContext.TransformSetLocalRotation(entity.uuid, value);
 #endif
             }
         }
@@ -181,7 +181,7 @@ namespace Crowny
                 Internal_GetEulerAngles(m_InternalPtr, out Vector3 temp);
                 return temp;
 #else
-                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetEulerAngles, entity.uuid);
+                return ManagedRuntimeContext.TransformGetEulerAngles(entity.uuid);
 #endif
             }
             set
@@ -189,7 +189,7 @@ namespace Crowny
 #if CROWNY_MONO
                 Internal_SetEulerAngles(m_InternalPtr, ref value);
 #else
-                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetEulerAngles, entity.uuid, value);
+                ManagedRuntimeContext.TransformSetEulerAngles(entity.uuid, value);
 #endif
             }
         }
@@ -206,7 +206,7 @@ namespace Crowny
                 Internal_GetLocalEulerAngles(m_InternalPtr, out Vector3 temp);
                 return temp;
 #else
-                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetLocalEulerAngles, entity.uuid);
+                return ManagedRuntimeContext.TransformGetLocalEulerAngles(entity.uuid);
 #endif
             }
             set
@@ -214,7 +214,7 @@ namespace Crowny
 #if CROWNY_MONO
                 Internal_SetLocalEulerAngles(m_InternalPtr, ref value);
 #else
-                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetLocalEulerAngles, entity.uuid, value);
+                ManagedRuntimeContext.TransformSetLocalEulerAngles(entity.uuid, value);
 #endif
             }
         }
@@ -230,7 +230,7 @@ namespace Crowny
                 Internal_GetWorldToLocalTransform(m_InternalPtr, out Matrix4 tmp);
                 return tmp;
 #else
-                return ManagedRuntimeContext.GetMatrix4(ManagedBindingId.TransformGetWorldToLocalMatrix, entity.uuid);
+                return ManagedRuntimeContext.TransformGetWorldToLocalMatrix(entity.uuid);
 #endif
             }
         }
@@ -246,7 +246,7 @@ namespace Crowny
                 Internal_GetLocalToWorldMatrix(m_InternalPtr, out Matrix4 tmp);
                 return tmp;
 #else
-                return ManagedRuntimeContext.GetMatrix4(ManagedBindingId.TransformGetLocalToWorldMatrix, entity.uuid);
+                return ManagedRuntimeContext.TransformGetLocalToWorldMatrix(entity.uuid);
 #endif
             }
         }

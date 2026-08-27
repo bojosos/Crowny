@@ -161,7 +161,7 @@ namespace Crowny
 #if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetKey(KeyCode code);
 #else
-        public static bool GetKey(KeyCode code) => ManagedRuntimeContext.GetInputBoolean(ManagedBindingId.InputGetKey, (uint)code);
+        public static bool GetKey(KeyCode code) => ManagedRuntimeContext.InputGetKey((uint)code);
 #endif
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace Crowny
 #if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetKeyDown(KeyCode code);
 #else
-        public static bool GetKeyDown(KeyCode code) => ManagedRuntimeContext.GetInputBoolean(ManagedBindingId.InputGetKeyDown, (uint)code);
+        public static bool GetKeyDown(KeyCode code) => ManagedRuntimeContext.InputGetKeyDown((uint)code);
 #endif
 
         /// <summary>
@@ -183,7 +183,7 @@ namespace Crowny
 #if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetKeyUp(KeyCode code);
 #else
-        public static bool GetKeyUp(KeyCode code) => ManagedRuntimeContext.GetInputBoolean(ManagedBindingId.InputGetKeyUp, (uint)code);
+        public static bool GetKeyUp(KeyCode code) => ManagedRuntimeContext.InputGetKeyUp((uint)code);
 #endif
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace Crowny
         [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetMouseButton(MouseCode code);
 #else
         public static bool GetMouseButton(MouseCode code) =>
-            ManagedRuntimeContext.GetInputBoolean(ManagedBindingId.InputGetMouseButton, (uint)code);
+            ManagedRuntimeContext.InputGetMouseButton((uint)code);
 #endif
 
         /// <summary>
@@ -207,7 +207,7 @@ namespace Crowny
         [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetMouseButtonDown(MouseCode code);
 #else
         public static bool GetMouseButtonDown(MouseCode code) =>
-            ManagedRuntimeContext.GetInputBoolean(ManagedBindingId.InputGetMouseButtonDown, (uint)code);
+            ManagedRuntimeContext.InputGetMouseButtonDown((uint)code);
 #endif
 
         /// <summary>
@@ -219,7 +219,7 @@ namespace Crowny
         [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetMouseButtonUp(MouseCode code);
 #else
         public static bool GetMouseButtonUp(MouseCode code) =>
-            ManagedRuntimeContext.GetInputBoolean(ManagedBindingId.InputGetMouseButtonUp, (uint)code);
+            ManagedRuntimeContext.InputGetMouseButtonUp((uint)code);
 #endif
 
         /// <summary>
@@ -228,7 +228,7 @@ namespace Crowny
 #if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)] public extern static float GetMouseScrollX();
 #else
-        public static float GetMouseScrollX() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.InputGetMouseScrollX);
+        public static float GetMouseScrollX() => ManagedRuntimeContext.InputGetMouseScrollX();
 #endif
 
         /// <summary>
@@ -237,7 +237,7 @@ namespace Crowny
 #if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)] public extern static float GetMouseScrollY();
 #else
-        public static float GetMouseScrollY() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.InputGetMouseScrollY);
+        public static float GetMouseScrollY() => ManagedRuntimeContext.InputGetMouseScrollY();
 #endif
 
         /// <summary>
@@ -251,7 +251,7 @@ namespace Crowny
                 Internal_GetMousePosition(out Vector2 pos);
                 return pos;
 #else
-                return ManagedRuntimeContext.GetBindingVector2(ManagedBindingId.InputGetMousePosition);
+                return ManagedRuntimeContext.InputGetMousePosition();
 #endif
             }
         }

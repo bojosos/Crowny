@@ -104,124 +104,124 @@ namespace Crowny
 
         public float Mass
         {
-            get { return ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.Rigidbody2DGetMass, EntityId); }
-            set { ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.Rigidbody2DSetMass, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetMass(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetMass(EntityId, value); }
         }
 
         public BodyType BodyType
         {
-            get { return (BodyType)ManagedRuntimeContext.GetBindingInt32(ManagedBindingId.Rigidbody2DGetBodyType, EntityId); }
-            set { ManagedRuntimeContext.SetBindingInt32(ManagedBindingId.Rigidbody2DSetBodyType, EntityId, (int)value); }
+            get { return (BodyType)ManagedRuntimeContext.Rigidbody2DGetBodyType(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetBodyType(EntityId, (int)value); }
         }
 
         public RigidbodySleepMode SleepMode
         {
-            get { return (RigidbodySleepMode)ManagedRuntimeContext.GetBindingInt32(ManagedBindingId.Rigidbody2DGetSleepMode, EntityId); }
-            set { ManagedRuntimeContext.SetBindingInt32(ManagedBindingId.Rigidbody2DSetSleepMode, EntityId, (int)value); }
+            get { return (RigidbodySleepMode)ManagedRuntimeContext.Rigidbody2DGetSleepMode(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetSleepMode(EntityId, (int)value); }
         }
 
         public CollisionDetectionMode2D CollisionDetectionMode
         {
-            get { return (CollisionDetectionMode2D)ManagedRuntimeContext.GetBindingInt32(ManagedBindingId.Rigidbody2DGetCollisionDetectionMode, EntityId); }
-            set { ManagedRuntimeContext.SetBindingInt32(ManagedBindingId.Rigidbody2DSetCollisionDetectionMode, EntityId, (int)value); }
+            get { return (CollisionDetectionMode2D)ManagedRuntimeContext.Rigidbody2DGetCollisionDetectionMode(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetCollisionDetectionMode(EntityId, (int)value); }
         }
 
         public RigidbodyInterpolation2D Interpolation
         {
-            get { return (RigidbodyInterpolation2D)ManagedRuntimeContext.GetBindingInt32(ManagedBindingId.Rigidbody2DGetInterpolation, EntityId); }
-            set { ManagedRuntimeContext.SetBindingInt32(ManagedBindingId.Rigidbody2DSetInterpolation, EntityId, (int)value); }
+            get { return (RigidbodyInterpolation2D)ManagedRuntimeContext.Rigidbody2DGetInterpolation(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetInterpolation(EntityId, (int)value); }
         }
 
         public bool AutoMass
         {
-            get { return ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.Rigidbody2DGetAutoMass, EntityId); }
-            set { ManagedRuntimeContext.SetBindingBoolean(ManagedBindingId.Rigidbody2DSetAutoMass, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetAutoMass(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetAutoMass(EntityId, value); }
         }
 
         public int Layer
         {
-            get { return ManagedRuntimeContext.GetBindingInt32(ManagedBindingId.Rigidbody2DGetLayer, EntityId); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetLayer(EntityId); }
             set
             {
                 if (value < 0 || value >= Physics2D.LayerCount)
                     throw new ArgumentOutOfRangeException("value", "Physics layers must be in the range 0 through 15.");
-                ManagedRuntimeContext.SetBindingInt32(ManagedBindingId.Rigidbody2DSetLayer, EntityId, value);
+                ManagedRuntimeContext.Rigidbody2DSetLayer(EntityId, value);
             }
         }
 
         public float LinearDrag
         {
-            get { return ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.Rigidbody2DGetLinearDrag, EntityId); }
-            set { ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.Rigidbody2DSetLinearDrag, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetLinearDrag(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetLinearDrag(EntityId, value); }
         }
 
         public float AngularDrag
         {
-            get { return ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.Rigidbody2DGetAngularDrag, EntityId); }
-            set { ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.Rigidbody2DSetAngularDrag, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetAngularDrag(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetAngularDrag(EntityId, value); }
         }
 
         public float GravityScale
         {
-            get { return ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.Rigidbody2DGetGravityScale, EntityId); }
-            set { ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.Rigidbody2DSetGravityScale, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetGravityScale(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetGravityScale(EntityId, value); }
         }
 
         public Vector2 CenterOfMass
         {
-            get { return ManagedRuntimeContext.GetBindingVector2(ManagedBindingId.Rigidbody2DGetCenterOfMass, EntityId); }
-            set { ManagedRuntimeContext.SetBindingVector2(ManagedBindingId.Rigidbody2DSetCenterOfMass, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetCenterOfMass(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetCenterOfMass(EntityId, value); }
         }
 
         public float Inertia
         {
-            get { return ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.Rigidbody2DGetInertia, EntityId); }
-            set { ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.Rigidbody2DSetInertia, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetInertia(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetInertia(EntityId, value); }
         }
 
         public Rigidbody2DConstraints Constraints
         {
-            get { return (Rigidbody2DConstraints)ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.Rigidbody2DGetConstraints, EntityId); }
-            set { ManagedRuntimeContext.SetBindingUInt32(ManagedBindingId.Rigidbody2DSetConstraints, EntityId, (uint)value); }
+            get { return (Rigidbody2DConstraints)ManagedRuntimeContext.Rigidbody2DGetConstraints(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetConstraints(EntityId, (uint)value); }
         }
 
-        public float Rotation => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.Rigidbody2DGetRotation, EntityId);
-        public Vector2 Position => ManagedRuntimeContext.GetBindingVector2(ManagedBindingId.Rigidbody2DGetPosition, EntityId);
+        public float Rotation => ManagedRuntimeContext.Rigidbody2DGetRotation(EntityId);
+        public Vector2 Position => ManagedRuntimeContext.Rigidbody2DGetPosition(EntityId);
 
         public Vector2 LinearVelocity
         {
-            get { return ManagedRuntimeContext.GetBindingVector2(ManagedBindingId.Rigidbody2DGetLinearVelocity, EntityId); }
-            set { ManagedRuntimeContext.SetBindingVector2(ManagedBindingId.Rigidbody2DSetLinearVelocity, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetLinearVelocity(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetLinearVelocity(EntityId, value); }
         }
 
         public float AngularVelocity
         {
-            get { return ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.Rigidbody2DGetAngularVelocity, EntityId); }
-            set { ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.Rigidbody2DSetAngularVelocity, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetAngularVelocity(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetAngularVelocity(EntityId, value); }
         }
 
         public bool Awake
         {
-            get { return ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.Rigidbody2DGetAwake, EntityId); }
-            set { ManagedRuntimeContext.SetBindingBoolean(ManagedBindingId.Rigidbody2DSetAwake, EntityId, value); }
+            get { return ManagedRuntimeContext.Rigidbody2DGetAwake(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody2DSetAwake(EntityId, value); }
         }
 
         /// <summary>Applies force at the body's center of mass.</summary>
         public void AddForce(Vector2 force, ForceMode2D mode = ForceMode2D.Force)
         {
-            ManagedRuntimeContext.InvokeBinding(ManagedBindingId.Rigidbody2DAddForce, EntityId, force, (int)mode);
+            ManagedRuntimeContext.Rigidbody2DAddForce(EntityId, force, (int)mode);
         }
 
         /// <summary>Applies force at a world-space position.</summary>
         public void AddForceAtPosition(Vector2 force, Vector2 worldPosition, ForceMode2D mode = ForceMode2D.Force)
         {
-            ManagedRuntimeContext.InvokeBinding(ManagedBindingId.Rigidbody2DAddForceAtPosition, EntityId, force, worldPosition, (int)mode);
+            ManagedRuntimeContext.Rigidbody2DAddForceAtPosition(EntityId, force, worldPosition, (int)mode);
         }
 
         /// <summary>Applies torque around the body's center of mass.</summary>
         public void AddTorque(float torque, ForceMode2D mode = ForceMode2D.Force)
         {
-            ManagedRuntimeContext.InvokeBinding(ManagedBindingId.Rigidbody2DAddTorque, EntityId, torque, (int)mode);
+            ManagedRuntimeContext.Rigidbody2DAddTorque(EntityId, torque, (int)mode);
         }
 #endif
 

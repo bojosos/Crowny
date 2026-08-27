@@ -23,7 +23,7 @@ namespace Crowny
 #if CROWNY_MONO
         public extern static float time { [MethodImpl(MethodImplOptions.InternalCall)] get; }
 #else
-        public static float time => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetTime);
+        public static float time => ManagedRuntimeContext.TimeGetTime();
 #endif
         
         /// <summary>
@@ -33,7 +33,7 @@ namespace Crowny
 #if CROWNY_MONO
         public extern static float fixedDeltaTime { [MethodImpl(MethodImplOptions.InternalCall)] get; }
 #else
-        public static float fixedDeltaTime => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetFixedDeltaTime);
+        public static float fixedDeltaTime => ManagedRuntimeContext.TimeGetFixedDeltaTime();
 #endif
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace Crowny
 #if CROWNY_MONO
         public extern static float smoothDeltaTime { [MethodImpl(MethodImplOptions.InternalCall)] get; }
 #else
-        public static float smoothDeltaTime => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetSmoothDeltaTime);
+        public static float smoothDeltaTime => ManagedRuntimeContext.TimeGetSmoothDeltaTime();
 #endif
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace Crowny
 #if CROWNY_MONO
         public extern static float realtimeSinceStartup { [MethodImpl(MethodImplOptions.InternalCall)] get; }
 #else
-        public static float realtimeSinceStartup => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetRealtimeSinceStartup);
+        public static float realtimeSinceStartup => ManagedRuntimeContext.TimeGetRealtimeSinceStartup();
 #endif
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace Crowny
 #if CROWNY_MONO
         public extern static float frameCount { [MethodImpl(MethodImplOptions.InternalCall)] get; }
 #else
-        public static float frameCount => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetFrameCount);
+        public static float frameCount => ManagedRuntimeContext.TimeGetFrameCount();
 #endif
     }
 }

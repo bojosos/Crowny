@@ -110,7 +110,7 @@ namespace Crowny
         /// </summary>
         public void Play()
         {
-            InvokePlayback(ManagedBindingId.AudioSourcePlay);
+            PlaySource();
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Crowny
         /// </summary>
         public void Pause()
         {
-            InvokePlayback(ManagedBindingId.AudioSourcePause);
+            PauseSource();
         }
 
         /// <summary>
@@ -126,7 +126,7 @@ namespace Crowny
         /// </summary>
         public void Stop()
         {
-            InvokePlayback(ManagedBindingId.AudioSourceStop);
+            StopSource();
         }
 
 #if CROWNY_MONO
@@ -149,39 +149,33 @@ namespace Crowny
         private AudioClip GetClip() => Internal_GetClip(m_InternalPtr);
         private void SetClip(AudioClip value) => Internal_SetClip(m_InternalPtr, value);
         private AudioSourceState GetState() => Internal_GetState(m_InternalPtr);
-        private void InvokePlayback(ManagedBindingId binding)
-        {
-            if (binding == ManagedBindingId.AudioSourcePlay)
-                Internal_Play(m_InternalPtr);
-            else if (binding == ManagedBindingId.AudioSourcePause)
-                Internal_Pause(m_InternalPtr);
-            else
-                Internal_Stop(m_InternalPtr);
-        }
+        private void PlaySource() => Internal_Play(m_InternalPtr);
+        private void PauseSource() => Internal_Pause(m_InternalPtr);
+        private void StopSource() => Internal_Stop(m_InternalPtr);
 #else
         private UUID EntityId => entity.uuid;
-        private float GetVolume() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetVolume, EntityId);
-        private void SetVolume(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetVolume, EntityId, value);
-        private float GetPitch() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetPitch, EntityId);
-        private void SetPitch(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetPitch, EntityId, value);
-        private float GetMinDistance() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetMinDistance, EntityId);
-        private void SetMinDistance(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetMinDistance, EntityId, value);
-        private float GetMaxDistance() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetMaxDistance, EntityId);
-        private void SetMaxDistance(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetMaxDistance, EntityId, value);
-        private bool GetLooping() => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.AudioSourceGetLoop, EntityId);
-        private void SetLooping(bool value) => ManagedRuntimeContext.SetBindingBoolean(ManagedBindingId.AudioSourceSetLoop, EntityId, value);
-        private bool GetIsMuted() => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.AudioSourceGetMuted, EntityId);
-        private void SetIsMuted(bool value) => ManagedRuntimeContext.SetBindingBoolean(ManagedBindingId.AudioSourceSetMuted, EntityId, value);
-        private bool GetPlayOnAwake() => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.AudioSourceGetPlayOnAwake, EntityId);
-        private void SetPlayOnAwake(bool value) => ManagedRuntimeContext.SetBindingBoolean(ManagedBindingId.AudioSourceSetPlayOnAwake, EntityId, value);
-        private float GetTime() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetTime, EntityId);
-        private void SetTime(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetTime, EntityId, value);
-        private AudioClip GetClip() => ManagedRuntimeContext.CreateAsset<AudioClip>(ManagedRuntimeContext.GetBindingUuid(ManagedBindingId.AudioSourceGetClip, EntityId));
-        private void SetClip(AudioClip value) => ManagedRuntimeContext.SetBindingUuid(ManagedBindingId.AudioSourceSetClip, EntityId,
-                                                                                       value?.uuid ?? UUID.Empty);
-        private AudioSourceState GetState() =>
-            (AudioSourceState)ManagedRuntimeContext.GetBindingInt32(ManagedBindingId.AudioSourceGetState, EntityId);
-        private void InvokePlayback(ManagedBindingId binding) => ManagedRuntimeContext.InvokeBinding(binding, EntityId);
+        private float GetVolume() => ManagedRuntimeContext.AudioSourceGetVolume(EntityId);
+        private void SetVolume(float value) => ManagedRuntimeContext.AudioSourceSetVolume(EntityId, value);
+        private float GetPitch() => ManagedRuntimeContext.AudioSourceGetPitch(EntityId);
+        private void SetPitch(float value) => ManagedRuntimeContext.AudioSourceSetPitch(EntityId, value);
+        private float GetMinDistance() => ManagedRuntimeContext.AudioSourceGetMinDistance(EntityId);
+        private void SetMinDistance(float value) => ManagedRuntimeContext.AudioSourceSetMinDistance(EntityId, value);
+        private float GetMaxDistance() => ManagedRuntimeContext.AudioSourceGetMaxDistance(EntityId);
+        private void SetMaxDistance(float value) => ManagedRuntimeContext.AudioSourceSetMaxDistance(EntityId, value);
+        private bool GetLooping() => ManagedRuntimeContext.AudioSourceGetLoop(EntityId);
+        private void SetLooping(bool value) => ManagedRuntimeContext.AudioSourceSetLoop(EntityId, value);
+        private bool GetIsMuted() => ManagedRuntimeContext.AudioSourceGetMuted(EntityId);
+        private void SetIsMuted(bool value) => ManagedRuntimeContext.AudioSourceSetMuted(EntityId, value);
+        private bool GetPlayOnAwake() => ManagedRuntimeContext.AudioSourceGetPlayOnAwake(EntityId);
+        private void SetPlayOnAwake(bool value) => ManagedRuntimeContext.AudioSourceSetPlayOnAwake(EntityId, value);
+        private float GetTime() => ManagedRuntimeContext.AudioSourceGetTime(EntityId);
+        private void SetTime(float value) => ManagedRuntimeContext.AudioSourceSetTime(EntityId, value);
+        private AudioClip GetClip() => ManagedRuntimeContext.CreateAsset<AudioClip>(ManagedRuntimeContext.AudioSourceGetClip(EntityId));
+        private void SetClip(AudioClip value) => ManagedRuntimeContext.AudioSourceSetClip(EntityId, value?.uuid ?? UUID.Empty);
+        private AudioSourceState GetState() => (AudioSourceState)ManagedRuntimeContext.AudioSourceGetState(EntityId);
+        private void PlaySource() => ManagedRuntimeContext.AudioSourcePlay(EntityId);
+        private void PauseSource() => ManagedRuntimeContext.AudioSourcePause(EntityId);
+        private void StopSource() => ManagedRuntimeContext.AudioSourceStop(EntityId);
 #endif
 
 #if CROWNY_MONO

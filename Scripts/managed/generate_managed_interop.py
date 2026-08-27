@@ -15,8 +15,8 @@ ABI_OUTPUT = ROOT / "Crowny-Managed" / "Crowny.ManagedHost" / "Generated" / "Cro
 NATIVE_ABI_OUTPUT = ROOT / "Crowny" / "Source" / "Crowny" / "Scripting" / "Managed" / "Interop" / "CrownyManagedAbi.h"
 AOT_OUTPUT = ROOT / "Crowny-Managed" / "Crowny.ManagedHost" / "Generated" / "ManagedAotRoots.g.cs"
 TRIM_OUTPUT = ROOT / "Crowny-Managed" / "Crowny.ManagedHost" / "Generated" / "ILLink.Descriptors.xml"
-BINDINGS_OUTPUT = ROOT / "Crowny-Sharp" / "Source" / "Runtime" / "Generated" / "ManagedBindingIds.g.cs"
 TYPED_HOST_OUTPUT = ROOT / "Crowny-Sharp" / "Source" / "Runtime" / "Generated" / "ManagedHostApi.g.cs"
+LINE_CONTINUATION = "\\"
 
 
 def enum_members(values: dict[str, int]) -> str:
@@ -82,6 +82,21 @@ SHARP_CS_TYPES = {
     "vec4": "ManagedNativeVec4",
     "quat": "ManagedNativeQuaternion",
     "mat4": "ManagedNativeMatrix4",
+}
+
+SHARP_API_TYPES = {
+    "bool": "bool",
+    "f32": "float",
+    "i32": "int",
+    "u32": "uint",
+    "uuid": "UUID",
+    "font_character_info": "CharacterInfo",
+    "string": "string",
+    "vec2": "Vector2",
+    "vec3": "Vector3",
+    "vec4": "Vector4",
+    "quat": "Quaternion",
+    "mat4": "Matrix4",
 }
 
 POINTER_INPUT_TYPES = {"vec2", "vec3", "vec4", "quat", "mat4"}
@@ -150,6 +165,108 @@ def sharp_cs_function_fields(functions: dict) -> str:
     )
 
 
+def sharp_native_parameter(parameter: dict) -> tuple[list[str], str]:
+    name = parameter["name"]
+    native_name = f"native{name[0].upper()}{name[1:]}"
+    parameter_type = parameter["type"]
+    if parameter_type == "bool":
+        return [], f"{name} ? (byte)1 : (byte)0"
+    if parameter_type in {"f32", "i32", "u32"}:
+        return [], name
+    if parameter_type == "uuid":
+        return [], f"EncodeUuid({name})"
+    if parameter_type == "string":
+        return [], native_name
+    if parameter_type == "vec2":
+        return [f"            ManagedNativeVec2 {native_name} = new() {{ X = {name}.x, Y = {name}.y }};"], f"&{native_name}"
+    if parameter_type == "vec3":
+        return [f"            ManagedNativeVec3 {native_name} = new() {{ X = {name}.x, Y = {name}.y, Z = {name}.z }};"], f"&{native_name}"
+    if parameter_type == "vec4":
+        return [f"            ManagedNativeVec4 {native_name} = new() {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
+    if parameter_type == "quat":
+        return [f"            ManagedNativeQuaternion {native_name} = new() {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
+    if parameter_type == "mat4":
+        return [f"            ManagedNativeMatrix4 {native_name} = EncodeMatrix({name});"], f"&{native_name}"
+    raise ValueError(f"unsupported managed parameter type: {parameter_type}")
+
+
+def sharp_result_declaration(result_type: str) -> tuple[str, str]:
+    native_type = SHARP_CS_TYPES[result_type]
+    declaration = f"            {native_type} result = default;"
+    if result_type == "bool":
+        return declaration, "result != 0"
+    if result_type in {"f32", "i32", "u32"}:
+        return declaration, "result"
+    if result_type == "uuid":
+        return declaration, "DecodeUuid(result)"
+    if result_type == "string":
+        return declaration, "DecodeString(result)"
+    if result_type == "font_character_info":
+        return declaration, "DecodeFontCharacterInfo(result)"
+    if result_type == "vec2":
+        return declaration, "new Vector2(result.X, result.Y)"
+    if result_type == "vec3":
+        return declaration, "new Vector3(result.X, result.Y, result.Z)"
+    if result_type == "vec4":
+        return declaration, "new Vector4(result.X, result.Y, result.Z, result.W)"
+    if result_type == "quat":
+        return declaration, "new Quaternion(result.X, result.Y, result.Z, result.W)"
+    if result_type == "mat4":
+        return declaration, "DecodeMatrix(result)"
+    raise ValueError(f"unsupported managed result type: {result_type}")
+
+
+def sharp_cs_function_wrappers(functions: dict) -> str:
+    methods: list[str] = []
+    for function_name, function in functions.items():
+        parameters = function.get("parameters", [])
+        result_type = function.get("result")
+        return_type = SHARP_API_TYPES[result_type] if result_type else "void"
+        signature = ", ".join(f"{SHARP_API_TYPES[value['type']]} {value['name']}" for value in parameters)
+        body: list[str] = [
+            f"        internal static {return_type} {function_name}({signature})",
+            "        {",
+            "            EnsureHostBindings();",
+        ]
+        call_arguments = ["nativeHostApi.Context"]
+        for parameter in parameters:
+            declarations, argument = sharp_native_parameter(parameter)
+            body.extend(declarations)
+            call_arguments.append(argument)
+        result_expression = None
+        if result_type:
+            declaration, result_expression = sharp_result_declaration(result_type)
+            body.append(declaration)
+            call_arguments.append("&result")
+
+        string_parameters = [value for value in parameters if value["type"] == "string"]
+        for parameter in string_parameters:
+            name = parameter["name"]
+            title = f"{name[0].upper()}{name[1:]}"
+            body.append(f"            byte[] encoded{title} = Encoding.UTF8.GetBytes({name} ?? string.Empty);")
+        indent = "            "
+        for parameter in string_parameters:
+            name = parameter["name"]
+            title = f"{name[0].upper()}{name[1:]}"
+            body.append(f"{indent}fixed (byte* {name}Bytes = encoded{title})")
+            body.append(f"{indent}{{")
+            indent += "    "
+            body.append(
+                f"{indent}ManagedNativeStringView native{title} = new({name}Bytes, (uint)encoded{title}.Length);"
+            )
+
+        arguments = ", ".join(call_arguments)
+        body.append(f"{indent}EnsureStatus(nativeHostApi.{function_name}({arguments}), \"{function_name}\");")
+        for _ in reversed(string_parameters):
+            indent = indent[:-4]
+            body.append(f"{indent}}}")
+        if result_expression:
+            body.append(f"            return {result_expression};")
+        body.append("        }")
+        methods.append("\n".join(body))
+    return "\n\n".join(methods)
+
+
 def generate_native_abi(manifest: dict) -> str:
     entry_type, entry_method = manifest["managedEntryPoint"].split("::", 1)
     return f"""#pragma once
@@ -185,11 +302,6 @@ enum cw_managed_status_code
 enum cw_managed_event_kind
 {{
 {native_enum_members(manifest['eventKinds'], 'CW_MANAGED_EVENT_')}
-}};
-
-enum cw_managed_host_binding
-{{
-{native_enum_members(manifest['hostBindings'], 'CW_MANAGED_BINDING_')}
 }};
 
 typedef struct cw_managed_string_view
@@ -304,9 +416,6 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_parent_fn)(void
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_parent_fn)(void* context, cw_managed_uuid entity,
                                                                            cw_managed_uuid parent);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_entity_fn)(void* context, cw_managed_uuid entity);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_invoke_host_binding_fn)(void* context, uint32_t binding,
-                                                                             cw_managed_uuid entity, cw_managed_blob input,
-                                                                             cw_managed_blob* output);
 {native_host_function_typedefs(manifest['hostFunctions'])}
 
 typedef struct cw_managed_host_api
@@ -321,11 +430,10 @@ typedef struct cw_managed_host_api
     cw_managed_get_entity_parent_fn get_entity_parent;
     cw_managed_set_entity_parent_fn set_entity_parent;
     cw_managed_destroy_entity_fn destroy_entity;
-    cw_managed_invoke_host_binding_fn invoke_host_binding;
 {native_host_function_fields(manifest['hostFunctions'])}
 }} cw_managed_host_api;
 
-#define CW_MANAGED_HOST_FUNCTION_LIST(X) \
+#define CW_MANAGED_HOST_FUNCTION_LIST(X) {LINE_CONTINUATION}
 {native_host_function_list(manifest['hostFunctions'])}
 
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_initialize_fn)(const cw_managed_host_api* host);
@@ -396,11 +504,6 @@ namespace Crowny.ManagedHost.Interop
     public enum NativeEventKind : uint
     {{
 {enum_members(manifest['eventKinds'])}
-    }}
-
-    public enum NativeHostBinding : uint
-    {{
-{enum_members(manifest['hostBindings'])}
     }}
 
     [StructLayout(LayoutKind.Sequential)]
@@ -538,7 +641,6 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> GetEntityParent;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SetEntityParent;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> DestroyEntity;
-        public delegate* unmanaged[Cdecl]<void*, NativeHostBinding, NativeUuid, NativeBlob, NativeBlob*, NativeStatus> InvokeHostBinding;
 {host_cs_function_fields(manifest['hostFunctions'])}
 
 {host_cs_function_validation(manifest['hostFunctions'])}
@@ -589,23 +691,11 @@ namespace Crowny.ManagedHost
 """
 
 
-def generate_binding_ids(manifest: dict) -> str:
-    return f"""// <auto-generated />
-namespace Crowny
-{{
-    internal enum ManagedBindingId : uint
-    {{
-{enum_members(manifest['hostBindings'])}
-    }}
-}}
-"""
-
-
 def generate_typed_host_api(manifest: dict) -> str:
     return f"""// <auto-generated />
 #if !CROWNY_MONO
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Crowny
 {{
@@ -703,8 +793,12 @@ namespace Crowny
         internal void* GetEntityParent;
         internal void* SetEntityParent;
         internal void* DestroyEntity;
-        internal void* InvokeHostBinding;
 {sharp_cs_function_fields(manifest['hostFunctions'])}
+    }}
+
+    internal static unsafe partial class ManagedRuntimeContext
+    {{
+{sharp_cs_function_wrappers(manifest['hostFunctions'])}
     }}
 }}
 #endif
@@ -745,7 +839,6 @@ def main() -> int:
         update(ABI_OUTPUT, generate_abi(manifest), arguments.check),
         update(AOT_OUTPUT, generate_aot_roots(manifest), arguments.check),
         update(TRIM_OUTPUT, generate_trim_roots(manifest), arguments.check),
-        update(BINDINGS_OUTPUT, generate_binding_ids(manifest), arguments.check),
         update(TYPED_HOST_OUTPUT, generate_typed_host_api(manifest), arguments.check),
     )
     return 0 if all(outputs) else 1
