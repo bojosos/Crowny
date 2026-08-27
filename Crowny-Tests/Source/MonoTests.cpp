@@ -148,7 +148,7 @@ TEST_CASE("Mono::Utils::GCHandles", "[Mono]")
     }
 }
 
-TEST_CASE("Managed animation API exposes clip identity and playback controls", "[Mono][Animation]")
+TEST_CASE("Managed animation API exposes clip identity and playback controls", "[Mono][Animation][.ProcessIsolated]")
 {
     AttachThread();
 
