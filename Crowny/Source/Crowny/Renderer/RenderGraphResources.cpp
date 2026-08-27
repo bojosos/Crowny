@@ -185,14 +185,18 @@ namespace Crowny
                 history.Paired = paired;
                 history.PhysicalIds[0] = AllocatePhysicalId();
                 history.PhysicalIds[1] = paired ? AllocatePhysicalId() : history.PhysicalIds[0];
+                // Keep the first read and write physically separate even
+                // though the invalid read will be ignored by the consumer.
+                history.LastWrittenSlot = paired ? 1u : 0u;
                 m_Stats.HistoryAllocations += paired ? 2u : 1u;
             }
 
             uint32_t physicalSlot = 0;
             if (paired)
             {
-                const uint32_t writeSlot = static_cast<uint32_t>(frameNumber & 1ull);
-                physicalSlot = resource.Desc.HistoryRole == RenderGraphHistoryRole::Write ? writeSlot : 1u - writeSlot;
+                history.FrameWriteSlot = 1u - history.LastWrittenSlot;
+                physicalSlot = resource.Desc.HistoryRole == RenderGraphHistoryRole::Write ? history.FrameWriteSlot
+                                                                                           : history.LastWrittenSlot;
             }
             binding.PhysicalId = history.PhysicalIds[physicalSlot];
             binding.HistoryValid = history.Valid && resource.Desc.HistoryRole != RenderGraphHistoryRole::Write;
@@ -211,7 +215,10 @@ namespace Crowny
                 resource.Desc.HistoryRole == RenderGraphHistoryRole::Read ||
                 resource.FirstUse == RenderGraphPassHandle::InvalidIndex)
                 continue;
-            m_History[m_CurrentHistoryNamespace][resource.Desc.HistoryId].Valid = true;
+            HistoryEntry& history = m_History[m_CurrentHistoryNamespace][resource.Desc.HistoryId];
+            if (history.Paired)
+                history.LastWrittenSlot = history.FrameWriteSlot;
+            history.Valid = true;
         }
         m_CurrentGraph = nullptr;
         m_CurrentFrame = 0;

@@ -42,11 +42,37 @@ namespace Crowny
 
     namespace
     {
-        uint64_t CameraHistoryNamespace(const Scene* scene, const Camera* camera)
+        std::atomic<uint64_t> s_NextHistoryOwnerId{ 1 };
+        std::mutex s_OrphanedHistoryMutex;
+        Vector<uint64_t> s_OrphanedHistoryReleases;
+
+        uint64_t AllocateHistoryOwnerId()
         {
-            uint64_t value = reinterpret_cast<uint64_t>(scene);
-            value ^= reinterpret_cast<uint64_t>(camera) + 0x9e3779b97f4a7c15ull + (value << 6u) + (value >> 2u);
+            uint64_t value = s_NextHistoryOwnerId.fetch_add(1, std::memory_order_relaxed);
+            if (value == 0)
+                value = s_NextHistoryOwnerId.fetch_add(1, std::memory_order_relaxed);
+            return value;
+        }
+
+        uint64_t CameraHistoryNamespace(uint64_t historyOwnerId, const Scene* scene, uint64_t cameraIdentity, uint64_t identityKind)
+        {
+            uint64_t value = historyOwnerId;
+            value ^= reinterpret_cast<uint64_t>(scene) + 0x9e3779b97f4a7c15ull + (value << 6u) + (value >> 2u);
+            value ^= cameraIdentity + 0x9e3779b97f4a7c15ull + (value << 6u) + (value >> 2u);
+            value ^= identityKind + 0x9e3779b97f4a7c15ull + (value << 6u) + (value >> 2u);
             return value == 0 ? 1 : value;
+        }
+
+        uint64_t ExternalCameraHistoryNamespace(uint64_t historyOwnerId, const Scene* scene, const Camera* camera)
+        {
+            constexpr uint64_t externalCameraKind = 0x45585445524e414cull;
+            return CameraHistoryNamespace(historyOwnerId, scene, reinterpret_cast<uint64_t>(camera), externalCameraKind);
+        }
+
+        uint64_t SceneCameraHistoryNamespace(uint64_t historyOwnerId, const Scene* scene, entt::entity cameraEntity)
+        {
+            constexpr uint64_t sceneCameraKind = 0x5343454e4543414dull;
+            return CameraHistoryNamespace(historyOwnerId, scene, static_cast<uint64_t>(entt::to_integral(cameraEntity)), sceneCameraKind);
         }
 
         bool ProjectionChanged(const glm::mat4& first, const glm::mat4& second)
@@ -58,30 +84,10 @@ namespace Crowny
             return false;
         }
 
-        glm::vec4 TransformBounds(const SphereBounds& bounds, const glm::mat4& transform)
-        {
-            const glm::vec3 worldCenter = glm::vec3(transform * glm::vec4(bounds.GetCenter(), 1.0f));
-            const float maximumScale =
-              std::max({ glm::length(glm::vec3(transform[0])), glm::length(glm::vec3(transform[1])), glm::length(glm::vec3(transform[2])) });
-            return glm::vec4(worldCenter, bounds.GetRadius() * maximumScale);
-        }
-
         bool HasForwardOnlyOpaqueMaterial(const Vector<AssetHandle<Material>>& materials)
         {
             return std::any_of(materials.begin(), materials.end(), [](const AssetHandle<Material>& material) {
-                if (!material)
-                    return false;
-                const AssetHandle<Shader> shader = material->GetShader();
-                if (!shader)
-                    return false;
-                const Ref<ShaderTechnique>& technique = shader->GetTechnique(material->GetVariation());
-                if (!technique || std::find(technique->GetTags().begin(), technique->GetTags().end(), "material_model=custom") ==
-                                    technique->GetTags().end())
-                    return false;
-                if (material->GetVariation().Has("ALPHA_MASK") && material->GetVariation().GetBool("ALPHA_MASK"))
-                    return false;
-                return std::none_of(technique->GetRenderPasses().begin(), technique->GetRenderPasses().end(),
-                                    [](const Ref<ShaderRenderPass>& pass) { return pass && pass->HasBlending(); });
+                return material && MaterialRenderClassifier::Classify(*material).IsForwardOnlyOpaque();
             });
         }
 
@@ -1377,6 +1383,8 @@ namespace Crowny
             ShadowAtlasAllocator SpotShadowAtlas;
             PointShadowLayerAllocator PointShadowLayers;
             UnorderedSet<uint32_t> PreviousSpotLights;
+            UnorderedMap<uint64_t, RenderingPath> HistoryPaths;
+            Vector<uint64_t> OrphanedHistoryReleases;
         };
 
         thread_local Scope<SceneRendererThreadResources> s_RenderThreadResources;
@@ -1409,6 +1417,7 @@ namespace Crowny
     };
 
     static SceneRendererData* s_Data;
+    static uint32_t s_DataUsers;
     static std::mutex s_StatisticsMutex;
     static SceneRenderStatistics s_Statistics;
 
@@ -1460,12 +1469,33 @@ namespace Crowny
         }
     } // namespace
 
-    SceneRenderer::SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget) : m_Scene(scene), m_RenderTarget(renderTarget) {}
+    SceneRenderer::SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget)
+      : m_RenderTarget(renderTarget), m_Scene(scene), m_HistoryOwnerId(AllocateHistoryOwnerId())
+    {
+    }
 
     SceneRenderer::~SceneRenderer()
     {
-        delete s_Data;
-        s_Data = nullptr;
+        if (!m_CameraHistory.empty() || !m_PendingHistoryReleases.empty())
+        {
+            std::scoped_lock lock(s_OrphanedHistoryMutex);
+            s_OrphanedHistoryReleases.reserve(s_OrphanedHistoryReleases.size() + m_CameraHistory.size() +
+                                              m_PendingHistoryReleases.size());
+            for (const auto& [historyNamespace, _] : m_CameraHistory)
+                s_OrphanedHistoryReleases.push_back(historyNamespace);
+            s_OrphanedHistoryReleases.insert(s_OrphanedHistoryReleases.end(), m_PendingHistoryReleases.begin(),
+                                             m_PendingHistoryReleases.end());
+        }
+        if (m_OwnsSharedData)
+        {
+            CW_ENGINE_ASSERT(s_DataUsers != 0, "Scene renderer shared-data ownership is unbalanced");
+            s_DataUsers--;
+            if (s_DataUsers == 0)
+            {
+                delete s_Data;
+                s_Data = nullptr;
+            }
+        }
     }
 
     SceneRenderStatistics SceneRenderer::GetStatistics()
@@ -1476,6 +1506,12 @@ namespace Crowny
 
     void SceneRenderer::Init()
     {
+        if (m_OwnsSharedData)
+            return;
+        m_OwnsSharedData = true;
+        s_DataUsers++;
+        if (s_Data != nullptr)
+            return;
         s_Data = new SceneRendererData();
         // s_Data->Timer2DGeometry = TimerQuery::Create();
         // s_Data->Timer3DGeometry = TimerQuery::Create();
@@ -1881,6 +1917,7 @@ namespace Crowny
         snapshot.Clear();
         snapshot.FrameNumber = frameNumber;
         Camera* mainCamera = nullptr;
+        entt::entity mainCameraEntity = entt::null;
         glm::mat4 cameraTransform;
         const auto cameraView = m_Scene->m_Registry.view<TransformComponent, CameraComponent, RelationshipComponent>();
         // TODO: Requires improvement for multiple cameras, maybe a main camera checkbox?
@@ -1888,13 +1925,15 @@ namespace Crowny
         {
             auto [transform, camera, relationship] = cameraView.get<TransformComponent, CameraComponent, RelationshipComponent>(ee);
             mainCamera = &camera.Camera;
+            mainCameraEntity = ee;
             cameraTransform = transform.GetWorldMatrix(relationship.Parent);
             break;
         }
 
         if (mainCamera)
         {
-            ExtractSnapshot(snapshot, *mainCamera, glm::inverse(cameraTransform), drawGrid);
+            ExtractSnapshotWithHistory(snapshot, *mainCamera, glm::inverse(cameraTransform),
+                                       SceneCameraHistoryNamespace(m_HistoryOwnerId, m_Scene.get(), mainCameraEntity), drawGrid);
             return;
         }
 
@@ -1902,6 +1941,7 @@ namespace Crowny
         // RenderFromSnapshot can still clear/present the frame without crashing.
         snapshot.Target = m_RenderTarget;
         snapshot.DrawGrid = drawGrid;
+        AdvanceCameraHistoryEpoch(snapshot.FrameNumber);
         TransferHistoryReleases(snapshot);
         SyncRenderWorld(snapshot);
     }
@@ -1915,27 +1955,21 @@ namespace Crowny
 
     void SceneRenderer::ExtractSnapshot(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform, bool drawGrid) const
     {
+        ExtractSnapshotWithHistory(snapshot, camera, viewTransform,
+                                   ExternalCameraHistoryNamespace(m_HistoryOwnerId, m_Scene.get(), &camera), drawGrid);
+    }
+
+    void SceneRenderer::ExtractSnapshotWithHistory(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform,
+                                                   uint64_t historyNamespace, bool drawGrid) const
+    {
         ZoneScopedN("ExtractSnapshot");
         const uint64_t frameNumber = snapshot.FrameNumber;
         snapshot.Clear();
         snapshot.FrameNumber = frameNumber;
         snapshot.ProjectionMatrix = camera.GetProjection();
         snapshot.ViewMatrix = viewTransform;
-        snapshot.HistoryNamespace = CameraHistoryNamespace(m_Scene.get(), &camera);
-        m_CameraHistoryEpoch++;
-        if (m_CameraHistoryEpoch == 0)
-            m_CameraHistoryEpoch = 1;
-        constexpr uint64_t historyRetentionEpochs = 120;
-        for (auto stale = m_CameraHistory.begin(); stale != m_CameraHistory.end();)
-        {
-            if (m_CameraHistoryEpoch - stale->second.LastSeenEpoch <= historyRetentionEpochs)
-            {
-                ++stale;
-                continue;
-            }
-            m_PendingHistoryReleases.push_back(stale->first);
-            stale = m_CameraHistory.erase(stale);
-        }
+        snapshot.HistoryNamespace = historyNamespace;
+        AdvanceCameraHistoryEpoch(snapshot.FrameNumber);
         const glm::mat4 cameraWorld = glm::inverse(viewTransform);
         const glm::vec3 cameraPosition = glm::vec3(cameraWorld[3]);
         snapshot.CameraPosition = cameraPosition;
@@ -1980,7 +2014,7 @@ namespace Crowny
                       animation != nullptr && animation->RuntimeMeshHandle && animation->Deformer
                         ? animation->Deformer->GetSphereBounds()
                         : renderMesh->GetSphereBounds();
-                    object.BoundingSphere = TransformBounds(bounds, object.WorldMatrix);
+                    object.BoundingSphere = VisibilityCulling::TransformSphere(bounds, object.WorldMatrix);
                     object.MeshHandle = renderMesh;
                     object.Materials.assign(mesh.Materials.begin(), mesh.Materials.end());
                     object.VisibilityLayers = mesh.VisibilityLayers;
@@ -1999,7 +2033,7 @@ namespace Crowny
                 {
                     RenderableObject& object = snapshot.MeshObjects.Acquire();
                     object.WorldMatrix = transform.GetWorldMatrix(relationship.Parent);
-                    object.BoundingSphere = TransformBounds(proc.RuntimeMeshHandle->GetSphereBounds(), object.WorldMatrix);
+                    object.BoundingSphere = VisibilityCulling::TransformSphere(proc.RuntimeMeshHandle->GetSphereBounds(), object.WorldMatrix);
                     object.MeshHandle = proc.RuntimeMeshHandle;
                     object.Materials.assign(proc.Materials.begin(), proc.Materials.end());
                     object.VisibilityLayers = RenderLayerMask::All();
@@ -2216,7 +2250,7 @@ namespace Crowny
             const uint32_t objectID = static_cast<uint32_t>(entt::to_integral(entity)) + 1u;
 
             const SphereBounds& localBounds = overrideBounds != nullptr ? *overrideBounds : mesh->GetSphereBounds();
-            const glm::vec4 worldBounds = TransformBounds(localBounds, transform);
+            const glm::vec4 worldBounds = VisibilityCulling::TransformSphere(localBounds, transform);
 
             RenderInstanceDesc desc;
             desc.Transform = transform;
@@ -2549,19 +2583,40 @@ namespace Crowny
         }
     }
 
-    void SceneRenderer::ShutdownRenderThreadResources() { s_RenderThreadResources.reset(); }
+    void SceneRenderer::ShutdownRenderThreadResources()
+    {
+        s_RenderThreadResources.reset();
+        std::scoped_lock lock(s_OrphanedHistoryMutex);
+        s_OrphanedHistoryReleases.clear();
+    }
 
     void SceneRenderer::RenderFromSnapshot(const RenderSnapshot& snapshot)
     {
         ZoneScopedN("RenderGraphFrame");
-        if (!snapshot.Target)
+        if (!snapshot.Target && !s_RenderThreadResources)
             return;
 
         SceneRendererThreadResources& threadResources = GetSceneRendererThreadResources();
         RenderGraph& renderGraph = threadResources.Graph;
         RenderGraphResourceRegistry& graphResources = threadResources.GraphResources;
-        for (uint64_t historyNamespace : snapshot.ReleasedHistoryNamespaces)
+        auto releaseHistory = [&](uint64_t historyNamespace) {
             graphResources.ReleaseHistory(historyNamespace);
+            threadResources.HistoryPaths.erase(historyNamespace);
+        };
+        for (uint64_t historyNamespace : snapshot.ReleasedHistoryNamespaces)
+            releaseHistory(historyNamespace);
+        {
+            std::scoped_lock lock(s_OrphanedHistoryMutex);
+            threadResources.OrphanedHistoryReleases.clear();
+            threadResources.OrphanedHistoryReleases.swap(s_OrphanedHistoryReleases);
+        }
+        for (uint64_t historyNamespace : threadResources.OrphanedHistoryReleases)
+        {
+            releaseHistory(historyNamespace);
+        }
+        threadResources.OrphanedHistoryReleases.clear();
+        if (!snapshot.Target)
+            return;
         renderGraph.Reset();
         GpuScene& gpuScene = Renderer::GetGpuScene();
         gpuScene.BeginFrame(snapshot.FrameNumber);
@@ -2571,6 +2626,8 @@ namespace Crowny
         const RenderFeatureTier featureTier = capabilities.GetFeatureTier();
         if (featureTier == RenderFeatureTier::Compatibility)
         {
+            if (threadResources.HistoryPaths.erase(snapshot.HistoryNamespace) != 0)
+                graphResources.InvalidateHistory(snapshot.HistoryNamespace);
             RenderLegacySnapshot(snapshot);
             return;
         }
@@ -2640,6 +2697,12 @@ namespace Crowny
         view.EnableMotionVectors = true;
         view.CameraCut = snapshot.CameraCut || snapshot.FrameNumber <= 1;
         view.Path = pipeline.ResolvePath(capabilities);
+        const auto [historyPath, newHistoryPath] = threadResources.HistoryPaths.try_emplace(snapshot.HistoryNamespace, view.Path);
+        if (!newHistoryPath && historyPath->second != view.Path)
+        {
+            historyPath->second = view.Path;
+            view.CameraCut = true;
+        }
 
         const bool gpuDrawTier = featureTier == RenderFeatureTier::GPUDriven || featureTier == RenderFeatureTier::Future;
         GpuDrawBinLayoutDesc drawBinDesc;
@@ -2963,6 +3026,46 @@ namespace Crowny
 
     void SceneRenderer::SetRenderTarget(const Ref<RenderTarget>& renderTarget) { m_RenderTarget = renderTarget; }
 
+    void SceneRenderer::AdvanceCameraHistoryEpoch(uint64_t frameNumber) const
+    {
+        if (frameNumber == 0)
+        {
+            m_LastCameraHistoryFrameNumber = 0;
+            m_CameraHistoryEpoch++;
+        }
+        else if (m_LastCameraHistoryFrameNumber == 0)
+        {
+            m_LastCameraHistoryFrameNumber = frameNumber;
+            m_CameraHistoryEpoch++;
+        }
+        else if (frameNumber > m_LastCameraHistoryFrameNumber)
+        {
+            m_CameraHistoryEpoch += frameNumber - m_LastCameraHistoryFrameNumber;
+            m_LastCameraHistoryFrameNumber = frameNumber;
+        }
+        else if (frameNumber < m_LastCameraHistoryFrameNumber)
+        {
+            // A restarted frame timeline begins a new logical epoch without
+            // making every retained view appear billions of frames old.
+            m_LastCameraHistoryFrameNumber = frameNumber;
+            m_CameraHistoryEpoch++;
+        }
+        if (m_CameraHistoryEpoch == 0)
+            m_CameraHistoryEpoch = 1;
+
+        constexpr uint64_t historyRetentionEpochs = 120;
+        for (auto stale = m_CameraHistory.begin(); stale != m_CameraHistory.end();)
+        {
+            if (m_CameraHistoryEpoch - stale->second.LastSeenEpoch <= historyRetentionEpochs)
+            {
+                ++stale;
+                continue;
+            }
+            m_PendingHistoryReleases.push_back(stale->first);
+            stale = m_CameraHistory.erase(stale);
+        }
+    }
+
     void SceneRenderer::TransferHistoryReleases(RenderSnapshot& snapshot) const
     {
         snapshot.ReleasedHistoryNamespaces.Reserve(m_PendingHistoryReleases.size());
@@ -2981,6 +3084,7 @@ namespace Crowny
             m_PendingHistoryReleases.push_back(historyNamespace);
         m_CameraHistory.clear();
         m_CameraHistoryEpoch = 0;
+        m_LastCameraHistoryFrameNumber = 0;
         m_Scene = scene;
     }
 

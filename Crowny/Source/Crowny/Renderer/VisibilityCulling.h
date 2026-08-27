@@ -40,6 +40,7 @@ namespace Crowny
     class VisibilityCulling
     {
     public:
+        static glm::vec4 TransformSphere(const SphereBounds& bounds, const glm::mat4& transform);
         static float ProjectedSphereDiameter(float radius, float viewDepth, float projectionYScale, float viewportHeight);
         static uint32_t SelectLod(const MeshGpuGeometry& geometry, float viewDepth, float projectionYScale,
                                   float viewportHeight, float maximumErrorPixels, float lodBias = 0.0f);

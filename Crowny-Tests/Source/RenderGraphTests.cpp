@@ -419,6 +419,36 @@ TEST_CASE("RenderGraph history ping-pongs per camera and resets on cuts", "[Rend
     resources.EndFrame();
 }
 
+TEST_CASE("RenderGraph history ping-pong follows each camera instead of global frame parity", "[Renderer][RenderGraph]")
+{
+    RenderGraph graph;
+    const RenderGraphHistoryPair history = graph.CreateHistoryTexture("Taa", ColorTexture());
+    graph.AddPass("Resolve", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) {
+        builder.Read(history.Read);
+        builder.Write(history.Write);
+    });
+    const RenderGraphCompileResult& compiled = graph.Compile();
+    REQUIRE(compiled.Succeeded);
+
+    RenderGraphResourceRegistry resources(2);
+    REQUIRE(resources.BeginFrame(compiled, 1, 42, true));
+    const uint64_t firstCameraWrite = resources.Get(history.Write).PhysicalId;
+    resources.EndFrame();
+
+    REQUIRE(resources.BeginFrame(compiled, 2, 7, true));
+    resources.Get(history.Read);
+    resources.Get(history.Write);
+    resources.EndFrame();
+
+    REQUIRE(resources.BeginFrame(compiled, 3, 42));
+    const RenderGraphResourceBinding returningRead = resources.Get(history.Read);
+    const RenderGraphResourceBinding returningWrite = resources.Get(history.Write);
+    CHECK(returningRead.HistoryValid);
+    CHECK(returningRead.PhysicalId == firstCameraWrite);
+    CHECK(returningWrite.PhysicalId != returningRead.PhysicalId);
+    resources.EndFrame();
+}
+
 TEST_CASE("RenderGraph releases retired camera history namespaces", "[Renderer][Resources][RenderGraph]")
 {
     RenderGraph graph;

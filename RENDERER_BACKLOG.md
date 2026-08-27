@@ -109,6 +109,14 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Require explicit `#pragma material_model custom` metadata before using the reverse-Z forward-only contract; unmarked shaders remain unsupported instead of inheriting an incompatible depth state.
 - [x] Settle persistent-instance previous transforms one frame after motion stops without allocating or resubmitting stable objects forever.
 - [x] Retire inactive and scene-replaced camera history namespaces, and preserve frame-context numbers through snapshot extraction.
+- [x] Key runtime camera history by stable generational entity identity so ECS camera-storage relocation cannot reset TAA or Hi-Z history, age retention by distinct frames rather than camera count, and retire it when a scene remains camera-less.
+- [x] Consume queued camera-history releases even after the view loses its render target.
+- [x] Isolate temporal history between renderer/view owners that render the same scene camera.
+- [x] Give view owners monotonic identities and defer their remaining history releases to the render thread when they are destroyed.
+- [x] Ping-pong temporal resources per camera/history entry rather than global frame parity, preserving history when cameras skip or interleave frames.
+- [x] Invalidate per-camera TAA and Hi-Z history when its resolved Forward+/Deferred+ path changes or it falls back through compatibility rendering.
+- [x] Keep process-wide renderer helper ownership with the renderer that initialized it; preview-renderer destruction no longer invalidates editor grid resources.
+- [x] Transform culling spheres with a shear-safe singular-value bound instead of the longest basis vector.
 - [x] Apply visibility, layer, and frustum culling to custom forward-only and compatibility draws; pin mixed custom-material instances to LOD zero until their forward pass consumes geometry-heap LOD ranges.
 - [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.

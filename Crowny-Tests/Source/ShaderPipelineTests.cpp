@@ -595,7 +595,7 @@ void main() { color = texture(textures[nonuniformEXT(0)], vec2(0.5)); }
 
 TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
 {
-    const std::array<Path, 17> shaders = {
+    const std::array<Path, 19> shaders = {
         "Crowny-Editor/Resources/Shaders/BinAndCompactIndirectDraws.glsl",
         "Crowny-Editor/Resources/Shaders/GpuDepthOnly.glsl",
         "Crowny-Editor/Resources/Shaders/GpuAnimatedDepthOnly.glsl",
@@ -607,7 +607,9 @@ TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
         "Crowny-Editor/Resources/Shaders/DeferredPlusStandard.glsl",
         "Crowny-Editor/Resources/Shaders/DeferredPlusLighting.glsl",
         "Crowny-Editor/Resources/Shaders/ToonOutlines.glsl",
+        "Crowny-Editor/Resources/Shaders/Pbribl.glsl",
         "Crowny-Editor/Resources/Shaders/Toon.glsl",
+        "Crowny-Editor/Resources/Shaders/Unlit.glsl",
         "Crowny-Editor/Resources/Shaders/Gtao.glsl",
         "Crowny-Editor/Resources/Shaders/TemporalResolve.glsl",
         "Crowny-Editor/Resources/Shaders/Bloom.glsl",

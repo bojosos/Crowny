@@ -58,6 +58,8 @@ namespace Crowny
 
     private:
         void Render(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid = false, const GridSettings& gridSettings = {});
+        void ExtractSnapshotWithHistory(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform,
+                                        uint64_t historyNamespace, bool drawGrid) const;
         static void RenderLegacySnapshot(const RenderSnapshot& snapshot);
         static void RenderLegacyOverlays(const RenderSnapshot& snapshot);
         void SyncRenderWorld(RenderSnapshot& snapshot) const;
@@ -167,6 +169,7 @@ namespace Crowny
         uint32_t GetResourceIndex(const AssetHandleData* identity, UnorderedMap<const AssetHandleData*, uint32_t>& resources,
                                   uint32_t& nextIndex) const;
         uint32_t GetMaterialSetIndex(const Vector<AssetHandle<Material>>& materials) const;
+        void AdvanceCameraHistoryEpoch(uint64_t frameNumber) const;
         void TrackMeshResource(uint32_t index, const AssetHandle<Mesh>& mesh, RenderSnapshot& snapshot) const;
         void TrackMaterialResources(uint32_t baseIndex, const Vector<AssetHandle<Material>>& materials, RenderSnapshot& snapshot) const;
         void FinalizeResourceChanges(RenderSnapshot& snapshot) const;
@@ -189,11 +192,14 @@ namespace Crowny
         mutable Vector<DirectionalShadowCascade> m_DirectionalCascadeScratch;
         mutable uint64_t m_RenderSyncEpoch = 0;
         mutable uint64_t m_CameraHistoryEpoch = 0;
+        mutable uint64_t m_LastCameraHistoryFrameNumber = 0;
         mutable uint64_t m_ShadowCasterRevision = 1;
         mutable uint32_t m_NextMeshResourceIndex = 1;
         mutable uint32_t m_NextMaterialResourceIndex = 1;
         mutable UnorderedMap<uint64_t, CameraHistoryState> m_CameraHistory;
         mutable Vector<uint64_t> m_PendingHistoryReleases;
+        uint64_t m_HistoryOwnerId = 0;
+        bool m_OwnsSharedData = false;
     };
 
 } // namespace Crowny

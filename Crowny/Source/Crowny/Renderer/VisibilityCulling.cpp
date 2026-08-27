@@ -63,6 +63,26 @@ namespace Crowny
         }
     }
 
+    glm::vec4 VisibilityCulling::TransformSphere(const SphereBounds& bounds, const glm::mat4& transform)
+    {
+        const glm::vec3 worldCenter = glm::vec3(transform * glm::vec4(bounds.GetCenter(), 1.0f));
+        const glm::mat3 linear(transform);
+        const glm::mat3 gram = glm::transpose(linear) * linear;
+        float maximumAbsoluteRowSum = 0.0f;
+        for (uint32_t row = 0; row < 3; row++)
+        {
+            float rowSum = 0.0f;
+            for (uint32_t column = 0; column < 3; column++)
+                rowSum += std::abs(gram[column][row]);
+            maximumAbsoluteRowSum = std::max(maximumAbsoluteRowSum, rowSum);
+        }
+        // The largest singular value is sqrt(lambda_max(A^T A)). The
+        // absolute row-sum norm bounds that eigenvalue, including shear,
+        // while remaining exact for rotations and axis-aligned scales.
+        const float maximumScale = std::sqrt(std::max(maximumAbsoluteRowSum, 0.0f));
+        return glm::vec4(worldCenter, bounds.GetRadius() * maximumScale);
+    }
+
     float VisibilityCulling::ProjectedSphereDiameter(float radius, float viewDepth, float projectionYScale,
                                                       float viewportHeight)
     {

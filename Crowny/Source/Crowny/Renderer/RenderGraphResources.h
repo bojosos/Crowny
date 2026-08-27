@@ -134,6 +134,8 @@ namespace Crowny
             std::array<uint64_t, 2> PhysicalIds{};
             bool Valid = false;
             bool Paired = false;
+            uint32_t LastWrittenSlot = 0;
+            uint32_t FrameWriteSlot = 0;
         };
 
         struct PhysicalResource

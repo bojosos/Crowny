@@ -3,6 +3,10 @@
 
 #include "Crowny/Renderer/VisibilityCulling.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <cmath>
+
 using namespace Crowny;
 
 TEST_CASE("Visibility frustum rejects spheres outside any plane", "[Renderer][Visibility]")
@@ -13,6 +17,23 @@ TEST_CASE("Visibility frustum rejects spheres outside any plane", "[Renderer][Vi
     CHECK(frustum.IntersectsSphere(glm::vec3(0.0f), 0.1f));
     CHECK(frustum.IntersectsSphere(glm::vec3(1.05f, 0.0f, 0.0f), 0.1f));
     CHECK_FALSE(frustum.IntersectsSphere(glm::vec3(1.2f, 0.0f, 0.0f), 0.1f));
+}
+
+TEST_CASE("Transformed sphere bounds remain conservative under shear", "[Renderer][Visibility]")
+{
+    const SphereBounds bounds(glm::vec3(1.0f, 2.0f, 3.0f), 1.0f);
+    glm::mat4 transform(1.0f);
+    transform[1][0] = 1.0f;
+    transform[3] = glm::vec4(4.0f, 5.0f, 6.0f, 1.0f);
+
+    const glm::vec4 transformed = VisibilityCulling::TransformSphere(bounds, transform);
+    CHECK(glm::vec3(transformed) == glm::vec3(7.0f, 7.0f, 9.0f));
+    CHECK(transformed.w == Catch::Approx(std::sqrt(3.0f)));
+    CHECK(transformed.w > std::sqrt(2.0f));
+
+    const SphereBounds unit(glm::vec3(0.0f), 2.0f);
+    const glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), 0.7f, glm::normalize(glm::vec3(1.0f, 2.0f, 3.0f)));
+    CHECK(VisibilityCulling::TransformSphere(unit, rotation).w == Catch::Approx(2.0f).margin(0.0001f));
 }
 
 TEST_CASE("Projected size and LOD error scale with distance", "[Renderer][Visibility]")

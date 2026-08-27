@@ -174,6 +174,23 @@ TEST_CASE("Changing scenes retires the old camera history namespace", "[Memory][
     CHECK(snapshot.HistoryNamespace != firstNamespace);
 }
 
+TEST_CASE("Renderer views keep independent camera history namespaces", "[Memory][Frame][Renderer][SceneSync]")
+{
+    const Ref<Scene> scene = CreateRef<Scene>(false);
+    SceneRenderer firstRenderer(scene, nullptr);
+    SceneRenderer secondRenderer(scene, nullptr);
+    RenderSnapshot firstSnapshot;
+    RenderSnapshot secondSnapshot;
+    Camera camera;
+
+    firstRenderer.ExtractSnapshot(firstSnapshot, camera, glm::mat4(1.0f), false);
+    secondRenderer.ExtractSnapshot(secondSnapshot, camera, glm::mat4(1.0f), false);
+
+    REQUIRE(firstSnapshot.HistoryNamespace != 0);
+    REQUIRE(secondSnapshot.HistoryNamespace != 0);
+    CHECK(firstSnapshot.HistoryNamespace != secondSnapshot.HistoryNamespace);
+}
+
 TEST_CASE("Inactive camera histories retire after the retention window", "[Memory][Frame][Renderer][SceneSync]")
 {
     const Ref<Scene> scene = CreateRef<Scene>(false);
@@ -181,13 +198,90 @@ TEST_CASE("Inactive camera histories retire after the retention window", "[Memor
     RenderSnapshot snapshot;
     std::array<Camera, 122> cameras;
 
+    snapshot.FrameNumber = 1;
     renderer.ExtractSnapshot(snapshot, cameras[0], glm::mat4(1.0f), false);
     const uint64_t firstNamespace = snapshot.HistoryNamespace;
     for (size_t index = 1; index < cameras.size(); index++)
+    {
+        snapshot.FrameNumber = index + 1u;
         renderer.ExtractSnapshot(snapshot, cameras[index], glm::mat4(1.0f), false);
+    }
 
     REQUIRE(snapshot.ReleasedHistoryNamespaces.Size() == 1);
     CHECK(snapshot.ReleasedHistoryNamespaces[0] == firstNamespace);
+}
+
+TEST_CASE("Active cameras do not age each other within one frame", "[Memory][Frame][Renderer][SceneSync]")
+{
+    const Ref<Scene> scene = CreateRef<Scene>(false);
+    SceneRenderer renderer(scene, nullptr);
+    RenderSnapshot snapshot;
+    std::array<Camera, 121> cameras;
+
+    for (uint64_t frame = 1; frame <= 3; frame++)
+    {
+        for (Camera& camera : cameras)
+        {
+            snapshot.FrameNumber = frame;
+            renderer.ExtractSnapshot(snapshot, camera, glm::mat4(1.0f), false);
+            if (frame != 1)
+                CHECK_FALSE(snapshot.CameraCut);
+            CHECK(snapshot.ReleasedHistoryNamespaces.Empty());
+        }
+    }
+}
+
+TEST_CASE("Scene camera history survives component-pool relocation", "[Memory][Frame][Renderer][SceneSync]")
+{
+    const Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity primaryCamera = scene->CreateEntity("Primary camera");
+    primaryCamera.AddComponent<CameraComponent>();
+
+    SceneRenderer renderer(scene, nullptr);
+    RenderSnapshot snapshot;
+    renderer.ExtractSnapshot(snapshot, false);
+    const uint64_t historyNamespace = snapshot.HistoryNamespace;
+    REQUIRE(historyNamespace != 0);
+    REQUIRE(snapshot.CameraCut);
+
+    Vector<Entity> temporaryCameras;
+    temporaryCameras.reserve(1024);
+    for (uint32_t index = 0; index < 1024; index++)
+    {
+        Entity camera = scene->CreateEntity("Temporary camera");
+        camera.AddComponent<CameraComponent>();
+        temporaryCameras.push_back(camera);
+    }
+    for (Entity camera : temporaryCameras)
+        scene->DestroyEntity(camera);
+
+    renderer.ExtractSnapshot(snapshot, false);
+    CHECK(snapshot.HistoryNamespace == historyNamespace);
+    CHECK_FALSE(snapshot.CameraCut);
+    CHECK(snapshot.ReleasedHistoryNamespaces.Empty());
+}
+
+TEST_CASE("Camera-less frames retire inactive scene history", "[Memory][Frame][Renderer][SceneSync]")
+{
+    const Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity camera = scene->CreateEntity("Removed camera");
+    camera.AddComponent<CameraComponent>();
+
+    SceneRenderer renderer(scene, nullptr);
+    RenderSnapshot snapshot;
+    renderer.ExtractSnapshot(snapshot, false);
+    const uint64_t historyNamespace = snapshot.HistoryNamespace;
+    REQUIRE(historyNamespace != 0);
+
+    scene->DestroyEntity(camera);
+    for (uint32_t frame = 0; frame < 121; frame++)
+    {
+        snapshot.FrameNumber = frame + 2u;
+        renderer.ExtractSnapshot(snapshot, false);
+    }
+
+    REQUIRE(snapshot.ReleasedHistoryNamespaces.Size() == 1);
+    CHECK(snapshot.ReleasedHistoryNamespaces[0] == historyNamespace);
 }
 
 TEST_CASE("Thread allocation snapshots cover standard allocation families", "[Memory][Frame]")
