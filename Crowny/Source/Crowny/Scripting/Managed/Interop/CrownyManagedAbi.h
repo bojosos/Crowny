@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 1u
+#define CW_MANAGED_ABI_VERSION 2u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -54,6 +54,45 @@ enum cw_managed_event_kind
     CW_MANAGED_EVENT_TRIGGER_ENTER_3_D = 12,
     CW_MANAGED_EVENT_TRIGGER_STAY_3_D = 13,
     CW_MANAGED_EVENT_TRIGGER_EXIT_3_D = 14,
+};
+
+enum cw_managed_host_binding
+{
+    CW_MANAGED_BINDING_ENTITY_HAS_COMPONENT = 1,
+    CW_MANAGED_BINDING_ENTITY_ADD_COMPONENT = 2,
+    CW_MANAGED_BINDING_ENTITY_REMOVE_COMPONENT = 3,
+    CW_MANAGED_BINDING_TRANSFORM_GET_POSITION = 10,
+    CW_MANAGED_BINDING_TRANSFORM_SET_POSITION = 11,
+    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_POSITION = 12,
+    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_POSITION = 13,
+    CW_MANAGED_BINDING_TRANSFORM_GET_SCALE = 14,
+    CW_MANAGED_BINDING_TRANSFORM_SET_SCALE = 15,
+    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_SCALE = 16,
+    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_SCALE = 17,
+    CW_MANAGED_BINDING_TRANSFORM_GET_ROTATION = 18,
+    CW_MANAGED_BINDING_TRANSFORM_SET_ROTATION = 19,
+    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_ROTATION = 20,
+    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_ROTATION = 21,
+    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_TO_WORLD_MATRIX = 22,
+    CW_MANAGED_BINDING_TRANSFORM_GET_WORLD_TO_LOCAL_MATRIX = 23,
+    CW_MANAGED_BINDING_TRANSFORM_GET_EULER_ANGLES = 24,
+    CW_MANAGED_BINDING_TRANSFORM_SET_EULER_ANGLES = 25,
+    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_EULER_ANGLES = 26,
+    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_EULER_ANGLES = 27,
+    CW_MANAGED_BINDING_INPUT_GET_KEY = 30,
+    CW_MANAGED_BINDING_INPUT_GET_KEY_DOWN = 31,
+    CW_MANAGED_BINDING_INPUT_GET_KEY_UP = 32,
+    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON = 33,
+    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_DOWN = 34,
+    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_UP = 35,
+    CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_X = 36,
+    CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_Y = 37,
+    CW_MANAGED_BINDING_INPUT_GET_MOUSE_POSITION = 38,
+    CW_MANAGED_BINDING_TIME_GET_TIME = 40,
+    CW_MANAGED_BINDING_TIME_GET_FIXED_DELTA_TIME = 41,
+    CW_MANAGED_BINDING_TIME_GET_SMOOTH_DELTA_TIME = 42,
+    CW_MANAGED_BINDING_TIME_GET_REALTIME_SINCE_STARTUP = 43,
+    CW_MANAGED_BINDING_TIME_GET_FRAME_COUNT = 44,
 };
 
 typedef struct cw_managed_string_view
@@ -113,6 +152,9 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_parent_fn)(void
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_parent_fn)(void* context, cw_managed_uuid entity,
                                                                            cw_managed_uuid parent);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_entity_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_invoke_host_binding_fn)(void* context, uint32_t binding,
+                                                                             cw_managed_uuid entity, cw_managed_blob input,
+                                                                             cw_managed_blob* output);
 
 typedef struct cw_managed_host_api
 {
@@ -126,6 +168,7 @@ typedef struct cw_managed_host_api
     cw_managed_get_entity_parent_fn get_entity_parent;
     cw_managed_set_entity_parent_fn set_entity_parent;
     cw_managed_destroy_entity_fn destroy_entity;
+    cw_managed_invoke_host_binding_fn invoke_host_binding;
 } cw_managed_host_api;
 
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_initialize_fn)(const cw_managed_host_api* host);

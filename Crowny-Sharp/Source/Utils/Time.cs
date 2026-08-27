@@ -20,30 +20,50 @@ namespace Crowny
         /// The time that has passed since the beginning.
         /// </summary>
         /// <returns>Time in milliseconds.</returns>
+#if CROWNY_MONO
         public extern static float time { [MethodImpl(MethodImplOptions.InternalCall)] get; }
+#else
+        public static float time => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetTime);
+#endif
         
         /// <summary>
         /// Fixed delta time is fixed xd
         /// </summary>
         /// <returns></returns>
+#if CROWNY_MONO
         public extern static float fixedDeltaTime { [MethodImpl(MethodImplOptions.InternalCall)] get; }
+#else
+        public static float fixedDeltaTime => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetFixedDeltaTime);
+#endif
 
         /// <summary>
         /// smoothDeltaTime = deltaTime + time / (frameCount + 1);
         /// </summary>
         /// <returns>The smoothDeltaTime if milliseconds.</returns>
-        public extern static float smoothDeltaTime { [MethodImpl(MethodImplOptions.InternalCall)]  get; }
+#if CROWNY_MONO
+        public extern static float smoothDeltaTime { [MethodImpl(MethodImplOptions.InternalCall)] get; }
+#else
+        public static float smoothDeltaTime => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetSmoothDeltaTime);
+#endif
 
         /// <summary>
         /// The in between frame time since the beginning.
         /// </summary>
         /// <returns>The time in milliseconds.</returns>
+#if CROWNY_MONO
         public extern static float realtimeSinceStartup { [MethodImpl(MethodImplOptions.InternalCall)] get; }
+#else
+        public static float realtimeSinceStartup => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetRealtimeSinceStartup);
+#endif
 
         /// <summary>
         /// The number of frames that have been rendered since the beginning.
         /// </summary>
         /// <returns>The number of frames.</returns>
+#if CROWNY_MONO
         public extern static float frameCount { [MethodImpl(MethodImplOptions.InternalCall)] get; }
+#else
+        public static float frameCount => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetFrameCount);
+#endif
     }
 }

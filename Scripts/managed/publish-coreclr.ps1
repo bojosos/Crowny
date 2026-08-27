@@ -26,6 +26,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
+$interopManifestPath = Join-Path $repositoryRoot "Scripts\managed\managed-interop.json"
+$abiVersion = [uint](Get-Content -LiteralPath $interopManifestPath -Raw | ConvertFrom-Json).abiVersion
 $repositoryDotNetRoot = Join-Path $repositoryRoot ".deps\dotnet"
 $repositoryDotNetName = if ($env:OS -eq "Windows_NT") { "dotnet.exe" } else { "dotnet" }
 $repositoryDotNet = Join-Path $repositoryDotNetRoot $repositoryDotNetName
@@ -195,7 +197,7 @@ foreach ($artifact in $requiredArtifacts) {
 
 $manifest = [ordered]@{
     schemaVersion = 1
-    abiVersion = 1
+    abiVersion = $abiVersion
     backend = "CoreCLR"
     runtimeIdentifier = $RuntimeIdentifier
     runtimeVersion = $RuntimeVersion

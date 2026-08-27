@@ -21,6 +21,16 @@ internal sealed class ManagedProgram
 
     internal ulong Generation => _generation;
 
+    internal Component? ResolveScriptComponent(UUID entity, Type requestedType)
+    {
+        foreach (ScriptRecord record in _instances.Values)
+        {
+            if (record.Entity.m_ManagedUuid == entity && requestedType.IsAssignableFrom(record.Type))
+                return (Component)record.Instance;
+        }
+        return null;
+    }
+
     internal void Load(string assemblyPath, ulong generation)
     {
         if (_loadContext is not null)

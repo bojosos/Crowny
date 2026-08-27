@@ -38,6 +38,45 @@ namespace Crowny.ManagedHost.Interop
         TriggerExit3D = 14,
     }
 
+    public enum NativeHostBinding : uint
+    {
+        EntityHasComponent = 1,
+        EntityAddComponent = 2,
+        EntityRemoveComponent = 3,
+        TransformGetPosition = 10,
+        TransformSetPosition = 11,
+        TransformGetLocalPosition = 12,
+        TransformSetLocalPosition = 13,
+        TransformGetScale = 14,
+        TransformSetScale = 15,
+        TransformGetLocalScale = 16,
+        TransformSetLocalScale = 17,
+        TransformGetRotation = 18,
+        TransformSetRotation = 19,
+        TransformGetLocalRotation = 20,
+        TransformSetLocalRotation = 21,
+        TransformGetLocalToWorldMatrix = 22,
+        TransformGetWorldToLocalMatrix = 23,
+        TransformGetEulerAngles = 24,
+        TransformSetEulerAngles = 25,
+        TransformGetLocalEulerAngles = 26,
+        TransformSetLocalEulerAngles = 27,
+        InputGetKey = 30,
+        InputGetKeyDown = 31,
+        InputGetKeyUp = 32,
+        InputGetMouseButton = 33,
+        InputGetMouseButtonDown = 34,
+        InputGetMouseButtonUp = 35,
+        InputGetMouseScrollX = 36,
+        InputGetMouseScrollY = 37,
+        InputGetMousePosition = 38,
+        TimeGetTime = 40,
+        TimeGetFixedDeltaTime = 41,
+        TimeGetSmoothDeltaTime = 42,
+        TimeGetRealtimeSinceStartup = 43,
+        TimeGetFrameCount = 44,
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public readonly unsafe struct NativeStringView
     {
@@ -107,6 +146,7 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> GetEntityParent;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SetEntityParent;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> DestroyEntity;
+        public delegate* unmanaged[Cdecl]<void*, NativeHostBinding, NativeUuid, NativeBlob, NativeBlob*, NativeStatus> InvokeHostBinding;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -129,7 +169,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 1;
+        public const uint Version = 2;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

@@ -1,14 +1,21 @@
 #include "cwpch.h"
 
 #include "Crowny/Common/UTF8.h"
+#include "Crowny/Common/Time.h"
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Input/Input.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
 #include "Crowny/Scripting/Managed/Interop/CrownyManagedAbi.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedAbiValidation.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedJson.h"
 
+#include <cstring>
 #include <limits>
+
+#include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #if defined(CW_PLATFORM_WIN32) && !defined(CW_EMSCRIPTEN)
 #include <Windows.h>
@@ -205,6 +212,112 @@ namespace Crowny
             {
                 return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
             }
+        }
+
+        bool ReadBindingFloats(cw_managed_blob input, float* output, size_t count)
+        {
+            if ((input.data == nullptr && input.length != 0) || input.length != count * sizeof(float))
+                return false;
+            std::memcpy(output, input.data, static_cast<size_t>(input.length));
+            return true;
+        }
+
+        cw_managed_status WriteBindingResult(cw_managed_blob* output, const void* data, size_t size)
+        {
+            if (output == nullptr || (data == nullptr && size != 0) || size > 64)
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+            thread_local Array<uint8_t, 64> storage{};
+            if (size != 0)
+                std::memcpy(storage.data(), data, size);
+            output->data = size == 0 ? nullptr : storage.data();
+            output->length = size;
+            return CW_MANAGED_STATUS_OK;
+        }
+
+        template <typename T> cw_managed_status WriteBindingResult(cw_managed_blob* output, const T& value)
+        {
+            return WriteBindingResult(output, &value, sizeof(value));
+        }
+
+        bool HasComponent(Entity entity, StringView name)
+        {
+            if (name == "Crowny.Transform")
+                return entity.HasComponent<TransformComponent>();
+#define CW_HAS_MANAGED_COMPONENT(managedName, nativeType)                                                                            \
+    if (name == managedName)                                                                                                         \
+        return entity.HasComponent<nativeType>()
+            CW_HAS_MANAGED_COMPONENT("Crowny.AudioListener", AudioListenerComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.AudioSource", AudioSourceComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.Camera", CameraComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.LightComponent", LightComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.Text", TextComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.SpriteRendererComponent", SpriteRendererComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.MeshRenderer", MeshRendererComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.Rigidbody2D", Rigidbody2DComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.BoxCollider2D", BoxCollider2DComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.CircleCollider2D", CircleCollider2DComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.Rigidbody3D", Rigidbody3DComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.BoxCollider3D", BoxCollider3DComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.SphereCollider3D", SphereCollider3DComponent);
+            CW_HAS_MANAGED_COMPONENT("Crowny.CapsuleCollider3D", CapsuleCollider3DComponent);
+#undef CW_HAS_MANAGED_COMPONENT
+            return false;
+        }
+
+        bool AddComponent(Entity entity, StringView name)
+        {
+            if (name == "Crowny.Transform")
+                return entity.HasComponent<TransformComponent>();
+#define CW_ADD_MANAGED_COMPONENT(managedName, nativeType)                                                                            \
+    if (name == managedName)                                                                                                         \
+    {                                                                                                                                \
+        entity.AddOrGetComponent<nativeType>();                                                                                      \
+        return true;                                                                                                                 \
+    }
+            CW_ADD_MANAGED_COMPONENT("Crowny.AudioListener", AudioListenerComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.AudioSource", AudioSourceComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.Camera", CameraComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.LightComponent", LightComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.Text", TextComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.SpriteRendererComponent", SpriteRendererComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.MeshRenderer", MeshRendererComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.Rigidbody2D", Rigidbody2DComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.BoxCollider2D", BoxCollider2DComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.CircleCollider2D", CircleCollider2DComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.Rigidbody3D", Rigidbody3DComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.BoxCollider3D", BoxCollider3DComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.SphereCollider3D", SphereCollider3DComponent)
+            CW_ADD_MANAGED_COMPONENT("Crowny.CapsuleCollider3D", CapsuleCollider3DComponent)
+#undef CW_ADD_MANAGED_COMPONENT
+            return false;
+        }
+
+        bool RemoveComponent(Entity entity, StringView name)
+        {
+            if (name == "Crowny.Transform")
+                return false;
+#define CW_REMOVE_MANAGED_COMPONENT(managedName, nativeType)                                                                         \
+    if (name == managedName)                                                                                                         \
+    {                                                                                                                                \
+        entity.RemoveComponentIfExists<nativeType>();                                                                                \
+        return true;                                                                                                                 \
+    }
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.AudioListener", AudioListenerComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.AudioSource", AudioSourceComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.Camera", CameraComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.LightComponent", LightComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.Text", TextComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.SpriteRendererComponent", SpriteRendererComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.MeshRenderer", MeshRendererComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.Rigidbody2D", Rigidbody2DComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.BoxCollider2D", BoxCollider2DComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.CircleCollider2D", CircleCollider2DComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.Rigidbody3D", Rigidbody3DComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.BoxCollider3D", BoxCollider3DComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.SphereCollider3D", SphereCollider3DComponent)
+            CW_REMOVE_MANAGED_COMPONENT("Crowny.CapsuleCollider3D", CapsuleCollider3DComponent)
+#undef CW_REMOVE_MANAGED_COMPONENT
+            return false;
         }
 
         class CoreClrBackend final : public ManagedBackend
@@ -589,7 +702,8 @@ namespace Crowny
                     return validation;
                 cw_managed_host_api hostApi{ sizeof(hostApi), CW_MANAGED_ABI_VERSION, this,          &Log,
                                              &GetEntityName, &SetEntityName,          &FindEntityByName,
-                                             &GetEntityParent, &SetEntityParent,      &DestroyEntity };
+                                             &GetEntityParent, &SetEntityParent,      &DestroyEntity,
+                                             &InvokeHostBinding };
                 if (cw_managed_status status = m_Api.initialize(&hostApi); status != CW_MANAGED_STATUS_OK)
                     return StatusFailure(status, "managed.coreclr.bootstrap_initialize_failed", "The managed bootstrap failed to initialize.");
                 m_RuntimeReady = true;
@@ -828,6 +942,175 @@ namespace Crowny
                         return CW_MANAGED_STATUS_STALE_HANDLE;
                     scene->DestroyEntity(entity);
                     return CW_MANAGED_STATUS_OK;
+                }
+                catch (...)
+                {
+                    return CW_MANAGED_STATUS_MANAGED_EXCEPTION;
+                }
+            }
+
+            static cw_managed_status CW_MANAGED_CALL InvokeHostBinding(void* context, uint32_t binding, cw_managed_uuid entityId,
+                                                                         cw_managed_blob input, cw_managed_blob* output)
+            {
+                if (context == nullptr || output == nullptr || (input.data == nullptr && input.length != 0))
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                WriteBindingResult(output, nullptr, 0);
+                try
+                {
+                    const auto resolveEntity = [&]() {
+                        const Ref<Scene> scene = ActiveScene();
+                        return scene != nullptr ? scene->TryGetEntityFromUuid(FromAbiUuid(entityId)) : Entity();
+                    };
+                    const auto readCode = [&]() {
+                        uint32_t code = 0;
+                        if (input.length == sizeof(code))
+                            std::memcpy(&code, input.data, sizeof(code));
+                        return code;
+                    };
+                    const auto writeVector2 = [&](const glm::vec2& value) {
+                        const float fields[] = { value.x, value.y };
+                        return WriteBindingResult(output, fields, sizeof(fields));
+                    };
+                    const auto writeVector3 = [&](const glm::vec3& value) {
+                        const float fields[] = { value.x, value.y, value.z };
+                        return WriteBindingResult(output, fields, sizeof(fields));
+                    };
+                    const auto writeQuaternion = [&](const glm::quat& value) {
+                        const float fields[] = { value.x, value.y, value.z, value.w };
+                        return WriteBindingResult(output, fields, sizeof(fields));
+                    };
+
+                    switch (binding)
+                    {
+                    case CW_MANAGED_BINDING_ENTITY_HAS_COMPONENT:
+                    case CW_MANAGED_BINDING_ENTITY_ADD_COMPONENT:
+                    case CW_MANAGED_BINDING_ENTITY_REMOVE_COMPONENT: {
+                        if (input.length > std::numeric_limits<size_t>::max())
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        Entity entity = resolveEntity();
+                        if (!entity)
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        const StringView name(reinterpret_cast<const char*>(input.data), static_cast<size_t>(input.length));
+                        if (binding == CW_MANAGED_BINDING_ENTITY_HAS_COMPONENT)
+                        {
+                            const uint8_t result = HasComponent(entity, name) ? 1 : 0;
+                            return WriteBindingResult(output, result);
+                        }
+                        const bool succeeded = binding == CW_MANAGED_BINDING_ENTITY_ADD_COMPONENT ? AddComponent(entity, name)
+                                                                                                  : RemoveComponent(entity, name);
+                        return succeeded ? CW_MANAGED_STATUS_OK : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                    }
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_POSITION:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_POSITION:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_SCALE:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_SCALE:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_ROTATION:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_ROTATION:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_TO_WORLD_MATRIX:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_WORLD_TO_LOCAL_MATRIX:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_EULER_ANGLES:
+                    case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_EULER_ANGLES: {
+                        Entity entity = resolveEntity();
+                        if (!entity)
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        switch (binding)
+                        {
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_POSITION: return writeVector3(entity.GetWorldPosition());
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_POSITION: return writeVector3(entity.GetLocalPosition());
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_SCALE: return writeVector3(entity.GetWorldScale());
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_SCALE: return writeVector3(entity.GetLocalScale());
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_ROTATION: return writeQuaternion(entity.GetWorldRotation());
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_ROTATION: return writeQuaternion(entity.GetLocalRotation());
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_TO_WORLD_MATRIX:
+                            return WriteBindingResult(output, glm::value_ptr(entity.GetWorldMatrix()), sizeof(glm::mat4));
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_WORLD_TO_LOCAL_MATRIX: {
+                            const glm::mat4 inverse = glm::inverse(entity.GetWorldMatrix());
+                            return WriteBindingResult(output, glm::value_ptr(inverse), sizeof(inverse));
+                        }
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_EULER_ANGLES:
+                            return writeVector3(glm::degrees(glm::eulerAngles(entity.GetWorldRotation())));
+                        case CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_EULER_ANGLES:
+                            return writeVector3(glm::degrees(glm::eulerAngles(entity.GetLocalRotation())));
+                        default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        }
+                    }
+                    case CW_MANAGED_BINDING_TRANSFORM_SET_POSITION:
+                    case CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_POSITION:
+                    case CW_MANAGED_BINDING_TRANSFORM_SET_SCALE:
+                    case CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_SCALE:
+                    case CW_MANAGED_BINDING_TRANSFORM_SET_EULER_ANGLES:
+                    case CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_EULER_ANGLES: {
+                        float value[3]{};
+                        if (!ReadBindingFloats(input, value, 3))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        Entity entity = resolveEntity();
+                        if (!entity)
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        const glm::vec3 vector(value[0], value[1], value[2]);
+                        if (binding == CW_MANAGED_BINDING_TRANSFORM_SET_POSITION)
+                            entity.SetWorldPosition(vector);
+                        else if (binding == CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_POSITION)
+                            entity.SetPosition(vector);
+                        else if (binding == CW_MANAGED_BINDING_TRANSFORM_SET_SCALE)
+                            entity.SetWorldScale(vector);
+                        else if (binding == CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_SCALE)
+                            entity.SetScale(vector);
+                        else if (binding == CW_MANAGED_BINDING_TRANSFORM_SET_EULER_ANGLES)
+                            entity.SetWorldRotation(glm::quat(glm::radians(vector)));
+                        else
+                            entity.SetRotation(glm::quat(glm::radians(vector)));
+                        return CW_MANAGED_STATUS_OK;
+                    }
+                    case CW_MANAGED_BINDING_TRANSFORM_SET_ROTATION:
+                    case CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_ROTATION: {
+                        float value[4]{};
+                        if (!ReadBindingFloats(input, value, 4))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        Entity entity = resolveEntity();
+                        if (!entity)
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        const glm::quat rotation(value[3], value[0], value[1], value[2]);
+                        if (binding == CW_MANAGED_BINDING_TRANSFORM_SET_ROTATION)
+                            entity.SetWorldRotation(rotation);
+                        else
+                            entity.SetRotation(rotation);
+                        return CW_MANAGED_STATUS_OK;
+                    }
+                    case CW_MANAGED_BINDING_INPUT_GET_KEY:
+                    case CW_MANAGED_BINDING_INPUT_GET_KEY_DOWN:
+                    case CW_MANAGED_BINDING_INPUT_GET_KEY_UP: {
+                        if (input.length != sizeof(uint32_t))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        const KeyCode code = static_cast<KeyCode>(readCode());
+                        const bool pressed = binding == CW_MANAGED_BINDING_INPUT_GET_KEY        ? Input::IsKeyPressed(code)
+                                             : binding == CW_MANAGED_BINDING_INPUT_GET_KEY_DOWN ? Input::IsKeyDown(code)
+                                                                                               : Input::IsKeyUp(code);
+                        const uint8_t result = pressed ? 1 : 0;
+                        return WriteBindingResult(output, result);
+                    }
+                    case CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON:
+                    case CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_DOWN:
+                    case CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_UP: {
+                        if (input.length != sizeof(uint32_t))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        const MouseCode code = static_cast<MouseCode>(readCode());
+                        const bool pressed = binding == CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON        ? Input::IsMouseButtonPressed(code)
+                                             : binding == CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_DOWN ? Input::IsMouseButtonDown(code)
+                                                                                                         : Input::IsMouseButtonUp(code);
+                        const uint8_t result = pressed ? 1 : 0;
+                        return WriteBindingResult(output, result);
+                    }
+                    case CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_X: return WriteBindingResult(output, Input::GetMouseScrollX());
+                    case CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_Y: return WriteBindingResult(output, Input::GetMouseScrollY());
+                    case CW_MANAGED_BINDING_INPUT_GET_MOUSE_POSITION: return writeVector2(Input::GetMousePosition());
+                    case CW_MANAGED_BINDING_TIME_GET_TIME: return WriteBindingResult(output, Time::GetTime());
+                    case CW_MANAGED_BINDING_TIME_GET_FIXED_DELTA_TIME: return WriteBindingResult(output, Time::GetFixedDeltaTime());
+                    case CW_MANAGED_BINDING_TIME_GET_SMOOTH_DELTA_TIME: return WriteBindingResult(output, Time::GetSmoothDeltaTime());
+                    case CW_MANAGED_BINDING_TIME_GET_REALTIME_SINCE_STARTUP:
+                        return WriteBindingResult(output, Time::GetRealtimeSinceStartup());
+                    case CW_MANAGED_BINDING_TIME_GET_FRAME_COUNT: return WriteBindingResult(output, Time::GetFrameCount());
+                    default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                    }
                 }
                 catch (...)
                 {

@@ -46,7 +46,8 @@ public static unsafe class Bootstrap
         if (host is null || host->Size < (uint)sizeof(NativeHostApi) || host->AbiVersion != NativeAbi.Version)
             return NativeStatus.AbiMismatch;
         if (host->Log == null || host->GetEntityName == null || host->SetEntityName == null || host->FindEntityByName == null ||
-            host->GetEntityParent == null || host->SetEntityParent == null || host->DestroyEntity == null)
+            host->GetEntityParent == null || host->SetEntityParent == null || host->DestroyEntity == null ||
+            host->InvokeHostBinding == null)
             return NativeStatus.AbiMismatch;
         if (_initialized)
             return NativeStatus.InvalidArgument;
@@ -55,6 +56,8 @@ public static unsafe class Bootstrap
         ManagedRuntimeContext.SetLogHandler(ForwardLog);
         ManagedRuntimeContext.SetEntityHandlers(GetEntityName, SetEntityName, FindEntityByName, GetEntityParent, SetEntityParent,
                                                 DestroyEntity);
+        ManagedRuntimeContext.SetHostBindingHandler(InvokeHostBinding);
+        ManagedRuntimeContext.SetScriptResolver(Program.ResolveScriptComponent);
         ManagedAotRoots.Preserve();
         return NativeStatus.Ok;
     }
@@ -74,6 +77,8 @@ public static unsafe class Bootstrap
         _initialized = false;
         ManagedRuntimeContext.SetLogHandler(null);
         ManagedRuntimeContext.SetEntityHandlers(null, null, null, null, null, null);
+        ManagedRuntimeContext.SetHostBindingHandler(null);
+        ManagedRuntimeContext.SetScriptResolver(null);
         _host = default;
         lock (DiagnosticLock)
             Diagnostics.Clear();
@@ -376,6 +381,21 @@ public static unsafe class Bootstrap
     private static void DestroyEntity(UUID entity)
     {
         EnsureHostStatus(_host.DestroyEntity(_host.Context, Encode(entity)), "destroy an entity");
+    }
+
+    private static byte[] InvokeHostBinding(ManagedBindingId binding, UUID entity, byte[] input)
+    {
+        input ??= Array.Empty<byte>();
+        NativeBlob output = default;
+        fixed (byte* inputBytes = input)
+        {
+            NativeBlob inputBlob = new(inputBytes, (ulong)input.Length);
+            EnsureHostStatus(_host.InvokeHostBinding(_host.Context, (NativeHostBinding)binding, Encode(entity), inputBlob, &output),
+                             $"invoke managed host binding {binding}");
+        }
+        if (output.Length > int.MaxValue || (output.Data == null && output.Length != 0))
+            throw new InvalidOperationException("The native host returned an invalid binding result.");
+        return output.Length == 0 ? Array.Empty<byte>() : new ReadOnlySpan<byte>(output.Data, (int)output.Length).ToArray();
     }
 
     private static void EnsureHostStatus(NativeStatus status, string operation)

@@ -26,10 +26,21 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Internal_GetPosition(m_InternalPtr, out Vector3 tmp);
                 return tmp;
+#else
+                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetPosition, entity.uuid);
+#endif
             }
-            set { Internal_SetPosition(m_InternalPtr, ref value); }
+            set
+            {
+#if CROWNY_MONO
+                Internal_SetPosition(m_InternalPtr, ref value);
+#else
+                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetPosition, entity.uuid, value);
+#endif
+            }
         }
 
         /// <summary>
@@ -40,10 +51,21 @@ namespace Crowny
         { 
             get
             {
+#if CROWNY_MONO
                 Internal_GetLocalPosition(m_InternalPtr, out Vector3 temp);
                 return temp;
-            } 
-            set { Internal_SetLocalPosition(m_InternalPtr, ref value); }
+#else
+                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetLocalPosition, entity.uuid);
+#endif
+            }
+            set
+            {
+#if CROWNY_MONO
+                Internal_SetLocalPosition(m_InternalPtr, ref value);
+#else
+                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetLocalPosition, entity.uuid, value);
+#endif
+            }
         }
 
         /// <summary>
@@ -54,10 +76,21 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Internal_GetScale(m_InternalPtr, out Vector3 tmp);
                 return tmp;
+#else
+                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetScale, entity.uuid);
+#endif
             }
-            set { Internal_SetScale(m_InternalPtr, ref value); }
+            set
+            {
+#if CROWNY_MONO
+                Internal_SetScale(m_InternalPtr, ref value);
+#else
+                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetScale, entity.uuid, value);
+#endif
+            }
         }
 
         /// <summary>
@@ -68,11 +101,22 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Vector3 temp;
                 Internal_GetLocalScale(m_InternalPtr, out temp);
                 return temp;
-            } 
-            set { Internal_SetLocalScale(m_InternalPtr, ref value); } 
+#else
+                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetLocalScale, entity.uuid);
+#endif
+            }
+            set
+            {
+#if CROWNY_MONO
+                Internal_SetLocalScale(m_InternalPtr, ref value);
+#else
+                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetLocalScale, entity.uuid, value);
+#endif
+            }
         }
 
         /// <summary>
@@ -83,10 +127,21 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Internal_GetRotation(m_InternalPtr, out Quaternion tmp);
                 return tmp;
+#else
+                return ManagedRuntimeContext.GetQuaternion(ManagedBindingId.TransformGetRotation, entity.uuid);
+#endif
             }
-            set { Internal_SetRotation(m_InternalPtr, ref value); }
+            set
+            {
+#if CROWNY_MONO
+                Internal_SetRotation(m_InternalPtr, ref value);
+#else
+                ManagedRuntimeContext.SetQuaternion(ManagedBindingId.TransformSetRotation, entity.uuid, value);
+#endif
+            }
         }
 
         /// <summary>
@@ -97,10 +152,21 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Internal_GetLocalRotation(m_InternalPtr, out Quaternion tmp);
                 return tmp;
+#else
+                return ManagedRuntimeContext.GetQuaternion(ManagedBindingId.TransformGetLocalRotation, entity.uuid);
+#endif
             }
-            set { Internal_SetLocalRotation(m_InternalPtr, ref value); }
+            set
+            {
+#if CROWNY_MONO
+                Internal_SetLocalRotation(m_InternalPtr, ref value);
+#else
+                ManagedRuntimeContext.SetQuaternion(ManagedBindingId.TransformSetLocalRotation, entity.uuid, value);
+#endif
+            }
         }
 
         /// <summary>
@@ -111,10 +177,21 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Internal_GetEulerAngles(m_InternalPtr, out Vector3 temp);
                 return temp;
-            } 
-            set { Internal_SetEulerAngles(m_InternalPtr, ref value); } 
+#else
+                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetEulerAngles, entity.uuid);
+#endif
+            }
+            set
+            {
+#if CROWNY_MONO
+                Internal_SetEulerAngles(m_InternalPtr, ref value);
+#else
+                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetEulerAngles, entity.uuid, value);
+#endif
+            }
         }
 
         /// <summary>
@@ -125,10 +202,21 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Internal_GetLocalEulerAngles(m_InternalPtr, out Vector3 temp);
                 return temp;
-            } 
-            set { Internal_SetEulerAngles(m_InternalPtr, ref value); } 
+#else
+                return ManagedRuntimeContext.GetVector3(ManagedBindingId.TransformGetLocalEulerAngles, entity.uuid);
+#endif
+            }
+            set
+            {
+#if CROWNY_MONO
+                Internal_SetLocalEulerAngles(m_InternalPtr, ref value);
+#else
+                ManagedRuntimeContext.SetVector3(ManagedBindingId.TransformSetLocalEulerAngles, entity.uuid, value);
+#endif
+            }
         }
 
         /// <summary>
@@ -138,8 +226,12 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Internal_GetWorldToLocalTransform(m_InternalPtr, out Matrix4 tmp);
                 return tmp;
+#else
+                return ManagedRuntimeContext.GetMatrix4(ManagedBindingId.TransformGetWorldToLocalMatrix, entity.uuid);
+#endif
             }
         }
 
@@ -150,8 +242,12 @@ namespace Crowny
         {
             get
             {
+#if CROWNY_MONO
                 Internal_GetLocalToWorldMatrix(m_InternalPtr, out Matrix4 tmp);
                 return tmp;
+#else
+                return ManagedRuntimeContext.GetMatrix4(ManagedBindingId.TransformGetLocalToWorldMatrix, entity.uuid);
+#endif
             }
         }
 
@@ -160,9 +256,14 @@ namespace Crowny
         /// </summary>
         public bool IsDirty(DirtyFlag dirtyFlag)
         {
+#if CROWNY_MONO
             return Internal_IsDirty(m_InternalPtr, dirtyFlag);
+#else
+            return false;
+#endif
         }
 
+#if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_GetPosition(IntPtr thisptr, out Vector3 output);
         [MethodImpl(MethodImplOptions.InternalCall)]
@@ -201,6 +302,7 @@ namespace Crowny
         private static extern void Internal_GetLocalToWorldMatrix(IntPtr thisptr, out Matrix4 value);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern bool Internal_IsDirty(IntPtr thisptr, DirtyFlag flag);
+#endif
 
     }
 }

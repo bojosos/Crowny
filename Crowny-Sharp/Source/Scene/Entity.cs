@@ -95,7 +95,11 @@ namespace Crowny
         /// <returns>Returns the component if the operation was successful, otherwise null.</returns>
         public T GetComponent<T>() where T : Component
         {
+#if CROWNY_MONO
             return (T)Internal_GetComponent(m_InternalPtr, typeof(T));
+#else
+            return ManagedRuntimeContext.GetComponent<T>(m_ManagedUuid);
+#endif
         }
 
         /// <summary>
@@ -105,7 +109,11 @@ namespace Crowny
         /// <returns>Whether the entity has the component.</returns>
         public bool HasComponent<T>() where T : Component
         {
+#if CROWNY_MONO
             return Internal_HasComponent(m_InternalPtr, typeof(T));
+#else
+            return ManagedRuntimeContext.HasComponent<T>(m_ManagedUuid);
+#endif
         }
 
         /// <summary>
@@ -114,7 +122,11 @@ namespace Crowny
         /// <returns>Returns the component if the operation was successful, otherwise null.</returns>
         public T AddComponent<T>() where T : Component
         {
+#if CROWNY_MONO
             return (T)Internal_AddComponent(m_InternalPtr, typeof(T));
+#else
+            return ManagedRuntimeContext.AddComponent<T>(m_ManagedUuid);
+#endif
         }
 
         /// <summary>
@@ -123,7 +135,11 @@ namespace Crowny
         /// <typeparam name="T">The type of component.</typeparam>
         public void RemoveComponent<T>() where T : Component
         {
+#if CROWNY_MONO
             Internal_RemoveComponent(m_InternalPtr, typeof(T));
+#else
+            ManagedRuntimeContext.RemoveComponent<T>(m_ManagedUuid);
+#endif
         }
 
         public void Destroy()
@@ -135,6 +151,7 @@ namespace Crowny
 #endif
         }
 
+#if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern Component Internal_GetComponent(IntPtr parent, Type type);
         [MethodImpl(MethodImplOptions.InternalCall)]
@@ -143,6 +160,7 @@ namespace Crowny
         private static extern Component Internal_AddComponent(IntPtr parent, Type type);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_RemoveComponent(IntPtr parent, Type type);
+#endif
 
 #if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)]

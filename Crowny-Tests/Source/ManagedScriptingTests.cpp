@@ -302,7 +302,8 @@ TEST_CASE("CoreCLR package manifest resolves only package-local artifacts", "[Sc
 
     const Path manifest = packageRoot / "managed-program.json";
     std::ofstream(manifest)
-      << R"({"schemaVersion":1,"abiVersion":1,"backend":"CoreCLR","runtimeRoot":"runtime","artifacts":{)"
+      << R"({"schemaVersion":1,"abiVersion":)" << CW_MANAGED_ABI_VERSION
+      << R"(,"backend":"CoreCLR","runtimeRoot":"runtime","artifacts":{)"
       << R"("nethost":"host/nethost.dll","hostAssembly":"host/Crowny.ManagedHost.dll",)"
       << R"("hostDependencies":"host/Crowny.ManagedHost.deps.json",)"
       << R"("runtimeConfig":"host/Crowny.ManagedHost.runtimeconfig.json","gameAssembly":"game/GameAssembly.dll",)"
@@ -316,7 +317,8 @@ TEST_CASE("CoreCLR package manifest resolves only package-local artifacts", "[Sc
     CHECK(loaded.Package.Program.Artifacts.size() == 6);
 
     std::ofstream(manifest, std::ios::trunc)
-      << R"({"schemaVersion":1,"abiVersion":1,"backend":"CoreCLR","runtimeRoot":"..","artifacts":{}})";
+      << R"({"schemaVersion":1,"abiVersion":)" << CW_MANAGED_ABI_VERSION
+      << R"(,"backend":"CoreCLR","runtimeRoot":"..","artifacts":{}})";
     const ManagedProgramPackageResult escaped = LoadManagedProgramPackage(manifest);
     CHECK_FALSE(escaped.Result.Succeeded);
     CHECK(escaped.Result.HasDiagnosticCode("managed.package.runtime_path_invalid"));
