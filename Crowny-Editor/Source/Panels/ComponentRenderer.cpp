@@ -152,10 +152,10 @@ namespace Crowny
             bool changed = false;
             for (const ScriptFieldSchema& field : schema.Fields)
             {
-                if ((field.Flags & ScriptFieldFlags::Inspectable) == ScriptFieldFlags::None)
+                if ((field.Flags & ScriptSchemaFieldFlags::Inspectable) == ScriptSchemaFieldFlags::None)
                     continue;
                 ScriptValue& value = state.Root.Members.try_emplace(field.Name, DefaultValue(field.ValueKind)).first->second;
-                const bool readOnly = (field.Flags & ScriptFieldFlags::ReadOnly) != ScriptFieldFlags::None;
+                const bool readOnly = (field.Flags & ScriptSchemaFieldFlags::ReadOnly) != ScriptSchemaFieldFlags::None;
                 ImGui::PushID(field.Name.c_str());
                 if (readOnly)
                     ImGui::BeginDisabled();
