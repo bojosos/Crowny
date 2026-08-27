@@ -2,6 +2,7 @@
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Log.h"
 #include "Crowny/Scripting/ManagedReload.h"
+#include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
 #include <cstdio>
@@ -144,5 +145,45 @@ TEST_CASE("Mono::Utils::GCHandles", "[Mono]")
         CHECK(retrieved == obj);
 
         MonoUtils::FreeGCHandle(handle);
+    }
+}
+
+TEST_CASE("Managed animation API exposes clip identity and playback controls", "[Mono][Animation]")
+{
+    AttachThread();
+
+    MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+    if (assembly == nullptr)
+    {
+        const Path assemblyPath = fs::absolute("Crowny-Sharp/CrownySharp.dll");
+        REQUIRE(fs::is_regular_file(assemblyPath));
+        assembly = &MonoManager::Get().LoadAssembly(assemblyPath, CROWNY_ASSEMBLY);
+    }
+
+    MonoClass* asset = assembly->GetClass(CROWNY_NS, "Asset");
+    MonoClass* component = assembly->GetClass(CROWNY_NS, "Component");
+    MonoClass* clip = assembly->GetClass(CROWNY_NS, "AnimationClip");
+    MonoClass* animation = assembly->GetClass(CROWNY_NS, "AnimationComponent");
+    REQUIRE(asset != nullptr);
+    REQUIRE(component != nullptr);
+    REQUIRE(clip != nullptr);
+    REQUIRE(animation != nullptr);
+    CHECK(clip->IsSubClassOf(asset));
+    CHECK(animation->IsSubClassOf(component));
+
+    for (StringView property : { "length", "sampleRate", "isAdditive" })
+    {
+        CAPTURE(property);
+        CHECK(clip->GetProperty(property) != nullptr);
+    }
+    for (StringView property : { "clip", "speed", "wrapMode", "playOnAwake", "applyRootMotion", "time", "normalizedTime", "state" })
+    {
+        CAPTURE(property);
+        CHECK(animation->GetProperty(property) != nullptr);
+    }
+    for (StringView method : { "Play", "Pause", "Stop" })
+    {
+        CAPTURE(method);
+        CHECK(animation->GetMethod(method, 0) != nullptr);
     }
 }

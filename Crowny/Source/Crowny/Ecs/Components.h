@@ -1140,28 +1140,50 @@ namespace Crowny
         {
             if (this != &other)
             {
+                ResetRuntime();
                 ComponentBase::operator=(other);
                 Clip = other.Clip;
                 Speed = other.Speed;
                 WrapMode = other.WrapMode;
                 PlayOnAwake = other.PlayOnAwake;
                 ApplyRootMotion = other.ApplyRootMotion;
-                ResetRuntime();
+                m_PlaybackTime = 0.0f;
+                m_PlaybackState = AnimationPlaybackState::Stopped;
+                m_HasPlaybackState = false;
             }
             return *this;
         }
 
-        void ResetRuntime()
-        {
-            Player = nullptr;
-            Deformer = nullptr;
-            RuntimeMesh = nullptr;
-            RuntimeMeshHandle = nullptr;
-            PendingGpuResult = nullptr;
-            GpuUploadPending = false;
-            RuntimeSourceMesh = UUID::EMPTY;
-            RuntimeClip = UUID::EMPTY;
-        }
+        const AssetHandle<AnimationClip>& GetClip() const { return Clip; }
+        void SetClip(const AssetHandle<AnimationClip>& clip);
+        float GetSpeed() const { return Speed; }
+        void SetSpeed(float speed);
+        AnimationWrapMode GetWrapMode() const { return WrapMode; }
+        void SetWrapMode(AnimationWrapMode wrapMode);
+        bool GetPlayOnAwake() const { return PlayOnAwake; }
+        void SetPlayOnAwake(bool playOnAwake) { PlayOnAwake = playOnAwake; }
+        bool GetApplyRootMotion() const { return ApplyRootMotion; }
+        void SetApplyRootMotion(bool applyRootMotion) { ApplyRootMotion = applyRootMotion; }
+
+        void Play();
+        void Pause();
+        void Stop();
+        void SetTime(float time);
+        float GetTime() const;
+        void SetNormalizedTime(float normalizedTime);
+        float GetNormalizedTime() const;
+        AnimationPlaybackState GetState() const;
+
+        /** Applies the requested playback state after the renderer creates a player. */
+        void InitializeRuntimePlayback();
+        /** Captures live player state before a renderer-owned runtime object is discarded. */
+        void SynchronizeRuntimePlayback();
+        void ResetRuntime(bool preservePlayback = false);
+
+    private:
+        float m_PlaybackTime = 0.0f;
+        AnimationPlaybackState m_PlaybackState = AnimationPlaybackState::Stopped;
+        bool m_HasPlaybackState = false;
     };
 
     template <> void ComponentEditorWidget<AnimationComponent>(Entity e);

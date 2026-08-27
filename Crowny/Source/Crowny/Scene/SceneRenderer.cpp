@@ -1762,7 +1762,7 @@ namespace Crowny
             if (!animation.Clip || !meshRenderer.MeshHandle)
             {
                 if (animation.Player || animation.Deformer || animation.RuntimeMesh || animation.PendingGpuResult)
-                    animation.ResetRuntime();
+                    animation.ResetRuntime(true);
                 continue;
             }
 
@@ -1770,7 +1770,7 @@ namespace Crowny
             const UUID clipId = animation.Clip.GetUUID();
             if (!animation.Player || !animation.Deformer || animation.RuntimeSourceMesh != sourceMeshId || animation.RuntimeClip != clipId)
             {
-                animation.ResetRuntime();
+                animation.ResetRuntime(true);
                 if (!meshRenderer.MeshHandle->IsCpuCached())
                 {
                     CW_ENGINE_WARN("Animated mesh '{}' is not CPU cached. Reimport it with bones or morph targets enabled.",
@@ -1778,19 +1778,15 @@ namespace Crowny
                     continue;
                 }
 
-                animation.Player = CreateRef<AnimationPlayer>();
                 animation.Deformer = CreateRef<MeshDeformer>();
                 if (!animation.Deformer->Initialize(meshRenderer.MeshHandle->GetMeshData(), meshRenderer.MeshHandle->GetSkeleton(),
                                                     meshRenderer.MeshHandle->GetMorph()))
                 {
-                    animation.ResetRuntime();
+                    animation.ResetRuntime(true);
                     continue;
                 }
-                animation.Player->SetSpeed(animation.Speed);
-                animation.Player->SetWrapMode(animation.WrapMode);
-                animation.Player->Play(animation.Clip.GetInternalPtr());
-                if (!animation.PlayOnAwake)
-                    animation.Player->Pause();
+                animation.Player = CreateRef<AnimationPlayer>();
+                animation.InitializeRuntimePlayback();
                 animation.RuntimeSourceMesh = sourceMeshId;
                 animation.RuntimeClip = clipId;
                 animation.PendingGpuResult = std::make_shared<MeshUploadResult>();
@@ -1815,6 +1811,7 @@ namespace Crowny
             animation.Player->SetWrapMode(animation.WrapMode);
             animation.Player->Update(std::max(0.0f, timestep.GetSeconds()), meshRenderer.MeshHandle->GetSkeleton(),
                                      meshRenderer.MeshHandle->GetMorph());
+            animation.SynchronizeRuntimePlayback();
 
             if (animation.ApplyRootMotion)
             {

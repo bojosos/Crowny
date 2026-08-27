@@ -18,6 +18,7 @@
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioListener.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptAnimation.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider2D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider3D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody.h"
@@ -27,6 +28,7 @@
 
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioMixer.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptAnimationClip.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMaterial.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
@@ -445,6 +447,7 @@ namespace Crowny
 
     void ScriptInfoManager::RegisterAssets()
     {
+        RegisterAsset<AnimationClip, ScriptAnimationClip>();
         RegisterAsset<AudioClip, ScriptAudioClip>();
         RegisterAsset<AudioMixer, ScriptAudioMixer>();
         RegisterAsset<PhysicsMaterial2D, ScriptPhysicsMaterial2D>();
@@ -457,6 +460,7 @@ namespace Crowny
 
     void ScriptInfoManager::RegisterComponents()
     {
+        RegisterComponent<AnimationComponent, ScriptAnimation>();
         RegisterComponent<TransformComponent, ScriptTransform>();
         RegisterComponent<CameraComponent, ScriptCamera>();
         RegisterComponent<LightComponent, ScriptLight>();

@@ -95,6 +95,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Add asset-backed and runtime mesh primitives: cube, plane, sphere, cylinder, cone, capsule, quad, and configurable tessellation with safe upper bounds.
 - [ ] Finish morph animation, then implement skeletal animation: skeleton assets, bones, bind/inverse-bind poses, clips, channels, interpolation, blending, layers, masks, root motion, events, retarget-ready IDs, GPU/CPU skinning, bounds, serialization, import, editor inspection, and C# APIs.
 - [x] Dispatch ping-pong animation events in traversal order across both reflected clip boundaries without double-firing endpoint events.
+- [x] Expose animation clips and backend-safe component playback controls to C#, preserving requested state and time when renderer runtime objects are recreated.
 - [ ] Improve geometry-node evaluation, node catalog, type conversion, caching, invalidation, diagnostics, previews, serialization, undo, and large-graph performance.
 
 ## Scripting and managed lifecycle

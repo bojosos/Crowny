@@ -3,6 +3,7 @@
 
 #include "Crowny/Animation/AnimationPlayer.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Ecs/Components.h"
 #include "Crowny/Renderer/Mesh.h"
 
 using namespace Crowny;
@@ -189,6 +190,62 @@ TEST_CASE("Animation clips preserve all track types during asset round trips", "
 
     loaded = nullptr;
     fs::remove(assetPath);
+}
+
+TEST_CASE("Animation components preserve requested playback across runtime recreation", "[Animation][Components]")
+{
+    AssetManager manager;
+    Ref<AnimationClip> clip = AnimationClip::Create(AnimationCurve<float>({ { 0.0f, 0.0f }, { 2.0f, 1.0f } }));
+    AssetHandle<AnimationClip> handle = static_asset_cast<AnimationClip>(manager.CreateAssetHandle(clip));
+
+    AnimationComponent animation;
+    animation.SetClip(handle);
+    animation.SetSpeed(1.5f);
+    animation.SetWrapMode(AnimationWrapMode::PingPong);
+    animation.SetNormalizedTime(0.25f);
+    animation.Pause();
+
+    CHECK(animation.GetState() == AnimationPlaybackState::Paused);
+    CHECK(animation.GetTime() == Approx(0.5f));
+    CHECK(animation.GetNormalizedTime() == Approx(0.25f));
+
+    animation.Player = CreateRef<AnimationPlayer>();
+    animation.InitializeRuntimePlayback();
+    REQUIRE(animation.Player != nullptr);
+    CHECK(animation.Player->GetClip() == clip);
+    CHECK(animation.Player->GetState() == AnimationPlaybackState::Paused);
+    CHECK(animation.Player->GetTime() == Approx(0.5f));
+    CHECK(animation.Player->GetSpeed() == Approx(1.5f));
+    CHECK(animation.Player->GetWrapMode() == AnimationWrapMode::PingPong);
+
+    animation.Play();
+    animation.Player->Update(0.4f);
+    animation.SynchronizeRuntimePlayback();
+    animation.ResetRuntime(true);
+    CHECK(animation.GetState() == AnimationPlaybackState::Playing);
+    CHECK(animation.GetTime() == Approx(0.6f));
+
+    animation.Player = CreateRef<AnimationPlayer>();
+    animation.InitializeRuntimePlayback();
+    CHECK(animation.Player->GetState() == AnimationPlaybackState::Playing);
+    CHECK(animation.Player->GetTime() == Approx(0.6f));
+
+    animation.Stop();
+    CHECK(animation.GetState() == AnimationPlaybackState::Stopped);
+    CHECK(animation.GetTime() == Approx(0.0f));
+    animation.SetTime(1.0f);
+    animation.ResetRuntime();
+    CHECK(animation.GetState() == AnimationPlaybackState::Playing);
+    CHECK(animation.GetTime() == Approx(0.0f));
+    animation.SetSpeed(std::numeric_limits<float>::infinity());
+    animation.SetWrapMode(static_cast<AnimationWrapMode>(99));
+    CHECK(animation.GetSpeed() == Approx(1.0f));
+    CHECK(animation.GetWrapMode() == AnimationWrapMode::Loop);
+
+    AnimationComponent copy(animation);
+    CHECK(copy.Player == nullptr);
+    CHECK(copy.GetState() == AnimationPlaybackState::Playing);
+    CHECK(copy.GetTime() == Approx(0.0f));
 }
 
 TEST_CASE("Mesh deformer skins vertices using a reusable output mesh", "[Animation][Mesh]")

@@ -24,6 +24,22 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        AnimationWrapMode SanitizeWrapMode(AnimationWrapMode wrapMode)
+        {
+            switch (wrapMode)
+            {
+            case AnimationWrapMode::Clamp:
+            case AnimationWrapMode::Loop:
+            case AnimationWrapMode::PingPong:
+                return wrapMode;
+            default:
+                return AnimationWrapMode::Loop;
+            }
+        }
+    } // namespace
+
     RelationshipComponent::RelationshipComponent(const RelationshipComponent& other)
       : ComponentBase(other), Children(other.Children), Parent(other.Parent), SiblingIndex(other.SiblingIndex)
     {
@@ -59,6 +75,143 @@ namespace Crowny
         other.Parent = {};
         other.SiblingIndex = 0;
         return *this;
+    }
+
+    void AnimationComponent::SetClip(const AssetHandle<AnimationClip>& clip)
+    {
+        if (Clip.GetUUID() == clip.GetUUID())
+            return;
+
+        ResetRuntime(true);
+        Clip = clip;
+        m_PlaybackTime = 0.0f;
+    }
+
+    void AnimationComponent::SetSpeed(float speed)
+    {
+        Speed = std::isfinite(speed) ? speed : 1.0f;
+        if (Player)
+            Player->SetSpeed(Speed);
+    }
+
+    void AnimationComponent::SetWrapMode(AnimationWrapMode wrapMode)
+    {
+        WrapMode = SanitizeWrapMode(wrapMode);
+        if (Player)
+            Player->SetWrapMode(WrapMode);
+    }
+
+    void AnimationComponent::Play()
+    {
+        m_HasPlaybackState = true;
+        m_PlaybackState = AnimationPlaybackState::Playing;
+        m_PlaybackTime = 0.0f;
+        if (Player)
+            Player->Play(Clip.GetInternalPtr());
+    }
+
+    void AnimationComponent::Pause()
+    {
+        if (GetState() != AnimationPlaybackState::Playing)
+            return;
+
+        m_HasPlaybackState = true;
+        m_PlaybackState = AnimationPlaybackState::Paused;
+        if (Player)
+            Player->Pause();
+    }
+
+    void AnimationComponent::Stop()
+    {
+        m_HasPlaybackState = true;
+        m_PlaybackState = AnimationPlaybackState::Stopped;
+        m_PlaybackTime = 0.0f;
+        if (Player)
+            Player->Stop();
+    }
+
+    void AnimationComponent::SetTime(float time)
+    {
+        m_PlaybackTime = std::isfinite(time) ? time : 0.0f;
+        if (Player)
+            Player->Seek(m_PlaybackTime);
+    }
+
+    float AnimationComponent::GetTime() const
+    {
+        return Player ? Player->GetTime() : m_PlaybackTime;
+    }
+
+    void AnimationComponent::SetNormalizedTime(float normalizedTime)
+    {
+        const float length = Clip ? Clip->GetLength() : 0.0f;
+        SetTime(length > 0.0f && std::isfinite(normalizedTime) ? normalizedTime * length : 0.0f);
+    }
+
+    float AnimationComponent::GetNormalizedTime() const
+    {
+        const float length = Clip ? Clip->GetLength() : 0.0f;
+        return length > 0.0f ? GetTime() / length : 0.0f;
+    }
+
+    AnimationPlaybackState AnimationComponent::GetState() const
+    {
+        if (Player)
+            return Player->GetState();
+        if (m_HasPlaybackState)
+            return m_PlaybackState;
+        return PlayOnAwake ? AnimationPlaybackState::Playing : AnimationPlaybackState::Paused;
+    }
+
+    void AnimationComponent::InitializeRuntimePlayback()
+    {
+        if (!Player || !Clip)
+            return;
+
+        const AnimationPlaybackState requestedState =
+          m_HasPlaybackState ? m_PlaybackState : (PlayOnAwake ? AnimationPlaybackState::Playing : AnimationPlaybackState::Paused);
+        const float requestedTime = m_PlaybackTime;
+        Player->SetSpeed(Speed);
+        Player->SetWrapMode(SanitizeWrapMode(WrapMode));
+        Player->Play(Clip.GetInternalPtr());
+        Player->Seek(requestedTime);
+        if (requestedState == AnimationPlaybackState::Paused)
+            Player->Pause();
+        else if (requestedState == AnimationPlaybackState::Stopped)
+        {
+            Player->Stop();
+            Player->Seek(requestedTime);
+        }
+        SynchronizeRuntimePlayback();
+    }
+
+    void AnimationComponent::SynchronizeRuntimePlayback()
+    {
+        if (!Player)
+            return;
+        m_PlaybackTime = Player->GetTime();
+        m_PlaybackState = Player->GetState();
+        m_HasPlaybackState = true;
+    }
+
+    void AnimationComponent::ResetRuntime(bool preservePlayback)
+    {
+        if (preservePlayback)
+            SynchronizeRuntimePlayback();
+        else
+        {
+            m_PlaybackTime = 0.0f;
+            m_PlaybackState = AnimationPlaybackState::Stopped;
+            m_HasPlaybackState = false;
+        }
+        Player = nullptr;
+        Deformer = nullptr;
+        RuntimeMesh = nullptr;
+        RuntimeMeshHandle = nullptr;
+        PendingGpuResult = nullptr;
+        GpuUploadPending = false;
+        RuntimeSourceMesh = UUID::EMPTY;
+        RuntimeClip = UUID::EMPTY;
     }
 
     void AudioListenerComponent::Initialize()
