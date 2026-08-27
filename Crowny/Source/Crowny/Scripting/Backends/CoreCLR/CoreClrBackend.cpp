@@ -713,10 +713,21 @@ namespace Crowny
                 ManagedOperationResult validation = ValidateManagedProgramApi(m_Api, ManagedBackendId::CoreCLR);
                 if (!validation.Succeeded)
                     return validation;
-                cw_managed_host_api hostApi{ sizeof(hostApi), CW_MANAGED_ABI_VERSION, this,          &Log,
-                                             &GetEntityName, &SetEntityName,          &FindEntityByName,
-                                             &GetEntityParent, &SetEntityParent,      &DestroyEntity,
-                                             &InvokeHostBinding };
+                cw_managed_host_api hostApi{};
+                hostApi.size = sizeof(hostApi);
+                hostApi.abi_version = CW_MANAGED_ABI_VERSION;
+                hostApi.context = this;
+                hostApi.log = &Log;
+                hostApi.get_entity_name = &GetEntityName;
+                hostApi.set_entity_name = &SetEntityName;
+                hostApi.find_entity_by_name = &FindEntityByName;
+                hostApi.get_entity_parent = &GetEntityParent;
+                hostApi.set_entity_parent = &SetEntityParent;
+                hostApi.destroy_entity = &DestroyEntity;
+                hostApi.invoke_host_binding = &InvokeHostBinding;
+#define CW_ASSIGN_HOST_FUNCTION(functionName, fieldName) hostApi.fieldName = &functionName;
+                CW_MANAGED_HOST_FUNCTION_LIST(CW_ASSIGN_HOST_FUNCTION)
+#undef CW_ASSIGN_HOST_FUNCTION
                 if (cw_managed_status status = m_Api.initialize(&hostApi); status != CW_MANAGED_STATUS_OK)
                     return StatusFailure(status, "managed.coreclr.bootstrap_initialize_failed", "The managed bootstrap failed to initialize.");
                 m_RuntimeReady = true;
@@ -961,6 +972,250 @@ namespace Crowny
                     return CW_MANAGED_STATUS_MANAGED_EXCEPTION;
                 }
             }
+
+            static cw_managed_status ForwardTypedBinding(void* context, uint32_t binding, cw_managed_uuid entityId,
+                                                          const void* inputData, size_t inputSize, void* resultData,
+                                                          size_t resultSize)
+            {
+                cw_managed_blob input{ static_cast<const uint8_t*>(inputData), inputSize };
+                cw_managed_blob output{};
+                const cw_managed_status status = InvokeHostBinding(context, binding, entityId, input, &output);
+                if (status != CW_MANAGED_STATUS_OK)
+                    return status;
+                if (output.length != resultSize || (resultSize != 0 && (output.data == nullptr || resultData == nullptr)))
+                    return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
+                if (resultSize != 0)
+                    std::memcpy(resultData, output.data, resultSize);
+                return CW_MANAGED_STATUS_OK;
+            }
+
+#define CW_TYPED_ENTITY_GET(functionName, bindingName, resultType)                                                                  \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entity, resultType* result)               \
+    {                                                                                                                               \
+        return ForwardTypedBinding(context, bindingName, entity, nullptr, 0, result, sizeof(resultType));                           \
+    }
+#define CW_TYPED_ENTITY_SET_VALUE(functionName, bindingName, valueType)                                                            \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entity, valueType value)                  \
+    {                                                                                                                               \
+        return ForwardTypedBinding(context, bindingName, entity, &value, sizeof(value), nullptr, 0);                               \
+    }
+#define CW_TYPED_ENTITY_SET_STRUCT(functionName, bindingName, valueType)                                                           \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entity, const valueType* value)           \
+    {                                                                                                                               \
+        return ForwardTypedBinding(context, bindingName, entity, value, value != nullptr ? sizeof(valueType) : 0, nullptr, 0);      \
+    }
+#define CW_TYPED_GLOBAL_GET(functionName, bindingName, resultType)                                                                 \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, resultType* result)                                       \
+    {                                                                                                                               \
+        return ForwardTypedBinding(context, bindingName, {}, nullptr, 0, result, sizeof(resultType));                              \
+    }
+
+            static cw_managed_status CW_MANAGED_CALL EntityHasComponent(void* context, cw_managed_uuid entity,
+                                                                          cw_managed_string_view typeName, uint8_t* result)
+            {
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_ENTITY_HAS_COMPONENT, entity, typeName.data, typeName.length,
+                                           result, sizeof(*result));
+            }
+
+            static cw_managed_status CW_MANAGED_CALL EntityAddComponent(void* context, cw_managed_uuid entity,
+                                                                          cw_managed_string_view typeName)
+            {
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_ENTITY_ADD_COMPONENT, entity, typeName.data, typeName.length,
+                                           nullptr, 0);
+            }
+
+            static cw_managed_status CW_MANAGED_CALL EntityRemoveComponent(void* context, cw_managed_uuid entity,
+                                                                             cw_managed_string_view typeName)
+            {
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_ENTITY_REMOVE_COMPONENT, entity, typeName.data, typeName.length,
+                                           nullptr, 0);
+            }
+
+            CW_TYPED_ENTITY_GET(TransformGetPosition, CW_MANAGED_BINDING_TRANSFORM_GET_POSITION, cw_managed_vec3)
+            CW_TYPED_ENTITY_SET_STRUCT(TransformSetPosition, CW_MANAGED_BINDING_TRANSFORM_SET_POSITION, cw_managed_vec3)
+            CW_TYPED_ENTITY_GET(TransformGetLocalPosition, CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_POSITION, cw_managed_vec3)
+            CW_TYPED_ENTITY_SET_STRUCT(TransformSetLocalPosition, CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_POSITION, cw_managed_vec3)
+            CW_TYPED_ENTITY_GET(TransformGetScale, CW_MANAGED_BINDING_TRANSFORM_GET_SCALE, cw_managed_vec3)
+            CW_TYPED_ENTITY_SET_STRUCT(TransformSetScale, CW_MANAGED_BINDING_TRANSFORM_SET_SCALE, cw_managed_vec3)
+            CW_TYPED_ENTITY_GET(TransformGetLocalScale, CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_SCALE, cw_managed_vec3)
+            CW_TYPED_ENTITY_SET_STRUCT(TransformSetLocalScale, CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_SCALE, cw_managed_vec3)
+            CW_TYPED_ENTITY_GET(TransformGetRotation, CW_MANAGED_BINDING_TRANSFORM_GET_ROTATION, cw_managed_quat)
+            CW_TYPED_ENTITY_SET_STRUCT(TransformSetRotation, CW_MANAGED_BINDING_TRANSFORM_SET_ROTATION, cw_managed_quat)
+            CW_TYPED_ENTITY_GET(TransformGetLocalRotation, CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_ROTATION, cw_managed_quat)
+            CW_TYPED_ENTITY_SET_STRUCT(TransformSetLocalRotation, CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_ROTATION, cw_managed_quat)
+            CW_TYPED_ENTITY_GET(TransformGetLocalToWorldMatrix, CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_TO_WORLD_MATRIX, cw_managed_mat4)
+            CW_TYPED_ENTITY_GET(TransformGetWorldToLocalMatrix, CW_MANAGED_BINDING_TRANSFORM_GET_WORLD_TO_LOCAL_MATRIX, cw_managed_mat4)
+            CW_TYPED_ENTITY_GET(TransformGetEulerAngles, CW_MANAGED_BINDING_TRANSFORM_GET_EULER_ANGLES, cw_managed_vec3)
+            CW_TYPED_ENTITY_SET_STRUCT(TransformSetEulerAngles, CW_MANAGED_BINDING_TRANSFORM_SET_EULER_ANGLES, cw_managed_vec3)
+            CW_TYPED_ENTITY_GET(TransformGetLocalEulerAngles, CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_EULER_ANGLES, cw_managed_vec3)
+            CW_TYPED_ENTITY_SET_STRUCT(TransformSetLocalEulerAngles, CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_EULER_ANGLES, cw_managed_vec3)
+
+#define CW_TYPED_INPUT_BUTTON(functionName, bindingName)                                                                            \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, uint32_t code, uint8_t* result)                            \
+    {                                                                                                                               \
+        return ForwardTypedBinding(context, bindingName, {}, &code, sizeof(code), result, sizeof(*result));                         \
+    }
+            CW_TYPED_INPUT_BUTTON(InputGetKey, CW_MANAGED_BINDING_INPUT_GET_KEY)
+            CW_TYPED_INPUT_BUTTON(InputGetKeyDown, CW_MANAGED_BINDING_INPUT_GET_KEY_DOWN)
+            CW_TYPED_INPUT_BUTTON(InputGetKeyUp, CW_MANAGED_BINDING_INPUT_GET_KEY_UP)
+            CW_TYPED_INPUT_BUTTON(InputGetMouseButton, CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON)
+            CW_TYPED_INPUT_BUTTON(InputGetMouseButtonDown, CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_DOWN)
+            CW_TYPED_INPUT_BUTTON(InputGetMouseButtonUp, CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_UP)
+            CW_TYPED_GLOBAL_GET(InputGetMouseScrollX, CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_X, float)
+            CW_TYPED_GLOBAL_GET(InputGetMouseScrollY, CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_Y, float)
+            CW_TYPED_GLOBAL_GET(InputGetMousePosition, CW_MANAGED_BINDING_INPUT_GET_MOUSE_POSITION, cw_managed_vec2)
+            CW_TYPED_GLOBAL_GET(TimeGetTime, CW_MANAGED_BINDING_TIME_GET_TIME, float)
+            CW_TYPED_GLOBAL_GET(TimeGetFixedDeltaTime, CW_MANAGED_BINDING_TIME_GET_FIXED_DELTA_TIME, float)
+            CW_TYPED_GLOBAL_GET(TimeGetSmoothDeltaTime, CW_MANAGED_BINDING_TIME_GET_SMOOTH_DELTA_TIME, float)
+            CW_TYPED_GLOBAL_GET(TimeGetRealtimeSinceStartup, CW_MANAGED_BINDING_TIME_GET_REALTIME_SINCE_STARTUP, float)
+            CW_TYPED_GLOBAL_GET(TimeGetFrameCount, CW_MANAGED_BINDING_TIME_GET_FRAME_COUNT, uint32_t)
+
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetMass, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_MASS, float)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetMass, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_MASS, float)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetBodyType, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_BODY_TYPE, int32_t)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetBodyType, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_BODY_TYPE, int32_t)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetSleepMode, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_SLEEP_MODE, int32_t)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetSleepMode, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_SLEEP_MODE, int32_t)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetCollisionDetectionMode, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_COLLISION_DETECTION_MODE, int32_t)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetCollisionDetectionMode, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_COLLISION_DETECTION_MODE,
+                                      int32_t)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetInterpolation, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INTERPOLATION, int32_t)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetInterpolation, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INTERPOLATION, int32_t)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetAutoMass, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AUTO_MASS, uint8_t)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetAutoMass, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AUTO_MASS, uint8_t)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetLayer, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LAYER, int32_t)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetLayer, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LAYER, int32_t)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetLinearDrag, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_DRAG, float)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetLinearDrag, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_DRAG, float)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetAngularDrag, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_DRAG, float)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetAngularDrag, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_DRAG, float)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetGravityScale, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_GRAVITY_SCALE, float)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetGravityScale, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_GRAVITY_SCALE, float)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetCenterOfMass, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CENTER_OF_MASS, cw_managed_vec2)
+            CW_TYPED_ENTITY_SET_STRUCT(Rigidbody2DSetCenterOfMass, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CENTER_OF_MASS, cw_managed_vec2)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetInertia, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INERTIA, float)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetInertia, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INERTIA, float)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetConstraints, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CONSTRAINTS, uint32_t)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetConstraints, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CONSTRAINTS, uint32_t)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetRotation, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ROTATION, float)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetPosition, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_POSITION, cw_managed_vec2)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetLinearVelocity, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_VELOCITY, cw_managed_vec2)
+            CW_TYPED_ENTITY_SET_STRUCT(Rigidbody2DSetLinearVelocity, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_VELOCITY, cw_managed_vec2)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetAngularVelocity, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_VELOCITY, float)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetAngularVelocity, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_VELOCITY, float)
+            CW_TYPED_ENTITY_GET(Rigidbody2DGetAwake, CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AWAKE, uint8_t)
+            CW_TYPED_ENTITY_SET_VALUE(Rigidbody2DSetAwake, CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AWAKE, uint8_t)
+
+            static cw_managed_status CW_MANAGED_CALL Rigidbody2DAddForce(void* context, cw_managed_uuid entity,
+                                                                          const cw_managed_vec2* force, int32_t mode)
+            {
+                struct Payload
+                {
+                    cw_managed_vec2 Force;
+                    int32_t Mode;
+                } payload{ force != nullptr ? *force : cw_managed_vec2{}, mode };
+                return force != nullptr ? ForwardTypedBinding(context, CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE, entity, &payload,
+                                                               sizeof(payload), nullptr, 0)
+                                        : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+            }
+
+            static cw_managed_status CW_MANAGED_CALL Rigidbody2DAddForceAtPosition(
+              void* context, cw_managed_uuid entity, const cw_managed_vec2* force, const cw_managed_vec2* position, int32_t mode)
+            {
+                struct Payload
+                {
+                    cw_managed_vec2 Force;
+                    cw_managed_vec2 Position;
+                    int32_t Mode;
+                } payload{ force != nullptr ? *force : cw_managed_vec2{}, position != nullptr ? *position : cw_managed_vec2{}, mode };
+                return force != nullptr && position != nullptr
+                         ? ForwardTypedBinding(context, CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE_AT_POSITION, entity, &payload,
+                                               sizeof(payload), nullptr, 0)
+                         : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+            }
+
+            static cw_managed_status CW_MANAGED_CALL Rigidbody2DAddTorque(void* context, cw_managed_uuid entity, float torque,
+                                                                           int32_t mode)
+            {
+                struct Payload
+                {
+                    float Torque;
+                    int32_t Mode;
+                } payload{ torque, mode };
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_RIGIDBODY_2_DADD_TORQUE, entity, &payload, sizeof(payload),
+                                           nullptr, 0);
+            }
+
+            CW_TYPED_ENTITY_GET(AudioSourceGetVolume, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_VOLUME, float)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetVolume, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_VOLUME, float)
+            CW_TYPED_ENTITY_GET(AudioSourceGetPitch, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PITCH, float)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetPitch, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PITCH, float)
+            CW_TYPED_ENTITY_GET(AudioSourceGetMinDistance, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MIN_DISTANCE, float)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetMinDistance, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MIN_DISTANCE, float)
+            CW_TYPED_ENTITY_GET(AudioSourceGetMaxDistance, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MAX_DISTANCE, float)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetMaxDistance, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MAX_DISTANCE, float)
+            CW_TYPED_ENTITY_GET(AudioSourceGetLoop, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_LOOP, uint8_t)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetLoop, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_LOOP, uint8_t)
+            CW_TYPED_ENTITY_GET(AudioSourceGetMuted, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MUTED, uint8_t)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetMuted, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MUTED, uint8_t)
+            CW_TYPED_ENTITY_GET(AudioSourceGetPlayOnAwake, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PLAY_ON_AWAKE, uint8_t)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetPlayOnAwake, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PLAY_ON_AWAKE, uint8_t)
+            CW_TYPED_ENTITY_GET(AudioSourceGetTime, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_TIME, float)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetTime, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_TIME, float)
+            CW_TYPED_ENTITY_GET(AudioSourceGetClip, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_CLIP, cw_managed_uuid)
+            CW_TYPED_ENTITY_SET_VALUE(AudioSourceSetClip, CW_MANAGED_BINDING_AUDIO_SOURCE_SET_CLIP, cw_managed_uuid)
+            CW_TYPED_ENTITY_GET(AudioSourceGetState, CW_MANAGED_BINDING_AUDIO_SOURCE_GET_STATE, int32_t)
+
+#define CW_TYPED_ENTITY_ACTION(functionName, bindingName)                                                                           \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entity)                                   \
+    {                                                                                                                               \
+        return ForwardTypedBinding(context, bindingName, entity, nullptr, 0, nullptr, 0);                                          \
+    }
+            CW_TYPED_ENTITY_ACTION(AudioSourcePlay, CW_MANAGED_BINDING_AUDIO_SOURCE_PLAY)
+            CW_TYPED_ENTITY_ACTION(AudioSourcePause, CW_MANAGED_BINDING_AUDIO_SOURCE_PAUSE)
+            CW_TYPED_ENTITY_ACTION(AudioSourceStop, CW_MANAGED_BINDING_AUDIO_SOURCE_STOP)
+
+            static cw_managed_status CW_MANAGED_CALL MathMatrixDeterminant(void* context, const cw_managed_mat4* matrix,
+                                                                            float* result)
+            {
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT, {}, matrix,
+                                           matrix != nullptr ? sizeof(*matrix) : 0, result, sizeof(*result));
+            }
+
+#define CW_TYPED_MATRIX_OPERATION(functionName, bindingName)                                                                       \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, const cw_managed_mat4* matrix,                             \
+                                                           cw_managed_mat4* result)                                                  \
+    {                                                                                                                               \
+        return ForwardTypedBinding(context, bindingName, {}, matrix, matrix != nullptr ? sizeof(*matrix) : 0, result,               \
+                                   sizeof(*result));                                                                                \
+    }
+            CW_TYPED_MATRIX_OPERATION(MathMatrixInverse, CW_MANAGED_BINDING_MATH_MATRIX_INVERSE)
+            CW_TYPED_MATRIX_OPERATION(MathMatrixAffineInverse, CW_MANAGED_BINDING_MATH_MATRIX_AFFINE_INVERSE)
+
+            static cw_managed_status CW_MANAGED_CALL MathLookAt(void* context, const cw_managed_vec3* from,
+                                                                 const cw_managed_vec3* to, const cw_managed_vec3* up,
+                                                                 cw_managed_mat4* result)
+            {
+                struct Payload
+                {
+                    cw_managed_vec3 From;
+                    cw_managed_vec3 To;
+                    cw_managed_vec3 Up;
+                } payload{ from != nullptr ? *from : cw_managed_vec3{}, to != nullptr ? *to : cw_managed_vec3{},
+                           up != nullptr ? *up : cw_managed_vec3{} };
+                return from != nullptr && to != nullptr && up != nullptr
+                         ? ForwardTypedBinding(context, CW_MANAGED_BINDING_MATH_LOOK_AT, {}, &payload, sizeof(payload), result,
+                                               sizeof(*result))
+                         : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+            }
+
+#undef CW_TYPED_MATRIX_OPERATION
+#undef CW_TYPED_ENTITY_ACTION
+#undef CW_TYPED_INPUT_BUTTON
+#undef CW_TYPED_GLOBAL_GET
+#undef CW_TYPED_ENTITY_SET_STRUCT
+#undef CW_TYPED_ENTITY_SET_VALUE
+#undef CW_TYPED_ENTITY_GET
 
             static cw_managed_status CW_MANAGED_CALL InvokeHostBinding(void* context, uint32_t binding, cw_managed_uuid entityId,
                                                                          cw_managed_blob input, cw_managed_blob* output)
