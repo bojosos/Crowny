@@ -146,6 +146,106 @@ namespace Crowny
             Invoke(binding, entity, Encode(value.x, value.y, value.z, value.w));
         }
 
+        internal static bool GetBindingBoolean(ManagedBindingId binding, UUID entity) =>
+            ReadBoolean(Invoke(binding, entity, Array.Empty<byte>()));
+
+        internal static void SetBindingBoolean(ManagedBindingId binding, UUID entity, bool value)
+        {
+            Invoke(binding, entity, new[] { value ? (byte)1 : (byte)0 });
+        }
+
+        internal static int GetBindingInt32(ManagedBindingId binding, UUID entity)
+        {
+            byte[] value = Invoke(binding, entity, Array.Empty<byte>());
+            RequireLength(value, sizeof(int));
+            return BitConverter.ToInt32(value, 0);
+        }
+
+        internal static uint GetBindingUInt32(ManagedBindingId binding, UUID entity)
+        {
+            byte[] value = Invoke(binding, entity, Array.Empty<byte>());
+            RequireLength(value, sizeof(uint));
+            return BitConverter.ToUInt32(value, 0);
+        }
+
+        internal static void SetBindingInt32(ManagedBindingId binding, UUID entity, int value)
+        {
+            Invoke(binding, entity, BitConverter.GetBytes(value));
+        }
+
+        internal static void SetBindingUInt32(ManagedBindingId binding, UUID entity, uint value)
+        {
+            Invoke(binding, entity, BitConverter.GetBytes(value));
+        }
+
+        internal static float GetBindingFloat(ManagedBindingId binding, UUID entity)
+        {
+            byte[] value = Invoke(binding, entity, Array.Empty<byte>());
+            RequireLength(value, sizeof(float));
+            return ReadSingle(value, 0);
+        }
+
+        internal static void SetBindingFloat(ManagedBindingId binding, UUID entity, float value)
+        {
+            Invoke(binding, entity, BitConverter.GetBytes(value));
+        }
+
+        internal static Vector2 GetBindingVector2(ManagedBindingId binding, UUID entity)
+        {
+            byte[] value = Invoke(binding, entity, Array.Empty<byte>());
+            RequireLength(value, 2 * sizeof(float));
+            return new Vector2(ReadSingle(value, 0), ReadSingle(value, sizeof(float)));
+        }
+
+        internal static void SetBindingVector2(ManagedBindingId binding, UUID entity, Vector2 value)
+        {
+            Invoke(binding, entity, Encode(value.x, value.y));
+        }
+
+        internal static void InvokeBinding(ManagedBindingId binding, UUID entity)
+        {
+            Invoke(binding, entity, Array.Empty<byte>());
+        }
+
+        internal static void InvokeBinding(ManagedBindingId binding, UUID entity, Vector2 value, int mode)
+        {
+            Invoke(binding, entity, Encode(value, mode));
+        }
+
+        internal static void InvokeBinding(ManagedBindingId binding, UUID entity, Vector2 first, Vector2 second, int mode)
+        {
+            Invoke(binding, entity, Encode(first, second, mode));
+        }
+
+        internal static void InvokeBinding(ManagedBindingId binding, UUID entity, float value, int mode)
+        {
+            byte[] result = new byte[2 * sizeof(int)];
+            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, result, 0, sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(mode), 0, result, sizeof(float), sizeof(int));
+            Invoke(binding, entity, result);
+        }
+
+        internal static UUID GetBindingUuid(ManagedBindingId binding, UUID entity)
+        {
+            byte[] value = Invoke(binding, entity, Array.Empty<byte>());
+            RequireLength(value, 16);
+            return DecodeUuid(value);
+        }
+
+        internal static void SetBindingUuid(ManagedBindingId binding, UUID entity, UUID value)
+        {
+            Invoke(binding, entity, Encode(value));
+        }
+
+        internal static T CreateAsset<T>(UUID uuid) where T : Asset
+        {
+            if (uuid == UUID.Empty)
+                return null;
+            T asset = Activator.CreateInstance<T>();
+            asset.m_ManagedUuid = uuid;
+            return asset;
+        }
+
         internal static Matrix4 GetMatrix4(ManagedBindingId binding, UUID entity)
         {
             byte[] value = Invoke(binding, entity, Array.Empty<byte>());
@@ -161,9 +261,7 @@ namespace Crowny
 
         internal static float GetBindingFloat(ManagedBindingId binding)
         {
-            byte[] value = Invoke(binding, UUID.Empty, Array.Empty<byte>());
-            RequireLength(value, 4);
-            return ReadSingle(value, 0);
+            return GetBindingFloat(binding, UUID.Empty);
         }
 
         internal static Vector2 GetBindingVector2(ManagedBindingId binding)
@@ -195,6 +293,36 @@ namespace Crowny
 
         private static byte[] Encode(uint value) => BitConverter.GetBytes(value);
 
+        private static byte[] Encode(UUID value)
+        {
+            byte[] result = new byte[16];
+            WriteBigEndian(result, 0, value.d0);
+            WriteBigEndian(result, 4, value.d1);
+            WriteBigEndian(result, 8, value.d2);
+            WriteBigEndian(result, 12, value.d3);
+            return result;
+        }
+
+        private static byte[] Encode(Vector2 value, int mode)
+        {
+            byte[] result = new byte[2 * sizeof(float) + sizeof(int)];
+            Buffer.BlockCopy(BitConverter.GetBytes(value.x), 0, result, 0, sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(value.y), 0, result, sizeof(float), sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(mode), 0, result, 2 * sizeof(float), sizeof(int));
+            return result;
+        }
+
+        private static byte[] Encode(Vector2 first, Vector2 second, int mode)
+        {
+            byte[] result = new byte[4 * sizeof(float) + sizeof(int)];
+            Buffer.BlockCopy(BitConverter.GetBytes(first.x), 0, result, 0, sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(first.y), 0, result, sizeof(float), sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(second.x), 0, result, 2 * sizeof(float), sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(second.y), 0, result, 3 * sizeof(float), sizeof(float));
+            Buffer.BlockCopy(BitConverter.GetBytes(mode), 0, result, 4 * sizeof(float), sizeof(int));
+            return result;
+        }
+
         private static byte[] Encode(params float[] values)
         {
             byte[] result = new byte[values.Length * sizeof(float)];
@@ -210,6 +338,24 @@ namespace Crowny
         }
 
         private static float ReadSingle(byte[] value, int offset) => BitConverter.ToSingle(value, offset);
+
+        private static UUID DecodeUuid(byte[] value)
+        {
+            return new UUID(ReadBigEndian(value, 0), ReadBigEndian(value, 4), ReadBigEndian(value, 8), ReadBigEndian(value, 12));
+        }
+
+        private static uint ReadBigEndian(byte[] value, int offset)
+        {
+            return (uint)value[offset] << 24 | (uint)value[offset + 1] << 16 | (uint)value[offset + 2] << 8 | value[offset + 3];
+        }
+
+        private static void WriteBigEndian(byte[] output, int offset, uint value)
+        {
+            output[offset] = (byte)(value >> 24);
+            output[offset + 1] = (byte)(value >> 16);
+            output[offset + 2] = (byte)(value >> 8);
+            output[offset + 3] = (byte)value;
+        }
 
         private static void RequireLength(byte[] value, int expected)
         {

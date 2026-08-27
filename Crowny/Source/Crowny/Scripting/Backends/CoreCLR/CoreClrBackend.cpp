@@ -1,9 +1,11 @@
 #include "cwpch.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/UTF8.h"
 #include "Crowny/Common/Time.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Input/Input.h"
+#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
 #include "Crowny/Scripting/Managed/Interop/CrownyManagedAbi.h"
@@ -222,6 +224,14 @@ namespace Crowny
             return true;
         }
 
+        template <typename T> bool ReadBindingValue(cw_managed_blob input, T& output)
+        {
+            if (input.data == nullptr || input.length != sizeof(T))
+                return false;
+            std::memcpy(&output, input.data, sizeof(T));
+            return true;
+        }
+
         cw_managed_status WriteBindingResult(cw_managed_blob* output, const void* data, size_t size)
         {
             if (output == nullptr || (data == nullptr && size != 0) || size > 64)
@@ -238,6 +248,8 @@ namespace Crowny
         {
             return WriteBindingResult(output, &value, sizeof(value));
         }
+
+        static_assert(sizeof(glm::mat4) == 64, "The managed matrix binding requires a packed 4x4 float matrix.");
 
         bool HasComponent(Entity entity, StringView name)
         {
@@ -1109,6 +1121,333 @@ namespace Crowny
                     case CW_MANAGED_BINDING_TIME_GET_REALTIME_SINCE_STARTUP:
                         return WriteBindingResult(output, Time::GetRealtimeSinceStartup());
                     case CW_MANAGED_BINDING_TIME_GET_FRAME_COUNT: return WriteBindingResult(output, Time::GetFrameCount());
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_MASS:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_BODY_TYPE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_SLEEP_MODE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_COLLISION_DETECTION_MODE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INTERPOLATION:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AUTO_MASS:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LAYER:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_DRAG:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_DRAG:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_GRAVITY_SCALE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CENTER_OF_MASS:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INERTIA:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CONSTRAINTS:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ROTATION:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_POSITION:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_VELOCITY:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_VELOCITY:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AWAKE: {
+                        Entity entity = resolveEntity();
+                        if (!entity || !entity.HasComponent<Rigidbody2DComponent>())
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        auto& rigidbody = entity.GetComponent<Rigidbody2DComponent>();
+                        Physics2D* physics = Physics2D::IsStartedUp() ? Physics2D::TryGet() : nullptr;
+                        switch (binding)
+                        {
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_MASS:
+                            return WriteBindingResult(output, physics != nullptr ? physics->GetMass(entity) : rigidbody.GetMass());
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_BODY_TYPE:
+                            return WriteBindingResult(output, static_cast<int32_t>(rigidbody.GetBodyType()));
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_SLEEP_MODE:
+                            return WriteBindingResult(output, static_cast<int32_t>(rigidbody.GetSleepMode()));
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_COLLISION_DETECTION_MODE:
+                            return WriteBindingResult(output, static_cast<int32_t>(rigidbody.GetCollisionDetectionMode()));
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INTERPOLATION:
+                            return WriteBindingResult(output, static_cast<int32_t>(rigidbody.GetInterpolationMode()));
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AUTO_MASS: {
+                            const uint8_t value = rigidbody.GetAutoMass() ? 1 : 0;
+                            return WriteBindingResult(output, value);
+                        }
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LAYER:
+                            return WriteBindingResult(output, static_cast<int32_t>(rigidbody.GetLayerMask()));
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_DRAG:
+                            return WriteBindingResult(output, rigidbody.GetLinearDrag());
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_DRAG:
+                            return WriteBindingResult(output, rigidbody.GetAngularDrag());
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_GRAVITY_SCALE:
+                            return WriteBindingResult(output, rigidbody.GetGravityScale());
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CENTER_OF_MASS:
+                            return writeVector2(physics != nullptr ? physics->GetCenterOfMass(entity) : rigidbody.GetCenterOfMass());
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INERTIA:
+                            return WriteBindingResult(output, physics != nullptr ? physics->GetInertia(entity) : rigidbody.GetInertia());
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CONSTRAINTS:
+                            return WriteBindingResult(output, static_cast<uint32_t>(rigidbody.GetConstraints()));
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ROTATION:
+                            return WriteBindingResult(output, physics != nullptr ? physics->GetRotation(entity) : 0.0f);
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_POSITION:
+                            return writeVector2(physics != nullptr ? physics->GetPosition(entity) : glm::vec2(entity.GetWorldPosition()));
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_VELOCITY:
+                            return writeVector2(physics != nullptr ? physics->GetLinearVelocity(entity) : glm::vec2(0.0f));
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_VELOCITY:
+                            return WriteBindingResult(output, physics != nullptr ? physics->GetAngularVelocity(entity) : 0.0f);
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AWAKE: {
+                            const uint8_t value = physics != nullptr && physics->IsBodyAwake(entity) ? 1 : 0;
+                            return WriteBindingResult(output, value);
+                        }
+                        default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        }
+                    }
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_MASS:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_BODY_TYPE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_SLEEP_MODE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_COLLISION_DETECTION_MODE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INTERPOLATION:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AUTO_MASS:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LAYER:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_DRAG:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_DRAG:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_GRAVITY_SCALE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CENTER_OF_MASS:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INERTIA:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CONSTRAINTS:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_VELOCITY:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_VELOCITY:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AWAKE: {
+                        Entity entity = resolveEntity();
+                        if (!entity || !entity.HasComponent<Rigidbody2DComponent>())
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        auto& rigidbody = entity.GetComponent<Rigidbody2DComponent>();
+                        if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AUTO_MASS ||
+                            binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AWAKE)
+                        {
+                            uint8_t value = 0;
+                            if (!ReadBindingValue(input, value))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AUTO_MASS)
+                                rigidbody.SetAutoMass(value != 0, entity);
+                            else if (Physics2D::IsStartedUp())
+                                Physics2D::TryGet()->SetBodyAwake(entity, value != 0);
+                            return CW_MANAGED_STATUS_OK;
+                        }
+                        if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_BODY_TYPE ||
+                            binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_SLEEP_MODE ||
+                            binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_COLLISION_DETECTION_MODE ||
+                            binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INTERPOLATION ||
+                            binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LAYER)
+                        {
+                            int32_t value = 0;
+                            if (!ReadBindingValue(input, value))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_BODY_TYPE)
+                                rigidbody.SetBodyType(static_cast<RigidbodyBodyType>(value));
+                            else if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_SLEEP_MODE)
+                                rigidbody.SetSleepMode(static_cast<RigidbodySleepMode>(value));
+                            else if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_COLLISION_DETECTION_MODE)
+                                rigidbody.SetCollisionDetectionMode(static_cast<CollisionDetectionMode2D>(value));
+                            else if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INTERPOLATION)
+                                rigidbody.SetInterpolationMode(static_cast<RigidbodyInterpolation>(value));
+                            else if (value >= 0 && value < static_cast<int32_t>(Physics2DLayerCount))
+                                rigidbody.SetLayerMask(static_cast<uint32_t>(value), entity);
+                            else
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            return CW_MANAGED_STATUS_OK;
+                        }
+                        if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CONSTRAINTS)
+                        {
+                            uint32_t value = 0;
+                            if (!ReadBindingValue(input, value))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            rigidbody.SetConstraints(Rigidbody2DConstraints(value));
+                            return CW_MANAGED_STATUS_OK;
+                        }
+                        if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CENTER_OF_MASS ||
+                            binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_VELOCITY)
+                        {
+                            float value[2]{};
+                            if (!ReadBindingFloats(input, value, 2))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            const glm::vec2 vector(value[0], value[1]);
+                            if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CENTER_OF_MASS)
+                                rigidbody.SetCenterOfMass(vector);
+                            else if (Physics2D::IsStartedUp())
+                                Physics2D::TryGet()->SetLinearVelocity(entity, vector);
+                            return CW_MANAGED_STATUS_OK;
+                        }
+                        float value = 0.0f;
+                        if (!ReadBindingValue(input, value))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        switch (binding)
+                        {
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_MASS:
+                            if (rigidbody.GetAutoMass())
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            rigidbody.SetMass(value);
+                            break;
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_DRAG: rigidbody.SetLinearDrag(value); break;
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_DRAG: rigidbody.SetAngularDrag(value); break;
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_GRAVITY_SCALE: rigidbody.SetGravityScale(value); break;
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INERTIA: rigidbody.SetInertia(value); break;
+                        case CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_VELOCITY:
+                            if (Physics2D::IsStartedUp())
+                                Physics2D::TryGet()->SetAngularVelocity(entity, value);
+                            break;
+                        default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        }
+                        return CW_MANAGED_STATUS_OK;
+                    }
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE_AT_POSITION:
+                    case CW_MANAGED_BINDING_RIGIDBODY_2_DADD_TORQUE: {
+                        Entity entity = resolveEntity();
+                        if (!entity || !entity.HasComponent<Rigidbody2DComponent>())
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        Physics2D* physics = Physics2D::IsStartedUp() ? Physics2D::TryGet() : nullptr;
+                        if (physics == nullptr)
+                            return CW_MANAGED_STATUS_NOT_INITIALIZED;
+                        if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE)
+                        {
+                            struct Payload
+                            {
+                                float Force[2];
+                                int32_t Mode;
+                            } payload{};
+                            static_assert(sizeof(Payload) == 12);
+                            if (!ReadBindingValue(input, payload))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            physics->AddForce(entity, glm::vec2(payload.Force[0], payload.Force[1]), static_cast<ForceMode>(payload.Mode));
+                        }
+                        else if (binding == CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE_AT_POSITION)
+                        {
+                            struct Payload
+                            {
+                                float Force[2];
+                                float Position[2];
+                                int32_t Mode;
+                            } payload{};
+                            static_assert(sizeof(Payload) == 20);
+                            if (!ReadBindingValue(input, payload))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            physics->AddForceAt(entity, glm::vec2(payload.Force[0], payload.Force[1]),
+                                                glm::vec2(payload.Position[0], payload.Position[1]), static_cast<ForceMode>(payload.Mode));
+                        }
+                        else
+                        {
+                            struct Payload
+                            {
+                                float Torque;
+                                int32_t Mode;
+                            } payload{};
+                            static_assert(sizeof(Payload) == 8);
+                            if (!ReadBindingValue(input, payload))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            physics->AddTorque(entity, payload.Torque, static_cast<ForceMode>(payload.Mode));
+                        }
+                        return CW_MANAGED_STATUS_OK;
+                    }
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_VOLUME:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PITCH:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MIN_DISTANCE:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MAX_DISTANCE:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_LOOP:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MUTED:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PLAY_ON_AWAKE:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_TIME:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_CLIP:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_STATE: {
+                        Entity entity = resolveEntity();
+                        if (!entity || !entity.HasComponent<AudioSourceComponent>())
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        auto& source = entity.GetComponent<AudioSourceComponent>();
+                        switch (binding)
+                        {
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_VOLUME: return WriteBindingResult(output, source.GetVolume());
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PITCH: return WriteBindingResult(output, source.GetPitch());
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MIN_DISTANCE: return WriteBindingResult(output, source.GetMinDistance());
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MAX_DISTANCE: return WriteBindingResult(output, source.GetMaxDistance());
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_LOOP: {
+                            const uint8_t value = source.GetLooping() ? 1 : 0;
+                            return WriteBindingResult(output, value);
+                        }
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MUTED: {
+                            const uint8_t value = source.GetIsMuted() ? 1 : 0;
+                            return WriteBindingResult(output, value);
+                        }
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PLAY_ON_AWAKE: {
+                            const uint8_t value = source.GetPlayOnAwake() ? 1 : 0;
+                            return WriteBindingResult(output, value);
+                        }
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_TIME: return WriteBindingResult(output, source.GetTime());
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_CLIP:
+                            return WriteBindingResult(output, ToAbiUuid(source.GetClip().GetUUID()));
+                        case CW_MANAGED_BINDING_AUDIO_SOURCE_GET_STATE:
+                            return WriteBindingResult(output, static_cast<int32_t>(source.GetState()));
+                        default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        }
+                    }
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_VOLUME:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PITCH:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MIN_DISTANCE:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MAX_DISTANCE:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_LOOP:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MUTED:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PLAY_ON_AWAKE:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_TIME:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_SET_CLIP:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_PLAY:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_PAUSE:
+                    case CW_MANAGED_BINDING_AUDIO_SOURCE_STOP: {
+                        Entity entity = resolveEntity();
+                        if (!entity || !entity.HasComponent<AudioSourceComponent>())
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+                        auto& source = entity.GetComponent<AudioSourceComponent>();
+                        if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_PLAY || binding == CW_MANAGED_BINDING_AUDIO_SOURCE_PAUSE ||
+                            binding == CW_MANAGED_BINDING_AUDIO_SOURCE_STOP)
+                        {
+                            if (input.length != 0)
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_PLAY)
+                                source.Play();
+                            else if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_PAUSE)
+                                source.Pause();
+                            else
+                                source.Stop();
+                            return CW_MANAGED_STATUS_OK;
+                        }
+                        if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_LOOP || binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MUTED ||
+                            binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PLAY_ON_AWAKE)
+                        {
+                            uint8_t value = 0;
+                            if (!ReadBindingValue(input, value))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_LOOP)
+                                source.SetLooping(value != 0);
+                            else if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MUTED)
+                                source.SetIsMuted(value != 0);
+                            else
+                                source.SetPlayOnAwake(value != 0);
+                            return CW_MANAGED_STATUS_OK;
+                        }
+                        if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_CLIP)
+                        {
+                            cw_managed_uuid value{};
+                            if (!ReadBindingValue(input, value))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            const UUID uuid = FromAbiUuid(value);
+                            if (uuid.Empty())
+                                source.SetClip({});
+                            else if (AssetManager::IsStartedUp())
+                                source.SetClip(AssetManager::TryGet()->LoadFromUUID<AudioClip>(uuid));
+                            else
+                                return CW_MANAGED_STATUS_NOT_INITIALIZED;
+                            return CW_MANAGED_STATUS_OK;
+                        }
+                        float value = 0.0f;
+                        if (!ReadBindingValue(input, value))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_VOLUME)
+                            source.SetVolume(value);
+                        else if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PITCH)
+                            source.SetPitch(value);
+                        else if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MIN_DISTANCE)
+                            source.SetMinDistance(value);
+                        else if (binding == CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MAX_DISTANCE)
+                            source.SetMaxDistance(value);
+                        else
+                            source.SetTime(value);
+                        return CW_MANAGED_STATUS_OK;
+                    }
                     default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                     }
                 }

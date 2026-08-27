@@ -21,8 +21,8 @@ namespace Crowny
         /// <value>A value in the range [0.0, 1.0].</value>
         public float volume
         {
-            get { return Internal_GetVolume(m_InternalPtr); }
-            set { Internal_SetVolume(m_InternalPtr, value); }
+            get { return GetVolume(); }
+            set { SetVolume(value); }
         }
 
         /// <summary>
@@ -30,8 +30,8 @@ namespace Crowny
         /// </summary>
         public float pitch
         {
-            get { return Internal_GetPitch(m_InternalPtr); }
-            set { Internal_SetPitch(m_InternalPtr, value); }
+            get { return GetPitch(); }
+            set { SetPitch(value); }
         }
 
         /// <summary>
@@ -39,8 +39,8 @@ namespace Crowny
         /// </summary>
         public float minDistance
         {
-            get { return Internal_GetMinDistance(m_InternalPtr); }
-            set { Internal_SetMinDistance(m_InternalPtr, value); }
+            get { return GetMinDistance(); }
+            set { SetMinDistance(value); }
         }
 
         /// <summary>
@@ -48,8 +48,8 @@ namespace Crowny
         /// </summary>
         public float maxDistance
         {
-            get { return Internal_GetMaxDistance(m_InternalPtr); }
-            set { Internal_SetMaxDistance(m_InternalPtr, value); }
+            get { return GetMaxDistance(); }
+            set { SetMaxDistance(value); }
         }
 
         /// <summary>
@@ -57,8 +57,8 @@ namespace Crowny
         /// </summary>
         public bool loop
         {
-            get { return Internal_GetLooping(m_InternalPtr); }
-            set { Internal_SetLooping(m_InternalPtr, value); }
+            get { return GetLooping(); }
+            set { SetLooping(value); }
         }
 
         /// <summary>
@@ -66,8 +66,8 @@ namespace Crowny
         /// </summary>
         public bool muted
         {
-            get { return Internal_GetIsMuted(m_InternalPtr); }
-            set { Internal_SetIsMuted(m_InternalPtr, value); }
+            get { return GetIsMuted(); }
+            set { SetIsMuted(value); }
         }
 
         /// <summary>
@@ -75,8 +75,8 @@ namespace Crowny
         /// </summary>
         public bool playOnAwake
         {
-            get { return Internal_GetPlayOnAwake(m_InternalPtr); }
-            set { Internal_SetPlayOnAwake(m_InternalPtr, value); }
+            get { return GetPlayOnAwake(); }
+            set { SetPlayOnAwake(value); }
         }
 
         /// <summary>
@@ -84,8 +84,8 @@ namespace Crowny
         /// </summary>
         public float time
         {
-            get { return Internal_GetTime(m_InternalPtr); }
-            set { Internal_SetTime(m_InternalPtr, value); }
+            get { return GetTime(); }
+            set { SetTime(value); }
         }
 
         /// <summary>
@@ -93,8 +93,8 @@ namespace Crowny
         /// </summary>
         public AudioClip clip
         {
-            get { return Internal_GetClip(m_InternalPtr); }
-            set { Internal_SetClip(m_InternalPtr, value); }
+            get { return GetClip(); }
+            set { SetClip(value); }
         }
 
         /// <summary>
@@ -102,7 +102,7 @@ namespace Crowny
         /// </summary>
         public AudioSourceState state
         {
-            get { return Internal_GetState(m_InternalPtr); }
+            get { return GetState(); }
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace Crowny
         /// </summary>
         public void Play()
         {
-            Internal_Play(m_InternalPtr);
+            InvokePlayback(ManagedBindingId.AudioSourcePlay);
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Crowny
         /// </summary>
         public void Pause()
         {
-            Internal_Pause(m_InternalPtr);
+            InvokePlayback(ManagedBindingId.AudioSourcePause);
         }
 
         /// <summary>
@@ -126,9 +126,65 @@ namespace Crowny
         /// </summary>
         public void Stop()
         {
-            Internal_Stop(m_InternalPtr);
+            InvokePlayback(ManagedBindingId.AudioSourceStop);
         }
 
+#if CROWNY_MONO
+        private float GetVolume() => Internal_GetVolume(m_InternalPtr);
+        private void SetVolume(float value) => Internal_SetVolume(m_InternalPtr, value);
+        private float GetPitch() => Internal_GetPitch(m_InternalPtr);
+        private void SetPitch(float value) => Internal_SetPitch(m_InternalPtr, value);
+        private float GetMinDistance() => Internal_GetMinDistance(m_InternalPtr);
+        private void SetMinDistance(float value) => Internal_SetMinDistance(m_InternalPtr, value);
+        private float GetMaxDistance() => Internal_GetMaxDistance(m_InternalPtr);
+        private void SetMaxDistance(float value) => Internal_SetMaxDistance(m_InternalPtr, value);
+        private bool GetLooping() => Internal_GetLooping(m_InternalPtr);
+        private void SetLooping(bool value) => Internal_SetLooping(m_InternalPtr, value);
+        private bool GetIsMuted() => Internal_GetIsMuted(m_InternalPtr);
+        private void SetIsMuted(bool value) => Internal_SetIsMuted(m_InternalPtr, value);
+        private bool GetPlayOnAwake() => Internal_GetPlayOnAwake(m_InternalPtr);
+        private void SetPlayOnAwake(bool value) => Internal_SetPlayOnAwake(m_InternalPtr, value);
+        private float GetTime() => Internal_GetTime(m_InternalPtr);
+        private void SetTime(float value) => Internal_SetTime(m_InternalPtr, value);
+        private AudioClip GetClip() => Internal_GetClip(m_InternalPtr);
+        private void SetClip(AudioClip value) => Internal_SetClip(m_InternalPtr, value);
+        private AudioSourceState GetState() => Internal_GetState(m_InternalPtr);
+        private void InvokePlayback(ManagedBindingId binding)
+        {
+            if (binding == ManagedBindingId.AudioSourcePlay)
+                Internal_Play(m_InternalPtr);
+            else if (binding == ManagedBindingId.AudioSourcePause)
+                Internal_Pause(m_InternalPtr);
+            else
+                Internal_Stop(m_InternalPtr);
+        }
+#else
+        private UUID EntityId => entity.uuid;
+        private float GetVolume() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetVolume, EntityId);
+        private void SetVolume(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetVolume, EntityId, value);
+        private float GetPitch() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetPitch, EntityId);
+        private void SetPitch(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetPitch, EntityId, value);
+        private float GetMinDistance() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetMinDistance, EntityId);
+        private void SetMinDistance(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetMinDistance, EntityId, value);
+        private float GetMaxDistance() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetMaxDistance, EntityId);
+        private void SetMaxDistance(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetMaxDistance, EntityId, value);
+        private bool GetLooping() => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.AudioSourceGetLoop, EntityId);
+        private void SetLooping(bool value) => ManagedRuntimeContext.SetBindingBoolean(ManagedBindingId.AudioSourceSetLoop, EntityId, value);
+        private bool GetIsMuted() => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.AudioSourceGetMuted, EntityId);
+        private void SetIsMuted(bool value) => ManagedRuntimeContext.SetBindingBoolean(ManagedBindingId.AudioSourceSetMuted, EntityId, value);
+        private bool GetPlayOnAwake() => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.AudioSourceGetPlayOnAwake, EntityId);
+        private void SetPlayOnAwake(bool value) => ManagedRuntimeContext.SetBindingBoolean(ManagedBindingId.AudioSourceSetPlayOnAwake, EntityId, value);
+        private float GetTime() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.AudioSourceGetTime, EntityId);
+        private void SetTime(float value) => ManagedRuntimeContext.SetBindingFloat(ManagedBindingId.AudioSourceSetTime, EntityId, value);
+        private AudioClip GetClip() => ManagedRuntimeContext.CreateAsset<AudioClip>(ManagedRuntimeContext.GetBindingUuid(ManagedBindingId.AudioSourceGetClip, EntityId));
+        private void SetClip(AudioClip value) => ManagedRuntimeContext.SetBindingUuid(ManagedBindingId.AudioSourceSetClip, EntityId,
+                                                                                       value?.uuid ?? UUID.Empty);
+        private AudioSourceState GetState() =>
+            (AudioSourceState)ManagedRuntimeContext.GetBindingInt32(ManagedBindingId.AudioSourceGetState, EntityId);
+        private void InvokePlayback(ManagedBindingId binding) => ManagedRuntimeContext.InvokeBinding(binding, EntityId);
+#endif
+
+#if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern float Internal_GetVolume(IntPtr parent);
         [MethodImpl(MethodImplOptions.InternalCall)]
@@ -174,6 +230,7 @@ namespace Crowny
         private static extern void Internal_Pause(IntPtr parent);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_Stop(IntPtr parent);
+#endif
 
     }
 }
