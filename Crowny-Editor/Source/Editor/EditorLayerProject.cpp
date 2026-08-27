@@ -68,6 +68,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <limits>
 #include <spdlog/fmt/fmt.h>
 
 #include "Crowny/ImGui/ImGuiVulkanTexture.h"
@@ -511,7 +512,14 @@ namespace Crowny
         }
         const ApplicationDesc& description = application->GetApplicationDesc();
         const Path assemblyDirectory = Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH;
-        const uint64_t generation = std::max<uint64_t>(m_AssemblyReloadDebouncer.GetGeneration(), 1);
+        if (m_ManagedBuildGeneration == std::numeric_limits<uint64_t>::max())
+        {
+            CW_ENGINE_ERROR("Managed build generations are exhausted for this editor process.");
+            return false;
+        }
+        m_ManagedBuildGeneration =
+          std::max<uint64_t>(m_ManagedBuildGeneration + 1, std::max<uint64_t>(m_AssemblyReloadDebouncer.GetGeneration(), 2));
+        const uint64_t generation = m_ManagedBuildGeneration;
         const Path stagingDirectory = assemblyDirectory / ".staging" / std::to_string(generation);
         std::error_code fsError;
         fs::remove_all(stagingDirectory, fsError);

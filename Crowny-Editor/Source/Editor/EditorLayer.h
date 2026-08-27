@@ -192,6 +192,7 @@ namespace Crowny
         Mutex m_FileWatchMutex;
         Vector<Path> m_FileWatchQueue;
         ManagedReloadDebouncer m_AssemblyReloadDebouncer;
+        uint64_t m_ManagedBuildGeneration = 0;
 
         Stack<UndoAction> m_UndoStack;
 
