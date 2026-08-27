@@ -47,7 +47,11 @@ namespace Crowny
             if (value.Kind == ScriptValueKind::Object)
             {
                 for (auto& [name, member] : value.Members)
+                {
+                    ImGui::PushID(name.c_str());
                     changed |= DrawScriptValue(name, member);
+                    ImGui::PopID();
+                }
             }
             else
             {
@@ -123,11 +127,13 @@ namespace Crowny
             }
             case ScriptValueKind::Entity:
             case ScriptValueKind::Asset:
-            case ScriptValueKind::Uuid:
+            case ScriptValueKind::Uuid: {
+                const String reference = value.ReferenceValue == UUID::EMPTY ? String("None") : value.ReferenceValue.ToString();
                 UI::Pre(label.c_str());
-                ImGui::TextUnformatted(value.ReferenceValue == UUID::EMPTY ? "None" : value.ReferenceValue.ToString().c_str());
+                ImGui::TextUnformatted(reference.c_str());
                 UI::Post();
                 return false;
+            }
             case ScriptValueKind::Array:
             case ScriptValueKind::List:
             case ScriptValueKind::Dictionary:
@@ -150,11 +156,13 @@ namespace Crowny
                     continue;
                 ScriptValue& value = state.Root.Members.try_emplace(field.Name, DefaultValue(field.ValueKind)).first->second;
                 const bool readOnly = (field.Flags & ScriptFieldFlags::ReadOnly) != ScriptFieldFlags::None;
+                ImGui::PushID(field.Name.c_str());
                 if (readOnly)
                     ImGui::BeginDisabled();
                 changed |= DrawScriptValue(field.Name, value);
                 if (readOnly)
                     ImGui::EndDisabled();
+                ImGui::PopID();
             }
             return changed;
         }
@@ -164,7 +172,7 @@ namespace Crowny
     {
         ManagedScripting* managed = Application::TryGet()->GetRuntime().GetManagedScripting();
         MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
-        for (uint32_t index = 0; index < scriptComponent.Scripts.size(); ++index)
+        for (uint32_t index = 0; index < scriptComponent.Scripts.size();)
         {
             MonoScript& script = scriptComponent.Scripts[index];
             ImGui::PushID(static_cast<int>(index));
@@ -176,7 +184,6 @@ namespace Crowny
                 ImGui::PopID();
                 if (!entity.HasComponent<MonoScriptComponent>())
                     return;
-                --index;
                 continue;
             }
             ImGui::SameLine();
@@ -211,6 +218,7 @@ namespace Crowny
                 ImGui::Unindent(30.0f);
             }
             ImGui::PopID();
+            ++index;
         }
     }
 } // namespace Crowny
