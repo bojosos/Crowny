@@ -248,7 +248,8 @@ TEST_CASE("Value-returning snapshots use the simulation frame for history aging"
     struct ResetTimeOnExit
     {
         ~ResetTimeOnExit() { Time::Reset(); }
-    } resetTime;
+    };
+    [[maybe_unused]] const ResetTimeOnExit resetTime;
 
     Time::Reset();
     const Ref<Scene> scene = CreateRef<Scene>(false);
