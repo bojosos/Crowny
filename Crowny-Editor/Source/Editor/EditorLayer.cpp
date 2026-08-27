@@ -19,12 +19,6 @@
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
-#include "Crowny/Scripting/Mono/MonoArray.h"
-#include "Crowny/Scripting/Mono/MonoAssembly.h"
-#include "Crowny/Scripting/Mono/MonoManager.h"
-#include "Crowny/Scripting/Mono/MonoMethod.h"
-#include "Crowny/Scripting/Mono/MonoProperty.h"
-#include "Crowny/Scripting/Mono/MonoUtils.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/PrefabUtils.h"
@@ -59,8 +53,6 @@
 #include "Crowny/Scripting/Bindings/Utils/ScriptCompression.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptJSON.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
-
 #include "Crowny/Renderer/Font.h"
 
 #include "Build/BuildManager.h"

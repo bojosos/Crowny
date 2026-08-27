@@ -241,6 +241,14 @@ namespace Crowny
                 !ReadString(value, "TypeName", type.Identity.TypeName))
                 return ManagedOperationResult::Failure("managed.catalog.json_type_invalid", "The managed catalog contains an invalid type.", backend);
             type.StableId = value["StableId"].GetUint64();
+            if (value.HasMember("RunInEditor"))
+            {
+                if (!value["RunInEditor"].IsBool())
+                    return ManagedOperationResult::Failure("managed.catalog.json_type_invalid",
+                                                           "The managed catalog contains an invalid edit-mode flag.", backend);
+                if (value["RunInEditor"].GetBool())
+                    type.Flags = type.Flags | ScriptTypeFlags::RunInEditor;
+            }
             if (value.HasMember("FormerIdentities"))
             {
                 if (!value["FormerIdentities"].IsArray())

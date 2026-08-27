@@ -6,7 +6,6 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Serialization/SceneSerializer.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptSceneManager.h"
 #include "Crowny/Window/Window.h"
 
 namespace Crowny
@@ -478,7 +477,7 @@ namespace Crowny
             for (const LifecycleListener& listener : listeners)
                 listener(event);
         }
-        ScriptSceneManager::DispatchPendingEvents();
+        ScriptRuntime::NotifySceneEventsAvailable();
     }
 
     void SceneManager::BeginCallbackDispatch() { ++m_CallbackDepth; }

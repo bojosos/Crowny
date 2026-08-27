@@ -18,12 +18,7 @@
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/ManagedReload.h"
-#include "Crowny/Scripting/Mono/MonoArray.h"
-#include "Crowny/Scripting/Mono/MonoAssembly.h"
-#include "Crowny/Scripting/Mono/MonoManager.h"
-#include "Crowny/Scripting/Mono/MonoMethod.h"
-#include "Crowny/Scripting/Mono/MonoProperty.h"
-#include "Crowny/Scripting/Mono/MonoUtils.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/PrefabUtils.h"
@@ -58,9 +53,6 @@
 #include "Crowny/Scripting/Bindings/Utils/ScriptCompression.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptJSON.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
-#include "Crowny/Scripting/ScriptObjectManager.h"
-
 #include "Crowny/Renderer/Font.h"
 
 #include "Build/BuildManager.h"
@@ -743,58 +735,27 @@ namespace Crowny
         UI::EndPropertyGrid();
     }
 
-    static void DrawClass(MonoClass* klass)
+    static void DrawScriptType(const ScriptTypeSchema& type)
     {
-        if (ImGui::TreeNode(klass->GetName().c_str()))
+        const String label = type.Identity.Assembly + ":" + type.Identity.GetFullName();
+        if (ImGui::TreeNode(label.c_str()))
         {
-            if (ImGui::TreeNode("Methods"))
+            ImGui::Text("Stable id: %llu", static_cast<unsigned long long>(type.StableId));
+            ImGui::Text("Runs in editor: %s",
+                        (type.Flags & ScriptTypeFlags::RunInEditor) != ScriptTypeFlags::None ? "yes" : "no");
+            if (ImGui::TreeNode("Callbacks"))
             {
-                for (MonoMethod* method : klass->GetMethods())
-                {
-                    if (ImGui::TreeNode(method->GetName().c_str()))
-                    {
-                        for (MonoClass* attribute : method->GetAttributes())
-                            DrawClass(attribute);
-                        ImGui::TreePop();
-                    }
-                }
+                for (ScriptEventKind event : type.Events)
+                    ImGui::BulletText("Event %u", static_cast<uint32_t>(event));
                 ImGui::TreePop();
             }
             if (ImGui::TreeNode("Fields"))
             {
-                for (MonoField* field : klass->GetFields())
+                for (const ScriptFieldSchema& field : type.Fields)
                 {
-                    bool expanded = ImGui::TreeNode(field->GetFullDeclName().c_str());
-                    ImGui::SameLine();
-                    ImGui::Text("%s", field->GetType()->GetFullName().c_str());
-                    ImGui::SameLine();
-                    ImGui::Text("%s", field->GetName().c_str());
-                    if (expanded)
-                    {
-                        for (MonoClass* attribute : field->GetAttributes())
-                            DrawClass(attribute);
-                        ImGui::TreePop();
-                    }
+                    ImGui::BulletText("%s (kind %u, stable id %llu)", field.Name.c_str(), static_cast<uint32_t>(field.ValueKind),
+                                      static_cast<unsigned long long>(field.StableId));
                 }
-                ImGui::TreePop();
-            }
-            if (ImGui::TreeNode("Properties"))
-            {
-                for (MonoProperty* prop : klass->GetProperties())
-                {
-                    if (ImGui::TreeNode(prop->GetName().c_str()))
-                    {
-                        for (MonoClass* attribute : prop->GetAttributes())
-                            DrawClass(attribute);
-                        ImGui::TreePop();
-                    }
-                }
-                ImGui::TreePop();
-            }
-            if (ImGui::TreeNode("Attributes"))
-            {
-                for (MonoClass* attribute : klass->GetAttributes())
-                    DrawClass(attribute);
                 ImGui::TreePop();
             }
             ImGui::TreePop();
@@ -1035,10 +996,15 @@ namespace Crowny
             UIUtils::AssetReference<AudioClip>("Clip", audioHandle);
             static AssetHandle<Shader> shaderHandle;
             UIUtils::AssetReference<Shader>("Shader", shaderHandle);
-            MonoAssembly* gameAssembly = MonoManager::Get().GetAssembly(GAME_ASSEMBLY);
-            for (MonoClass* klass : gameAssembly->GetClasses())
+            ManagedScripting* managed = Application::TryGet()->GetRuntime().GetManagedScripting();
+            if (managed == nullptr || !managed->IsStarted())
+                ImGui::TextDisabled("Managed scripting is unavailable.");
+            else
             {
-                DrawClass(klass);
+                const ScriptCatalog& catalog = managed->GetScriptCatalog();
+                ImGui::Text("Manifest %u, %zu script types", catalog.ManifestVersion, catalog.Types.size());
+                for (const ScriptTypeSchema& type : catalog.Types)
+                    DrawScriptType(type);
             }
             ImGui::End();
         }

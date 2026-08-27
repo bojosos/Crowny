@@ -11,9 +11,6 @@
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics3D.h"
 
-#include "Crowny/Scripting/ScriptInfoManager.h"
-#include "Crowny/Scripting/ScriptSceneObjectManager.h"
-
 #include <entt/entt.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -949,9 +946,7 @@ namespace Crowny
         if (initialize)
         {
             ScriptRuntime::CreateScript(entity, script, false);
-            MonoClass* monoClass = script.GetManagedClass();
-            MonoClass* runInEditor = ScriptInfoManager::IsStartedUp() ? ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute : nullptr;
-            if (m_RuntimeActive || (m_IsEditorScene && monoClass != nullptr && runInEditor != nullptr && monoClass->HasAttribute(runInEditor)))
+            if (m_RuntimeActive || (m_IsEditorScene && ScriptRuntime::RunsInEditor(script.GetTypeIdentity())))
                 ScriptRuntime::Dispatch(script, ScriptEvent::Lifecycle(ScriptEventKind::Start));
         }
         return true;
@@ -1191,10 +1186,8 @@ namespace Crowny
 
     void Scene::OnTransformComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (!ScriptSceneObjectManager::IsStartedUp())
-            return;
         Entity e = { entity, this };
-        ScriptSceneObjectManager::Get().NotifyEntityDestroyed(e);
+        ScriptRuntime::NotifyEntityDestroyed(e);
     }
 
     void Scene::OnMonoScriptComponentDestroy(entt::registry& registry, entt::entity entity)
@@ -1204,8 +1197,7 @@ namespace Crowny
         for (auto& script : msc.Scripts)
         {
             ScriptRuntime::DestroyScript(e, script);
-            if (ScriptSceneObjectManager::IsStartedUp())
-                ScriptSceneObjectManager::Get().NotifyComponentDestroyed(script.InstanceId);
+            ScriptRuntime::NotifyComponentDestroyed(script.InstanceId);
         }
     }
 

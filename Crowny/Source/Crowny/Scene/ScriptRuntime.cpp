@@ -5,11 +5,9 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scene/ScriptRuntime.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptSceneManager.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 #include "Crowny/Scripting/Managed/LegacyScriptState.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
-#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 namespace Crowny
 {
@@ -85,11 +83,6 @@ namespace Crowny
             return script != scripts.end() ? &*script : nullptr;
         }
 
-        void DispatchPendingMonoEvents()
-        {
-            if (ScriptSceneObjectManager::IsStartedUp())
-                ScriptSceneManager::DispatchPendingEvents();
-        }
     } // namespace
 
     void ScriptRuntime::Init() {}
@@ -190,6 +183,31 @@ namespace Crowny
         return true;
     }
 
+    bool ScriptRuntime::RunsInEditor(const ScriptTypeIdentity& identity)
+    {
+        ManagedScripting* managed = GetManagedScripting();
+        const ScriptTypeSchema* schema = managed != nullptr ? managed->GetScriptCatalog().FindType(identity) : nullptr;
+        return schema != nullptr && (schema->Flags & ScriptTypeFlags::RunInEditor) != ScriptTypeFlags::None;
+    }
+
+    void ScriptRuntime::NotifyEntityDestroyed(const Entity& entity)
+    {
+        if (ManagedScripting* managed = GetManagedScripting())
+            managed->NotifyEntityDestroyed(entity);
+    }
+
+    void ScriptRuntime::NotifyComponentDestroyed(uint64_t instanceId)
+    {
+        if (ManagedScripting* managed = GetManagedScripting())
+            managed->NotifyComponentDestroyed(instanceId);
+    }
+
+    void ScriptRuntime::NotifySceneEventsAvailable()
+    {
+        if (ManagedScripting* managed = GetManagedScripting())
+            managed->NotifySceneEventsAvailable();
+    }
+
     void ScriptRuntime::OnStart() { OnStart(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
 
     void ScriptRuntime::OnStart(const Ref<Scene>& scene)
@@ -208,7 +226,6 @@ namespace Crowny
                     CreateScript(entity, *script, true);
             }
         }
-        DispatchPendingMonoEvents();
     }
 
     void ScriptRuntime::OnUpdate() { OnUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
@@ -231,7 +248,6 @@ namespace Crowny
         }
         if (ManagedScripting* managed = GetManagedScripting())
             LogDiagnostics(managed->Update());
-        DispatchPendingMonoEvents();
     }
 
     void ScriptRuntime::OnShutdown() { OnShutdown(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
@@ -251,8 +267,8 @@ namespace Crowny
                 DestroyScript(entity, *script, true);
         }
 
-        if (ScriptSceneObjectManager::IsStartedUp())
-            ScriptSceneObjectManager::Get().DestroySceneObjects(scene.get());
+        if (ManagedScripting* managed = GetManagedScripting())
+            managed->NotifySceneDestroyed(scene.get());
     }
 
     void ScriptRuntime::Reload()

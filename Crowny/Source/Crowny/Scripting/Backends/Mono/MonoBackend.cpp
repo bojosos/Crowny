@@ -7,6 +7,7 @@
 #include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Bindings/ScriptBindings.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptSceneManager.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
 #include "Crowny/Scripting/Managed/LegacyScriptState.h"
 #include "Crowny/Scripting/ManagedReload.h"
@@ -211,6 +212,9 @@ namespace Crowny
                 }
                 AppendFields(objectInfo, schema.Fields);
                 schema.Events = GetEvents(type);
+                MonoClass* runInEditor = ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute;
+                if (runInEditor != nullptr && type->HasAttribute(runInEditor))
+                    schema.Flags = schema.Flags | ScriptTypeFlags::RunInEditor;
                 catalog.Types.push_back(std::move(schema));
             }
             std::sort(catalog.Types.begin(), catalog.Types.end(), [](const ScriptTypeSchema& left, const ScriptTypeSchema& right) {
@@ -881,8 +885,30 @@ namespace Crowny
             {
                 if (ScriptObjectManager::IsStartedUp())
                     ScriptObjectManager::Get().Update();
+                if (ScriptSceneObjectManager::IsStartedUp())
+                    ScriptSceneManager::DispatchPendingEvents();
                 return {};
             }
+
+            void NotifyEntityDestroyed(const Entity& entity) override
+            {
+                if (ScriptSceneObjectManager::IsStartedUp())
+                    ScriptSceneObjectManager::Get().NotifyEntityDestroyed(entity);
+            }
+
+            void NotifyComponentDestroyed(uint64_t instanceId) override
+            {
+                if (ScriptSceneObjectManager::IsStartedUp())
+                    ScriptSceneObjectManager::Get().NotifyComponentDestroyed(instanceId);
+            }
+
+            void NotifySceneDestroyed(const Scene* scene) override
+            {
+                if (ScriptSceneObjectManager::IsStartedUp())
+                    ScriptSceneObjectManager::Get().DestroySceneObjects(scene);
+            }
+
+            void NotifySceneEventsAvailable() override { ScriptSceneManager::DispatchPendingEvents(); }
 
         private:
             struct Instance

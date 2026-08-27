@@ -190,6 +190,30 @@ namespace Crowny
 
     Vector<ManagedDiagnostic> ManagedScripting::Update() { return IsStarted() ? m_Backend->Update() : Vector<ManagedDiagnostic>{}; }
 
+    void ManagedScripting::NotifyEntityDestroyed(const Entity& entity)
+    {
+        if (IsStarted())
+            m_Backend->NotifyEntityDestroyed(entity);
+    }
+
+    void ManagedScripting::NotifyComponentDestroyed(uint64_t instanceId)
+    {
+        if (IsStarted())
+            m_Backend->NotifyComponentDestroyed(instanceId);
+    }
+
+    void ManagedScripting::NotifySceneDestroyed(const Scene* scene)
+    {
+        if (IsStarted())
+            m_Backend->NotifySceneDestroyed(scene);
+    }
+
+    void ManagedScripting::NotifySceneEventsAvailable()
+    {
+        if (IsStarted())
+            m_Backend->NotifySceneEventsAvailable();
+    }
+
     ManagedOperationResult ManagedScripting::RequireStarted() const
     {
         return IsStarted() ? ManagedOperationResult::Success()

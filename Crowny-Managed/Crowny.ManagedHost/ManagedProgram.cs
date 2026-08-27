@@ -111,6 +111,7 @@ internal sealed class ManagedProgram
             TypeName = TypeName(type),
             FormerIdentities = FormerIdentities(type, legacyIdentityCounts),
             BaseType = type.BaseType is { } baseType && baseType != typeof(EntityBehaviour) ? CatalogIdentity(baseType) : null,
+            RunInEditor = type.IsDefined(typeof(RunInEditor), inherit: true),
             Events = LifecycleEvents(type),
             Fields = Members(type).Select(member => new
             {

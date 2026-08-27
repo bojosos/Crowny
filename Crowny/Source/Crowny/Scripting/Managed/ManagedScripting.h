@@ -4,7 +4,9 @@
 
 namespace Crowny
 {
+    class Entity;
     class ManagedBackend;
+    class Scene;
 
     class ManagedScripting
     {
@@ -30,6 +32,10 @@ namespace Crowny
         ScriptStateResult CaptureState(ScriptInstanceHandle handle);
         ManagedOperationResult ApplyState(ScriptInstanceHandle handle, const ScriptState& state);
         Vector<ManagedDiagnostic> Update();
+        void NotifyEntityDestroyed(const Entity& entity);
+        void NotifyComponentDestroyed(uint64_t instanceId);
+        void NotifySceneDestroyed(const Scene* scene);
+        void NotifySceneEventsAvailable();
 
     private:
         struct InstanceSlot

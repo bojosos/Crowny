@@ -266,13 +266,14 @@ TEST_CASE("Managed catalog preserves unambiguous nested script identities", "[Sc
     const String json =
       R"({"ManifestVersion":1,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
       R"("TypeName":"Outer+Mover","FormerIdentities":[{"Assembly":"GameAssembly","Namespace":"Game",)"
-      R"("TypeName":"Mover"}],"BaseType":null,"Events":["Start"],"Fields":[]}]})";
+      R"("TypeName":"Mover"}],"BaseType":null,"RunInEditor":true,"Events":["Start"],"Fields":[]}]})";
     ScriptCatalog catalog;
     const ManagedOperationResult result = ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR);
     REQUIRE(result.Succeeded);
     REQUIRE(catalog.Types.size() == 1);
     CHECK(catalog.FindType({ "GameAssembly", "Game", "Outer+Mover" }) == &catalog.Types.front());
     CHECK(catalog.FindType({ "GameAssembly", "Game", "Mover" }) == &catalog.Types.front());
+    CHECK((catalog.Types.front().Flags & ScriptTypeFlags::RunInEditor) != ScriptTypeFlags::None);
 
     String invalid = json;
     const size_t event = invalid.find("Start");

@@ -4,6 +4,9 @@
 
 namespace Crowny
 {
+    class Entity;
+    class Scene;
+
     struct ManagedBackendCreateResult
     {
         ManagedOperationResult Result;
@@ -48,6 +51,10 @@ namespace Crowny
         virtual ManagedBackendStateResult CaptureState(uint64_t handle) = 0;
         virtual ManagedOperationResult ApplyState(uint64_t handle, const ScriptState& state) = 0;
         virtual Vector<ManagedDiagnostic> Update() = 0;
+        virtual void NotifyEntityDestroyed(const Entity&) {}
+        virtual void NotifyComponentDestroyed(uint64_t) {}
+        virtual void NotifySceneDestroyed(const Scene*) {}
+        virtual void NotifySceneEventsAvailable() {}
     };
 
     Scope<ManagedBackend> CreateManagedBackend(ManagedBackendId backend);

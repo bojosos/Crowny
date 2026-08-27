@@ -25,6 +25,10 @@ namespace Crowny
         static void Dispatch(MonoScript& script, const ScriptEvent& event);
         static ScriptState CaptureState(MonoScript& script);
         static bool ApplyState(MonoScript& script, const ScriptState& state);
+        static bool RunsInEditor(const ScriptTypeIdentity& identity);
+        static void NotifyEntityDestroyed(const Entity& entity);
+        static void NotifyComponentDestroyed(uint64_t instanceId);
+        static void NotifySceneEventsAvailable();
 
         static void Reload();
         static void UnloadAssemblies();

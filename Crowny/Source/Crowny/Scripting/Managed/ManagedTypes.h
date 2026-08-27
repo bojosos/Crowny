@@ -167,6 +167,22 @@ namespace Crowny
         ScriptSchemaFieldFlags Flags = ScriptSchemaFieldFlags::None;
     };
 
+    enum class ScriptTypeFlags : uint32_t
+    {
+        None = 0,
+        RunInEditor = 1 << 0
+    };
+
+    constexpr ScriptTypeFlags operator|(ScriptTypeFlags lhs, ScriptTypeFlags rhs)
+    {
+        return static_cast<ScriptTypeFlags>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
+    }
+
+    constexpr ScriptTypeFlags operator&(ScriptTypeFlags lhs, ScriptTypeFlags rhs)
+    {
+        return static_cast<ScriptTypeFlags>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
+    }
+
     struct ScriptTypeSchema
     {
         uint64_t StableId = 0;
@@ -175,6 +191,7 @@ namespace Crowny
         ScriptTypeIdentity BaseType;
         Vector<ScriptFieldSchema> Fields;
         Vector<ScriptEventKind> Events;
+        ScriptTypeFlags Flags = ScriptTypeFlags::None;
     };
 
     struct ScriptCatalog
