@@ -9,6 +9,7 @@
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
+#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/ImGui/ImGuiMenu.h"
 #include "Crowny/Physics/Physics2D.h"
@@ -76,6 +77,85 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        String EscapeXml(String value)
+        {
+            value = StringUtils::Replace(value, "&", "&amp;");
+            value = StringUtils::Replace(value, "\"", "&quot;");
+            value = StringUtils::Replace(value, "<", "&lt;");
+            value = StringUtils::Replace(value, ">", "&gt;");
+            return value;
+        }
+
+        Vector<Path> CollectGameScriptFiles()
+        {
+            Vector<Path> scripts;
+            const Vector<Ref<LibraryEntry>> entries = ProjectLibrary::Get().Search("*", { AssetType::ScriptCode });
+            for (const Ref<LibraryEntry>& entry : entries)
+            {
+                if (entry->Type != LibraryEntryType::File)
+                    continue;
+                const auto* file = static_cast<const FileEntry*>(entry.get());
+                const Ref<CSharpScriptImportOptions> options =
+                  StaticRefCast<CSharpScriptImportOptions>(file->Metadata->ImportOptions);
+                if (options == nullptr || !options->IsEditorScript)
+                    scripts.push_back(file->Filepath);
+            }
+            std::sort(scripts.begin(), scripts.end());
+            scripts.erase(std::unique(scripts.begin(), scripts.end()), scripts.end());
+            return scripts;
+        }
+
+        const ManagedProgramArtifact* FindManagedArtifact(const ManagedProgramDefinition& program, ManagedProgramArtifactKind kind,
+                                                          StringView logicalName)
+        {
+            const auto artifact = std::find_if(program.Artifacts.begin(), program.Artifacts.end(), [&](const ManagedProgramArtifact& value) {
+                return value.Kind == kind && value.LogicalName == logicalName;
+            });
+            return artifact != program.Artifacts.end() ? &*artifact : nullptr;
+        }
+
+        bool WriteCoreClrGameProject(const Path& projectFile, const Vector<Path>& scripts, const Path& apiAssembly)
+        {
+            StringStream sourceItems;
+            for (const Path& script : scripts)
+                sourceItems << "    <Compile Include=\"" << EscapeXml(fs::absolute(script).generic_string()) << "\" />\n";
+
+            const String project =
+              "<Project Sdk=\"Microsoft.NET.Sdk\">\n"
+              "  <PropertyGroup>\n"
+              "    <TargetFramework>net10.0</TargetFramework>\n"
+              "    <AssemblyName>GameAssembly</AssemblyName>\n"
+              "    <RootNamespace>GameAssembly</RootNamespace>\n"
+              "    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>\n"
+              "    <Nullable>disable</Nullable>\n"
+              "    <Deterministic>true</Deterministic>\n"
+              "    <GenerateDependencyFile>true</GenerateDependencyFile>\n"
+              "  </PropertyGroup>\n"
+              "  <ItemGroup>\n" +
+              sourceItems.str() +
+              "  </ItemGroup>\n"
+              "  <ItemGroup>\n"
+              "    <Reference Include=\"CrownySharp\">\n"
+              "      <HintPath>" +
+              EscapeXml(fs::absolute(apiAssembly).generic_string()) +
+              "</HintPath>\n"
+              "      <Private>true</Private>\n"
+              "    </Reference>\n"
+              "  </ItemGroup>\n"
+              "</Project>\n";
+            return FileSystem::WriteTextFile(projectFile, project);
+        }
+
+        void LogManagedBuildDiagnostics(const Vector<ManagedBuildDiagnostic>& diagnostics)
+        {
+            for (const ManagedBuildDiagnostic& diagnostic : diagnostics)
+                CW_ENGINE_ERROR("Managed build [{}] {}{}", diagnostic.Code, diagnostic.Message,
+                                diagnostic.Subject.empty() ? String() : " (" + diagnostic.Subject.string() + ")");
+        }
+    } // namespace
+
     void EditorLayer::SetProjectSettings()
     {
         Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
@@ -422,34 +502,16 @@ namespace Crowny
 
     bool EditorLayer::RebuildAssemblies()
     {
-        MonoClass* scriptCompiler = ScriptInfoManager::Get().GetBuiltinClasses().ScriptCompiler;
-        if (scriptCompiler == nullptr)
+        Application* application = Application::TryGet();
+        ManagedScripting* managed = application != nullptr ? application->GetRuntime().GetManagedScripting() : nullptr;
+        if (application == nullptr || managed == nullptr || !managed->IsStarted())
         {
-            CW_ENGINE_ERROR("Cannot build game scripts because Crowny.ScriptCompiler is unavailable.");
+            CW_ENGINE_ERROR("Managed runtime is unavailable; game scripts cannot be built or loaded.");
             return false;
         }
-
-        MonoMethod* compileMethod = scriptCompiler->GetMethod("Compile", 7);
-        if (compileMethod == nullptr)
-        {
-            CW_ENGINE_ERROR("CrownySharp.dll is out of date. Rebuild Crowny-Sharp before compiling game scripts.");
-            return false;
-        }
-
-        uint32_t type = 0;
-        bool debug = true;
-        const Path engineAssemblyPath =
-          Application::TryGet()->GetApplicationDesc().WorkingDirectory / Application::TryGet()->GetApplicationDesc().EngineAssemblyPath;
-        const Path compilerPath = MonoManager::Get().GetCompilerPath();
-        if (!fs::is_regular_file(engineAssemblyPath) || !fs::is_regular_file(compilerPath))
-        {
-            CW_ENGINE_ERROR("Managed build prerequisites are missing. Engine assembly: {0}, compiler: {1}", engineAssemblyPath.string(),
-                            compilerPath.string());
-            return false;
-        }
-
+        const ApplicationDesc& description = application->GetApplicationDesc();
         const Path assemblyDirectory = Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH;
-        const uint64_t generation = m_AssemblyReloadDebouncer.GetGeneration();
+        const uint64_t generation = std::max<uint64_t>(m_AssemblyReloadDebouncer.GetGeneration(), 1);
         const Path stagingDirectory = assemblyDirectory / ".staging" / std::to_string(generation);
         std::error_code fsError;
         fs::remove_all(stagingDirectory, fsError);
@@ -461,41 +523,113 @@ namespace Crowny
             return false;
         }
 
-        ScriptArray libDirs = ScriptArray::Create<String>(1);
-        libDirs.Set<String>(0, engineAssemblyPath.parent_path().string());
-        ScriptArray refs = ScriptArray::Create<String>(1);
-        refs.Set<String>(0, engineAssemblyPath.filename().string());
-
-        void* params[7] = { &type,
-                            &debug,
-                            MonoUtils::ToMonoString(stagingDirectory.string()),
-                            MonoUtils::ToMonoString(ProjectLibrary::Get().GetAssetFolder().string()),
-                            libDirs.GetInternal(),
-                            refs.GetInternal(),
-                            MonoUtils::ToMonoString(compilerPath.string()) };
-        MonoObject* result = compileMethod->Invoke(nullptr, params);
-        const bool compiled = result != nullptr && *static_cast<bool*>(MonoUtils::Unbox(result));
-        const Path stagedGameAssembly = stagingDirectory / "GameAssembly.dll";
-        if (!compiled || !fs::is_regular_file(stagedGameAssembly))
+        Vector<Path> scripts = CollectGameScriptFiles();
+        if (scripts.empty())
         {
-            CW_ENGINE_ERROR("Game script build failed. Keeping the current managed domain active.");
+            const Path emptyAssemblySource = stagingDirectory / "EmptyGameAssembly.g.cs";
+            if (!FileSystem::WriteTextFile(emptyAssemblySource, "// Generated for a project with no gameplay scripts.\n"))
+            {
+                CW_ENGINE_ERROR("Could not write the empty managed game assembly source.");
+                return false;
+            }
+            scripts.push_back(emptyAssemblySource);
+        }
+        const Path stagedGameAssembly = stagingDirectory / "GameAssembly.dll";
+        const Path stagedGameDependencies = stagingDirectory / "GameAssembly.deps.json";
+        ManagedProgramDefinition program;
+        program.Generation = generation;
+
+        if (description.Script.Backend == ManagedBackendPreset::CoreCLR)
+        {
+            Path manifest = description.Script.ProgramManifest;
+            if (manifest.is_relative())
+                manifest = description.WorkingDirectory / manifest;
+            ManagedProgramPackageResult package = LoadManagedProgramPackage(manifest, generation);
+            if (!package.Result.Succeeded)
+            {
+                for (const ManagedDiagnostic& diagnostic : package.Result.Diagnostics)
+                    CW_ENGINE_ERROR("Managed package [{}]: {}", diagnostic.Code, diagnostic.Message);
+                return false;
+            }
+            const ManagedProgramArtifact* hostAssembly =
+              FindManagedArtifact(package.Package.Program, ManagedProgramArtifactKind::EngineAssembly, "managed-host");
+            const Path apiAssembly = hostAssembly != nullptr ? hostAssembly->Filepath.parent_path() / "CrownySharp.dll" : Path();
+            if (!fs::is_regular_file(apiAssembly))
+            {
+                CW_ENGINE_ERROR("The CoreCLR package does not contain the CrownySharp API assembly beside its managed host.");
+                return false;
+            }
+            const Path projectFile = stagingDirectory / "GameAssembly.Managed.csproj";
+            if (!WriteCoreClrGameProject(projectFile, scripts, apiAssembly))
+            {
+                CW_ENGINE_ERROR("Could not write the SDK-style game project at {}.", projectFile.string());
+                return false;
+            }
+            DotNetSdk sdk = LocateDotNetSdk(description.WorkingDirectory / ".deps" / "dotnet");
+            ManagedSdkBuildRequest request;
+            request.ProjectFile = projectFile;
+            request.OutputDirectory = stagingDirectory;
+            ManagedSdkBuildResult result = BuildManagedSdkProject(request, sdk);
+            if (!result.Succeeded())
+            {
+                LogManagedBuildDiagnostics(result.Diagnostics);
+                if (!result.StandardOutput.empty())
+                    CW_ENGINE_ERROR("{}", result.StandardOutput);
+                if (!result.StandardError.empty())
+                    CW_ENGINE_ERROR("{}", result.StandardError);
+                return false;
+            }
+            program = std::move(package.Package.Program);
+            program.Generation = generation;
+            std::erase_if(program.Artifacts, [](const ManagedProgramArtifact& artifact) {
+                return artifact.Kind == ManagedProgramArtifactKind::GameAssembly ||
+                       (artifact.Kind == ManagedProgramArtifactKind::DependencyManifest && artifact.LogicalName == "game");
+            });
+            program.Artifacts.push_back({ ManagedProgramArtifactKind::GameAssembly, "game", stagedGameAssembly });
+            program.Artifacts.push_back({ ManagedProgramArtifactKind::DependencyManifest, "game", stagedGameDependencies });
+        }
+        else if (description.Script.Backend == ManagedBackendPreset::Mono)
+        {
+            Path engineAssemblyPath = description.EngineAssemblyPath;
+            if (engineAssemblyPath.is_relative())
+                engineAssemblyPath = description.WorkingDirectory / engineAssemblyPath;
+            ManagedToolchain toolchain = LocateManagedToolchain(description.Script.RuntimeRoot);
+            ManagedBuildRequest request;
+            request.ProjectRoot = Editor::Get().GetProjectPath();
+            request.OutputAssembly = stagedGameAssembly;
+            request.Sources = scripts;
+            request.References = { engineAssemblyPath };
+            request.Symbols = { "CROWNY_MONO" };
+            ManagedCompileResult result = CompileManagedAssembly(request, toolchain);
+            if (!result.Succeeded())
+            {
+                LogManagedBuildDiagnostics(result.Diagnostics);
+                if (!result.StandardOutput.empty())
+                    CW_ENGINE_ERROR("{}", result.StandardOutput);
+                if (!result.StandardError.empty())
+                    CW_ENGINE_ERROR("{}", result.StandardError);
+                return false;
+            }
+            program.Artifacts = {
+                { ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, engineAssemblyPath },
+                { ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, stagedGameAssembly },
+            };
+        }
+        else
+        {
+            CW_ENGINE_ERROR("The selected managed backend cannot rebuild scripts inside the editor.");
+            return false;
+        }
+
+        if (!fs::is_regular_file(stagedGameAssembly) ||
+            (description.Script.Backend == ManagedBackendPreset::CoreCLR && !fs::is_regular_file(stagedGameDependencies)))
+        {
+            CW_ENGINE_ERROR("The managed build completed without producing its required game artifacts.");
             return false;
         }
 
         if (m_InspectorPanel)
             m_InspectorPanel->ResetUndoTransactions(false);
-        ManagedScripting* managed = Application::TryGet()->GetRuntime().GetManagedScripting();
-        if (managed == nullptr)
-        {
-            CW_ENGINE_ERROR("Managed runtime is unavailable; the compiled game assembly was not loaded.");
-            return false;
-        }
-        ManagedProgramDefinition program;
-        program.Generation = std::max<uint64_t>(generation, 1);
-        program.Artifacts = {
-            { ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, engineAssemblyPath },
-            { ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, stagedGameAssembly },
-        };
         ManagedOperationResult reloaded = managed->ReloadProgram(program);
         if (!reloaded.Succeeded)
         {
@@ -512,24 +646,11 @@ namespace Crowny
             return true;
         }
 
-        fs::remove_all(stagingDirectory, fsError);
-        CW_ENGINE_INFO("Reloaded game scripts from {0}", gameAssemblyPath.string());
+        if (description.Script.Backend == ManagedBackendPreset::CoreCLR &&
+            !PublishManagedArtifact(stagedGameDependencies, assemblyDirectory / stagedGameDependencies.filename(), &publishError))
+            CW_ENGINE_WARN("Reloaded game scripts, but could not publish the dependency manifest: {0}", publishError);
 
-        // ScriptInfoManager::Get().InitializeTypes();
-        // ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
-        // ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
-        /*
-        auto view = SceneManager::TryGet()->GetActiveScene()->GetAllEntitiesWith<MonoScriptComponent>();
-        for (auto e : view)
-        {
-            Entity entity = { e, SceneManager::TryGet()->GetActiveScene().get() };
-            auto& msc = entity.GetComponent<MonoScriptComponent>();
-            for (auto& script : msc.Scripts)
-            {
-                script.SetClassName(script.GetTypeName());
-                // FIXME script.OnInitialize(entity);
-            }
-        }*/
+        CW_ENGINE_INFO("Reloaded game scripts from {0}", gameAssemblyPath.string());
         return true;
     }
 

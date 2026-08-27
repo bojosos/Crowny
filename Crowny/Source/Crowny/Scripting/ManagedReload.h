@@ -44,5 +44,6 @@ namespace Crowny
     MonoRuntimePaths ResolveMonoRuntimePaths(const Path& workingDirectory);
     MonoRuntimePaths ResolveMonoRuntimePaths(const Vector<Path>& roots);
 
+    bool PublishManagedArtifact(const Path& stagedArtifact, const Path& destinationArtifact, String* error = nullptr);
     bool PublishManagedAssembly(const Path& stagedAssembly, const Path& destinationAssembly, String* error = nullptr);
 } // namespace Crowny

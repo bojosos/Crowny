@@ -153,16 +153,20 @@ namespace Crowny
         return true;
     }
 
-    bool PublishManagedAssembly(const Path& stagedAssembly, const Path& destinationAssembly, String* error)
+    bool PublishManagedArtifact(const Path& stagedArtifact, const Path& destinationArtifact, String* error)
     {
-        if (!fs::is_regular_file(stagedAssembly))
+        if (!fs::is_regular_file(stagedArtifact))
         {
             if (error != nullptr)
-                *error = "Compiler did not produce " + stagedAssembly.string();
+                *error = "Build did not produce " + stagedArtifact.string();
             return false;
         }
+        return CopyAtomically(stagedArtifact, destinationArtifact, error);
+    }
 
-        if (!CopyAtomically(stagedAssembly, destinationAssembly, error))
+    bool PublishManagedAssembly(const Path& stagedAssembly, const Path& destinationAssembly, String* error)
+    {
+        if (!PublishManagedArtifact(stagedAssembly, destinationAssembly, error))
             return false;
 
         const Path stagedPdb = Path(stagedAssembly).replace_extension("pdb");
