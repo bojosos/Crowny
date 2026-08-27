@@ -421,18 +421,11 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     const auto initialFieldId = initialInfo->m_FieldNameToId.find("smoothSpeed");
     REQUIRE(initialFieldId != initialInfo->m_FieldNameToId.end());
     Ref<SerializableMemberInfo> initialField = initialInfo->m_Fields.at(initialFieldId->second);
-    Ref<Scene> sourceScene = CreateRef<Scene>(false);
-    Entity sourceEntity = sourceScene->CreateEntity("Source");
-    REQUIRE(sourceScene->AddScriptComponent(sourceEntity, identity));
-    MonoScript& sourceScript = sourceEntity.GetComponent<MonoScriptComponent>().Scripts.front();
-    Ref<SerializableObject> fields = sourceScript.CapturePersistedState().Fields;
-    REQUIRE(fields != nullptr);
+    Ref<SerializableObject> fields = CreateRef<SerializableObject>(initialInfo);
     Ref<SerializableFieldFloat> value = CreateRef<SerializableFieldFloat>();
     value->Value = 7.25f;
     fields->SetFieldData(initialField, value);
     fields = DetachScriptFields(fields);
-    sourceScene->RemoveScriptComponent(sourceEntity, identity);
-    sourceScene = nullptr;
 
     Vector<AssemblyRefreshInfo> engineOnly;
     engineOnly.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
