@@ -18,6 +18,7 @@
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/ManagedReload.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Crowny/Scripting/Mono/MonoArray.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
@@ -59,7 +60,6 @@
 #include "Crowny/Scripting/Bindings/Utils/ScriptJSON.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
-#include "Crowny/Scripting/ScriptObjectManager.h"
 
 #include "Crowny/Renderer/Font.h"
 
@@ -673,8 +673,22 @@ namespace Crowny
         }
 
         m_HierarchyPanel->Update();
-        if (ScriptObjectManager::IsStartedUp())
-            ScriptObjectManager::Get().Update();
+        if (m_SceneState != SceneState::Play)
+        {
+            ManagedScripting* managed = Application::TryGet()->GetRuntime().GetManagedScripting();
+            if (managed != nullptr)
+            {
+                for (const ManagedDiagnostic& diagnostic : managed->Update())
+                {
+                    if (diagnostic.Severity == ManagedDiagnosticSeverity::Error)
+                        CW_ENGINE_ERROR("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
+                    else if (diagnostic.Severity == ManagedDiagnosticSeverity::Warning)
+                        CW_ENGINE_WARN("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
+                    else
+                        CW_ENGINE_INFO("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
+                }
+            }
+        }
     }
 
     void EditorLayer::RenderOverlay()

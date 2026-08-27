@@ -6,6 +6,7 @@ namespace Crowny
 {
 
     struct ApplicationDesc;
+    class ManagedScripting;
 
     /** Owns the engine services used by one Application instance.
      *
@@ -30,6 +31,9 @@ namespace Crowny
         void ShutdownServices();
         void ShutdownCoreServices();
         void ShutdownRenderAPI();
+
+        ManagedScripting* GetManagedScripting();
+        const ManagedScripting* GetManagedScripting() const;
 
     private:
         struct State;

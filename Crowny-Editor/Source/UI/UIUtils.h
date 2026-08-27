@@ -1,12 +1,13 @@
 #pragma once
 
 #include "Crowny/Application/Application.h"
+#include "Crowny/Application/EngineRuntime.h"
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Scene/SceneManager.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Editor/Editor.h"
 #include "Editor/ProjectLibrary.h"
 #include "UI/PopupLabelId.h"
@@ -514,26 +515,29 @@ namespace Crowny
                             }
                         }
 
-                        const auto& classes = ScriptInfoManager::Get().GetEntityBehaviours();
-                        for (const auto& [name, klass] : classes)
+                        ManagedScripting* managed = Application::TryGet()->GetRuntime().GetManagedScripting();
+                        const ScriptCatalog* catalog = managed != nullptr ? &managed->GetScriptCatalog() : nullptr;
+                        if (catalog != nullptr)
                         {
-                            if (klass->GetFullName() == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
-                                continue;
-                            if (!searchString.empty() && !StringUtils::IsSearchMathing(name, searchString))
-                                continue;
-
-                            bool isSelected = (current == name);
-                            if (ImGui::Selectable(name.c_str(), isSelected))
+                            for (const ScriptTypeSchema& type : catalog->Types)
                             {
-                                current = name;
-                                selectedScript = name;
-                                modified = true;
-                            }
+                                const String& name = type.Identity.TypeName;
+                                if (!searchString.empty() && !StringUtils::IsSearchMathing(name, searchString))
+                                    continue;
 
-                            if (forwardFocus)
-                                forwardFocus = false;
-                            else if (isSelected)
-                                ImGui::SetItemDefaultFocus();
+                                bool isSelected = (current == name);
+                                if (ImGui::Selectable(name.c_str(), isSelected))
+                                {
+                                    current = name;
+                                    selectedScript = name;
+                                    modified = true;
+                                }
+
+                                if (forwardFocus)
+                                    forwardFocus = false;
+                                else if (isSelected)
+                                    ImGui::SetItemDefaultFocus();
+                            }
                         }
 
                         ImGui::EndListBox();

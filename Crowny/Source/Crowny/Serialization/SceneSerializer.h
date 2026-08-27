@@ -17,7 +17,7 @@ namespace Crowny
     class SceneSerializer
     {
     public:
-        static constexpr uint32_t FORMAT_VERSION = 8;
+        static constexpr uint32_t FORMAT_VERSION = 9;
 
         SceneSerializer(const Ref<Scene>& scene);
 

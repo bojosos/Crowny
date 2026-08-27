@@ -8,6 +8,8 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/Renderer/Font.h"
+#include "Crowny/Scene/ScriptRuntime.h"
+#include "Crowny/Scripting/Managed/Interop/ManagedJson.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
@@ -627,11 +629,12 @@ namespace Crowny
         {
             static void WriteYaml(YAML::Emitter& out, Entity entity)
             {
-                const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+                auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
                 SerializeValueYAML(out, "Scripts", YAML::BeginSeq);
-                for (const auto& script : scripts)
+                for (auto& script : scripts)
                 {
-                    const PersistedScriptState state = script.CapturePersistedState();
+                    PersistedScriptState state = script.CapturePersistedState();
+                    state.ManagedState = ScriptRuntime::CaptureState(script);
                     out << YAML::BeginMap;
                     SerializeValueYAML(out, "Assembly", state.Identity.Assembly);
                     SerializeValueYAML(out, "Namespace", state.Identity.Namespace);
@@ -640,6 +643,8 @@ namespace Crowny
                     if (state.Fields != nullptr)
                         state.Fields->SerializeYAML(out);
                     EndYAMLSeq(out);
+                    if (state.ManagedState.Identity.IsValid())
+                        SerializeValueYAML(out, "ManagedState", WriteManagedStateJson(state.ManagedState));
                     out << YAML::EndMap;
                 }
                 EndYAMLSeq(out);
@@ -672,6 +677,18 @@ namespace Crowny
                                 CW_ENGINE_WARN("Managed script '{}:{}' has malformed fields and was ignored.", state.Identity.Assembly,
                                                state.Identity.GetFullName());
                                 continue;
+                            }
+                            const String managedState = entry["ManagedState"].as<String>("");
+                            if (!managedState.empty())
+                            {
+                                ManagedOperationResult parsed =
+                                  ParseManagedStateJson(managedState, state.ManagedState, ManagedBackendId::GeneratedMetadata);
+                                if (!parsed.Succeeded)
+                                {
+                                    CW_ENGINE_WARN("Managed script '{}:{}' has malformed runtime-neutral state. Its legacy fields were retained.",
+                                                   state.Identity.Assembly, state.Identity.GetFullName());
+                                    state.ManagedState = {};
+                                }
                             }
                             context.TargetScene->AddScriptComponent(entity, state);
                         }
@@ -712,16 +729,24 @@ namespace Crowny
 
             static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
             {
-                const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+                auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
                 archive(static_cast<uint32_t>(scripts.size()));
-                for (const auto& script : scripts)
+                for (auto& script : scripts)
                 {
-                    const PersistedScriptState state = script.CapturePersistedState();
+                    PersistedScriptState state = script.CapturePersistedState();
+                    state.ManagedState = ScriptRuntime::CaptureState(script);
                     archive(state.Identity.Assembly, state.Identity.Namespace, state.Identity.TypeName);
                     const bool hasFields = state.Fields != nullptr;
                     archive(hasFields);
                     if (hasFields)
                         Save(archive, *state.Fields);
+                    const bool hasManagedState = state.ManagedState.Identity.IsValid();
+                    archive(hasManagedState);
+                    if (hasManagedState)
+                    {
+                        const String managedState = WriteManagedStateJson(state.ManagedState);
+                        archive(managedState);
+                    }
                 }
             }
 
@@ -750,6 +775,20 @@ namespace Crowny
                         SerializableObject value;
                         Load(archive, value);
                         state.Fields = CreateRef<SerializableObject>(std::move(value));
+                    }
+                    if (context.SceneVersion >= 9)
+                    {
+                        bool hasManagedState = false;
+                        archive(hasManagedState);
+                        if (hasManagedState)
+                        {
+                            String managedState;
+                            archive(managedState);
+                            ManagedOperationResult parsed =
+                              ParseManagedStateJson(managedState, state.ManagedState, ManagedBackendId::GeneratedMetadata);
+                            if (!parsed.Succeeded)
+                                state.ManagedState = {};
+                        }
                     }
                     context.TargetScene->AddScriptComponent(entity, state);
                 }

@@ -11,6 +11,10 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
+#include "Crowny/Application/Application.h"
+#include "Crowny/Application/EngineRuntime.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
+
 #include <cctype>
 #include <imgui.h>
 
@@ -49,7 +53,7 @@ namespace Crowny
     // Helper: add a component or script to an entity, eliminating the five
     // duplicate AddScriptComponent call-sites that existed before.
     // ---------------------------------------------------------------------------
-    static bool EntityHasScript(const Entity& entity, const String& scriptName);
+    static bool EntityHasScript(const Entity& entity, const ScriptTypeIdentity& identity);
 
     static void AddComponentToEntities(const Ref<Scene>& scene, const Vector<Entity>& entities, const entt::registry& registry,
                                        ComponentEditor::ComponentTypeID tid, const ComponentEditor::ComponentInfo& ci, const String& scriptName = "")
@@ -61,10 +65,11 @@ namespace Crowny
                 continue;
             if (tid == entt::type_hash<MonoScriptComponent>::value())
             {
-                if (scriptName.empty() || !EntityHasScript(entity, scriptName))
+                const ScriptTypeIdentity identity = scriptName.empty() ? ScriptTypeIdentity{} : ScriptTypeIdentity{ GAME_ASSEMBLY, "Sandbox", scriptName };
+                if (!identity.IsValid() || !EntityHasScript(entity, identity))
                 {
                     ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(entity);
-                    scene->AddScriptComponent(entity, scriptName.empty() ? "" : "Sandbox", scriptName, !scriptName.empty());
+                    scene->AddScriptComponent(entity, identity, identity.IsValid());
                     actions->Add(CreateRef<ChangeScriptComponentAction>(entity, std::move(snapshot), "Add script"));
                 }
             }
@@ -80,12 +85,12 @@ namespace Crowny
     // ---------------------------------------------------------------------------
     // Check whether a specific script is already attached to the entity.
     // ---------------------------------------------------------------------------
-    static bool EntityHasScript(const Entity& entity, const String& scriptName)
+    static bool EntityHasScript(const Entity& entity, const ScriptTypeIdentity& identity)
     {
         if (!entity.HasComponent<MonoScriptComponent>())
             return false;
         const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-        return std::find_if(scripts.begin(), scripts.end(), [&](const auto& s) { return s.GetTypeName() == scriptName; }) != scripts.end();
+        return std::find_if(scripts.begin(), scripts.end(), [&](const auto& script) { return script.GetTypeIdentity() == identity; }) != scripts.end();
     }
 
     static bool IsValidScriptClassName(const String& value)
@@ -99,32 +104,22 @@ namespace Crowny
                std::all_of(value.begin() + 1, value.end(), [&](char c) { return isValidRest(static_cast<unsigned char>(c)); });
     }
 
-    static uint64_t GetScriptCatalogFingerprint(const UnorderedMap<String, MonoClass*>& entityBehaviours, const MonoClass* entityBehaviourBase)
-    {
-        uint64_t fingerprint = 0x9ae16a3b2f90404fULL ^ static_cast<uint64_t>(entityBehaviours.size());
-        for (const auto& [name, klass] : entityBehaviours)
-        {
-            uint64_t entryHash = Hashing::CityHash64(name);
-            entryHash ^= klass == nullptr ? 0xc3a5c85c97cb3127ULL : 0xb492b66fbe98f273ULL;
-            entryHash ^= klass == entityBehaviourBase ? 0x9ddfea08eb382d69ULL : 0ULL;
-            fingerprint ^= entryHash + 0x9e3779b97f4a7c15ULL + (fingerprint << 6u) + (fingerprint >> 2u);
-        }
-        return fingerprint;
-    }
-
     static void SynchronizeScriptCatalog(ComponentMenuModel& menu)
     {
-        const ScriptInfoManager& scriptInfo = ScriptInfoManager::Get();
-        const auto& entityBehaviours = scriptInfo.GetEntityBehaviours();
-        const MonoClass* entityBehaviourBase = scriptInfo.GetBuiltinClasses().EntityBehaviour;
-        const uint64_t fingerprint = GetScriptCatalogFingerprint(entityBehaviours, entityBehaviourBase);
+        Application* application = Application::TryGet();
+        const ManagedScripting* managed = application != nullptr ? application->GetRuntime().GetManagedScripting() : nullptr;
+        const ScriptCatalog* catalog = managed != nullptr && managed->IsStarted() ? &managed->GetScriptCatalog() : nullptr;
+        const uint64_t fingerprint = catalog != nullptr ? catalog->ManifestHash : 1;
         if (menu.HasScriptCatalog(fingerprint))
             return;
 
         Vector<ComponentMenuModel::ScriptEntry> scripts;
-        scripts.reserve(entityBehaviours.size());
-        for (const auto& [name, klass] : entityBehaviours)
-            scripts.push_back({ name, klass != nullptr && klass != entityBehaviourBase });
+        if (catalog != nullptr)
+        {
+            scripts.reserve(catalog->Types.size());
+            for (const ScriptTypeSchema& type : catalog->Types)
+                scripts.push_back({ type.Identity.TypeName, true, type.Identity });
+        }
         menu.SetScripts(fingerprint, std::move(scripts));
     }
 
@@ -606,14 +601,25 @@ namespace Crowny
                 ImGui::PushID("ScriptSearchResults");
                 for (size_t scriptIndex : results.ScriptIndices)
                 {
-                    const String& scriptName = scripts[scriptIndex].Name;
+                    const ComponentMenuModel::ScriptEntry& scriptEntry = scripts[scriptIndex];
+                    const String& scriptName = scriptEntry.Name;
                     ImGui::PushID(scriptName.c_str());
                     const bool alreadyAdded =
-                      std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, scriptName); });
+                      std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, scriptEntry.Identity); });
                     if (RenderComponentMenuItem(scriptName, "C# script", alreadyAdded))
                     {
                         ComponentEditor::ComponentInfo dummy;
-                        AddComponentToEntities(scene, entities, registry, entt::type_hash<MonoScriptComponent>::value(), dummy, scriptName);
+                        Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Add script" : "Add scripts");
+                        for (Entity entity : entities)
+                        {
+                            if (!entity || EntityHasScript(entity, scriptEntry.Identity))
+                                continue;
+                            ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(entity);
+                            scene->AddScriptComponent(entity, scriptEntry.Identity, true);
+                            actions->Add(CreateRef<ChangeScriptComponentAction>(entity, std::move(snapshot), "Add script"));
+                        }
+                        if (!actions->Empty())
+                            UndoRedo::Get().RegisterAction(actions);
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::PopID();
@@ -686,11 +692,21 @@ namespace Crowny
                 const String& scriptName = script.Name;
                 ImGui::PushID(scriptName.c_str());
                 const bool alreadyAdded =
-                  std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, scriptName); });
+                  std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, script.Identity); });
                 if (RenderComponentMenuItem(scriptName, "C# script", alreadyAdded))
                 {
                     ComponentEditor::ComponentInfo dummy;
-                    AddComponentToEntities(scene, entities, registry, entt::type_hash<MonoScriptComponent>::value(), dummy, scriptName);
+                    Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Add script" : "Add scripts");
+                    for (Entity entity : entities)
+                    {
+                        if (!entity || EntityHasScript(entity, script.Identity))
+                            continue;
+                        ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(entity);
+                        scene->AddScriptComponent(entity, script.Identity, true);
+                        actions->Add(CreateRef<ChangeScriptComponentAction>(entity, std::move(snapshot), "Add script"));
+                    }
+                    if (!actions->Empty())
+                        UndoRedo::Get().RegisterAction(actions);
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::PopID();

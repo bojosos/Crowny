@@ -27,14 +27,10 @@
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Threading/TaskSystem.h"
 
-// Scripting
-#include "Crowny/Scripting/Bindings/ScriptBindings.h"
 #include "Crowny/Scripting/ManagedReload.h"
-#include "Crowny/Scripting/Mono/MonoManager.h"
-#include "Crowny/Scripting/ScriptAssetManager.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
-#include "Crowny/Scripting/ScriptObjectManager.h"
-#include "Crowny/Scripting/ScriptSceneObjectManager.h"
+#include "Crowny/Scripting/Managed/ManagedBackendSelection.h"
+#include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 
 namespace Crowny
 {
@@ -88,22 +84,17 @@ namespace Crowny
             }
         }
 
-        bool StartMono(const ApplicationDesc& applicationDesc)
+        void LogManagedDiagnostics(const ManagedOperationResult& result)
         {
-            if (MonoManager::IsStartedUp())
-                return false;
-
-            const MonoRuntimePaths monoPaths = ResolveMonoRuntimePaths(applicationDesc.WorkingDirectory);
-            if (!monoPaths.HasRuntime())
+            for (const ManagedDiagnostic& diagnostic : result.Diagnostics)
             {
-                CW_ENGINE_ERROR("Mono runtime not found. Set CROWNY_MONO_ROOT or MONO_SDK, or run Scripts/setup-windows.ps1.");
-                return false;
+                if (diagnostic.Severity == ManagedDiagnosticSeverity::Error)
+                    CW_ENGINE_ERROR("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
+                else if (diagnostic.Severity == ManagedDiagnosticSeverity::Warning)
+                    CW_ENGINE_WARN("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
+                else
+                    CW_ENGINE_INFO("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
             }
-
-            CW_ENGINE_INFO("Using Mono runtime at {0}", monoPaths.Root.string());
-            const uint32_t debugPort = applicationDesc.Script.EnableDebugging ? 17615 : 0;
-            MonoManager::StartUp(monoPaths.LibraryDirectory, monoPaths.EtcDirectory, debugPort);
-            return true;
         }
 
         void LoadDefaultFont()
@@ -157,6 +148,10 @@ namespace Crowny
         bool OwnsTaskSystem = false;
         bool OwnsSceneManager = false;
         bool TaskSystemDrained = false;
+        Scope<ManagedScripting> Managed;
+        ManagedProgramDefinition ManagedProgram;
+        bool HasManagedProgram = false;
+        bool ManagedProgramLoaded = false;
     };
 
     EngineRuntime::EngineRuntime(const ApplicationDesc& applicationDesc) : m_State(CreateScope<State>(applicationDesc)) {}
@@ -195,15 +190,51 @@ namespace Crowny
 
         StartOwnedModule<StringIDTable>(m_State->CoreShutdownActions);
 
-        // Initialize the embedded runtime before Crowny creates its worker pool so
-        // Mono's process-wide thread and GC bookkeeping is established first.
+        // Initialize the selected runtime before Crowny creates its worker pool.
         // Managed assemblies and higher-level scripting services remain deferred.
-        if (!MonoManager::IsStartedUp())
+        ManagedBackendSelection selection = ResolveManagedBackendPreset(m_State->Description.Script.Backend);
+        selection.Runtime.EnableDebugging = m_State->Description.Script.EnableDebugging;
+        selection.Runtime.EnableProfiling = m_State->Description.Script.EnableProfiling;
+        selection.Runtime.RuntimeRoot = m_State->Description.Script.RuntimeRoot;
+
+        if (selection.Runtime.Backend == ManagedBackendId::Mono && selection.Runtime.RuntimeRoot.empty())
         {
-            m_State->ServiceShutdownActions.emplace_back([]() { MonoManager::Shutdown(); });
-            if (!StartMono(m_State->Description))
-                m_State->ServiceShutdownActions.pop_back();
+            const MonoRuntimePaths monoPaths = ResolveMonoRuntimePaths(m_State->Description.WorkingDirectory);
+            if (monoPaths.HasRuntime())
+            {
+                selection.Runtime.RuntimeRoot = monoPaths.Root;
+                CW_ENGINE_INFO("Using Mono runtime at {}", monoPaths.Root.string());
+            }
         }
+
+        if (selection.Runtime.Backend == ManagedBackendId::CoreCLR && !m_State->Description.Script.ProgramManifest.empty())
+        {
+            Path manifest = m_State->Description.Script.ProgramManifest;
+            if (manifest.is_relative())
+                manifest = m_State->Description.WorkingDirectory / manifest;
+            ManagedProgramPackageResult package = LoadManagedProgramPackage(manifest);
+            if (package.Result.Succeeded)
+            {
+                package.Package.Runtime.EnableDebugging = selection.Runtime.EnableDebugging;
+                package.Package.Runtime.EnableProfiling = selection.Runtime.EnableProfiling;
+                selection.Runtime = std::move(package.Package.Runtime);
+                m_State->ManagedProgram = std::move(package.Package.Program);
+                m_State->HasManagedProgram = true;
+            }
+            else
+                LogManagedDiagnostics(package.Result);
+        }
+
+        Scope<ManagedScripting> managed = CreateScope<ManagedScripting>();
+        ManagedOperationResult managedStarted = managed->Start(selection.Runtime);
+        if (managedStarted.Succeeded)
+        {
+            m_State->Managed = std::move(managed);
+            ManagedScripting* managedRuntime = m_State->Managed.get();
+            m_State->ServiceShutdownActions.emplace_back([managedRuntime]() { managedRuntime->Shutdown(); });
+        }
+        else
+            LogManagedDiagnostics(managedStarted);
 
         m_State->OwnsTaskSystem = StartOwnedModule<TaskSystem>(m_State->CoreShutdownActions);
         StartOwnedModule<Importer>(m_State->CoreShutdownActions);
@@ -303,62 +334,42 @@ namespace Crowny
         StartOwnedModule<AudioManager>(m_State->ServiceShutdownActions);
         LoadDefaultFont();
 
-        if (ScriptObjectManager::IsStartedUp())
+        if (m_State->Managed == nullptr || !m_State->Managed->IsStarted() || m_State->ManagedProgramLoaded)
             return;
 
-        if (!MonoManager::IsStartedUp())
-            return;
-
-        ScriptBindings::Register();
-        StartOwnedModule<ScriptInfoManager>(m_State->ServiceShutdownActions);
-
-        Path engineAssemblyPath = m_State->Description.EngineAssemblyPath;
-        if (!engineAssemblyPath.empty())
+        if (!m_State->HasManagedProgram && m_State->Description.Script.Backend == ManagedBackendPreset::Mono)
         {
+            ManagedProgramDefinition program;
+            program.Generation = 1;
+            Path engineAssemblyPath = m_State->Description.EngineAssemblyPath;
             if (engineAssemblyPath.is_relative())
                 engineAssemblyPath = m_State->Description.WorkingDirectory / engineAssemblyPath;
-            if (fs::exists(engineAssemblyPath))
-            {
-                MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
-                ScriptInfoManager::Get().InitializeTypes();
-                ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
-                CW_ENGINE_INFO("Loaded engine assembly {0}", engineAssemblyPath.string());
-            }
-        }
+            if (m_State->Description.EngineAssemblyPath.empty())
+                return;
+            program.Artifacts.push_back(
+              { ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, std::move(engineAssemblyPath) });
 
-        Path gameAssemblyPath = m_State->Description.GameAssemblyPath;
-        if (!gameAssemblyPath.empty())
-        {
+            Path gameAssemblyPath = m_State->Description.GameAssemblyPath;
             if (gameAssemblyPath.is_relative())
                 gameAssemblyPath = m_State->Description.WorkingDirectory / gameAssemblyPath;
-            if (fs::exists(gameAssemblyPath))
-            {
-                MonoManager::Get().LoadAssembly(gameAssemblyPath, GAME_ASSEMBLY);
-                ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
-                CW_ENGINE_INFO("Loaded game assembly {0}", gameAssemblyPath.string());
-            }
+            if (!m_State->Description.GameAssemblyPath.empty() && fs::is_regular_file(gameAssemblyPath))
+                program.Artifacts.push_back({ ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, std::move(gameAssemblyPath) });
+            m_State->ManagedProgram = std::move(program);
+            m_State->HasManagedProgram = true;
         }
 
-        if (!ScriptSceneObjectManager::IsStartedUp())
+        if (!m_State->HasManagedProgram)
+            return;
+        ManagedOperationResult loaded = m_State->Managed->LoadProgram(m_State->ManagedProgram);
+        if (!loaded.Succeeded)
         {
-            m_State->ServiceShutdownActions.emplace_back([]() {
-                if (!ScriptSceneObjectManager::IsStartedUp())
-                    return;
-                ScriptSceneObjectManager::Get().Del();
-                ScriptSceneObjectManager::Shutdown();
-            });
-            try
-            {
-                ScriptSceneObjectManager::StartUp();
-            }
-            catch (...)
-            {
-                m_State->ServiceShutdownActions.pop_back();
-                throw;
-            }
+            LogManagedDiagnostics(loaded);
+            return;
         }
-        StartOwnedModule<ScriptObjectManager>(m_State->ServiceShutdownActions);
-        StartOwnedModule<ScriptAssetManager>(m_State->ServiceShutdownActions);
+        m_State->ManagedProgramLoaded = true;
+        CW_ENGINE_INFO("Loaded managed program generation {} with {} script types using {}", m_State->ManagedProgram.Generation,
+                       m_State->Managed->GetScriptCatalog().Types.size(),
+                       ToString(ResolveManagedBackendPreset(m_State->Description.Script.Backend).Runtime.Backend));
     }
 
     void EngineRuntime::StopRenderer()
@@ -403,4 +414,8 @@ namespace Crowny
         RunShutdownActions(m_State->RenderAPIShutdownActions);
         RunShutdownActions(m_State->FinalShutdownActions);
     }
+
+    ManagedScripting* EngineRuntime::GetManagedScripting() { return m_State->Managed.get(); }
+
+    const ManagedScripting* EngineRuntime::GetManagedScripting() const { return m_State->Managed.get(); }
 } // namespace Crowny

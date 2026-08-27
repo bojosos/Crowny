@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Scripting/ScriptTypeIdentity.h"
 
 #include <cstdint>
 
@@ -23,6 +24,7 @@ namespace Crowny
         {
             String Name;
             bool Visible = true;
+            ScriptTypeIdentity Identity;
         };
 
         struct SearchResults

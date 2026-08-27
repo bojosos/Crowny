@@ -1,12 +1,14 @@
 #include "cwpch.h"
 
+#include "Crowny/Application/Application.h"
+#include "Crowny/Application/EngineRuntime.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scene/ScriptRuntime.h"
-
-#include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptSceneManager.h"
-#include "Crowny/Scripting/ScriptObjectManager.h"
+#include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
+#include "Crowny/Scripting/Managed/LegacyScriptState.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 namespace Crowny
@@ -19,10 +21,44 @@ namespace Crowny
             uint64_t ScriptId = 0;
         };
 
+        ManagedScripting* GetManagedScripting()
+        {
+            Application* application = Application::TryGet();
+            return application != nullptr ? application->GetRuntime().GetManagedScripting() : nullptr;
+        }
+
+        void LogDiagnostics(const ManagedOperationResult& result, const ScriptTypeIdentity& identity, const UUID& entity)
+        {
+            for (const ManagedDiagnostic& diagnostic : result.Diagnostics)
+            {
+                const String& scriptName = identity.TypeName;
+                if (diagnostic.Severity == ManagedDiagnosticSeverity::Error)
+                    CW_ENGINE_ERROR("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(),
+                                    diagnostic.Code, diagnostic.Message);
+                else if (diagnostic.Severity == ManagedDiagnosticSeverity::Warning)
+                    CW_ENGINE_WARN("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(),
+                                   diagnostic.Code, diagnostic.Message);
+                else
+                    CW_ENGINE_INFO("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(),
+                                   diagnostic.Code, diagnostic.Message);
+            }
+        }
+
+        void LogDiagnostics(const Vector<ManagedDiagnostic>& diagnostics)
+        {
+            for (const ManagedDiagnostic& diagnostic : diagnostics)
+            {
+                if (diagnostic.Severity == ManagedDiagnosticSeverity::Error)
+                    CW_ENGINE_ERROR("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
+                else if (diagnostic.Severity == ManagedDiagnosticSeverity::Warning)
+                    CW_ENGINE_WARN("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
+                else
+                    CW_ENGINE_INFO("Managed scripting [{}]: {}", diagnostic.Code, diagnostic.Message);
+            }
+        }
+
         Vector<ScriptInvocation>& CollectScriptInvocations(const Ref<Scene>& scene)
         {
-            // Runtime callbacks execute on the main thread. Reusing this scratch
-            // avoids allocating a traversal snapshot on every Update.
             static Vector<ScriptInvocation> invocations;
             invocations.clear();
             auto view = scene->GetAllEntitiesWith<MonoScriptComponent>();
@@ -31,9 +67,8 @@ namespace Crowny
             invocations.reserve(scriptCount);
             view.each([&](entt::entity handle, const MonoScriptComponent& component) {
                 const Entity entity(handle, scene.get());
-                const UUID entityId = entity.GetUuid();
                 for (const MonoScript& script : component.Scripts)
-                    invocations.push_back({ entityId, script.InstanceId });
+                    invocations.push_back({ entity.GetUuid(), script.InstanceId });
             });
             return invocations;
         }
@@ -49,9 +84,108 @@ namespace Crowny
             });
             return script != scripts.end() ? &*script : nullptr;
         }
+
+        void DispatchPendingMonoEvents()
+        {
+            if (ScriptSceneObjectManager::IsStartedUp())
+                ScriptSceneManager::DispatchPendingEvents();
+        }
     } // namespace
 
     void ScriptRuntime::Init() {}
+
+    bool ScriptRuntime::CreateScript(Entity entity, MonoScript& script, bool dispatchStart)
+    {
+        ManagedScripting* managed = GetManagedScripting();
+        if (managed == nullptr || !managed->IsStarted() || script.GetRuntimeHandle().IsValid())
+            return script.GetRuntimeHandle().IsValid();
+
+        ScriptCreateRequest request;
+        request.Identity = script.GetTypeIdentity();
+        request.Entity = entity.GetUuid();
+        request.RuntimeInstanceId = script.InstanceId;
+        request.InitialState = script.GetManagedState();
+        if (!request.InitialState.Identity.IsValid())
+        {
+            request.InitialState = ConvertLegacyScriptState(script.CapturePersistedState());
+            if (request.InitialState.Identity.IsValid())
+                script.SetManagedState(request.InitialState);
+        }
+        ScriptCreateResult created = managed->CreateScript(request);
+        if (!created.Result.Succeeded)
+        {
+            LogDiagnostics(created.Result, request.Identity, request.Entity);
+            return false;
+        }
+
+        script.SetRuntimeHandle(created.Handle);
+        if (dispatchStart)
+            Dispatch(script, ScriptEvent::Lifecycle(ScriptEventKind::Start));
+        return true;
+    }
+
+    void ScriptRuntime::DestroyScript(Entity entity, MonoScript& script, bool dispatchDestroy)
+    {
+        const ScriptInstanceHandle handle = script.GetRuntimeHandle();
+        if (!handle.IsValid())
+            return;
+        ManagedScripting* managed = GetManagedScripting();
+        if (managed != nullptr && managed->IsStarted())
+        {
+            if (dispatchDestroy)
+            {
+                ManagedOperationResult dispatched = managed->Dispatch(handle, ScriptEvent::Lifecycle(ScriptEventKind::Destroy));
+                if (!dispatched.Succeeded)
+                    LogDiagnostics(dispatched, script.GetTypeIdentity(), entity.GetUuid());
+            }
+            CaptureState(script);
+            ManagedOperationResult destroyed = managed->DestroyScript(handle);
+            if (!destroyed.Succeeded)
+                LogDiagnostics(destroyed, script.GetTypeIdentity(), entity.GetUuid());
+        }
+        script.ClearRuntimeHandle();
+    }
+
+    void ScriptRuntime::Dispatch(MonoScript& script, const ScriptEvent& event)
+    {
+        ManagedScripting* managed = GetManagedScripting();
+        if (managed == nullptr || !managed->IsStarted() || !script.GetRuntimeHandle().IsValid())
+            return;
+        ManagedOperationResult result = managed->Dispatch(script.GetRuntimeHandle(), event);
+        if (!result.Succeeded)
+            LogDiagnostics(result, script.GetTypeIdentity(), event.OtherEntity);
+    }
+
+    ScriptState ScriptRuntime::CaptureState(MonoScript& script)
+    {
+        ManagedScripting* managed = GetManagedScripting();
+        if (managed == nullptr || !managed->IsStarted() || !script.GetRuntimeHandle().IsValid())
+            return script.GetManagedState();
+        ScriptStateResult captured = managed->CaptureState(script.GetRuntimeHandle());
+        if (!captured.Result.Succeeded)
+        {
+            LogDiagnostics(captured.Result, script.GetTypeIdentity(), UUID::EMPTY);
+            return script.GetManagedState();
+        }
+        script.SetManagedState(captured.State);
+        return std::move(captured.State);
+    }
+
+    bool ScriptRuntime::ApplyState(MonoScript& script, const ScriptState& state)
+    {
+        ManagedScripting* managed = GetManagedScripting();
+        if (managed != nullptr && managed->IsStarted() && script.GetRuntimeHandle().IsValid())
+        {
+            ManagedOperationResult applied = managed->ApplyState(script.GetRuntimeHandle(), state);
+            if (!applied.Succeeded)
+            {
+                LogDiagnostics(applied, script.GetTypeIdentity(), UUID::EMPTY);
+                return false;
+            }
+        }
+        script.SetManagedState(state);
+        return true;
+    }
 
     void ScriptRuntime::OnStart() { OnStart(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
 
@@ -67,20 +201,11 @@ namespace Crowny
             {
                 Entity entity;
                 MonoScript* script = FindScript(scene, invocation, entity);
-                if (script == nullptr)
-                    continue;
-                if (script->GetManagedInstance() == nullptr && MonoManager::IsStartedUp() && ScriptSceneObjectManager::IsStartedUp())
-                {
-                    script->Create(entity);
-                    script = FindScript(scene, invocation, entity);
-                    if (script == nullptr)
-                        continue;
-                }
-                const MonoScript::RuntimeCallback callback = script->GetStartCallback();
-                callback.Invoke();
+                if (script != nullptr)
+                    CreateScript(entity, *script, true);
             }
         }
-        ScriptSceneManager::DispatchPendingEvents();
+        DispatchPendingMonoEvents();
     }
 
     void ScriptRuntime::OnUpdate() { OnUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
@@ -98,13 +223,12 @@ namespace Crowny
                 Entity entity;
                 MonoScript* script = FindScript(scene, invocation, entity);
                 if (script != nullptr)
-                {
-                    const MonoScript::RuntimeCallback callback = script->GetUpdateCallback();
-                    callback.Invoke();
-                }
+                    Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::Update));
             }
         }
-        ScriptSceneManager::DispatchPendingEvents();
+        if (ManagedScripting* managed = GetManagedScripting())
+            LogDiagnostics(managed->Update());
+        DispatchPendingMonoEvents();
     }
 
     void ScriptRuntime::OnShutdown() { OnShutdown(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
@@ -113,48 +237,66 @@ namespace Crowny
     {
         if (scene == nullptr)
             return;
-        SceneManager::CallbackScope callbackScope = SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+        SceneManager::CallbackScope callbackScope =
+          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
         const Vector<ScriptInvocation>& invocations = CollectScriptInvocations(scene);
         for (const ScriptInvocation& invocation : invocations)
         {
             Entity entity;
             MonoScript* script = FindScript(scene, invocation, entity);
             if (script != nullptr)
-            {
-                const MonoScript::RuntimeCallback callback = script->GetDestroyCallback();
-                callback.Invoke();
-            }
+                DestroyScript(entity, *script, true);
         }
 
         if (ScriptSceneObjectManager::IsStartedUp())
             ScriptSceneObjectManager::Get().DestroySceneObjects(scene.get());
-        scene->GetAllEntitiesWith<MonoScriptComponent>().each([](MonoScriptComponent& sc) {
-            for (MonoScript& script : sc.Scripts)
-                script.ClearRuntimeInstance();
-        });
     }
 
     void ScriptRuntime::Reload()
     {
-        Vector<AssemblyRefreshInfo> assemblies;
+        ManagedScripting* managed = GetManagedScripting();
+        Application* application = Application::TryGet();
+        if (managed == nullptr || application == nullptr || !managed->IsStarted() || !managed->GetCapabilities().Reload)
+            return;
 
-        Path engineAssemblyPath = String("Resources/Assemblies/") + CROWNY_ASSEMBLY + ".dll";
-        assemblies.push_back(AssemblyRefreshInfo(CROWNY_ASSEMBLY, &engineAssemblyPath));
+        static uint64_t generation = 1;
+        const ApplicationDesc& description = application->GetApplicationDesc();
+        ManagedProgramDefinition program;
+        program.Generation = ++generation;
+        if (description.Script.Backend == ManagedBackendPreset::CoreCLR)
+        {
+            Path manifest = description.Script.ProgramManifest;
+            if (manifest.is_relative())
+                manifest = description.WorkingDirectory / manifest;
+            ManagedProgramPackageResult package = LoadManagedProgramPackage(manifest, generation);
+            if (!package.Result.Succeeded)
+            {
+                LogDiagnostics(package.Result.Diagnostics);
+                return;
+            }
+            program = std::move(package.Package.Program);
+        }
+        else
+        {
+            Path engineAssembly = description.EngineAssemblyPath;
+            if (engineAssembly.is_relative())
+                engineAssembly = description.WorkingDirectory / engineAssembly;
+            Path gameAssembly = description.GameAssemblyPath;
+            if (gameAssembly.is_relative())
+                gameAssembly = description.WorkingDirectory / gameAssembly;
+            program.Artifacts.push_back({ ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, std::move(engineAssembly) });
+            if (!description.GameAssemblyPath.empty() && fs::is_regular_file(gameAssembly))
+                program.Artifacts.push_back({ ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, std::move(gameAssembly) });
+        }
 
-        Path gameAssmeblyPath = String("Resources/Assemblies/") + GAME_ASSEMBLY + ".dll";
-        if (fs::exists(gameAssmeblyPath))
-            assemblies.push_back(AssemblyRefreshInfo(GAME_ASSEMBLY, &gameAssmeblyPath));
-
-        ScriptObjectManager::Get().RefreshAssemblies(assemblies);
+        ManagedOperationResult reloaded = managed->ReloadProgram(program);
+        if (!reloaded.Succeeded)
+            LogDiagnostics(reloaded.Diagnostics);
     }
 
     void ScriptRuntime::UnloadAssemblies()
     {
-        MonoManager::Get().UnloadScriptDomain();
-        ScriptObjectManager::Get().ProcessFinalizedObjects();
-        MonoManager::Shutdown();
-        ScriptSceneObjectManager::Shutdown();
-        ScriptObjectManager::Shutdown();
+        if (ManagedScripting* managed = GetManagedScripting())
+            managed->Shutdown();
     }
-
 } // namespace Crowny

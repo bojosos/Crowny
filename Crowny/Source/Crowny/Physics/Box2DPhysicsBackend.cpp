@@ -5,6 +5,7 @@
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics2DBackend.h"
 #include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 
 #include <box2d/box2d.h>
 
@@ -218,44 +219,35 @@ namespace Crowny
                     return;
 
                 auto& scripts = receiver.GetComponent<MonoScriptComponent>().Scripts;
+                ScriptEvent scriptEvent;
+                scriptEvent.OtherEntity = other.GetUuid();
                 if (event.Contact.IsTrigger)
                 {
+                    if (event.Type == ContactEventType::Enter)
+                        scriptEvent.Kind = ScriptEventKind::TriggerEnter2D;
+                    else if (event.Type == ContactEventType::Stay)
+                        scriptEvent.Kind = ScriptEventKind::TriggerStay2D;
+                    else
+                        scriptEvent.Kind = ScriptEventKind::TriggerExit2D;
                     for (auto& script : scripts)
-                    {
-                        switch (event.Type)
-                        {
-                        case ContactEventType::Enter:
-                            script.OnTriggerEnter2D(other);
-                            break;
-                        case ContactEventType::Stay:
-                            script.OnTriggerStay2D(other);
-                            break;
-                        case ContactEventType::Exit:
-                            script.OnTriggerExit2D(other);
-                            break;
-                        }
-                    }
+                        ScriptRuntime::Dispatch(script, scriptEvent);
                     return;
                 }
 
                 Collision2D collision = event.Contact.Collision;
                 if (reverse)
                     std::swap(collision.Colliders[0], collision.Colliders[1]);
+                if (event.Type == ContactEventType::Enter)
+                    scriptEvent.Kind = ScriptEventKind::CollisionEnter2D;
+                else if (event.Type == ContactEventType::Stay)
+                    scriptEvent.Kind = ScriptEventKind::CollisionStay2D;
+                else
+                    scriptEvent.Kind = ScriptEventKind::CollisionExit2D;
+                scriptEvent.Contacts.reserve(collision.Points.size());
+                for (const glm::vec2& point : collision.Points)
+                    scriptEvent.Contacts.push_back({ glm::vec3(point, 0.0f) });
                 for (auto& script : scripts)
-                {
-                    switch (event.Type)
-                    {
-                    case ContactEventType::Enter:
-                        script.OnCollisionEnter2D(collision);
-                        break;
-                    case ContactEventType::Stay:
-                        script.OnCollisionStay2D(collision);
-                        break;
-                    case ContactEventType::Exit:
-                        script.OnCollisionExit2D(collision);
-                        break;
-                    }
-                }
+                    ScriptRuntime::Dispatch(script, scriptEvent);
             }
 
             static void Dispatch(const ContactEvent& event)

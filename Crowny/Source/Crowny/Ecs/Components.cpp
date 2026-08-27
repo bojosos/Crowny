@@ -676,7 +676,7 @@ namespace Crowny
 
     MonoScript::MonoScript(const MonoScript& other)
       : InstanceId(s_NextAvailableId.fetch_add(1, std::memory_order_relaxed)), m_Identity(other.m_Identity), m_MissingType(other.m_MissingType),
-        m_SerializedObjectData(other.CapturePersistedState().Fields)
+        m_SerializedObjectData(other.CapturePersistedState().Fields), m_ManagedState(other.m_ManagedState)
     {
     }
 
@@ -688,17 +688,19 @@ namespace Crowny
         m_Identity = other.m_Identity;
         m_MissingType = other.m_MissingType;
         m_SerializedObjectData = other.CapturePersistedState().Fields;
+        m_ManagedState = other.m_ManagedState;
         m_ObjectInfo = nullptr;
         m_RuntimeType = nullptr;
         m_Class = nullptr;
         m_ScriptEntityBehaviour = nullptr;
+        m_RuntimeHandle = {};
         ResetRuntimeCallbacks();
         return *this;
     }
 
     PersistedScriptState MonoScript::CapturePersistedState() const
     {
-        PersistedScriptState persisted{ m_Identity, m_SerializedObjectData };
+        PersistedScriptState persisted{ m_Identity, m_SerializedObjectData, m_ManagedState };
         if (m_ScriptEntityBehaviour == nullptr || m_MissingType)
             return persisted;
 
@@ -723,6 +725,8 @@ namespace Crowny
                            m_Identity.Assembly, m_Identity.GetFullName());
             return false;
         }
+
+        m_ManagedState = state.ManagedState;
 
         MonoObject* instance = GetManagedInstance();
         if (!m_MissingType && instance != nullptr && m_ObjectInfo != nullptr)

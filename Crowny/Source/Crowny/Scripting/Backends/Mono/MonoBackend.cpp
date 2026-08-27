@@ -6,6 +6,7 @@
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Bindings/ScriptBindings.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
+#include "Crowny/Scripting/Managed/LegacyScriptState.h"
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoClass.h"
@@ -177,7 +178,7 @@ namespace Crowny
             static constexpr EventMethod METHODS[] = {
                 { ScriptEventKind::Start, "Start", 0 },
                 { ScriptEventKind::Update, "Update", 0 },
-                { ScriptEventKind::Destroy, "OnDestroy", 0 },
+                { ScriptEventKind::Destroy, "Destroy", 0 },
                 { ScriptEventKind::CollisionEnter2D, "OnCollisionEnter2D", 1 },
                 { ScriptEventKind::CollisionStay2D, "OnCollisionStay2D", 1 },
                 { ScriptEventKind::CollisionExit2D, "OnCollisionExit2D", 1 },
@@ -367,7 +368,8 @@ namespace Crowny
                     return ScriptValue::Null();
                 Ref<SerializableObjectInfo> objectInfo;
                 const auto objectType = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
-                ScriptInfoManager::Get().GetSerializableObjectInfo(*objectType, objectInfo);
+                if (ScriptInfoManager::IsStartedUp())
+                    ScriptInfoManager::Get().GetSerializableObjectInfo(*objectType, objectInfo);
                 if (objectInfo == nullptr)
                     objectInfo = field->Value->GetObjectInfo();
                 return ReadLegacyObject(field->Value, objectInfo);
@@ -512,7 +514,8 @@ namespace Crowny
                 Ref<SerializableFieldObject> field = CreateRef<SerializableFieldObject>();
                 const auto objectType = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
                 Ref<SerializableObjectInfo> objectInfo;
-                ScriptInfoManager::Get().GetSerializableObjectInfo(*objectType, objectInfo);
+                if (ScriptInfoManager::IsStartedUp())
+                    ScriptInfoManager::Get().GetSerializableObjectInfo(*objectType, objectInfo);
                 field->Value = WriteLegacyObject(value, objectInfo);
                 field->AllowNull = !objectType->m_ValueType;
                 return field;
@@ -597,11 +600,6 @@ namespace Crowny
                     MonoManager::StartUp(paths.LibraryDirectory, paths.EtcDirectory, config.EnableDebugging ? MONO_DEBUG_PORT : 0);
                     m_OwnsMono = true;
                 }
-                ScriptBindings::Register();
-                StartModule<ScriptInfoManager>(m_OwnsScriptInfo);
-                StartModule<ScriptSceneObjectManager>(m_OwnsSceneObjects);
-                StartModule<ScriptObjectManager>(m_OwnsScriptObjects);
-                StartModule<ScriptAssetManager>(m_OwnsScriptAssets);
                 m_Config = config;
                 m_Started = true;
                 return ManagedOperationResult::Success();
@@ -656,6 +654,7 @@ namespace Crowny
                     return Failure("managed.mono.not_started", "The Mono adapter is not running.");
                 if (m_ProgramLoaded)
                     return Failure("managed.mono.program_already_loaded", "Unload or reload the current Mono program first.");
+                EnsureServices();
                 ManagedOperationResult loaded = LoadAssemblies(program);
                 if (!loaded.Succeeded)
                     return loaded;
@@ -787,7 +786,7 @@ namespace Crowny
                     Collision2D collision;
                     collision.Colliders = { self, other };
                     for (const ScriptContactPoint& contact : event.Contacts)
-                        collision.Points.push_back(glm::vec2(contact.Position));
+                        collision.Points.emplace_back(contact.Position.x, contact.Position.y);
                     if (event.Kind == ScriptEventKind::CollisionEnter2D)
                         script->OnCollisionEnter2D(collision);
                     else if (event.Kind == ScriptEventKind::CollisionStay2D)
@@ -876,6 +875,15 @@ namespace Crowny
                     T::StartUp();
                     owned = true;
                 }
+            }
+
+            void EnsureServices()
+            {
+                ScriptBindings::Register();
+                StartModule<ScriptInfoManager>(m_OwnsScriptInfo);
+                StartModule<ScriptSceneObjectManager>(m_OwnsSceneObjects);
+                StartModule<ScriptObjectManager>(m_OwnsScriptObjects);
+                StartModule<ScriptAssetManager>(m_OwnsScriptAssets);
             }
 
             ManagedOperationResult LoadAssemblies(const ManagedProgramDefinition& program)
@@ -989,6 +997,16 @@ namespace Crowny
             bool m_OwnsScriptAssets = false;
         };
     } // namespace
+
+    ScriptState ConvertLegacyScriptState(const PersistedScriptState& persisted)
+    {
+        ScriptState state;
+        if (!persisted.Identity.IsValid() || persisted.Fields == nullptr || persisted.Fields->GetObjectInfo() == nullptr)
+            return state;
+        state.Identity = persisted.Identity;
+        state.Root = ReadLegacyObject(persisted.Fields, persisted.Fields->GetObjectInfo());
+        return state;
+    }
 
     Scope<ManagedBackend> CreateMonoBackend() { return CreateScope<MonoBackend>(); }
 } // namespace Crowny

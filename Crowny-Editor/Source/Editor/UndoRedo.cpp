@@ -5,6 +5,7 @@
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 #include "Crowny/Serialization/ScriptSerializer.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -18,7 +19,7 @@ namespace Crowny
 
         PersistedScriptState CloneScriptState(const PersistedScriptState& state, Scene* scene)
         {
-            PersistedScriptState clone{ state.Identity, nullptr };
+            PersistedScriptState clone{ state.Identity, nullptr, state.ManagedState };
             if (state.Fields == nullptr)
                 return clone;
 
@@ -371,7 +372,11 @@ namespace Crowny
             const auto found = std::find_if(component.Scripts.begin(), component.Scripts.end(),
                                             [&](const MonoScript& script) { return script.GetTypeIdentity() == snapshot.Identity; });
             if (found != component.Scripts.end())
+            {
                 found->ApplyPersistedState(snapshot);
+                if (snapshot.ManagedState.Identity.IsValid())
+                    ScriptRuntime::ApplyState(*found, snapshot.ManagedState);
+            }
         }
     }
 

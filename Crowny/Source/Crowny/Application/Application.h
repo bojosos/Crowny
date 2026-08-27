@@ -9,6 +9,7 @@
 
 #include "Crowny/ImGui/ImGuiLayer.h"
 #include "Crowny/Renderer/RenderThread.h"
+#include "Crowny/Scripting/Managed/ManagedBackendSelection.h"
 
 int main(int argc, char** argv);
 
@@ -21,6 +22,9 @@ namespace Crowny
 
     struct ScriptConfig
     {
+        ManagedBackendPreset Backend = ManagedBackendPreset::Mono;
+        Path ProgramManifest;
+        Path RuntimeRoot;
         bool EnableDebugging = false;
         bool EnableProfiling = false;
     };

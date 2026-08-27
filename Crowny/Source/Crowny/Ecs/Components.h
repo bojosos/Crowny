@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/Scripting/ScriptTypeIdentity.h"
+#include "Crowny/Scripting/Managed/ManagedTypes.h"
 
 #include "Crowny/Common/Color.h"
 #include "Crowny/Scene/SceneCamera.h"
@@ -581,6 +581,7 @@ namespace Crowny
     {
         ScriptTypeIdentity Identity;
         Ref<SerializableObject> Fields;
+        ScriptState ManagedState;
     };
 
     class MonoScript
@@ -620,6 +621,11 @@ namespace Crowny
         const String& GetAssemblyName() const { return m_Identity.Assembly; }
         const String& GetTypeName() const { return m_Identity.TypeName; }
         const String& GetNamespace() const { return m_Identity.Namespace; }
+        ScriptInstanceHandle GetRuntimeHandle() const { return m_RuntimeHandle; }
+        void SetRuntimeHandle(ScriptInstanceHandle handle) { m_RuntimeHandle = handle; }
+        void ClearRuntimeHandle() { m_RuntimeHandle = {}; }
+        const ScriptState& GetManagedState() const { return m_ManagedState; }
+        void SetManagedState(ScriptState state) { m_ManagedState = std::move(state); }
 
         void OnInitialize(ScriptEntityBehaviour* entityBehaviour);
         void Create(Entity entity);
@@ -685,6 +691,8 @@ namespace Crowny
         MonoReflectionType* m_RuntimeType = nullptr;
         MonoClass* m_Class = nullptr;
         ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
+        ScriptInstanceHandle m_RuntimeHandle;
+        ScriptState m_ManagedState;
     };
 
     class MonoScriptComponent : public ComponentBase

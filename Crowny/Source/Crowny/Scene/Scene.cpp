@@ -2,6 +2,7 @@
 
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
@@ -833,47 +834,33 @@ namespace Crowny
                 return;
 
             auto& scripts = self.GetComponent<MonoScriptComponent>().Scripts;
+            ScriptEvent scriptEvent;
+            scriptEvent.OtherEntity = other.GetUuid();
             if (event.IsTrigger)
             {
+                if (event.Type == PhysicsContactEventType3D::Enter)
+                    scriptEvent.Kind = ScriptEventKind::TriggerEnter3D;
+                else if (event.Type == PhysicsContactEventType3D::Stay)
+                    scriptEvent.Kind = ScriptEventKind::TriggerStay3D;
+                else
+                    scriptEvent.Kind = ScriptEventKind::TriggerExit3D;
                 for (auto& script : scripts)
-                {
-                    switch (event.Type)
-                    {
-                    case PhysicsContactEventType3D::Enter:
-                        script.OnTriggerEnter3D(other);
-                        break;
-                    case PhysicsContactEventType3D::Stay:
-                        script.OnTriggerStay3D(other);
-                        break;
-                    case PhysicsContactEventType3D::Exit:
-                        script.OnTriggerExit3D(other);
-                        break;
-                    }
-                }
+                    ScriptRuntime::Dispatch(script, scriptEvent);
                 return;
             }
 
-            Collision3D collision;
-            collision.Colliders = { self, other };
-            collision.Points = event.Points;
-            if (reverseNormal)
-                for (auto& point : collision.Points)
-                    point.Normal = -point.Normal;
+            if (event.Type == PhysicsContactEventType3D::Enter)
+                scriptEvent.Kind = ScriptEventKind::CollisionEnter3D;
+            else if (event.Type == PhysicsContactEventType3D::Stay)
+                scriptEvent.Kind = ScriptEventKind::CollisionStay3D;
+            else
+                scriptEvent.Kind = ScriptEventKind::CollisionExit3D;
+            scriptEvent.Contacts.reserve(event.Points.size());
+            for (const PhysicsContactPoint3D& point : event.Points)
+                scriptEvent.Contacts.push_back(
+                  { point.Position, reverseNormal ? -point.Normal : point.Normal, point.Separation, point.Impulse });
             for (auto& script : scripts)
-            {
-                switch (event.Type)
-                {
-                case PhysicsContactEventType3D::Enter:
-                    script.OnCollisionEnter3D(collision);
-                    break;
-                case PhysicsContactEventType3D::Stay:
-                    script.OnCollisionStay3D(collision);
-                    break;
-                case PhysicsContactEventType3D::Exit:
-                    script.OnCollisionExit3D(collision);
-                    break;
-                }
-            }
+                ScriptRuntime::Dispatch(script, scriptEvent);
         };
 
         dispatch(firstHandle, secondHandle, false);
@@ -961,11 +948,11 @@ namespace Crowny
         script.ApplyPersistedState(state);
         if (initialize)
         {
-            script.Create(entity);
+            ScriptRuntime::CreateScript(entity, script, false);
             MonoClass* monoClass = script.GetManagedClass();
             MonoClass* runInEditor = ScriptInfoManager::IsStartedUp() ? ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute : nullptr;
             if (m_RuntimeActive || (m_IsEditorScene && monoClass != nullptr && runInEditor != nullptr && monoClass->HasAttribute(runInEditor)))
-                script.OnStart();
+                ScriptRuntime::Dispatch(script, ScriptEvent::Lifecycle(ScriptEventKind::Start));
         }
         return true;
     }
@@ -984,8 +971,7 @@ namespace Crowny
           std::find_if(scripts.begin(), scripts.end(), [&](const MonoScript& candidate) { return candidate.GetTypeIdentity() == identity; });
         if (script == scripts.end())
             return;
-        if (ScriptSceneObjectManager::IsStartedUp())
-            ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, &*script);
+        ScriptRuntime::DestroyScript(entity, *script);
         scripts.erase(script);
         if (scripts.empty())
             entity.RemoveComponent<MonoScriptComponent>();
@@ -1213,12 +1199,14 @@ namespace Crowny
 
     void Scene::OnMonoScriptComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (!ScriptSceneObjectManager::IsStartedUp())
-            return;
         Entity e = { entity, this };
         auto& msc = e.GetComponent<MonoScriptComponent>();
         for (auto& script : msc.Scripts)
-            ScriptSceneObjectManager::Get().NotifyComponentDestroyed(script.InstanceId);
+        {
+            ScriptRuntime::DestroyScript(e, script);
+            if (ScriptSceneObjectManager::IsStartedUp())
+                ScriptSceneObjectManager::Get().NotifyComponentDestroyed(script.InstanceId);
+        }
     }
 
 } // namespace Crowny

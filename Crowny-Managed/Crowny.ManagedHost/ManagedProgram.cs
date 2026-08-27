@@ -279,7 +279,11 @@ internal sealed class ManagedProgram
         foreach (NativeEventKind kind in Enum.GetValues<NativeEventKind>())
         {
             (string methodName, Type? parameterType) = CallbackSignature(kind);
-            callbacks.Add(kind, FindCallback(type, methodName, parameterType));
+            MethodInfo? callback = FindCallback(type, methodName, parameterType);
+            string? fallback = FallbackCallbackName(kind);
+            if (callback is null && fallback is not null)
+                callback = FindCallback(type, fallback, parameterType);
+            callbacks.Add(kind, callback);
         }
         return callbacks;
     }
@@ -288,7 +292,7 @@ internal sealed class ManagedProgram
     {
         NativeEventKind.Start => ("Start", null),
         NativeEventKind.Update => ("Update", null),
-        NativeEventKind.Destroy => ("OnDestroy", null),
+        NativeEventKind.Destroy => ("Destroy", null),
         NativeEventKind.CollisionEnter2D => ("OnCollisionEnter2D", typeof(Collision2D)),
         NativeEventKind.CollisionStay2D => ("OnCollisionStay2D", typeof(Collision2D)),
         NativeEventKind.CollisionExit2D => ("OnCollisionExit2D", typeof(Collision2D)),
@@ -302,6 +306,18 @@ internal sealed class ManagedProgram
         NativeEventKind.TriggerStay3D => ("OnTriggerStay3D", typeof(Entity)),
         NativeEventKind.TriggerExit3D => ("OnTriggerExit3D", typeof(Entity)),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown managed event kind.")
+    };
+
+    private static string? FallbackCallbackName(NativeEventKind kind) => kind switch
+    {
+        NativeEventKind.Destroy => "OnDestroy",
+        NativeEventKind.CollisionEnter3D => "OnCollisionEnter",
+        NativeEventKind.CollisionStay3D => "OnCollisionStay",
+        NativeEventKind.CollisionExit3D => "OnCollisionExit",
+        NativeEventKind.TriggerEnter3D => "OnTriggerEnter",
+        NativeEventKind.TriggerStay3D => "OnTriggerStay",
+        NativeEventKind.TriggerExit3D => "OnTriggerExit",
+        _ => null
     };
 
     private static MethodInfo? FindCallback(Type type, string methodName, Type? parameterType)
