@@ -292,14 +292,14 @@ namespace Crowny
                         !ReadIdentity(fieldValue["DeclaredType"], field.DeclaredType))
                         return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
                                                                "The managed catalog contains an invalid declared field type.", backend);
-                    field.Flags = ScriptFieldFlags::Serializable | ScriptFieldFlags::Inspectable;
+                    field.Flags = ScriptSchemaFieldFlags::Serializable | ScriptSchemaFieldFlags::Inspectable;
                     if (fieldValue.HasMember("IsReadOnly"))
                     {
                         if (!fieldValue["IsReadOnly"].IsBool())
                             return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
                                                                    "The managed catalog contains an invalid read-only flag.", backend);
                         if (fieldValue["IsReadOnly"].GetBool())
-                            field.Flags = field.Flags | ScriptFieldFlags::ReadOnly;
+                            field.Flags = field.Flags | ScriptSchemaFieldFlags::ReadOnly;
                     }
                     if (fieldValue.HasMember("IsNullable"))
                     {
@@ -307,7 +307,7 @@ namespace Crowny
                             return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
                                                                    "The managed catalog contains an invalid nullable flag.", backend);
                         if (fieldValue["IsNullable"].GetBool())
-                            field.Flags = field.Flags | ScriptFieldFlags::Nullable;
+                            field.Flags = field.Flags | ScriptSchemaFieldFlags::Nullable;
                     }
                     if (fieldValue.HasMember("FormerNames") && !fieldValue["FormerNames"].IsArray())
                         return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",

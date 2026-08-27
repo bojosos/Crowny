@@ -97,7 +97,7 @@ namespace Crowny
         bool operator==(const ScriptValue& other) const;
     };
 
-    enum class ScriptFieldFlags : uint32_t
+    enum class ScriptSchemaFieldFlags : uint32_t
     {
         None = 0,
         Serializable = 1 << 0,
@@ -107,14 +107,14 @@ namespace Crowny
         Static = 1 << 4
     };
 
-    constexpr ScriptFieldFlags operator|(ScriptFieldFlags lhs, ScriptFieldFlags rhs)
+    constexpr ScriptSchemaFieldFlags operator|(ScriptSchemaFieldFlags lhs, ScriptSchemaFieldFlags rhs)
     {
-        return static_cast<ScriptFieldFlags>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
+        return static_cast<ScriptSchemaFieldFlags>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
     }
 
-    constexpr ScriptFieldFlags operator&(ScriptFieldFlags lhs, ScriptFieldFlags rhs)
+    constexpr ScriptSchemaFieldFlags operator&(ScriptSchemaFieldFlags lhs, ScriptSchemaFieldFlags rhs)
     {
-        return static_cast<ScriptFieldFlags>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
+        return static_cast<ScriptSchemaFieldFlags>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
     }
 
     enum class ScriptEventKind
@@ -164,7 +164,7 @@ namespace Crowny
         ScriptValueKind ElementKind = ScriptValueKind::Null;
         ScriptValueKind KeyKind = ScriptValueKind::Null;
         ScriptTypeIdentity DeclaredType;
-        ScriptFieldFlags Flags = ScriptFieldFlags::None;
+        ScriptSchemaFieldFlags Flags = ScriptSchemaFieldFlags::None;
     };
 
     struct ScriptTypeSchema

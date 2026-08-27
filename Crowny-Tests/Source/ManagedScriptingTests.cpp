@@ -48,7 +48,7 @@ namespace
         speed.StableId = 0x2001;
         speed.Name = "Speed";
         speed.ValueKind = ScriptValueKind::Float;
-        speed.Flags = ScriptFieldFlags::Serializable | ScriptFieldFlags::Inspectable;
+        speed.Flags = ScriptSchemaFieldFlags::Serializable | ScriptSchemaFieldFlags::Inspectable;
 
         ScriptTypeSchema mover;
         mover.StableId = 0x1001;

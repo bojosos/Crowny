@@ -222,7 +222,7 @@ namespace Crowny
         Map<String, ScriptValue> remaining = state.Root.Members;
         for (const ScriptFieldSchema& field : target.Fields)
         {
-            if ((field.Flags & ScriptFieldFlags::Serializable) == ScriptFieldFlags::None)
+            if ((field.Flags & ScriptSchemaFieldFlags::Serializable) == ScriptSchemaFieldFlags::None)
                 continue;
             auto value = remaining.find(field.Name);
             if (value == remaining.end())

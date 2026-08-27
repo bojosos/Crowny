@@ -103,20 +103,20 @@ namespace Crowny
             return ScriptValueKind::Null;
         }
 
-        ScriptFieldFlags GetFieldFlags(const Ref<SerializableMemberInfo>& member)
+        ScriptSchemaFieldFlags GetFieldFlags(const Ref<SerializableMemberInfo>& member)
         {
-            ScriptFieldFlags flags = ScriptFieldFlags::None;
+            ScriptSchemaFieldFlags flags = ScriptSchemaFieldFlags::None;
             if (member->m_Flags.IsSet(ScriptFieldFlagBits::Serializable))
-                flags = flags | ScriptFieldFlags::Serializable;
+                flags = flags | ScriptSchemaFieldFlags::Serializable;
             if (member->m_Flags.IsSet(ScriptFieldFlagBits::Inspectable))
-                flags = flags | ScriptFieldFlags::Inspectable;
+                flags = flags | ScriptSchemaFieldFlags::Inspectable;
             if (member->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly))
-                flags = flags | ScriptFieldFlags::ReadOnly;
+                flags = flags | ScriptSchemaFieldFlags::ReadOnly;
             const ScriptValueKind kind = GetValueKind(member->m_TypeInfo);
             if (kind == ScriptValueKind::String || kind == ScriptValueKind::Entity || kind == ScriptValueKind::Asset ||
                 kind == ScriptValueKind::Object || kind == ScriptValueKind::Array || kind == ScriptValueKind::List ||
                 kind == ScriptValueKind::Dictionary)
-                flags = flags | ScriptFieldFlags::Nullable;
+                flags = flags | ScriptSchemaFieldFlags::Nullable;
             return flags;
         }
 
