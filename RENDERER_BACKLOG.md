@@ -114,8 +114,10 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Isolate temporal history between renderer/view owners that render the same scene camera.
 - [x] Give view owners monotonic identities and queue namespace-only teardown releases directly to the render thread behind a submission watermark, so destruction does not depend on another snapshot.
 - [x] Ping-pong temporal resources per camera/history entry rather than global frame parity, preserving history when cameras skip or interleave frames.
+- [x] Commit temporal ping-pong writes only after a successful graph execution; failed frames preserve the last valid history slot.
 - [x] Invalidate per-camera TAA and Hi-Z history when its resolved Forward+/Deferred+ path changes or it falls back through compatibility rendering.
-- [x] Keep process-wide renderer helper ownership with the renderer that initialized it; preview-renderer destruction no longer invalidates editor grid resources.
+- [x] Keep process-wide renderer helper data alive until the last `SceneRenderer` consumer is destroyed; preview rendering also disables the editor grid it does not use.
+- [x] Use the simulation frame for standalone snapshot extraction so public value-returning overloads do not age histories by camera count.
 - [x] Transform culling spheres with a shear-safe singular-value bound instead of the longest basis vector.
 - [x] Apply visibility, layer, and frustum culling to custom forward-only and compatibility draws; pin mixed custom-material instances to LOD zero until their forward pass consumes geometry-heap LOD ranges.
 - [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.

@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Common/Time.h"
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
 #include "Crowny/Physics/PhysicsCollision.h"
@@ -196,6 +197,9 @@ TEST_CASE("Renderer views keep independent camera history namespaces", "[Memory]
 
     REQUIRE(firstSnapshot.HistoryNamespace != 0);
     REQUIRE(secondSnapshot.HistoryNamespace != 0);
+    REQUIRE(firstSnapshot.HistoryOwnerId != 0);
+    REQUIRE(secondSnapshot.HistoryOwnerId != 0);
+    CHECK(firstSnapshot.HistoryOwnerId != secondSnapshot.HistoryOwnerId);
     CHECK(firstSnapshot.HistoryNamespace != secondSnapshot.HistoryNamespace);
 }
 
@@ -232,6 +236,32 @@ TEST_CASE("Active cameras do not age each other within one frame", "[Memory][Fra
         {
             snapshot.FrameNumber = frame;
             renderer.ExtractSnapshot(snapshot, camera, glm::mat4(1.0f), false);
+            if (frame != 1)
+                CHECK_FALSE(snapshot.CameraCut);
+            CHECK(snapshot.ReleasedHistoryNamespaces.Empty());
+        }
+    }
+}
+
+TEST_CASE("Value-returning snapshots use the simulation frame for history aging", "[Memory][Frame][Renderer][SceneSync]")
+{
+    struct ResetTimeOnExit
+    {
+        ~ResetTimeOnExit() { Time::Reset(); }
+    } resetTime;
+
+    Time::Reset();
+    const Ref<Scene> scene = CreateRef<Scene>(false);
+    SceneRenderer renderer(scene, nullptr);
+    std::array<Camera, 121> cameras;
+
+    for (uint64_t frame = 1; frame <= 3; frame++)
+    {
+        Time::Update(1.0f / 60.0f, 1.0f / 60.0f);
+        for (Camera& camera : cameras)
+        {
+            const RenderSnapshot snapshot = renderer.ExtractSnapshot(camera, glm::mat4(1.0f), false);
+            CHECK(snapshot.FrameNumber == frame);
             if (frame != 1)
                 CHECK_FALSE(snapshot.CameraCut);
             CHECK(snapshot.ReleasedHistoryNamespaces.Empty());
@@ -408,8 +438,7 @@ TEST_CASE("Physics contact collider pairs stay inline on the dispatch path", "[M
     const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
     const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
 
-    const uint64_t expectedPerContact = 2ull * static_cast<uint32_t>(first.GetHandle()) +
-                                        2ull * static_cast<uint32_t>(second.GetHandle());
+    const uint64_t expectedPerContact = 2ull * static_cast<uint32_t>(first.GetHandle()) + 2ull * static_cast<uint32_t>(second.GetHandle());
     CHECK(observedHandles == expectedPerContact * contactCount);
     CHECK(delta.AllocationCount == 0u);
     CHECK(delta.RequestedBytes == 0u);
@@ -433,8 +462,7 @@ TEST_CASE("Render blackboard rebuilds allocate nothing after warm-up", "[Memory]
             blackboard.Clear();
             for (uint32_t index = 0; index < resourceCount; index++)
             {
-                blackboard.Set(StringView(names[index]),
-                               { index, 1u, RenderGraphResourceType::Buffer });
+                blackboard.Set(StringView(names[index]), { index, 1u, RenderGraphResourceType::Buffer });
             }
 
             uint64_t checksum = 0;
@@ -443,8 +471,7 @@ TEST_CASE("Render blackboard rebuilds allocate nothing after warm-up", "[Memory]
             return checksum;
         };
 
-        const uint64_t expectedChecksum =
-            static_cast<uint64_t>(resourceCount) * (static_cast<uint64_t>(resourceCount) + 1u) / 2u;
+        const uint64_t expectedChecksum = static_cast<uint64_t>(resourceCount) * (static_cast<uint64_t>(resourceCount) + 1u) / 2u;
         CHECK(rebuild() == expectedChecksum);
         blackboard.Clear();
         CHECK_FALSE(blackboard.Contains(StringView(names.front())));

@@ -449,6 +449,37 @@ TEST_CASE("RenderGraph history ping-pong follows each camera instead of global f
     resources.EndFrame();
 }
 
+TEST_CASE("RenderGraph does not commit history from a failed frame", "[Renderer][RenderGraph]")
+{
+    RenderGraph graph;
+    const RenderGraphHistoryPair history = graph.CreateHistoryTexture("Taa", ColorTexture());
+    graph.AddPass("Resolve", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) {
+        builder.Read(history.Read);
+        builder.Write(history.Write);
+    });
+    const RenderGraphCompileResult& compiled = graph.Compile();
+    REQUIRE(compiled.Succeeded);
+
+    RenderGraphResourceRegistry resources(2);
+    REQUIRE(resources.BeginFrame(compiled, 1, 42, true));
+    const uint64_t lastSuccessfulWrite = resources.Get(history.Write).PhysicalId;
+    resources.EndFrame();
+
+    REQUIRE(resources.BeginFrame(compiled, 2, 42));
+    REQUIRE(resources.Get(history.Read).HistoryValid);
+    const uint64_t failedWrite = resources.Get(history.Write).PhysicalId;
+    REQUIRE(failedWrite != lastSuccessfulWrite);
+    resources.AbortFrame();
+
+    REQUIRE(resources.BeginFrame(compiled, 3, 42));
+    const RenderGraphResourceBinding returningRead = resources.Get(history.Read);
+    const RenderGraphResourceBinding retryWrite = resources.Get(history.Write);
+    CHECK(returningRead.HistoryValid);
+    CHECK(returningRead.PhysicalId == lastSuccessfulWrite);
+    CHECK(retryWrite.PhysicalId == failedWrite);
+    resources.EndFrame();
+}
+
 TEST_CASE("RenderGraph releases retired camera history namespaces", "[Renderer][Resources][RenderGraph]")
 {
     RenderGraph graph;

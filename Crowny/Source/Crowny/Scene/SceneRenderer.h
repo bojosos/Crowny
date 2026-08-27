@@ -64,8 +64,8 @@ namespace Crowny
         friend class RenderThread;
 
         void Render(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid = false, const GridSettings& gridSettings = {});
-        void ExtractSnapshotWithHistory(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform,
-                                        uint64_t historyNamespace, bool drawGrid) const;
+        void ExtractSnapshotWithHistory(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform, uint64_t historyNamespace,
+                                        bool drawGrid) const;
         static void RenderLegacySnapshot(const RenderSnapshot& snapshot);
         static void RenderLegacyOverlays(const RenderSnapshot& snapshot);
         static void ReleaseRenderThreadHistory(uint64_t historyNamespace);
@@ -208,7 +208,6 @@ namespace Crowny
         mutable UnorderedMap<uint64_t, CameraHistoryState> m_CameraHistory;
         mutable Vector<uint64_t> m_PendingHistoryReleases;
         uint64_t m_HistoryOwnerId = 0;
-        bool m_OwnsSharedData = false;
     };
 
 } // namespace Crowny

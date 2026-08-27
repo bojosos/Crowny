@@ -24,6 +24,7 @@
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/Time.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
@@ -50,6 +51,12 @@ namespace Crowny
             if (value == 0)
                 value = s_NextHistoryOwnerId.fetch_add(1, std::memory_order_relaxed);
             return value;
+        }
+
+        uint64_t CurrentSimulationFrameNumber()
+        {
+            const float frameCount = Time::GetFrameCount();
+            return frameCount >= 1.0f ? static_cast<uint64_t>(frameCount) : 1u;
         }
 
         uint64_t CameraHistoryNamespace(uint64_t historyOwnerId, const Scene* scene, uint64_t cameraIdentity, uint64_t identityKind)
@@ -92,8 +99,7 @@ namespace Crowny
         bool IsRenderableObjectVisible(const RenderableObject& object, const VisibilityFrustum& frustum, RenderLayerMask visibilityMask)
         {
             return object.Visible && object.VisibilityLayers.Intersects(visibilityMask) &&
-                   (object.BoundingSphere.w < 0.0f ||
-                    frustum.IntersectsSphere(glm::vec3(object.BoundingSphere), object.BoundingSphere.w));
+                   (object.BoundingSphere.w < 0.0f || frustum.IntersectsSphere(glm::vec3(object.BoundingSphere), object.BoundingSphere.w));
         }
 
         class PointShadowLayerAllocator
@@ -182,8 +188,8 @@ namespace Crowny
         {
         public:
             void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
-                            const GpuDrawBinLayout* drawBinLayout, const RenderSnapshot& snapshot,
-                            const Ref<EnvironmentMap>& environment, const RenderPipelineSettings& settings)
+                            const GpuDrawBinLayout* drawBinLayout, const RenderSnapshot& snapshot, const Ref<EnvironmentMap>& environment,
+                            const RenderPipelineSettings& settings)
             {
                 m_View = view;
                 m_Blackboard = &blackboard;
@@ -901,15 +907,15 @@ namespace Crowny
                 textureVersion = m_Scene->GetBindlessTextureVersion();
             }
 
-            void DrawCpuOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList,
-                                   bool skipGpuBins, bool includeForwardOnly = false)
+            void DrawCpuOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList, bool skipGpuBins,
+                                   bool includeForwardOnly = false)
             {
                 if (commands == nullptr || !material.Bind())
                     return;
                 for (const GpuDrawRun& run : drawList.Runs)
                 {
-                    const bool supportedPhase = run.Bin.Phase == RenderDrawPhase::Opaque ||
-                                                (includeForwardOnly && run.Bin.Phase == RenderDrawPhase::ForwardOpaque);
+                    const bool supportedPhase =
+                      run.Bin.Phase == RenderDrawPhase::Opaque || (includeForwardOnly && run.Bin.Phase == RenderDrawPhase::ForwardOpaque);
                     if (!supportedPhase || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) || run.CommandCount == 0)
                         continue;
                     if (skipGpuBins && m_DrawBinLayout != nullptr && m_DrawBinLayout->Contains(run.Bin))
@@ -991,13 +997,11 @@ namespace Crowny
                 m_ForwardPlus.SetTexture(
                   0, 16, TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
                 BindMaterialTable(m_ForwardPlus, m_ForwardTextureVersion, context);
-                const RenderSurfaceMask loadMask(
-                  static_cast<uint32_t>(RT_DEPTH_STENCIL) |
-                  (Resource("ObjectID") ? static_cast<uint32_t>(RT_COLOR2) : 0u));
+                const RenderSurfaceMask loadMask(static_cast<uint32_t>(RT_DEPTH_STENCIL) |
+                                                 (Resource("ObjectID") ? static_cast<uint32_t>(RT_COLOR2) : 0u));
                 RenderAPI::TryGet()->SetRenderTarget(target, 0, loadMask);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f, 0,
-                                                   static_cast<uint8_t>(RT_COLOR0 | RT_COLOR1));
+                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f, 0, static_cast<uint8_t>(RT_COLOR0 | RT_COLOR1));
                 const Ref<GenericGpuBuffer> gpuInstanceIds = Buffer(context, "VisibleDrawInstances");
                 const Ref<GenericGpuBuffer> gpuCommands = Buffer(context, "IndirectCommands");
                 const Ref<GenericGpuBuffer> gpuCounts = Buffer(context, "IndirectDrawCounts");
@@ -1038,15 +1042,13 @@ namespace Crowny
                 m_DeferredGBuffer.WriteUniformBlock(0, 0, &view, sizeof(view));
                 m_DeferredGBuffer.SetBuffer(0, 1, instances);
                 BindMaterialTable(m_DeferredGBuffer, m_DeferredTextureVersion, context);
-                const RenderSurfaceMask loadMask(
-                  static_cast<uint32_t>(RT_DEPTH_STENCIL) |
-                  (Resource("ObjectID") ? static_cast<uint32_t>(RT_COLOR4) : 0u));
+                const RenderSurfaceMask loadMask(static_cast<uint32_t>(RT_DEPTH_STENCIL) |
+                                                 (Resource("ObjectID") ? static_cast<uint32_t>(RT_COLOR4) : 0u));
                 RenderAPI::TryGet()->SetRenderTarget(target, 0, loadMask);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                RenderAPI::TryGet()->ClearViewport(
-                  FBT_COLOR, glm::vec4(0.0f), 0.0f, 0,
-                  static_cast<uint8_t>(static_cast<uint32_t>(RT_COLOR0) | static_cast<uint32_t>(RT_COLOR1) |
-                                       static_cast<uint32_t>(RT_COLOR2) | static_cast<uint32_t>(RT_COLOR3)));
+                RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f, 0,
+                                                   static_cast<uint8_t>(static_cast<uint32_t>(RT_COLOR0) | static_cast<uint32_t>(RT_COLOR1) |
+                                                                        static_cast<uint32_t>(RT_COLOR2) | static_cast<uint32_t>(RT_COLOR3)));
                 const Ref<GenericGpuBuffer> gpuInstanceIds = Buffer(context, "VisibleDrawInstances");
                 const Ref<GenericGpuBuffer> gpuCommands = Buffer(context, "IndirectCommands");
                 const Ref<GenericGpuBuffer> gpuCounts = Buffer(context, "IndirectDrawCounts");
@@ -1264,10 +1266,9 @@ namespace Crowny
                     return;
                 ForwardRenderer::SetPolygonMode(m_Snapshot->OverridePolygonMode);
                 ForwardRenderer::Begin();
-                ForwardRenderer::BeginForwardOnlyScene(m_Snapshot->ProjectionMatrix, m_Snapshot->ViewMatrix,
-                                                       m_Snapshot->CameraPosition, m_Snapshot->Environment);
-                ForwardRenderer::SetLights(m_Snapshot->LegacyLights.begin(),
-                                           static_cast<uint32_t>(m_Snapshot->LegacyLights.Size()));
+                ForwardRenderer::BeginForwardOnlyScene(m_Snapshot->ProjectionMatrix, m_Snapshot->ViewMatrix, m_Snapshot->CameraPosition,
+                                                       m_Snapshot->Environment);
+                ForwardRenderer::SetLights(m_Snapshot->LegacyLights.begin(), static_cast<uint32_t>(m_Snapshot->LegacyLights.Size()));
                 const VisibilityFrustum frustum =
                   VisibilityFrustum::FromViewProjection(m_View.Projection * m_View.View, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
                 for (const RenderableObject& object : m_Snapshot->MeshObjects)
@@ -1414,7 +1415,7 @@ namespace Crowny
     };
 
     static SceneRendererData* s_Data;
-    static uint32_t s_DataUsers;
+    static uint32_t s_RendererInstances;
     static std::mutex s_StatisticsMutex;
     static SceneRenderStatistics s_Statistics;
 
@@ -1441,8 +1442,8 @@ namespace Crowny
         {
             SceneRenderStatistics statistics;
             statistics.FrameNumber = snapshot.FrameNumber;
-            const VisibilityFrustum frustum = VisibilityFrustum::FromViewProjection(
-              snapshot.ProjectionMatrix * snapshot.ViewMatrix, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
+            const VisibilityFrustum frustum =
+              VisibilityFrustum::FromViewProjection(snapshot.ProjectionMatrix * snapshot.ViewMatrix, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
             for (const RenderableObject& object : snapshot.MeshObjects)
             {
                 if (!object.MeshHandle || !IsRenderableObjectVisible(object, frustum, RenderLayerMask::All()))
@@ -1471,20 +1472,18 @@ namespace Crowny
       : m_RenderTarget(renderTarget), m_Scene(scene), m_HistoryReleaseSink(historyReleaseSink),
         m_HistoryOwnerId(AllocateHistoryOwnerId())
     {
+        s_RendererInstances++;
     }
 
     SceneRenderer::~SceneRenderer()
     {
         DispatchHistoryReleases();
-        if (m_OwnsSharedData)
+        CW_ENGINE_ASSERT(s_RendererInstances != 0, "Scene renderer instance ownership is unbalanced");
+        s_RendererInstances--;
+        if (s_RendererInstances == 0)
         {
-            CW_ENGINE_ASSERT(s_DataUsers != 0, "Scene renderer shared-data ownership is unbalanced");
-            s_DataUsers--;
-            if (s_DataUsers == 0)
-            {
-                delete s_Data;
-                s_Data = nullptr;
-            }
+            delete s_Data;
+            s_Data = nullptr;
         }
     }
 
@@ -1496,10 +1495,6 @@ namespace Crowny
 
     void SceneRenderer::Init()
     {
-        if (m_OwnsSharedData)
-            return;
-        m_OwnsSharedData = true;
-        s_DataUsers++;
         if (s_Data != nullptr)
             return;
         s_Data = new SceneRendererData();
@@ -1903,7 +1898,7 @@ namespace Crowny
 
     void SceneRenderer::ExtractSnapshot(RenderSnapshot& snapshot, bool drawGrid) const
     {
-        const uint64_t frameNumber = snapshot.FrameNumber;
+        const uint64_t frameNumber = snapshot.FrameNumber != 0 ? snapshot.FrameNumber : CurrentSimulationFrameNumber();
         snapshot.Clear();
         snapshot.FrameNumber = frameNumber;
         Camera* mainCamera = nullptr;
@@ -1930,6 +1925,7 @@ namespace Crowny
         // No camera in scene — return a snapshot that carries the render target so
         // RenderFromSnapshot can still clear/present the frame without crashing.
         snapshot.Target = m_RenderTarget;
+        snapshot.HistoryOwnerId = m_HistoryOwnerId;
         snapshot.DrawGrid = drawGrid;
         AdvanceCameraHistoryEpoch(snapshot.FrameNumber);
         TransferHistoryReleases(snapshot);
@@ -1945,19 +1941,20 @@ namespace Crowny
 
     void SceneRenderer::ExtractSnapshot(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform, bool drawGrid) const
     {
-        ExtractSnapshotWithHistory(snapshot, camera, viewTransform,
-                                   ExternalCameraHistoryNamespace(m_HistoryOwnerId, m_Scene.get(), &camera), drawGrid);
+        ExtractSnapshotWithHistory(snapshot, camera, viewTransform, ExternalCameraHistoryNamespace(m_HistoryOwnerId, m_Scene.get(), &camera),
+                                   drawGrid);
     }
 
     void SceneRenderer::ExtractSnapshotWithHistory(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform,
                                                    uint64_t historyNamespace, bool drawGrid) const
     {
         ZoneScopedN("ExtractSnapshot");
-        const uint64_t frameNumber = snapshot.FrameNumber;
+        const uint64_t frameNumber = snapshot.FrameNumber != 0 ? snapshot.FrameNumber : CurrentSimulationFrameNumber();
         snapshot.Clear();
         snapshot.FrameNumber = frameNumber;
         snapshot.ProjectionMatrix = camera.GetProjection();
         snapshot.ViewMatrix = viewTransform;
+        snapshot.HistoryOwnerId = m_HistoryOwnerId;
         snapshot.HistoryNamespace = historyNamespace;
         AdvanceCameraHistoryEpoch(snapshot.FrameNumber);
         const glm::mat4 cameraWorld = glm::inverse(viewTransform);
@@ -1977,9 +1974,8 @@ namespace Crowny
         {
             snapshot.PreviousViewProjection = snapshot.ProjectionMatrix * snapshot.ViewMatrix;
         }
-        m_CameraHistory.insert_or_assign(
-          snapshot.HistoryNamespace,
-          CameraHistoryState{ snapshot.ViewMatrix, snapshot.ProjectionMatrix, cameraPosition, cameraForward, m_CameraHistoryEpoch });
+        m_CameraHistory.insert_or_assign(snapshot.HistoryNamespace, CameraHistoryState{ snapshot.ViewMatrix, snapshot.ProjectionMatrix,
+                                                                                        cameraPosition, cameraForward, m_CameraHistoryEpoch });
         snapshot.Target = m_RenderTarget;
         snapshot.Environment = m_Scene->GetEnvironment();
         snapshot.DrawGrid = drawGrid;
@@ -2000,10 +1996,9 @@ namespace Crowny
                 {
                     RenderableObject& object = snapshot.MeshObjects.Acquire();
                     object.WorldMatrix = transform.GetWorldMatrix(relationship.Parent);
-                    const SphereBounds& bounds =
-                      animation != nullptr && animation->RuntimeMeshHandle && animation->Deformer
-                        ? animation->Deformer->GetSphereBounds()
-                        : renderMesh->GetSphereBounds();
+                    const SphereBounds& bounds = animation != nullptr && animation->RuntimeMeshHandle && animation->Deformer
+                                                   ? animation->Deformer->GetSphereBounds()
+                                                   : renderMesh->GetSphereBounds();
                     object.BoundingSphere = VisibilityCulling::TransformSphere(bounds, object.WorldMatrix);
                     object.MeshHandle = renderMesh;
                     object.Materials.assign(mesh.Materials.begin(), mesh.Materials.end());
@@ -2507,8 +2502,8 @@ namespace Crowny
             ForwardRenderer::Begin();
             ForwardRenderer::BeginScene(snapshot.ProjectionMatrix, snapshot.ViewMatrix, snapshot.CameraPosition, snapshot.Environment);
             ForwardRenderer::SetLights(snapshot.LegacyLights.begin(), static_cast<uint32_t>(snapshot.LegacyLights.Size()));
-            const VisibilityFrustum frustum = VisibilityFrustum::FromViewProjection(
-              snapshot.ProjectionMatrix * snapshot.ViewMatrix, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
+            const VisibilityFrustum frustum =
+              VisibilityFrustum::FromViewProjection(snapshot.ProjectionMatrix * snapshot.ViewMatrix, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
             for (const auto& obj : snapshot.MeshObjects)
             {
                 if (IsRenderableObjectVisible(obj, frustum, RenderLayerMask::All()))
@@ -2930,9 +2925,8 @@ namespace Crowny
             graphDesc.FinalComposition = [&](RenderGraphContext&) { RenderLegacyOverlays(snapshot); };
         }
         pipeline.BuildFrameGraph(renderGraph, view, graphDesc, blackboard);
-        gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList,
-                                     gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr, snapshot, snapshot.Environment,
-                                     pipeline.GetSettings());
+        gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList, gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr,
+                                     snapshot, snapshot.Environment, pipeline.GetSettings());
 
         const RenderGraphCompileResult& compiledGraph = renderGraph.Compile();
         const bool resourceFrameBegun = graphResources.BeginFrame(compiledGraph, snapshot.FrameNumber, snapshot.HistoryNamespace, view.CameraCut);
@@ -2956,7 +2950,12 @@ namespace Crowny
         }
         const bool executed = resourcesReady && renderGraph.Execute(nullptr, &graphResources);
         if (resourceFrameBegun)
-            graphResources.EndFrame();
+        {
+            if (executed)
+                graphResources.EndFrame();
+            else
+                graphResources.AbortFrame();
+        }
         if (!executed)
         {
             if (!compiledGraph.Succeeded)

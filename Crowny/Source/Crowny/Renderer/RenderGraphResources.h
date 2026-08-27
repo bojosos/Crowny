@@ -34,8 +34,7 @@ namespace Crowny
     class RenderGraphGpuResourceAllocator final : public IRenderGraphResourceAllocator
     {
     public:
-        explicit RenderGraphGpuResourceAllocator(uint32_t framesInFlight = 2,
-                                                 uint64_t retainedBufferBudget = 64ull * 1024ull * 1024ull,
+        explicit RenderGraphGpuResourceAllocator(uint32_t framesInFlight = 2, uint64_t retainedBufferBudget = 64ull * 1024ull * 1024ull,
                                                  uint64_t retainedTextureBudget = 64ull * 1024ull * 1024ull)
           : m_BufferPool(framesInFlight, retainedBufferBudget), m_TexturePool(framesInFlight, retainedTextureBudget)
         {
@@ -98,12 +97,11 @@ namespace Crowny
     class RenderGraphResourceRegistry
     {
     public:
-        explicit RenderGraphResourceRegistry(uint32_t framesInFlight = 2,
-                                             IRenderGraphResourceAllocator* allocator = nullptr);
+        explicit RenderGraphResourceRegistry(uint32_t framesInFlight = 2, IRenderGraphResourceAllocator* allocator = nullptr);
 
-        bool BeginFrame(const RenderGraphCompileResult& graph, uint64_t frameNumber,
-                        uint64_t historyNamespace, bool resetHistory = false);
+        bool BeginFrame(const RenderGraphCompileResult& graph, uint64_t frameNumber, uint64_t historyNamespace, bool resetHistory = false);
         void EndFrame();
+        void AbortFrame();
         void InvalidateHistory(uint64_t historyNamespace);
         bool ReleaseHistory(uint64_t historyNamespace);
         void Reset();
@@ -166,8 +164,8 @@ namespace Crowny
             size_t operator()(const RenderTargetKey& key) const;
         };
 
-        static bool DescriptorsMatch(const RenderGraphResourceDesc& first,
-                                     const RenderGraphResourceDesc& second);
+        static bool DescriptorsMatch(const RenderGraphResourceDesc& first, const RenderGraphResourceDesc& second);
+        void FinishFrame(bool commitHistory);
         uint64_t AllocatePhysicalId();
         void RegisterPhysicalResource(uint64_t physicalId, const RenderGraphResourceInfo& resource);
         void ReleasePhysicalResource(uint64_t physicalId);

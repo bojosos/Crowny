@@ -8,10 +8,7 @@ namespace Crowny
 {
     namespace
     {
-        bool IsDepthFormat(TextureFormat format)
-        {
-            return format == TextureFormat::DEPTH32F || format == TextureFormat::DEPTH24STENCIL8;
-        }
+        bool IsDepthFormat(TextureFormat format) { return format == TextureFormat::DEPTH32F || format == TextureFormat::DEPTH24STENCIL8; }
     } // namespace
 
     void RenderGraphGpuResourceAllocator::BeginFrame(uint64_t frameNumber)
@@ -80,29 +77,26 @@ namespace Crowny
         return m_BufferPool.Acquire(bufferDesc);
     }
 
-    void RenderGraphGpuResourceAllocator::ReleaseBuffer(const RenderGraphBufferDesc& desc,
-                                                        Ref<GenericGpuBuffer>&& buffer)
+    void RenderGraphGpuResourceAllocator::ReleaseBuffer(const RenderGraphBufferDesc& desc, Ref<GenericGpuBuffer>&& buffer)
     {
         if (!buffer)
             return;
 
         GenericGpuBufferDesc bufferDesc;
         bufferDesc.ElementSize = std::max(desc.Stride, 1u);
-        bufferDesc.ElementCount = static_cast<uint32_t>((desc.Size + bufferDesc.ElementSize - 1u) /
-                                                        bufferDesc.ElementSize);
+        bufferDesc.ElementCount = static_cast<uint32_t>((desc.Size + bufferDesc.ElementSize - 1u) / bufferDesc.ElementSize);
         bufferDesc.Type = desc.Type;
         bufferDesc.Usage = BufferUsage::BU_LOADSTORE;
         m_BufferPool.Release(bufferDesc, std::move(buffer));
     }
 
-    RenderGraphResourceRegistry::RenderGraphResourceRegistry(uint32_t framesInFlight,
-                                                             IRenderGraphResourceAllocator* allocator)
+    RenderGraphResourceRegistry::RenderGraphResourceRegistry(uint32_t framesInFlight, IRenderGraphResourceAllocator* allocator)
       : m_FramesInFlight(std::max(framesInFlight, 1u)), m_Allocator(allocator), m_TransientFrames(m_FramesInFlight)
     {
     }
 
-    bool RenderGraphResourceRegistry::BeginFrame(const RenderGraphCompileResult& graph, uint64_t frameNumber,
-                                                 uint64_t historyNamespace, bool resetHistory)
+    bool RenderGraphResourceRegistry::BeginFrame(const RenderGraphCompileResult& graph, uint64_t frameNumber, uint64_t historyNamespace,
+                                                 bool resetHistory)
     {
         if (!graph.Succeeded || m_CurrentGraph != nullptr)
             return false;
@@ -195,8 +189,7 @@ namespace Crowny
             if (paired)
             {
                 history.FrameWriteSlot = 1u - history.LastWrittenSlot;
-                physicalSlot = resource.Desc.HistoryRole == RenderGraphHistoryRole::Write ? history.FrameWriteSlot
-                                                                                           : history.LastWrittenSlot;
+                physicalSlot = resource.Desc.HistoryRole == RenderGraphHistoryRole::Write ? history.FrameWriteSlot : history.LastWrittenSlot;
             }
             binding.PhysicalId = history.PhysicalIds[physicalSlot];
             binding.HistoryValid = history.Valid && resource.Desc.HistoryRole != RenderGraphHistoryRole::Write;
@@ -205,20 +198,26 @@ namespace Crowny
         return true;
     }
 
-    void RenderGraphResourceRegistry::EndFrame()
+    void RenderGraphResourceRegistry::EndFrame() { FinishFrame(true); }
+
+    void RenderGraphResourceRegistry::AbortFrame() { FinishFrame(false); }
+
+    void RenderGraphResourceRegistry::FinishFrame(bool commitHistory)
     {
         if (m_CurrentGraph == nullptr)
             return;
-        for (const RenderGraphResourceInfo& resource : m_CurrentGraph->Resources)
+        if (commitHistory)
         {
-            if (resource.Desc.Lifetime != RenderGraphResourceLifetime::History ||
-                resource.Desc.HistoryRole == RenderGraphHistoryRole::Read ||
-                resource.FirstUse == RenderGraphPassHandle::InvalidIndex)
-                continue;
-            HistoryEntry& history = m_History[m_CurrentHistoryNamespace][resource.Desc.HistoryId];
-            if (history.Paired)
-                history.LastWrittenSlot = history.FrameWriteSlot;
-            history.Valid = true;
+            for (const RenderGraphResourceInfo& resource : m_CurrentGraph->Resources)
+            {
+                if (resource.Desc.Lifetime != RenderGraphResourceLifetime::History || resource.Desc.HistoryRole == RenderGraphHistoryRole::Read ||
+                    resource.FirstUse == RenderGraphPassHandle::InvalidIndex)
+                    continue;
+                HistoryEntry& history = m_History[m_CurrentHistoryNamespace][resource.Desc.HistoryId];
+                if (history.Paired)
+                    history.LastWrittenSlot = history.FrameWriteSlot;
+                history.Valid = true;
+            }
         }
         m_CurrentGraph = nullptr;
         m_CurrentFrame = 0;
@@ -311,8 +310,7 @@ namespace Crowny
 
     Ref<RenderTarget> RenderGraphResourceRegistry::GetRenderTarget(const RenderGraphRenderTargetDesc& desc)
     {
-        if (m_CurrentGraph == nullptr || desc.ColorCount > MAX_FRAMEBUFFER_COLOR_ATTACHMENTS ||
-            (desc.ColorCount == 0 && !desc.Depth.IsValid()))
+        if (m_CurrentGraph == nullptr || desc.ColorCount > MAX_FRAMEBUFFER_COLOR_ATTACHMENTS || (desc.ColorCount == 0 && !desc.Depth.IsValid()))
             return nullptr;
 
         RenderTargetKey key;
@@ -322,10 +320,8 @@ namespace Crowny
         key.LayerCount = std::max(desc.LayerCount, 1u);
         RenderTextureDesc targetDesc;
         bool dimensionsSet = false;
-        auto bindAttachment = [&](RenderGraphResourceHandle handle, RenderTextureSurface& surface,
-                                  uint32_t keyIndex) -> bool {
-            if (!handle.IsValid() || handle.Type != RenderGraphResourceType::Texture ||
-                handle.Index >= m_CurrentGraph->Resources.size())
+        auto bindAttachment = [&](RenderGraphResourceHandle handle, RenderTextureSurface& surface, uint32_t keyIndex) -> bool {
+            if (!handle.IsValid() || handle.Type != RenderGraphResourceType::Texture || handle.Index >= m_CurrentGraph->Resources.size())
                 return false;
             const RenderGraphResourceInfo& resource = m_CurrentGraph->Resources[handle.Index];
             const RenderGraphResourceBinding& binding = Get(handle);
@@ -356,8 +352,7 @@ namespace Crowny
             if (!bindAttachment(desc.Colors[index], targetDesc.ColorSurfaces[index], index))
                 return nullptr;
         }
-        if (desc.Depth.IsValid() &&
-            !bindAttachment(desc.Depth, targetDesc.DepthSurface, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS))
+        if (desc.Depth.IsValid() && !bindAttachment(desc.Depth, targetDesc.DepthSurface, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS))
             return nullptr;
 
         const auto cached = m_RenderTargets.find(key);
@@ -381,8 +376,7 @@ namespace Crowny
 
     bool RenderGraphResourceRegistry::BindExternalTexture(RenderGraphResourceHandle handle, const Ref<Texture>& texture)
     {
-        if (m_CurrentGraph == nullptr || !handle.IsValid() || handle.Index >= m_Bindings.size() ||
-            handle.Type != RenderGraphResourceType::Texture)
+        if (m_CurrentGraph == nullptr || !handle.IsValid() || handle.Index >= m_Bindings.size() || handle.Type != RenderGraphResourceType::Texture)
             return false;
         RenderGraphResourceBinding& binding = m_Bindings[handle.Index];
         if (binding.ExternalId == 0 || reinterpret_cast<uint64_t>(texture.get()) != binding.ExternalId)
@@ -393,11 +387,9 @@ namespace Crowny
         return true;
     }
 
-    bool RenderGraphResourceRegistry::BindExternalRenderTarget(RenderGraphResourceHandle handle,
-                                                                const Ref<RenderTarget>& renderTarget)
+    bool RenderGraphResourceRegistry::BindExternalRenderTarget(RenderGraphResourceHandle handle, const Ref<RenderTarget>& renderTarget)
     {
-        if (m_CurrentGraph == nullptr || !handle.IsValid() || handle.Index >= m_Bindings.size() ||
-            handle.Type != RenderGraphResourceType::Texture)
+        if (m_CurrentGraph == nullptr || !handle.IsValid() || handle.Index >= m_Bindings.size() || handle.Type != RenderGraphResourceType::Texture)
             return false;
         RenderGraphResourceBinding& binding = m_Bindings[handle.Index];
         if (binding.ExternalId == 0 || reinterpret_cast<uint64_t>(renderTarget.get()) != binding.ExternalId)
@@ -408,11 +400,9 @@ namespace Crowny
         return true;
     }
 
-    bool RenderGraphResourceRegistry::BindExternalBuffer(RenderGraphResourceHandle handle,
-                                                         const Ref<GenericGpuBuffer>& buffer)
+    bool RenderGraphResourceRegistry::BindExternalBuffer(RenderGraphResourceHandle handle, const Ref<GenericGpuBuffer>& buffer)
     {
-        if (m_CurrentGraph == nullptr || !handle.IsValid() || handle.Index >= m_Bindings.size() ||
-            handle.Type != RenderGraphResourceType::Buffer)
+        if (m_CurrentGraph == nullptr || !handle.IsValid() || handle.Index >= m_Bindings.size() || handle.Type != RenderGraphResourceType::Buffer)
             return false;
         RenderGraphResourceBinding& binding = m_Bindings[handle.Index];
         if (binding.ExternalId == 0 || reinterpret_cast<uint64_t>(buffer.get()) != binding.ExternalId)
@@ -422,13 +412,11 @@ namespace Crowny
         return true;
     }
 
-    bool RenderGraphResourceRegistry::DescriptorsMatch(const RenderGraphResourceDesc& first,
-                                                       const RenderGraphResourceDesc& second)
+    bool RenderGraphResourceRegistry::DescriptorsMatch(const RenderGraphResourceDesc& first, const RenderGraphResourceDesc& second)
     {
         if (first.Type != second.Type)
             return false;
-        return first.Type == RenderGraphResourceType::Texture ? first.Texture == second.Texture
-                                                               : first.Buffer == second.Buffer;
+        return first.Type == RenderGraphResourceType::Texture ? first.Texture == second.Texture : first.Buffer == second.Buffer;
     }
 
     size_t RenderGraphResourceRegistry::RenderTargetKeyHash::operator()(const RenderTargetKey& key) const
@@ -458,8 +446,7 @@ namespace Crowny
         return result;
     }
 
-    void RenderGraphResourceRegistry::RegisterPhysicalResource(uint64_t physicalId,
-                                                               const RenderGraphResourceInfo& resource)
+    void RenderGraphResourceRegistry::RegisterPhysicalResource(uint64_t physicalId, const RenderGraphResourceInfo& resource)
     {
         if (physicalId == 0)
             return;
@@ -471,8 +458,7 @@ namespace Crowny
         }
         else
         {
-            CW_ENGINE_ASSERT(DescriptorsMatch(entry->second.Desc, resource.Desc),
-                             "Aliased render graph resources have incompatible descriptors");
+            CW_ENGINE_ASSERT(DescriptorsMatch(entry->second.Desc, resource.Desc), "Aliased render graph resources have incompatible descriptors");
         }
     }
 
@@ -483,8 +469,7 @@ namespace Crowny
             for (auto target = m_RenderTargets.begin(); target != m_RenderTargets.end();)
             {
                 const bool referencesResource =
-                  std::find(target->first.PhysicalIds.begin(), target->first.PhysicalIds.end(), physicalId) !=
-                  target->first.PhysicalIds.end();
+                  std::find(target->first.PhysicalIds.begin(), target->first.PhysicalIds.end(), physicalId) != target->first.PhysicalIds.end();
                 target = referencesResource ? m_RenderTargets.erase(target) : std::next(target);
             }
             const auto physical = m_PhysicalResources.find(physicalId);

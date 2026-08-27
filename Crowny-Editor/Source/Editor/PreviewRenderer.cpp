@@ -55,7 +55,7 @@ namespace Crowny
         camera.SetViewportSize(256, 256);
         camera.SetDistance(5);
         camera.Focus(glm::vec3(0.0f));
-        m_SceneRenderer->RenderEditor(camera);
+        m_SceneRenderer->RenderEditor(camera, false);
         RenderAPI::TryGet()->SubmitCommandBuffer(nullptr);
         RenderAPI::TryGet()->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);
@@ -119,7 +119,7 @@ namespace Crowny
         camera.SetViewportSize(256, 256);
         camera.SetDistance(3);
         camera.Focus(glm::vec3(0.0f));
-        m_SceneRenderer->RenderEditor(camera);
+        m_SceneRenderer->RenderEditor(camera, false);
         RenderAPI::TryGet()->SubmitCommandBuffer(nullptr);
         RenderAPI::TryGet()->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);

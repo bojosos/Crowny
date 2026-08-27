@@ -131,6 +131,7 @@ namespace Crowny
 
         // Frame metadata
         uint64_t FrameNumber = 0;
+        uint64_t HistoryOwnerId = 0;
         uint64_t HistoryNamespace = 0;
         bool CameraCut = true;
         bool DrawGrid = false;
@@ -171,6 +172,7 @@ namespace Crowny
             Environment = nullptr;
             Target = nullptr;
             FrameNumber = 0;
+            HistoryOwnerId = 0;
             HistoryNamespace = 0;
             CameraCut = true;
             PreviousViewProjection = glm::mat4(1.0f);
