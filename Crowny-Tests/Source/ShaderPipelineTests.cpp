@@ -218,6 +218,32 @@ void main() { outColor = vec4(1.0); }
     CHECK(pass.DepthStencilState->DepthCompareFunction == CompareFunction::GREATER_EQUAL);
 }
 
+TEST_CASE("Custom material shaders cannot override the reverse-Z prepass contract", "[Shader][Materials]")
+{
+    const String source = R"(#lang glsl
+#pragma material_model custom
+#pragma variation FEATURE
+#pragma depth_read false
+#pragma depth_write true
+#pragma depth_compare less_equal
+#type vertex
+#version 450
+layout(location = 0) in vec3 cw_Position;
+void main() { gl_Position = vec4(cw_Position, 1.0); }
+#type fragment
+#version 450
+layout(location = 0) out vec4 outColor;
+void main() { outColor = vec4(1.0); }
+)";
+
+    const ShaderCompileResult result = ShaderCompiler::CompileWithDiagnostics("invalid_custom_depth.glsl", source);
+    CHECK_FALSE(result.Succeeded());
+    CHECK(result.Description.Techniques.empty());
+    CHECK(std::count_if(result.Diagnostics.begin(), result.Diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
+              return diagnostic.Message.find("reverse-Z depth prepass") != String::npos;
+          }) == 3);
+}
+
 TEST_CASE("Shader compiler rejects malformed blend-state values", "[Shader]")
 {
     String source = BASIC_VARIATION_SHADER;

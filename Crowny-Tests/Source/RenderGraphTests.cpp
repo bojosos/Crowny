@@ -419,6 +419,36 @@ TEST_CASE("RenderGraph history ping-pongs per camera and resets on cuts", "[Rend
     resources.EndFrame();
 }
 
+TEST_CASE("RenderGraph releases retired camera history namespaces", "[Renderer][Resources][RenderGraph]")
+{
+    RenderGraph graph;
+    const RenderGraphHistoryPair history = graph.CreateHistoryTexture("Taa", ColorTexture());
+    graph.AddPass("Resolve", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) {
+        builder.Read(history.Read);
+        builder.Write(history.Write);
+    });
+    REQUIRE(graph.Compile().Succeeded);
+
+    RetiringTextureAllocator allocator;
+    RenderGraphResourceRegistry resources(2, &allocator);
+    REQUIRE(resources.BeginFrame(graph.GetCompileResult(), 1, 42));
+    const uint64_t firstRead = resources.Get(history.Read).PhysicalId;
+    const uint64_t firstWrite = resources.Get(history.Write).PhysicalId;
+    REQUIRE(firstRead != firstWrite);
+    REQUIRE(allocator.ReleasedTextures.empty());
+    CHECK_FALSE(resources.ReleaseHistory(42));
+    resources.EndFrame();
+
+    CHECK(resources.ReleaseHistory(42));
+    CHECK(allocator.ReleasedTextures.size() == 2);
+
+    REQUIRE(resources.BeginFrame(graph.GetCompileResult(), 2, 42));
+    CHECK_FALSE(resources.Get(history.Read).HistoryValid);
+    CHECK(resources.Get(history.Read).PhysicalId != firstRead);
+    CHECK(resources.Get(history.Write).PhysicalId != firstWrite);
+    resources.EndFrame();
+}
+
 TEST_CASE("RenderGraph registry preserves transient aliasing within a frame", "[Renderer][RenderGraph]")
 {
     RenderGraph graph;

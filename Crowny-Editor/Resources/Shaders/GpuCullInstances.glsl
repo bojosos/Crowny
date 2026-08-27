@@ -32,6 +32,8 @@ struct VisibleInstanceRecord
     uint lod;
 };
 
+const uint INSTANCE_FLAG_FORCE_LOD0 = 1u << 5u;
+
 layout(binding = 0) uniform CullingConstants
 {
     vec4 frustumPlanes[6];
@@ -124,6 +126,9 @@ bool sphereOccluded(vec4 sphere)
 
 uint selectLod(InstanceRecord instance)
 {
+    uint flags = instance.draw.x >> 24;
+    if ((flags & INSTANCE_FLAG_FORCE_LOD0) != 0u)
+        return 0u;
     uint meshIndex = instance.draw.x & 0x00ffffffu;
     MeshRecord mesh = meshes[meshIndex];
     uint lodCount = mesh.lodRangeAndHeaps.y;

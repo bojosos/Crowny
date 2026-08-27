@@ -105,6 +105,7 @@ namespace Crowny
                         uint64_t historyNamespace, bool resetHistory = false);
         void EndFrame();
         void InvalidateHistory(uint64_t historyNamespace);
+        bool ReleaseHistory(uint64_t historyNamespace);
         void Reset();
 
         const RenderGraphResourceBinding& Get(RenderGraphResourceHandle handle);

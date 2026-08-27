@@ -29,9 +29,14 @@ namespace Crowny
 
     struct RenderableObject
     {
-        glm::mat4 WorldMatrix;
+        glm::mat4 WorldMatrix = glm::mat4(1.0f);
+        // Negative radius means an externally-produced legacy snapshot did not
+        // provide culling bounds and must remain visible for compatibility.
+        glm::vec4 BoundingSphere = glm::vec4(0.0f, 0.0f, 0.0f, -1.0f);
         AssetHandle<Mesh> MeshHandle;
         Vector<AssetHandle<Material>> Materials;
+        RenderLayerMask VisibilityLayers = RenderLayerMask::All();
+        bool Visible = true;
     };
 
     struct RenderableSprite
@@ -109,6 +114,7 @@ namespace Crowny
         FrameVector<RenderLightChange> RenderLightChanges;
         FrameVector<RenderMeshResourceChange> MeshResourceChanges;
         FrameVector<RenderMaterialResourceChange> MaterialResourceChanges;
+        FrameVector<uint64_t> ReleasedHistoryNamespaces;
         // Compatibility renderer adapter. The clustered renderer consumes only
         // RenderLightChanges and keeps its light table resident on the GPU.
         FrameVector<RenderLightData> LegacyLights;
@@ -155,6 +161,7 @@ namespace Crowny
                 change.Resource = {};
             MeshResourceChanges.Reset();
             MaterialResourceChanges.Reset();
+            ReleasedHistoryNamespaces.Reset();
             LegacyLights.Reset();
             ShadowUpdateRequests.Reset();
             DirectionalShadow = {};

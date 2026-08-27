@@ -102,6 +102,39 @@ namespace Crowny
                 CW_ENGINE_WARN("{}", message);
         }
 
+        bool ValidateCustomForwardDepthContract(const Path& path, const ParsedShaderSource& source,
+                                                Vector<ShaderDiagnostic>& diagnostics)
+        {
+            const bool customForwardOnly = std::any_of(source.GlobalPragmas.begin(), source.GlobalPragmas.end(),
+                                                       [](const ShaderPragma& pragma) {
+                                                           return pragma.Name == "material_model" && pragma.Value == "custom";
+                                                       });
+            if (!customForwardOnly)
+                return true;
+
+            bool valid = true;
+            auto validate = [&](const Vector<ShaderPragma>& pragmas) {
+                for (const ShaderPragma& pragma : pragmas)
+                {
+                    const bool compatible = (pragma.Name == "depth_read" && pragma.Value == "true") ||
+                                            (pragma.Name == "depth_write" && pragma.Value == "false") ||
+                                            (pragma.Name == "depth_compare" && pragma.Value == "greater_equal");
+                    if ((pragma.Name == "depth_read" || pragma.Name == "depth_write" || pragma.Name == "depth_compare") && !compatible)
+                    {
+                        diagnostics.push_back(
+                          { ShaderDiagnosticSeverity::Error, path, pragma.Line, {},
+                            "Custom forward-only materials require #pragma depth_read true, #pragma depth_write false, and "
+                            "#pragma depth_compare greater_equal for Crowny's reverse-Z depth prepass." });
+                        valid = false;
+                    }
+                }
+            };
+            validate(source.GlobalPragmas);
+            for (const ShaderSourcePass& pass : source.Passes)
+                validate(pass.Pragmas);
+            return valid;
+        }
+
         bool ExpandShaderIncludes(const Path& path, StringView source, String& output,
                                   Vector<ShaderDiagnostic>& diagnostics, Vector<Path>& dependencies,
                                   UnorderedSet<String>& dependencyKeys, Vector<String>& includeStack, uint32_t depth)
@@ -949,6 +982,8 @@ namespace Crowny
         if (!parsedSource.Succeeded() ||
             std::any_of(result.Diagnostics.begin(), result.Diagnostics.end(),
                         [](const ShaderDiagnostic& diagnostic) { return diagnostic.Severity == ShaderDiagnosticSeverity::Error; }))
+            return result;
+        if (!ValidateCustomForwardDepthContract(path, parsedSource, result.Diagnostics))
             return result;
 
         const ShaderLanguage inputLanguage = parsedSource.Language == "hlsl" ? ShaderLanguage::HLSL : ShaderLanguage::GLSL;

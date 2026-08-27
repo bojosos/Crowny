@@ -15,6 +15,7 @@
 #include "Crowny/Renderer/ComputeMaterial.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/GpuScene.h"
 #include "Crowny/Renderer/RenderGraph.h"
 #include "Crowny/Renderer/RenderGraphResources.h"
@@ -55,6 +56,40 @@ namespace Crowny
                     if (std::abs(first[column][row] - second[column][row]) > 0.0001f)
                         return true;
             return false;
+        }
+
+        glm::vec4 TransformBounds(const SphereBounds& bounds, const glm::mat4& transform)
+        {
+            const glm::vec3 worldCenter = glm::vec3(transform * glm::vec4(bounds.GetCenter(), 1.0f));
+            const float maximumScale =
+              std::max({ glm::length(glm::vec3(transform[0])), glm::length(glm::vec3(transform[1])), glm::length(glm::vec3(transform[2])) });
+            return glm::vec4(worldCenter, bounds.GetRadius() * maximumScale);
+        }
+
+        bool HasForwardOnlyOpaqueMaterial(const Vector<AssetHandle<Material>>& materials)
+        {
+            return std::any_of(materials.begin(), materials.end(), [](const AssetHandle<Material>& material) {
+                if (!material)
+                    return false;
+                const AssetHandle<Shader> shader = material->GetShader();
+                if (!shader)
+                    return false;
+                const Ref<ShaderTechnique>& technique = shader->GetTechnique(material->GetVariation());
+                if (!technique || std::find(technique->GetTags().begin(), technique->GetTags().end(), "material_model=custom") ==
+                                    technique->GetTags().end())
+                    return false;
+                if (material->GetVariation().Has("ALPHA_MASK") && material->GetVariation().GetBool("ALPHA_MASK"))
+                    return false;
+                return std::none_of(technique->GetRenderPasses().begin(), technique->GetRenderPasses().end(),
+                                    [](const Ref<ShaderRenderPass>& pass) { return pass && pass->HasBlending(); });
+            });
+        }
+
+        bool IsRenderableObjectVisible(const RenderableObject& object, const VisibilityFrustum& frustum, RenderLayerMask visibilityMask)
+        {
+            return object.Visible && object.VisibilityLayers.Intersects(visibilityMask) &&
+                   (object.BoundingSphere.w < 0.0f ||
+                    frustum.IntersectsSphere(glm::vec3(object.BoundingSphere), object.BoundingSphere.w));
         }
 
         class PointShadowLayerAllocator
@@ -1229,8 +1264,14 @@ namespace Crowny
                                                        m_Snapshot->CameraPosition, m_Snapshot->Environment);
                 ForwardRenderer::SetLights(m_Snapshot->LegacyLights.begin(),
                                            static_cast<uint32_t>(m_Snapshot->LegacyLights.Size()));
+                const VisibilityFrustum frustum =
+                  VisibilityFrustum::FromViewProjection(m_View.Projection * m_View.View, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
                 for (const RenderableObject& object : m_Snapshot->MeshObjects)
+                {
+                    if (!IsRenderableObjectVisible(object, frustum, m_View.VisibilityMask))
+                        continue;
                     ForwardRenderer::SubmitForwardOnlyOpaque(object.MeshHandle, object.Materials, object.WorldMatrix);
+                }
                 ForwardRenderer::Flush();
                 ForwardRenderer::EndScene();
                 ForwardRenderer::End();
@@ -1394,12 +1435,14 @@ namespace Crowny
         {
             SceneRenderStatistics statistics;
             statistics.FrameNumber = snapshot.FrameNumber;
-            statistics.VisibleInstances = static_cast<uint32_t>(snapshot.MeshObjects.Size());
-            statistics.LogicalDraws = statistics.VisibleInstances;
+            const VisibilityFrustum frustum = VisibilityFrustum::FromViewProjection(
+              snapshot.ProjectionMatrix * snapshot.ViewMatrix, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
             for (const RenderableObject& object : snapshot.MeshObjects)
             {
-                if (!object.MeshHandle)
+                if (!object.MeshHandle || !IsRenderableObjectVisible(object, frustum, RenderLayerMask::All()))
                     continue;
+                statistics.VisibleInstances++;
+                statistics.LogicalDraws++;
                 const uint64_t elementCount =
                   object.MeshHandle->GetIndexCount() != 0 ? object.MeshHandle->GetIndexCount() : object.MeshHandle->GetVertexCount();
                 statistics.VisibleVertices += elementCount;
@@ -1837,7 +1880,9 @@ namespace Crowny
 
     void SceneRenderer::ExtractSnapshot(RenderSnapshot& snapshot, bool drawGrid) const
     {
+        const uint64_t frameNumber = snapshot.FrameNumber;
         snapshot.Clear();
+        snapshot.FrameNumber = frameNumber;
         Camera* mainCamera = nullptr;
         glm::mat4 cameraTransform;
         const auto cameraView = m_Scene->m_Registry.view<TransformComponent, CameraComponent, RelationshipComponent>();
@@ -1860,6 +1905,7 @@ namespace Crowny
         // RenderFromSnapshot can still clear/present the frame without crashing.
         snapshot.Target = m_RenderTarget;
         snapshot.DrawGrid = drawGrid;
+        TransferHistoryReleases(snapshot);
         SyncRenderWorld(snapshot);
     }
 
@@ -1873,10 +1919,26 @@ namespace Crowny
     void SceneRenderer::ExtractSnapshot(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform, bool drawGrid) const
     {
         ZoneScopedN("ExtractSnapshot");
+        const uint64_t frameNumber = snapshot.FrameNumber;
         snapshot.Clear();
+        snapshot.FrameNumber = frameNumber;
         snapshot.ProjectionMatrix = camera.GetProjection();
         snapshot.ViewMatrix = viewTransform;
         snapshot.HistoryNamespace = CameraHistoryNamespace(m_Scene.get(), &camera);
+        m_CameraHistoryEpoch++;
+        if (m_CameraHistoryEpoch == 0)
+            m_CameraHistoryEpoch = 1;
+        constexpr uint64_t historyRetentionEpochs = 120;
+        for (auto stale = m_CameraHistory.begin(); stale != m_CameraHistory.end();)
+        {
+            if (m_CameraHistoryEpoch - stale->second.LastSeenEpoch <= historyRetentionEpochs)
+            {
+                ++stale;
+                continue;
+            }
+            m_PendingHistoryReleases.push_back(stale->first);
+            stale = m_CameraHistory.erase(stale);
+        }
         const glm::mat4 cameraWorld = glm::inverse(viewTransform);
         const glm::vec3 cameraPosition = glm::vec3(cameraWorld[3]);
         snapshot.CameraPosition = cameraPosition;
@@ -1894,11 +1956,13 @@ namespace Crowny
         {
             snapshot.PreviousViewProjection = snapshot.ProjectionMatrix * snapshot.ViewMatrix;
         }
-        m_CameraHistory.insert_or_assign(snapshot.HistoryNamespace,
-                                         CameraHistoryState{ snapshot.ViewMatrix, snapshot.ProjectionMatrix, cameraPosition, cameraForward });
+        m_CameraHistory.insert_or_assign(
+          snapshot.HistoryNamespace,
+          CameraHistoryState{ snapshot.ViewMatrix, snapshot.ProjectionMatrix, cameraPosition, cameraForward, m_CameraHistoryEpoch });
         snapshot.Target = m_RenderTarget;
         snapshot.Environment = m_Scene->GetEnvironment();
         snapshot.DrawGrid = drawGrid;
+        TransferHistoryReleases(snapshot);
         SyncRenderWorld(snapshot);
 
         // 3D mesh objects
@@ -1915,8 +1979,15 @@ namespace Crowny
                 {
                     RenderableObject& object = snapshot.MeshObjects.Acquire();
                     object.WorldMatrix = transform.GetWorldMatrix(relationship.Parent);
+                    const SphereBounds& bounds =
+                      animation != nullptr && animation->RuntimeMeshHandle && animation->Deformer
+                        ? animation->Deformer->GetSphereBounds()
+                        : renderMesh->GetSphereBounds();
+                    object.BoundingSphere = TransformBounds(bounds, object.WorldMatrix);
                     object.MeshHandle = renderMesh;
                     object.Materials.assign(mesh.Materials.begin(), mesh.Materials.end());
+                    object.VisibilityLayers = mesh.VisibilityLayers;
+                    object.Visible = mesh.Visible;
                 }
             }
         }
@@ -1931,8 +2002,11 @@ namespace Crowny
                 {
                     RenderableObject& object = snapshot.MeshObjects.Acquire();
                     object.WorldMatrix = transform.GetWorldMatrix(relationship.Parent);
+                    object.BoundingSphere = TransformBounds(proc.RuntimeMeshHandle->GetSphereBounds(), object.WorldMatrix);
                     object.MeshHandle = proc.RuntimeMeshHandle;
                     object.Materials.assign(proc.Materials.begin(), proc.Materials.end());
+                    object.VisibilityLayers = RenderLayerMask::All();
+                    object.Visible = true;
                 }
             }
         }
@@ -2139,14 +2213,13 @@ namespace Crowny
             if (!mesh)
                 return;
 
+            if (HasForwardOnlyOpaqueMaterial(materials))
+                flags = flags | RenderInstanceFlags::ForceLod0;
             const AssetHandleData* meshIdentity = mesh.GetHandleData().get();
             const uint32_t objectID = static_cast<uint32_t>(entt::to_integral(entity)) + 1u;
 
             const SphereBounds& localBounds = overrideBounds != nullptr ? *overrideBounds : mesh->GetSphereBounds();
-            const glm::vec3 worldCenter = glm::vec3(transform * glm::vec4(localBounds.GetCenter(), 1.0f));
-            const float maximumScale =
-              std::max({ glm::length(glm::vec3(transform[0])), glm::length(glm::vec3(transform[1])), glm::length(glm::vec3(transform[2])) });
-            const glm::vec4 worldBounds(worldCenter, localBounds.GetRadius() * maximumScale);
+            const glm::vec4 worldBounds = TransformBounds(localBounds, transform);
 
             RenderInstanceDesc desc;
             desc.Transform = transform;
@@ -2413,8 +2486,13 @@ namespace Crowny
             ForwardRenderer::Begin();
             ForwardRenderer::BeginScene(snapshot.ProjectionMatrix, snapshot.ViewMatrix, snapshot.CameraPosition, snapshot.Environment);
             ForwardRenderer::SetLights(snapshot.LegacyLights.begin(), static_cast<uint32_t>(snapshot.LegacyLights.Size()));
+            const VisibilityFrustum frustum = VisibilityFrustum::FromViewProjection(
+              snapshot.ProjectionMatrix * snapshot.ViewMatrix, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
             for (const auto& obj : snapshot.MeshObjects)
-                ForwardRenderer::Submit(obj.MeshHandle, obj.Materials, obj.WorldMatrix);
+            {
+                if (IsRenderableObjectVisible(obj, frustum, RenderLayerMask::All()))
+                    ForwardRenderer::Submit(obj.MeshHandle, obj.Materials, obj.WorldMatrix);
+            }
             ForwardRenderer::Flush();
             ForwardRenderer::EndScene();
             ForwardRenderer::End();
@@ -2485,6 +2563,8 @@ namespace Crowny
         SceneRendererThreadResources& threadResources = GetSceneRendererThreadResources();
         RenderGraph& renderGraph = threadResources.Graph;
         RenderGraphResourceRegistry& graphResources = threadResources.GraphResources;
+        for (uint64_t historyNamespace : snapshot.ReleasedHistoryNamespaces)
+            graphResources.ReleaseHistory(historyNamespace);
         renderGraph.Reset();
         GpuScene& gpuScene = Renderer::GetGpuScene();
         gpuScene.BeginFrame(snapshot.FrameNumber);
@@ -2886,12 +2966,24 @@ namespace Crowny
 
     void SceneRenderer::SetRenderTarget(const Ref<RenderTarget>& renderTarget) { m_RenderTarget = renderTarget; }
 
+    void SceneRenderer::TransferHistoryReleases(RenderSnapshot& snapshot) const
+    {
+        snapshot.ReleasedHistoryNamespaces.Reserve(m_PendingHistoryReleases.size());
+        for (uint64_t historyNamespace : m_PendingHistoryReleases)
+            snapshot.ReleasedHistoryNamespaces.Acquire() = historyNamespace;
+        m_PendingHistoryReleases.clear();
+    }
+
     void SceneRenderer::SetScene(const Ref<Scene>& scene)
     {
         if (m_Scene == scene)
             return;
         ResetTrackedRenderWorld();
+        m_PendingHistoryReleases.reserve(m_PendingHistoryReleases.size() + m_CameraHistory.size());
+        for (const auto& [historyNamespace, _] : m_CameraHistory)
+            m_PendingHistoryReleases.push_back(historyNamespace);
         m_CameraHistory.clear();
+        m_CameraHistoryEpoch = 0;
         m_Scene = scene;
     }
 

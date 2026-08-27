@@ -233,6 +233,24 @@ namespace Crowny
         }
     }
 
+    bool RenderGraphResourceRegistry::ReleaseHistory(uint64_t historyNamespace)
+    {
+        if (m_CurrentGraph != nullptr && m_CurrentHistoryNamespace == historyNamespace)
+            return false;
+        const auto namespaceEntry = m_History.find(historyNamespace);
+        if (namespaceEntry == m_History.end())
+            return false;
+
+        for (const auto& [_, history] : namespaceEntry->second)
+        {
+            ReleasePhysicalResource(history.PhysicalIds[0]);
+            if (history.PhysicalIds[1] != history.PhysicalIds[0])
+                ReleasePhysicalResource(history.PhysicalIds[1]);
+        }
+        m_History.erase(namespaceEntry);
+        return true;
+    }
+
     void RenderGraphResourceRegistry::Reset()
     {
         m_TransientFrames.assign(m_FramesInFlight, {});

@@ -565,8 +565,10 @@ namespace Crowny
             const AssetHandle<Mesh>& mesh = m_MeshResources[meshIndex].Resource;
             const glm::vec3 viewCenter = glm::vec3(view.View * glm::vec4(center, 1.0f));
             const float viewDepth = std::max(-viewCenter.z, 0.0001f);
-            const uint32_t lod = VisibilityCulling::SelectLod(mesh->GetGpuGeometry(), viewDepth, projectionYScale, viewportHeight, 1.0f,
-                                                              RenderWorld::GetLodBias(instance.Draw));
+            const uint32_t lod = HasFlag(flags, RenderInstanceFlags::ForceLod0)
+                                   ? 0u
+                                   : VisibilityCulling::SelectLod(mesh->GetGpuGeometry(), viewDepth, projectionYScale, viewportHeight, 1.0f,
+                                                                  RenderWorld::GetLodBias(instance.Draw));
             const GpuMeshRecord& meshRecord = m_Geometry.Meshes[meshIndex];
             if (meshRecord.LodRangeAndHeaps.y == 0)
                 continue;

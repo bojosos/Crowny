@@ -15,6 +15,19 @@ TEST_CASE("RenderWorld uses compact GPU instance records", "[Renderer][RenderWor
     CHECK(RenderInstanceHandle::MaxInstances == 1'048'576);
 }
 
+TEST_CASE("RenderWorld preserves forward-only LOD routing in packed instance flags", "[Renderer][RenderWorld][Materials]")
+{
+    RenderWorld world;
+    RenderInstanceDesc desc;
+    desc.Flags = RenderInstanceFlags::Visible | RenderInstanceFlags::ForceLod0;
+    const RenderInstanceHandle handle = world.CreateInstance(desc);
+    RenderInstanceData data;
+
+    REQUIRE(world.TryGetInstance(handle, data));
+    CHECK(HasFlag(RenderWorld::GetFlags(data.Draw), RenderInstanceFlags::Visible));
+    CHECK(HasFlag(RenderWorld::GetFlags(data.Draw), RenderInstanceFlags::ForceLod0));
+}
+
 TEST_CASE("RenderWorld rejects stale generational handles", "[Renderer][RenderWorld]")
 {
     RenderWorld world(1);
@@ -57,6 +70,30 @@ TEST_CASE("RenderWorld coalesces changes before render-thread consumption", "[Re
     CHECK(RenderWorld::GetMaterialHandle(changes[0].Data.Draw) == 23);
     CHECK(RenderWorld::GetLodBias(changes[0].Data.Draw) == -1.25f);
     CHECK(changes[0].Data.Culling.BoundingSphere.w == 2.0f);
+
+    world.DrainChanges(changes);
+    CHECK(changes.empty());
+}
+
+TEST_CASE("RenderWorld settles previous transforms one frame after movement", "[Renderer][RenderWorld][MotionVectors]")
+{
+    RenderWorld world;
+    const RenderInstanceHandle handle = world.CreateInstance({});
+    Vector<RenderWorldChange> changes;
+    world.DrainChanges(changes);
+
+    const glm::mat4 moved = glm::translate(glm::mat4(1.0f), glm::vec3(4.0f, 5.0f, 6.0f));
+    REQUIRE(world.UpdateTransform(handle, moved, glm::vec4(4.0f, 5.0f, 6.0f, 2.0f)));
+    world.DrainChanges(changes);
+    REQUIRE(changes.size() == 1);
+    CHECK(changes[0].Data.Transforms.Current.ToMatrix() == moved);
+    CHECK(changes[0].Data.Transforms.Previous.ToMatrix() == glm::mat4(1.0f));
+
+    world.DrainChanges(changes);
+    REQUIRE(changes.size() == 1);
+    CHECK(changes[0].DirtyFlags == RenderWorldDirtyFlags::Transform);
+    CHECK(changes[0].Data.Transforms.Current.ToMatrix() == moved);
+    CHECK(changes[0].Data.Transforms.Previous.ToMatrix() == moved);
 
     world.DrainChanges(changes);
     CHECK(changes.empty());

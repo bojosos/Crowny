@@ -92,6 +92,7 @@ namespace Crowny
             glm::mat4 Projection = glm::mat4(1.0f);
             glm::vec3 Position = glm::vec3(0.0f);
             glm::vec3 Forward = glm::vec3(0.0f, 0.0f, -1.0f);
+            uint64_t LastSeenEpoch = 0;
         };
 
         struct MaterialSetKey
@@ -169,6 +170,7 @@ namespace Crowny
         void TrackMeshResource(uint32_t index, const AssetHandle<Mesh>& mesh, RenderSnapshot& snapshot) const;
         void TrackMaterialResources(uint32_t baseIndex, const Vector<AssetHandle<Material>>& materials, RenderSnapshot& snapshot) const;
         void FinalizeResourceChanges(RenderSnapshot& snapshot) const;
+        void TransferHistoryReleases(RenderSnapshot& snapshot) const;
 
     private:
         Ref<RenderTarget> m_RenderTarget;
@@ -186,10 +188,12 @@ namespace Crowny
         mutable UnorderedMap<uint32_t, TrackedMaterialResource> m_ResidentMaterialResources;
         mutable Vector<DirectionalShadowCascade> m_DirectionalCascadeScratch;
         mutable uint64_t m_RenderSyncEpoch = 0;
+        mutable uint64_t m_CameraHistoryEpoch = 0;
         mutable uint64_t m_ShadowCasterRevision = 1;
         mutable uint32_t m_NextMeshResourceIndex = 1;
         mutable uint32_t m_NextMaterialResourceIndex = 1;
         mutable UnorderedMap<uint64_t, CameraHistoryState> m_CameraHistory;
+        mutable Vector<uint64_t> m_PendingHistoryReleases;
     };
 
 } // namespace Crowny

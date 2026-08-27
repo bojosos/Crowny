@@ -14,7 +14,11 @@ namespace Crowny
         CastShadows = 1 << 1,
         ReceiveShadows = 1 << 2,
         MotionVectors = 1 << 3,
-        TwoSided = 1 << 4
+        TwoSided = 1 << 4,
+        // Forward-only custom materials currently draw their source mesh through
+        // ForwardRenderer. Keep GPU depth and visibility on the same LOD until
+        // custom passes consume geometry-heap LOD ranges directly.
+        ForceLod0 = 1 << 5
     };
 
     constexpr RenderInstanceFlags operator|(RenderInstanceFlags first, RenderInstanceFlags second)
@@ -148,11 +152,14 @@ namespace Crowny
             RenderInstanceData Data;
             uint32_t Generation = 1;
             uint32_t PendingChange = InvalidChangeIndex;
+            bool TransformSettleQueued = false;
             bool Alive = false;
         };
 
         static RenderInstanceData BuildInstanceData(const RenderInstanceDesc& desc, RenderObjectID fallbackObjectID);
         static uint32_t NextGeneration(uint32_t generation);
+        static bool TransformsEqual(const AffineTransform3x4& first, const AffineTransform3x4& second);
+        void SetTransformSettleRequired(uint32_t slotIndex, bool required);
         void QueueChange(uint32_t slotIndex, RenderInstanceHandle handle, RenderWorldChangeType type,
                          RenderWorldDirtyFlags dirtyFlags);
         bool ValidateHandle(RenderInstanceHandle handle) const;
@@ -161,6 +168,7 @@ namespace Crowny
         Vector<Slot> m_Slots;
         Vector<uint32_t> m_FreeSlots;
         Vector<uint32_t> m_DeferredFreeSlots;
+        Vector<uint32_t> m_TransformSettleSlots;
         Vector<RenderWorldChange> m_PendingChanges;
         uint32_t m_ActiveInstances = 0;
     };

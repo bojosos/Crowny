@@ -9,6 +9,7 @@
 #include "cwpch.h"
 
 #include <atomic>
+#include <glm/gtc/matrix_transform.hpp>
 #include <new>
 #include <thread>
 
@@ -107,6 +108,86 @@ TEST_CASE("CommandQueue reuses both frame buffers", "[Memory][Frame][Threading]"
     CHECK(metrics.ReadCapacity == CommandsPerFrame);
     CHECK(metrics.WriteSize == 0);
     CHECK(metrics.ReadSize == 0);
+}
+
+TEST_CASE("Scene snapshot extraction preserves the frame-context number", "[Memory][Frame][Renderer][SceneSync]")
+{
+    const Ref<Scene> scene = CreateRef<Scene>(false);
+    SceneRenderer renderer(scene, nullptr);
+    RenderSnapshot snapshot;
+
+    snapshot.FrameNumber = 73;
+    renderer.ExtractSnapshot(snapshot, false);
+    CHECK(snapshot.FrameNumber == 73);
+
+    Camera camera;
+    snapshot.FrameNumber = 74;
+    renderer.ExtractSnapshot(snapshot, camera, glm::mat4(1.0f), false);
+    CHECK(snapshot.FrameNumber == 74);
+}
+
+TEST_CASE("RenderWorld transform settling reuses its change queues", "[Memory][Frame][Renderer][MotionVectors]")
+{
+    RenderWorld world(1);
+    const RenderInstanceHandle handle = world.CreateInstance({});
+    Vector<RenderWorldChange> changes;
+    world.DrainChanges(changes);
+
+    for (uint32_t frame = 1; frame <= 4; frame++)
+    {
+        REQUIRE(world.UpdateTransform(handle, glm::translate(glm::mat4(1.0f), glm::vec3(static_cast<float>(frame), 0.0f, 0.0f)),
+                                      glm::vec4(static_cast<float>(frame), 0.0f, 0.0f, 1.0f)));
+        world.DrainChanges(changes);
+    }
+
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 5; frame < 125; frame++)
+    {
+        world.UpdateTransform(handle, glm::translate(glm::mat4(1.0f), glm::vec3(static_cast<float>(frame), 0.0f, 0.0f)),
+                              glm::vec4(static_cast<float>(frame), 0.0f, 0.0f, 1.0f));
+        world.DrainChanges(changes);
+    }
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+    CHECK(delta.AllocationCount == 0);
+    CHECK(delta.RequestedBytes == 0);
+}
+
+TEST_CASE("Changing scenes retires the old camera history namespace", "[Memory][Frame][Renderer][SceneSync]")
+{
+    const Ref<Scene> firstScene = CreateRef<Scene>(false);
+    const Ref<Scene> secondScene = CreateRef<Scene>(false);
+    SceneRenderer renderer(firstScene, nullptr);
+    RenderSnapshot snapshot;
+    Camera camera;
+
+    renderer.ExtractSnapshot(snapshot, camera, glm::mat4(1.0f), false);
+    const uint64_t firstNamespace = snapshot.HistoryNamespace;
+    REQUIRE(firstNamespace != 0);
+    CHECK(snapshot.ReleasedHistoryNamespaces.Empty());
+
+    renderer.SetScene(secondScene);
+    renderer.ExtractSnapshot(snapshot, camera, glm::mat4(1.0f), false);
+    REQUIRE(snapshot.ReleasedHistoryNamespaces.Size() == 1);
+    CHECK(snapshot.ReleasedHistoryNamespaces[0] == firstNamespace);
+    CHECK(snapshot.HistoryNamespace != firstNamespace);
+}
+
+TEST_CASE("Inactive camera histories retire after the retention window", "[Memory][Frame][Renderer][SceneSync]")
+{
+    const Ref<Scene> scene = CreateRef<Scene>(false);
+    SceneRenderer renderer(scene, nullptr);
+    RenderSnapshot snapshot;
+    std::array<Camera, 122> cameras;
+
+    renderer.ExtractSnapshot(snapshot, cameras[0], glm::mat4(1.0f), false);
+    const uint64_t firstNamespace = snapshot.HistoryNamespace;
+    for (size_t index = 1; index < cameras.size(); index++)
+        renderer.ExtractSnapshot(snapshot, cameras[index], glm::mat4(1.0f), false);
+
+    REQUIRE(snapshot.ReleasedHistoryNamespaces.Size() == 1);
+    CHECK(snapshot.ReleasedHistoryNamespaces[0] == firstNamespace);
 }
 
 TEST_CASE("Thread allocation snapshots cover standard allocation families", "[Memory][Frame]")

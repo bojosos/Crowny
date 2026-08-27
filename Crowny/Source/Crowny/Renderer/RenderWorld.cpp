@@ -49,6 +49,7 @@ namespace Crowny
         Slot& slot = m_Slots[slotIndex];
         const RenderInstanceHandle handle = RenderInstanceHandle::FromParts(slotIndex, slot.Generation);
         slot.Data = BuildInstanceData(desc, { handle.GetValue() });
+        slot.TransformSettleQueued = false;
         slot.Alive = true;
         m_ActiveInstances++;
         QueueChange(slotIndex, handle, RenderWorldChangeType::Create, RenderWorldDirtyFlags::All);
@@ -62,9 +63,13 @@ namespace Crowny
             return false;
 
         Slot& slot = m_Slots[handle.GetIndex()];
-        const AffineTransform3x4 previous = slot.Data.Transforms.Current;
+        const bool pendingCreate = slot.PendingChange != InvalidChangeIndex &&
+                                   m_PendingChanges[slot.PendingChange].Type == RenderWorldChangeType::Create;
+        const AffineTransform3x4 previous =
+          slot.PendingChange == InvalidChangeIndex ? slot.Data.Transforms.Current : slot.Data.Transforms.Previous;
         slot.Data = BuildInstanceData(desc, { handle.GetValue() });
-        slot.Data.Transforms.Previous = previous;
+        slot.Data.Transforms.Previous = pendingCreate ? slot.Data.Transforms.Current : previous;
+        SetTransformSettleRequired(handle.GetIndex(), !pendingCreate && !TransformsEqual(slot.Data.Transforms.Current, previous));
         QueueChange(handle.GetIndex(), handle, RenderWorldChangeType::Update, RenderWorldDirtyFlags::All);
         return true;
     }
@@ -76,9 +81,14 @@ namespace Crowny
             return false;
 
         Slot& slot = m_Slots[handle.GetIndex()];
-        slot.Data.Transforms.Previous = slot.Data.Transforms.Current;
+        const bool pendingCreate = slot.PendingChange != InvalidChangeIndex &&
+                                   m_PendingChanges[slot.PendingChange].Type == RenderWorldChangeType::Create;
+        const AffineTransform3x4 previous =
+          slot.PendingChange == InvalidChangeIndex ? slot.Data.Transforms.Current : slot.Data.Transforms.Previous;
         slot.Data.Transforms.Current = AffineTransform3x4::FromMatrix(transform);
+        slot.Data.Transforms.Previous = pendingCreate ? slot.Data.Transforms.Current : previous;
         slot.Data.Culling.BoundingSphere = boundingSphere;
+        SetTransformSettleRequired(handle.GetIndex(), !pendingCreate && !TransformsEqual(slot.Data.Transforms.Current, previous));
         QueueChange(handle.GetIndex(), handle, RenderWorldChangeType::Update,
                     RenderWorldDirtyFlags::Transform | RenderWorldDirtyFlags::Bounds);
         return true;
@@ -144,6 +154,7 @@ namespace Crowny
         m_Slots.reserve(clampedCapacity);
         m_FreeSlots.reserve(clampedCapacity);
         m_DeferredFreeSlots.reserve(clampedCapacity);
+        m_TransformSettleSlots.reserve(clampedCapacity);
         m_PendingChanges.reserve(clampedCapacity);
     }
 
@@ -166,9 +177,25 @@ namespace Crowny
         for (uint32_t slotIndex : m_DeferredFreeSlots)
         {
             m_Slots[slotIndex].Data = {};
+            m_Slots[slotIndex].TransformSettleQueued = false;
             m_FreeSlots.push_back(slotIndex);
         }
         m_DeferredFreeSlots.clear();
+
+        for (uint32_t slotIndex : m_TransformSettleSlots)
+        {
+            if (slotIndex >= m_Slots.size())
+                continue;
+            Slot& slot = m_Slots[slotIndex];
+            if (!slot.Alive || !slot.TransformSettleQueued)
+                continue;
+
+            slot.TransformSettleQueued = false;
+            slot.Data.Transforms.Previous = slot.Data.Transforms.Current;
+            const RenderInstanceHandle handle = RenderInstanceHandle::FromParts(slotIndex, slot.Generation);
+            QueueChange(slotIndex, handle, RenderWorldChangeType::Update, RenderWorldDirtyFlags::Transform);
+        }
+        m_TransformSettleSlots.clear();
     }
 
     float RenderWorld::GetLodBias(const RenderDrawRecord& record)
@@ -198,6 +225,25 @@ namespace Crowny
     {
         generation = (generation + 1u) & RenderInstanceHandle::GenerationMask;
         return generation == 0 ? 1u : generation;
+    }
+
+    bool RenderWorld::TransformsEqual(const AffineTransform3x4& first, const AffineTransform3x4& second)
+    {
+        return first.Row0 == second.Row0 && first.Row1 == second.Row1 && first.Row2 == second.Row2;
+    }
+
+    void RenderWorld::SetTransformSettleRequired(uint32_t slotIndex, bool required)
+    {
+        Slot& slot = m_Slots[slotIndex];
+        if (!required)
+        {
+            slot.TransformSettleQueued = false;
+            return;
+        }
+        if (slot.TransformSettleQueued)
+            return;
+        slot.TransformSettleQueued = true;
+        m_TransformSettleSlots.push_back(slotIndex);
     }
 
     void RenderWorld::QueueChange(uint32_t slotIndex, RenderInstanceHandle handle, RenderWorldChangeType type,

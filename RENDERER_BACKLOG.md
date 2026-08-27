@@ -106,6 +106,10 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Add pooled transient images where render-graph lifetime aliasing cannot reuse an allocation.
 - [x] Route explicitly classified custom opaque materials through the post-lighting forward-only pass; keep standard GPU bins separate and reject unsupported records during GPU compaction.
 - [x] Require explicit `#pragma material_model custom` metadata before using the reverse-Z forward-only contract; unmarked shaders remain unsupported instead of inheriting an incompatible depth state.
+- [x] Settle persistent-instance previous transforms one frame after motion stops without allocating or resubmitting stable objects forever.
+- [x] Retire inactive and scene-replaced camera history namespaces, and preserve frame-context numbers through snapshot extraction.
+- [x] Apply visibility, layer, and frustum culling to custom forward-only and compatibility draws; pin mixed custom-material instances to LOD zero until their forward pass consumes geometry-heap LOD ranges.
+- [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
 - [ ] Cook and verify the independent depth-prepass output matrix: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID.
 
@@ -120,4 +124,5 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Isolated GPU draw-bin validation: focused layout/graph/shader coverage passed 136 assertions in 11 cases; focused GPU-scene coverage passed 94 assertions in 13 cases; full Release Catch2 passed 25,405 assertions in 351 cases.
 - [x] Updated 54-resource built-in pack loaded successfully; Release render harness passed Vulkan 4/4 and OpenGL 4/4 on Intel Iris Xe, with all 4 cross-backend captures matching.
 - [x] Isolated transient-texture validation: focused ASan `[Renderer][Resources]` coverage passed 94 assertions in 8 cases, including descriptor separation, frame-delayed reuse, budget rejection, trimming, and render-graph retirement.
+- [ ] Run the focused renderer/shader regression batch for the pending temporal-history, custom-material, and motion-settling repairs. The first mode-stable project migration attempted a full engine compile and was intentionally stopped; do not repeat it as a separate renderer-only build.
 - [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.

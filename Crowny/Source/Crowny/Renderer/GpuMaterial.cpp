@@ -87,6 +87,14 @@ namespace Crowny
                                       [](const Ref<ShaderRenderPass>& pass) { return pass && pass->HasBlending(); });
         }
         const bool alphaMasked = material.GetVariation().Has("ALPHA_MASK") && material.GetVariation().GetBool("ALPHA_MASK");
+        static const Vector<String> emptyTags;
+        const Vector<String>& tags = technique ? technique->GetTags() : emptyTags;
+        const bool hasExplicitMaterialModel = std::any_of(tags.begin(), tags.end(), [](const String& tag) {
+            return tag.starts_with("material_model=");
+        });
+        if (hasExplicitMaterialModel)
+            return Classify({}, tags, hasBlending, alphaMasked);
+
         String shaderIdentity = shader->GetName();
         if (shaderIdentity.empty())
         {
@@ -94,8 +102,6 @@ namespace Crowny
             if (AssetManager::TryGet() != nullptr && AssetManager::TryGet()->GetAssetPath(shader.GetUUID(), shaderPath))
                 shaderIdentity = shaderPath.generic_string();
         }
-        static const Vector<String> emptyTags;
-        const Vector<String>& tags = technique ? technique->GetTags() : emptyTags;
         return Classify(shaderIdentity, tags, hasBlending, alphaMasked);
     }
 
