@@ -852,6 +852,55 @@ namespace Crowny
             return modified;
         }
 
+        template <typename LabelAt, typename TUnderlying = int32_t>
+        static bool PropertyDropdown(const char* label, size_t optionCount, TUnderlying& selected, const LabelAt& labelAt)
+        {
+            // labelAt returns a borrowed, null-terminated label that remains valid for this call.
+            TUnderlying selectedIndex = selected;
+            Pre(label);
+            bool modified = false;
+            if (optionCount == 0)
+            {
+                ImGui::TextDisabled("No options available");
+                Post();
+                return false;
+            }
+            const bool indexValid = [&]() {
+                if constexpr (std::is_signed_v<TUnderlying>)
+                    return selectedIndex >= 0 && static_cast<size_t>(selectedIndex) < optionCount;
+                else
+                    return static_cast<size_t>(selectedIndex) < optionCount;
+            }();
+            if (!indexValid)
+            {
+                selectedIndex = 0;
+                selected = 0;
+                modified = true;
+            }
+
+            const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
+            const char* current = mixed ? "---" : labelAt(static_cast<size_t>(selectedIndex));
+            if (ImGui::BeginCombo(GenerateID(), current))
+            {
+                for (size_t index = 0; index < optionCount; index++)
+                {
+                    const bool isSelected = index == static_cast<size_t>(selectedIndex);
+                    if (ImGui::Selectable(labelAt(index), isSelected))
+                    {
+                        selected = static_cast<TUnderlying>(index);
+                        modified = true;
+                    }
+                    if (isSelected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            UndoRedo::Get().OnItemInteract(modified);
+            Post();
+
+            return modified;
+        }
+
     } // namespace UI
 
 } // namespace Crowny

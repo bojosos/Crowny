@@ -113,7 +113,8 @@ namespace
     };
 
     void DrawDropdownProperties(const Vector<String>& stringOptions, const Vector<NamedOption>& namedOptions, int& stringSelection,
-                                int& literalSelection, int& namedSelection)
+                                int& literalSelection, int& namedSelection, int& borrowedSelection, int& mixedBorrowedSelection,
+                                uint32_t& borrowedLabelRequests)
     {
         ImGui::NewFrame();
         ImGui::Begin("Dropdown allocation test");
@@ -127,6 +128,15 @@ namespace
                              literalSelection);
         UI::PropertyDropdown("A deliberately long selected option label", namedOptions, namedSelection,
                              [](const NamedOption& option) -> const String& { return option.Name; });
+        const auto borrowedLabelAt = [&](size_t index) {
+            borrowedLabelRequests++;
+            return index == 0 ? "(None)" : namedOptions[index - 1u].Name.c_str();
+        };
+        UI::PropertyDropdown("A deliberately long borrowed option label", namedOptions.size() + 1u, borrowedSelection, borrowedLabelAt);
+        ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, true);
+        UI::PropertyDropdown("A deliberately long mixed borrowed option label", namedOptions.size() + 1u, mixedBorrowedSelection,
+                             borrowedLabelAt);
+        ImGui::PopItemFlag();
         UI::EndPropertyGrid();
         ImGui::Dummy(ImVec2(0.0f, 0.0f));
         ImGui::End();
@@ -160,19 +170,28 @@ TEST_CASE("Property dropdowns allocate nothing after ImGui warm-up", "[Editor][P
     int stringSelection = 1;
     int literalSelection = 9;
     int namedSelection = 1;
+    int borrowedSelection = 2;
+    int mixedBorrowedSelection = 1;
+    uint32_t borrowedLabelRequests = 0;
 
     for (uint32_t frame = 0; frame < 8; frame++)
-        DrawDropdownProperties(stringOptions, namedOptions, stringSelection, literalSelection, namedSelection);
+        DrawDropdownProperties(stringOptions, namedOptions, stringSelection, literalSelection, namedSelection, borrowedSelection,
+                               mixedBorrowedSelection, borrowedLabelRequests);
 
+    borrowedLabelRequests = 0;
     const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
     for (uint32_t frame = 0; frame < 120; frame++)
-        DrawDropdownProperties(stringOptions, namedOptions, stringSelection, literalSelection, namedSelection);
+        DrawDropdownProperties(stringOptions, namedOptions, stringSelection, literalSelection, namedSelection, borrowedSelection,
+                               mixedBorrowedSelection, borrowedLabelRequests);
     const Memory::ThreadAllocationSnapshot delta =
       Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
 
     CHECK(stringSelection == 1);
     CHECK(literalSelection == 9);
     CHECK(namedSelection == 1);
+    CHECK(borrowedSelection == 2);
+    CHECK(mixedBorrowedSelection == 1);
+    CHECK(borrowedLabelRequests == 120u);
     CHECK(delta.AllocationCount == 0u);
     CHECK(delta.RequestedBytes == 0u);
 }

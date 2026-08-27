@@ -137,14 +137,14 @@ namespace Crowny
         {
             const AudioBusDesc& desc = descs[i];
             uint32_t depth = 0;
-            String parent = desc.Parent;
+            StringView parent = desc.Parent;
             while (!parent.empty() && depth < descs.size())
             {
                 const auto parentIt =
-                  std::find_if(descs.begin(), descs.end(), [&](const AudioBusDesc& candidate) { return candidate.Name == parent; });
+                  std::find_if(descs.begin(), descs.end(), [&](const AudioBusDesc& candidate) { return StringView(candidate.Name) == parent; });
                 if (parentIt == descs.end())
                     break;
-                parent = parentIt->Parent;
+                parent = StringView(parentIt->Parent);
                 depth++;
             }
 
@@ -215,21 +215,18 @@ namespace Crowny
                 }
             }
 
-            Vector<String> parents;
-            for (size_t i = 0; i < descIndex; i++)
-                parents.push_back(descs[i].Name);
             int parentIdx = 0;
-            for (int i = 0; i < static_cast<int>(parents.size()); i++)
+            for (size_t i = 0; i < descIndex; i++)
             {
-                if (parents[i] == desc.Parent)
+                if (descs[i].Name == desc.Parent)
                 {
-                    parentIdx = i;
+                    parentIdx = static_cast<int>(i);
                     break;
                 }
             }
-            if (UI::PropertyDropdown("Parent", parents, parentIdx))
+            if (UI::PropertyDropdown("Parent", descIndex, parentIdx, [&](size_t index) { return descs[index].Name.c_str(); }))
             {
-                desc.Parent = parents[parentIdx];
+                desc.Parent = descs[static_cast<size_t>(parentIdx)].Name;
                 mixer.Init();
             }
         }
@@ -263,12 +260,14 @@ namespace Crowny
         ImGui::SeparatorText("Effect");
         ImGui::Columns(2, "##effectColumns", false);
         ImGui::SetColumnWidth(0, std::clamp(ImGui::GetContentRegionAvail().x * 0.32f, 105.0f, 150.0f));
-        Vector<String> effectNames = { "None",      "Reverb",        "Echo",    "Distortion", "Chorus",
-                                       "Equalizer", "Pitch Shifter", "Flanger", "Compressor", "Ring Modulator" };
         int effectIdx = static_cast<int>(desc.FirstEffect);
-        if (effectIdx >= static_cast<int>(effectNames.size()))
+        constexpr int effectCount = static_cast<int>(AudioEffectType::RingModulator) + 1;
+        if (effectIdx >= effectCount)
             effectIdx = 0;
-        if (UI::PropertyDropdown("Type", effectNames, effectIdx))
+        if (UI::PropertyDropdown("Type",
+                                 { "None", "Reverb", "Echo", "Distortion", "Chorus", "Equalizer", "Pitch Shifter", "Flanger",
+                                   "Compressor", "Ring Modulator" },
+                                 effectIdx))
         {
             desc.FirstEffect = static_cast<AudioEffectType>(effectIdx);
             mixer.Init();
@@ -471,9 +470,8 @@ namespace Crowny
     void AudioMixerPanel::RenderChorusControls(AudioBusDesc& desc)
     {
         bool changed = false;
-        Vector<String> waveforms = { "Sinusoid", "Triangle" };
         int waveform = desc.Chorus.Waveform;
-        if (UI::PropertyDropdown("Waveform", waveforms, waveform))
+        if (UI::PropertyDropdown("Waveform", { "Sinusoid", "Triangle" }, waveform))
         {
             desc.Chorus.Waveform = waveform;
             changed = true;
@@ -516,9 +514,8 @@ namespace Crowny
     void AudioMixerPanel::RenderFlangerControls(AudioBusDesc& desc)
     {
         bool changed = false;
-        Vector<String> waveforms = { "Sinusoid", "Triangle" };
         int waveform = desc.Flanger.Waveform;
-        if (UI::PropertyDropdown("Waveform", waveforms, waveform))
+        if (UI::PropertyDropdown("Waveform", { "Sinusoid", "Triangle" }, waveform))
         {
             desc.Flanger.Waveform = waveform;
             changed = true;
@@ -543,9 +540,8 @@ namespace Crowny
         bool changed = false;
         changed |= UI::PropertySlider("Frequency", desc.RingModulator.Frequency, 0.0f, 8000.0f);
         changed |= UI::PropertySlider("Highpass Cutoff", desc.RingModulator.HighpassCutoff, 0.0f, 24000.0f);
-        Vector<String> waveforms = { "Sinusoid", "Sawtooth", "Square" };
         int waveform = desc.RingModulator.Waveform;
-        if (UI::PropertyDropdown("Waveform", waveforms, waveform))
+        if (UI::PropertyDropdown("Waveform", { "Sinusoid", "Sawtooth", "Square" }, waveform))
         {
             desc.RingModulator.Waveform = waveform;
             changed = true;

@@ -903,28 +903,27 @@ namespace Crowny
           [](Entity entity, float value) { entity.GetComponent<AudioSourceComponent>().SetMaxDistance(value); },
           [](float& value) { return UI::Property("Max Distance", value); });
 
-        Vector<String> busNames = { "(None)" };
-        if (const AssetHandle<AudioMixer>& mixer = AudioManager::TryGet()->GetActiveMixer())
-        {
-            for (const AudioBusDesc& desc : mixer->GetBusDescs())
-                busNames.push_back(desc.Name);
-        }
+        const AssetHandle<AudioMixer> mixer = AudioManager::TryGet()->GetActiveMixer();
+        const Vector<AudioBusDesc>* busDescs = mixer ? &mixer->GetBusDescs() : nullptr;
+        const size_t busOptionCount = 1u + (busDescs != nullptr ? busDescs->size() : 0u);
         MultiValue<String>(
           entities, "Audio Source", "Bus", [](Entity entity) { return entity.GetComponent<AudioSourceComponent>().GetBusName(); },
           [](Entity entity, const String& value) { entity.GetComponent<AudioSourceComponent>().SetBusName(value); },
           [&](String& value) {
               int selected = 0;
-              for (size_t i = 1; i < busNames.size(); ++i)
+              for (size_t index = 1; index < busOptionCount; index++)
               {
-                  if (busNames[i] == value)
+                  if ((*busDescs)[index - 1u].Name == value)
                   {
-                      selected = static_cast<int>(i);
+                      selected = static_cast<int>(index);
                       break;
                   }
               }
-              if (!UI::PropertyDropdown("Bus", busNames, selected))
+              if (!UI::PropertyDropdown("Bus", busOptionCount, selected, [&](size_t index) {
+                      return index == 0 ? "(None)" : (*busDescs)[index - 1u].Name.c_str();
+                  }))
                   return false;
-              value = selected == 0 ? String() : busNames[selected];
+              value = selected == 0 ? String() : (*busDescs)[static_cast<size_t>(selected) - 1u].Name;
               return true;
           });
         MultiValue<float>(
