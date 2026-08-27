@@ -128,6 +128,7 @@ namespace
         UI::PropertyDropdown("A deliberately long selected option label", namedOptions, namedSelection,
                              [](const NamedOption& option) -> const String& { return option.Name; });
         UI::EndPropertyGrid();
+        ImGui::Dummy(ImVec2(0.0f, 0.0f));
         ImGui::End();
         ImGui::EndFrame();
     }

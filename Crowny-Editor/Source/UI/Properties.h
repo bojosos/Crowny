@@ -756,7 +756,7 @@ namespace Crowny
             TUnderlying selectedIndex = (TUnderlying)selected;
             Pre(label);
             bool modified = false;
-            if (options.empty())
+            if (options.size() == 0)
             {
                 ImGui::TextDisabled("No options available");
                 Post();

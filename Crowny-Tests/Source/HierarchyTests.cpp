@@ -439,8 +439,9 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
 
         REQUIRE(clone);
         REQUIRE(clone.GetChildCount() == 1);
-        CHECK(sourceChildren.data() == sourceChildStorage);
-        CHECK(sourceChildren.capacity() == sourceChildCapacity);
+        const auto& sourceChildrenAfter = source.GetComponent<RelationshipComponent>().Children;
+        CHECK(sourceChildrenAfter.data() == sourceChildStorage);
+        CHECK(sourceChildrenAfter.capacity() == sourceChildCapacity);
         CHECK(source.GetChild(0) == child);
         CHECK(clone.GetLocalPosition() == source.GetLocalPosition());
         CHECK(clone.GetChild(0).GetLocalPosition() == child.GetLocalPosition());
