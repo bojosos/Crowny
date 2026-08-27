@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <fstream>
+#include <rapidjson/document.h>
 #include <yaml-cpp/yaml.h>
 
 using namespace Crowny;
@@ -46,8 +47,7 @@ namespace
         explicit TemporaryMeshFile(StringView contents, StringView extension = "obj")
         {
             const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
-            m_Path = std::filesystem::temp_directory_path() /
-                     ("crowny_mesh_" + std::to_string(unique) + "." + String(extension));
+            m_Path = std::filesystem::temp_directory_path() / ("crowny_mesh_" + std::to_string(unique) + "." + String(extension));
             std::ofstream stream(m_Path, std::ios::binary);
             stream << contents;
         }
@@ -63,6 +63,40 @@ namespace
     private:
         Path m_Path;
     };
+
+    constexpr StringView TRIANGLE_BUFFER_BASE64 = "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/"
+                                                  "AACAPwAAAAAAAAAAAACAPwAAgD8AAAAAAAAAAAAAgD8AAIA/AAAAAAAAAAAAAIA/AAABAAIA";
+
+    String BuildGltfDocument(uint32_t byteLength, StringView encodedBuffer, StringView bufferViews, StringView accessors, StringView meshes,
+                             StringView nodes, StringView sceneNodes, StringView extraRoot = {})
+    {
+        String document = R"GLTF({"asset":{"version":"2.0"},"buffers":[{"byteLength":)GLTF";
+        document += std::to_string(byteLength);
+        document += R"GLTF(,"uri":"data:application/octet-stream;base64,)GLTF";
+        document.append(encodedBuffer.data(), encodedBuffer.size());
+        document += R"GLTF("}],"bufferViews":)GLTF";
+        document.append(bufferViews.data(), bufferViews.size());
+        document += R"GLTF(,"accessors":)GLTF";
+        document.append(accessors.data(), accessors.size());
+        document += R"GLTF(,"meshes":)GLTF";
+        document.append(meshes.data(), meshes.size());
+        document += R"GLTF(,"nodes":)GLTF";
+        document.append(nodes.data(), nodes.size());
+        document.append(extraRoot.data(), extraRoot.size());
+        document += R"GLTF(,"scenes":[{"nodes":)GLTF";
+        document.append(sceneNodes.data(), sceneNodes.size());
+        document += R"GLTF(}],"scene":0})GLTF";
+        return document;
+    }
+
+    String BuildTriangleGltf(StringView meshes, StringView nodes, StringView sceneNodes)
+    {
+        return BuildGltfDocument(
+          126, TRIANGLE_BUFFER_BASE64,
+          R"GLTF([{"buffer":0,"byteOffset":0,"byteLength":36,"target":34962},{"buffer":0,"byteOffset":36,"byteLength":36,"target":34962},{"buffer":0,"byteOffset":72,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":120,"byteLength":6,"target":34963}])GLTF",
+          R"GLTF([{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},{"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},{"bufferView":3,"componentType":5123,"count":3,"type":"SCALAR"}])GLTF",
+          meshes, nodes, sceneNodes);
+    }
 } // namespace
 
 TEST_CASE_METHOD(ImporterFixture, "Importer indexes normalized exact extensions", "[Assets][Importer]")
@@ -154,9 +188,9 @@ l 5 6
     CHECK(foundFlippedCoordinate);
 }
 
-TEST_CASE("Mesh parser expands transformed scene instances", "[Assets][Importer][Mesh]")
+TEST_CASE("Upstream RapidJSON and Assimp parse transformed scene instances", "[Assets][Importer][Mesh]")
 {
-    const TemporaryMeshFile source(R"GLTF({
+    constexpr StringView gltf = R"GLTF({
   "asset": { "version": "2.0" },
   "buffers": [ {
     "byteLength": 126,
@@ -191,8 +225,14 @@ TEST_CASE("Mesh parser expands transformed scene instances", "[Assets][Importer]
   ],
   "scenes": [ { "nodes": [ 0, 2 ] } ],
   "scene": 0
-})GLTF",
-                                   "gltf");
+})GLTF";
+
+    rapidjson::Document upstreamDocument;
+    upstreamDocument.Parse(gltf.data(), gltf.size());
+    REQUIRE_FALSE(upstreamDocument.HasParseError());
+    REQUIRE(upstreamDocument.HasMember("meshes"));
+
+    const TemporaryMeshFile source(gltf, "gltf");
 
     MeshImportOptions options;
     options.ImportMaterials = false;
@@ -260,6 +300,126 @@ TEST_CASE("Mesh parser expands transformed scene instances", "[Assets][Importer]
     CHECK(sphereBounds.GetRadius() > 0.0f);
 }
 
+TEST_CASE("Mesh parser rejects only degenerate transformed instances", "[Assets][Importer][Mesh]")
+{
+    const String gltf =
+      BuildTriangleGltf(R"GLTF([{"name":"Triangle","primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TANGENT":2},"indices":3,"mode":4}]}])GLTF",
+                        R"GLTF([{"name":"Collapsed","mesh":0,"scale":[0,1,1]},{"name":"Valid","mesh":0,"translation":[4,0,0]}])GLTF", "[0,1]");
+    const TemporaryMeshFile source(gltf, "gltf");
+
+    MeshImportOptions options;
+    options.ImportMaterials = false;
+    const MeshImportResult result = MeshImporter::Parse(source.GetPath(), options);
+
+    REQUIRE(result);
+    REQUIRE(result.Data != nullptr);
+    CHECK(result.Data->GetVertexCount() == 3);
+    CHECK(result.Data->GetIndexCount() == 3);
+    REQUIRE(result.SubMeshes.size() == 1);
+    const Vector<glm::vec3> positions = result.Data->GetPositions();
+    REQUIRE(positions.size() == 3);
+    CHECK_THAT(positions[0].x, Catch::Matchers::WithinAbs(4.0f, 0.001f));
+}
+
+TEST_CASE("Negative mesh scale preserves mirrored winding and tangent basis", "[Assets][Importer][Mesh]")
+{
+    const String gltf =
+      BuildTriangleGltf(R"GLTF([{"name":"Triangle","primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TANGENT":2},"indices":3,"mode":4}]}])GLTF",
+                        R"GLTF([{"name":"Triangle","mesh":0}])GLTF", "[0]");
+    const TemporaryMeshFile source(gltf, "gltf");
+
+    MeshImportOptions options;
+    options.ImportMaterials = false;
+    options.ScaleFactor = -2.0f;
+    const MeshImportResult result = MeshImporter::Parse(source.GetPath(), options);
+
+    REQUIRE(result);
+    REQUIRE(result.Data != nullptr);
+    const Vector<glm::vec3> positions = result.Data->GetPositions();
+    const Vector<glm::vec3> normals = result.Data->GetNormals();
+    const Vector<glm::vec3> tangents = result.Data->GetTangents();
+    const Vector<glm::vec3> bitangents = result.Data->GetBitangents();
+    const Vector<uint32_t> indices = result.Data->GetIndices();
+    REQUIRE(positions.size() == 3);
+    REQUIRE(normals.size() == positions.size());
+    REQUIRE(tangents.size() == positions.size());
+    REQUIRE(bitangents.size() == positions.size());
+    REQUIRE(indices.size() == 3);
+
+    const glm::vec3 geometricNormal =
+      glm::normalize(glm::cross(positions[indices[1]] - positions[indices[0]], positions[indices[2]] - positions[indices[0]]));
+    CHECK_THAT(geometricNormal.z, Catch::Matchers::WithinAbs(-1.0f, 0.001f));
+    for (uint32_t vertex = 0; vertex < positions.size(); vertex++)
+    {
+        CHECK_THAT(normals[vertex].z, Catch::Matchers::WithinAbs(-1.0f, 0.001f));
+        CHECK_THAT(tangents[vertex].x, Catch::Matchers::WithinAbs(-1.0f, 0.001f));
+        CHECK_THAT(bitangents[vertex].y, Catch::Matchers::WithinAbs(-1.0f, 0.001f));
+    }
+}
+
+TEST_CASE("Mesh parser duplicates transformed morph deltas for scene instances", "[Assets][Importer][Mesh][Morph]")
+{
+    constexpr StringView morphBuffer = "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAACAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIA";
+    const String gltf = BuildGltfDocument(
+      78, morphBuffer,
+      R"GLTF([{"buffer":0,"byteOffset":0,"byteLength":36,"target":34962},{"buffer":0,"byteOffset":36,"byteLength":36,"target":34962},{"buffer":0,"byteOffset":72,"byteLength":6,"target":34963}])GLTF",
+      R"GLTF([{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},{"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":2,"componentType":5123,"count":3,"type":"SCALAR"}])GLTF",
+      R"GLTF([{"name":"Triangle","weights":[0],"extras":{"targetNames":["Offset"]},"primitives":[{"attributes":{"POSITION":0},"indices":2,"targets":[{"POSITION":1}],"mode":4}]}])GLTF",
+      R"GLTF([{"name":"Wide","mesh":0,"scale":[2,1,1]},{"name":"Mirrored","mesh":0,"translation":[10,0,0],"scale":[-3,1,1]}])GLTF", "[0,1]");
+    const TemporaryMeshFile source(gltf, "gltf");
+
+    MeshImportOptions options;
+    options.ImportMaterials = false;
+    options.ImportMorphMeshes = true;
+    const MeshImportResult result = MeshImporter::Parse(source.GetPath(), options);
+
+    REQUIRE(result);
+    REQUIRE(result.Data != nullptr);
+    REQUIRE(result.Morph != nullptr);
+    CHECK(result.Data->GetVertexCount() == 6);
+    CHECK(result.Morph->GetVertexCount() == 6);
+    REQUIRE(result.Morph->GetChannelCount() == 1);
+    const Ref<MorphChannel>& channel = result.Morph->GetChannel(0);
+    REQUIRE(channel != nullptr);
+    REQUIRE(channel->GetShapeCount() == 1);
+    const Vector<MorphData>& vertices = channel->GetShape(0)->GetVertices();
+    REQUIRE(vertices.size() == 2);
+
+    const auto first = std::find_if(vertices.begin(), vertices.end(), [](const MorphData& morph) { return morph.VertexIndex == 0; });
+    const auto second = std::find_if(vertices.begin(), vertices.end(), [](const MorphData& morph) { return morph.VertexIndex == 3; });
+    REQUIRE(first != vertices.end());
+    REQUIRE(second != vertices.end());
+    CHECK_THAT(first->VertexTranslation.x, Catch::Matchers::WithinAbs(2.0f, 0.001f));
+    CHECK_THAT(second->VertexTranslation.x, Catch::Matchers::WithinAbs(-3.0f, 0.001f));
+}
+
+TEST_CASE("Mesh parser rejects transformed skinned instances", "[Assets][Importer][Mesh][Skin]")
+{
+    constexpr StringView skinBuffer =
+      "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/"
+      "AAAAAAAAAAAAAAAAAAABAAIAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/";
+    const String gltf = BuildGltfDocument(
+      168, skinBuffer,
+      R"GLTF([{"buffer":0,"byteOffset":0,"byteLength":36,"target":34962},{"buffer":0,"byteOffset":36,"byteLength":12,"target":34962},{"buffer":0,"byteOffset":48,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":96,"byteLength":6,"target":34963},{"buffer":0,"byteOffset":104,"byteLength":64}])GLTF",
+      R"GLTF([{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},{"bufferView":1,"componentType":5121,"count":3,"type":"VEC4"},{"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},{"bufferView":3,"componentType":5123,"count":3,"type":"SCALAR"},{"bufferView":4,"componentType":5126,"count":1,"type":"MAT4"}])GLTF",
+      R"GLTF([{"name":"SkinnedTriangle","primitives":[{"attributes":{"POSITION":0,"JOINTS_0":1,"WEIGHTS_0":2},"indices":3,"mode":4}]}])GLTF",
+      R"GLTF([{"name":"MeshNode","mesh":0,"skin":0,"translation":[2,0,0]},{"name":"Joint"}])GLTF", "[0,1]",
+      R"GLTF(,"skins":[{"inverseBindMatrices":4,"joints":[1],"skeleton":1}])GLTF");
+    const TemporaryMeshFile source(gltf, "gltf");
+
+    MeshImportOptions options;
+    options.ImportMaterials = false;
+    options.ImportBones = true;
+    const MeshImportResult result = MeshImporter::Parse(source.GetPath(), options);
+
+    CHECK_FALSE(result);
+    CHECK(result.Data == nullptr);
+    CHECK(result.SubMeshes.empty());
+    CHECK(result.MaterialIndices.empty());
+    CHECK_FALSE(result.Bones.empty());
+    CHECK(result.MeshSkeleton != nullptr);
+}
+
 TEST_CASE("Mesh import options survive metadata round trip", "[Assets][Importer][Mesh]")
 {
     Ref<MeshImportOptions> source = CreateRef<MeshImportOptions>();
@@ -312,8 +472,7 @@ TEST_CASE("Texture import options survive metadata round trip", "[Assets][Import
     emitter << YAML::BeginMap;
     ImportOptionsSerializer::Serialize(emitter, source);
     emitter << YAML::EndMap;
-    const Ref<TextureImportOptions> restored =
-      StaticRefCast<TextureImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load(emitter.c_str())));
+    const Ref<TextureImportOptions> restored = StaticRefCast<TextureImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load(emitter.c_str())));
 
     REQUIRE(restored != nullptr);
     CHECK_FALSE(restored->AutomaticFormat);
@@ -344,8 +503,7 @@ TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer]
     emitter << YAML::BeginMap;
     ImportOptionsSerializer::Serialize(emitter, source);
     emitter << YAML::EndMap;
-    const Ref<FontImportOptions> restored =
-      StaticRefCast<FontImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load(emitter.c_str())));
+    const Ref<FontImportOptions> restored = StaticRefCast<FontImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load(emitter.c_str())));
 
     REQUIRE(restored != nullptr);
     CHECK_FALSE(restored->GetKerningData);
