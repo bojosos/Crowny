@@ -470,6 +470,14 @@ namespace Crowny
             return VK_FORMAT_R32_SINT;
         case TextureFormat::R32F:
             return VK_FORMAT_R32_SFLOAT;
+        case TextureFormat::R16:
+            return VK_FORMAT_R16_UNORM;
+        case TextureFormat::RG16:
+            return VK_FORMAT_R16G16_UNORM;
+        case TextureFormat::RGB16:
+            return VK_FORMAT_R16G16B16_UNORM;
+        case TextureFormat::RGBA16:
+            return VK_FORMAT_R16G16B16A16_UNORM;
         case TextureFormat::DEPTH32F:
             return VK_FORMAT_D32_SFLOAT;
         case TextureFormat::DEPTH24STENCIL8:

@@ -48,8 +48,7 @@ project "Crowny-Editor"
 
 	links
 	{
-		"Crowny",
-		"Crowny-Sharp"
+		"Crowny"
 	}
 
 	linkCrownyFinalDependencies()
@@ -57,8 +56,7 @@ project "Crowny-Editor"
 
 	dependson
 	{
-		"Crowny",
-		"Crowny-Sharp"
+		"Crowny"
 	}
 
 	filter "system:windows"

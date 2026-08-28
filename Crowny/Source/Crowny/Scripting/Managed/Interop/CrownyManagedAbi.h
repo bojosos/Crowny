@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 7u
+#define CW_MANAGED_ABI_VERSION 8u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -54,188 +54,6 @@ enum cw_managed_event_kind
     CW_MANAGED_EVENT_TRIGGER_ENTER_3_D = 12,
     CW_MANAGED_EVENT_TRIGGER_STAY_3_D = 13,
     CW_MANAGED_EVENT_TRIGGER_EXIT_3_D = 14,
-};
-
-enum cw_managed_host_binding
-{
-    CW_MANAGED_BINDING_ENTITY_HAS_COMPONENT = 1,
-    CW_MANAGED_BINDING_ENTITY_ADD_COMPONENT = 2,
-    CW_MANAGED_BINDING_ENTITY_REMOVE_COMPONENT = 3,
-    CW_MANAGED_BINDING_TRANSFORM_GET_POSITION = 10,
-    CW_MANAGED_BINDING_TRANSFORM_SET_POSITION = 11,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_POSITION = 12,
-    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_POSITION = 13,
-    CW_MANAGED_BINDING_TRANSFORM_GET_SCALE = 14,
-    CW_MANAGED_BINDING_TRANSFORM_SET_SCALE = 15,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_SCALE = 16,
-    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_SCALE = 17,
-    CW_MANAGED_BINDING_TRANSFORM_GET_ROTATION = 18,
-    CW_MANAGED_BINDING_TRANSFORM_SET_ROTATION = 19,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_ROTATION = 20,
-    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_ROTATION = 21,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_TO_WORLD_MATRIX = 22,
-    CW_MANAGED_BINDING_TRANSFORM_GET_WORLD_TO_LOCAL_MATRIX = 23,
-    CW_MANAGED_BINDING_TRANSFORM_GET_EULER_ANGLES = 24,
-    CW_MANAGED_BINDING_TRANSFORM_SET_EULER_ANGLES = 25,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_EULER_ANGLES = 26,
-    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_EULER_ANGLES = 27,
-    CW_MANAGED_BINDING_INPUT_GET_KEY = 30,
-    CW_MANAGED_BINDING_INPUT_GET_KEY_DOWN = 31,
-    CW_MANAGED_BINDING_INPUT_GET_KEY_UP = 32,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON = 33,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_DOWN = 34,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_UP = 35,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_X = 36,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_Y = 37,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_POSITION = 38,
-    CW_MANAGED_BINDING_TIME_GET_TIME = 40,
-    CW_MANAGED_BINDING_TIME_GET_FIXED_DELTA_TIME = 41,
-    CW_MANAGED_BINDING_TIME_GET_SMOOTH_DELTA_TIME = 42,
-    CW_MANAGED_BINDING_TIME_GET_REALTIME_SINCE_STARTUP = 43,
-    CW_MANAGED_BINDING_TIME_GET_FRAME_COUNT = 44,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_MASS = 50,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_MASS = 51,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_BODY_TYPE = 52,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_BODY_TYPE = 53,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_SLEEP_MODE = 54,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_SLEEP_MODE = 55,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_COLLISION_DETECTION_MODE = 56,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_COLLISION_DETECTION_MODE = 57,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INTERPOLATION = 58,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INTERPOLATION = 59,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AUTO_MASS = 60,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AUTO_MASS = 61,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LAYER = 62,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LAYER = 63,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_DRAG = 64,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_DRAG = 65,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_DRAG = 66,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_DRAG = 67,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_GRAVITY_SCALE = 68,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_GRAVITY_SCALE = 69,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CENTER_OF_MASS = 70,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CENTER_OF_MASS = 71,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INERTIA = 72,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INERTIA = 73,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CONSTRAINTS = 74,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CONSTRAINTS = 75,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ROTATION = 76,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_POSITION = 77,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_VELOCITY = 78,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_VELOCITY = 79,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_VELOCITY = 80,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_VELOCITY = 81,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AWAKE = 82,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AWAKE = 83,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE = 84,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE_AT_POSITION = 85,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DADD_TORQUE = 86,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_VOLUME = 100,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_VOLUME = 101,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PITCH = 102,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PITCH = 103,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MIN_DISTANCE = 104,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MIN_DISTANCE = 105,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MAX_DISTANCE = 106,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MAX_DISTANCE = 107,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_LOOP = 108,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_LOOP = 109,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MUTED = 110,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MUTED = 111,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PLAY_ON_AWAKE = 112,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PLAY_ON_AWAKE = 113,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_TIME = 114,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_TIME = 115,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_CLIP = 116,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_CLIP = 117,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_STATE = 118,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_PLAY = 119,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_PAUSE = 120,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_STOP = 121,
-    CW_MANAGED_BINDING_TEXT_GET_TEXT = 200,
-    CW_MANAGED_BINDING_TEXT_SET_TEXT = 201,
-    CW_MANAGED_BINDING_TEXT_GET_FONT = 202,
-    CW_MANAGED_BINDING_TEXT_SET_FONT = 203,
-    CW_MANAGED_BINDING_TEXT_GET_COLOR = 204,
-    CW_MANAGED_BINDING_TEXT_SET_COLOR = 205,
-    CW_MANAGED_BINDING_TEXT_GET_SIZE = 206,
-    CW_MANAGED_BINDING_TEXT_SET_SIZE = 207,
-    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE = 208,
-    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE = 209,
-    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE_MIN = 210,
-    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE_MIN = 211,
-    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE_MAX = 212,
-    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE_MAX = 213,
-    CW_MANAGED_BINDING_TEXT_GET_LAYOUT_SIZE = 214,
-    CW_MANAGED_BINDING_TEXT_SET_LAYOUT_SIZE = 215,
-    CW_MANAGED_BINDING_TEXT_GET_WRAPPING = 216,
-    CW_MANAGED_BINDING_TEXT_SET_WRAPPING = 217,
-    CW_MANAGED_BINDING_TEXT_GET_WRAP_MODE = 218,
-    CW_MANAGED_BINDING_TEXT_SET_WRAP_MODE = 219,
-    CW_MANAGED_BINDING_TEXT_GET_OVERFLOW = 220,
-    CW_MANAGED_BINDING_TEXT_SET_OVERFLOW = 221,
-    CW_MANAGED_BINDING_TEXT_GET_CLIP_TO_BOUNDS = 222,
-    CW_MANAGED_BINDING_TEXT_SET_CLIP_TO_BOUNDS = 223,
-    CW_MANAGED_BINDING_TEXT_GET_MAX_LINES = 224,
-    CW_MANAGED_BINDING_TEXT_SET_MAX_LINES = 225,
-    CW_MANAGED_BINDING_TEXT_GET_HORIZONTAL_ALIGNMENT = 226,
-    CW_MANAGED_BINDING_TEXT_SET_HORIZONTAL_ALIGNMENT = 227,
-    CW_MANAGED_BINDING_TEXT_GET_VERTICAL_ALIGNMENT = 228,
-    CW_MANAGED_BINDING_TEXT_SET_VERTICAL_ALIGNMENT = 229,
-    CW_MANAGED_BINDING_TEXT_GET_FONT_STYLE = 230,
-    CW_MANAGED_BINDING_TEXT_SET_FONT_STYLE = 231,
-    CW_MANAGED_BINDING_TEXT_GET_OUTLINE_COLOR = 232,
-    CW_MANAGED_BINDING_TEXT_SET_OUTLINE_COLOR = 233,
-    CW_MANAGED_BINDING_TEXT_GET_OUTLINE_WIDTH = 234,
-    CW_MANAGED_BINDING_TEXT_SET_OUTLINE_WIDTH = 235,
-    CW_MANAGED_BINDING_TEXT_GET_SHADOW_COLOR = 236,
-    CW_MANAGED_BINDING_TEXT_SET_SHADOW_COLOR = 237,
-    CW_MANAGED_BINDING_TEXT_GET_SHADOW_OFFSET = 238,
-    CW_MANAGED_BINDING_TEXT_SET_SHADOW_OFFSET = 239,
-    CW_MANAGED_BINDING_TEXT_GET_SHADOW_SOFTNESS = 240,
-    CW_MANAGED_BINDING_TEXT_SET_SHADOW_SOFTNESS = 241,
-    CW_MANAGED_BINDING_TEXT_GET_CHARACTER_SPACING = 242,
-    CW_MANAGED_BINDING_TEXT_SET_CHARACTER_SPACING = 243,
-    CW_MANAGED_BINDING_TEXT_GET_WORD_SPACING = 244,
-    CW_MANAGED_BINDING_TEXT_SET_WORD_SPACING = 245,
-    CW_MANAGED_BINDING_TEXT_GET_LINE_SPACING = 246,
-    CW_MANAGED_BINDING_TEXT_SET_LINE_SPACING = 247,
-    CW_MANAGED_BINDING_TEXT_GET_PARAGRAPH_SPACING = 248,
-    CW_MANAGED_BINDING_TEXT_SET_PARAGRAPH_SPACING = 249,
-    CW_MANAGED_BINDING_TEXT_GET_TAB_WIDTH = 250,
-    CW_MANAGED_BINDING_TEXT_SET_TAB_WIDTH = 251,
-    CW_MANAGED_BINDING_TEXT_GET_USE_CUSTOM_DECORATION_COLOR = 252,
-    CW_MANAGED_BINDING_TEXT_SET_USE_CUSTOM_DECORATION_COLOR = 253,
-    CW_MANAGED_BINDING_TEXT_GET_DECORATION_COLOR = 254,
-    CW_MANAGED_BINDING_TEXT_SET_DECORATION_COLOR = 255,
-    CW_MANAGED_BINDING_TEXT_GET_DECORATION_THICKNESS = 256,
-    CW_MANAGED_BINDING_TEXT_SET_DECORATION_THICKNESS = 257,
-    CW_MANAGED_BINDING_TEXT_GET_UNDERLINE_OFFSET = 258,
-    CW_MANAGED_BINDING_TEXT_SET_UNDERLINE_OFFSET = 259,
-    CW_MANAGED_BINDING_TEXT_GET_STRIKETHROUGH_OFFSET = 260,
-    CW_MANAGED_BINDING_TEXT_SET_STRIKETHROUGH_OFFSET = 261,
-    CW_MANAGED_BINDING_TEXT_GET_USE_KERNING = 262,
-    CW_MANAGED_BINDING_TEXT_SET_USE_KERNING = 263,
-    CW_MANAGED_BINDING_TEXT_GET_SORTING_LAYER = 264,
-    CW_MANAGED_BINDING_TEXT_SET_SORTING_LAYER = 265,
-    CW_MANAGED_BINDING_TEXT_GET_ORDER_IN_LAYER = 266,
-    CW_MANAGED_BINDING_TEXT_SET_ORDER_IN_LAYER = 267,
-    CW_MANAGED_BINDING_FONT_GET_IS_VALID = 300,
-    CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT = 301,
-    CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH = 302,
-    CW_MANAGED_BINDING_FONT_GET_ATLAS_WIDTH = 303,
-    CW_MANAGED_BINDING_FONT_GET_ATLAS_HEIGHT = 304,
-    CW_MANAGED_BINDING_FONT_GET_ATLAS_PIXEL_RANGE = 305,
-    CW_MANAGED_BINDING_FONT_HAS_GLYPH = 306,
-    CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO = 307,
-    CW_MANAGED_BINDING_FONT_GET_FALLBACK_COUNT = 308,
-    CW_MANAGED_BINDING_FONT_GET_FALLBACK = 309,
-    CW_MANAGED_BINDING_FONT_ADD_FALLBACK = 310,
-    CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS = 311,
-    CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT = 130,
-    CW_MANAGED_BINDING_MATH_MATRIX_INVERSE = 131,
-    CW_MANAGED_BINDING_MATH_MATRIX_AFFINE_INVERSE = 132,
-    CW_MANAGED_BINDING_MATH_LOOK_AT = 133,
 };
 
 typedef struct cw_managed_string_view
@@ -350,9 +168,6 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_parent_fn)(void
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_parent_fn)(void* context, cw_managed_uuid entity,
                                                                            cw_managed_uuid parent);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_entity_fn)(void* context, cw_managed_uuid entity);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_invoke_host_binding_fn)(void* context, uint32_t binding,
-                                                                             cw_managed_uuid entity, cw_managed_blob input,
-                                                                             cw_managed_blob* output);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_has_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view typeName, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_add_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view typeName);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_remove_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view typeName);
@@ -374,6 +189,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_get_euler_angles
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_set_euler_angles_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_get_local_euler_angles_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_set_local_euler_angles_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_is_dirty_fn)(void* context, cw_managed_uuid entity, int32_t flag, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_key_fn)(void* context, uint32_t code, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_key_down_fn)(void* context, uint32_t code, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_key_up_fn)(void* context, uint32_t code, uint8_t* result);
@@ -383,6 +199,21 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_button_up_
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_scroll_x_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_scroll_y_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_position_fn)(void* context, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_delta_fn)(void* context, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_is_gamepad_connected_fn)(void* context, uint32_t gamepad, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_down_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_up_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_axis_fn)(void* context, uint32_t gamepad, uint32_t code, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_down_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_up_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_axis_fn)(void* context, cw_managed_string_view actionName, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_vector_fn)(void* context, cw_managed_string_view actionName, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_enable_action_map_fn)(void* context, cw_managed_string_view mapName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_disable_action_map_fn)(void* context, cw_managed_string_view mapName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_clear_action_rebinds_fn)(void* context);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_delta_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_fixed_delta_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_smooth_delta_time_fn)(void* context, float* result);
@@ -544,7 +375,6 @@ typedef struct cw_managed_host_api
     cw_managed_get_entity_parent_fn get_entity_parent;
     cw_managed_set_entity_parent_fn set_entity_parent;
     cw_managed_destroy_entity_fn destroy_entity;
-    cw_managed_invoke_host_binding_fn invoke_host_binding;
     cw_managed_entity_has_component_fn entity_has_component;
     cw_managed_entity_add_component_fn entity_add_component;
     cw_managed_entity_remove_component_fn entity_remove_component;
@@ -566,6 +396,7 @@ typedef struct cw_managed_host_api
     cw_managed_transform_set_euler_angles_fn transform_set_euler_angles;
     cw_managed_transform_get_local_euler_angles_fn transform_get_local_euler_angles;
     cw_managed_transform_set_local_euler_angles_fn transform_set_local_euler_angles;
+    cw_managed_transform_is_dirty_fn transform_is_dirty;
     cw_managed_input_get_key_fn input_get_key;
     cw_managed_input_get_key_down_fn input_get_key_down;
     cw_managed_input_get_key_up_fn input_get_key_up;
@@ -575,6 +406,21 @@ typedef struct cw_managed_host_api
     cw_managed_input_get_mouse_scroll_x_fn input_get_mouse_scroll_x;
     cw_managed_input_get_mouse_scroll_y_fn input_get_mouse_scroll_y;
     cw_managed_input_get_mouse_position_fn input_get_mouse_position;
+    cw_managed_input_get_mouse_delta_fn input_get_mouse_delta;
+    cw_managed_input_is_gamepad_connected_fn input_is_gamepad_connected;
+    cw_managed_input_get_gamepad_button_fn input_get_gamepad_button;
+    cw_managed_input_get_gamepad_button_down_fn input_get_gamepad_button_down;
+    cw_managed_input_get_gamepad_button_up_fn input_get_gamepad_button_up;
+    cw_managed_input_get_gamepad_axis_fn input_get_gamepad_axis;
+    cw_managed_input_get_action_fn input_get_action;
+    cw_managed_input_get_action_down_fn input_get_action_down;
+    cw_managed_input_get_action_up_fn input_get_action_up;
+    cw_managed_input_get_axis_fn input_get_axis;
+    cw_managed_input_get_action_vector_fn input_get_action_vector;
+    cw_managed_input_enable_action_map_fn input_enable_action_map;
+    cw_managed_input_disable_action_map_fn input_disable_action_map;
+    cw_managed_input_clear_action_rebinds_fn input_clear_action_rebinds;
+    cw_managed_time_get_delta_time_fn time_get_delta_time;
     cw_managed_time_get_time_fn time_get_time;
     cw_managed_time_get_fixed_delta_time_fn time_get_fixed_delta_time;
     cw_managed_time_get_smooth_delta_time_fn time_get_smooth_delta_time;
@@ -725,7 +571,8 @@ typedef struct cw_managed_host_api
     cw_managed_math_look_at_fn math_look_at;
 } cw_managed_host_api;
 
-#define CW_MANAGED_HOST_FUNCTION_LIST(X)     X(EntityHasComponent, entity_has_component) \
+#define CW_MANAGED_HOST_FUNCTION_LIST(X) \
+    X(EntityHasComponent, entity_has_component) \
     X(EntityAddComponent, entity_add_component) \
     X(EntityRemoveComponent, entity_remove_component) \
     X(TransformGetPosition, transform_get_position) \
@@ -746,6 +593,7 @@ typedef struct cw_managed_host_api
     X(TransformSetEulerAngles, transform_set_euler_angles) \
     X(TransformGetLocalEulerAngles, transform_get_local_euler_angles) \
     X(TransformSetLocalEulerAngles, transform_set_local_euler_angles) \
+    X(TransformIsDirty, transform_is_dirty) \
     X(InputGetKey, input_get_key) \
     X(InputGetKeyDown, input_get_key_down) \
     X(InputGetKeyUp, input_get_key_up) \
@@ -755,6 +603,21 @@ typedef struct cw_managed_host_api
     X(InputGetMouseScrollX, input_get_mouse_scroll_x) \
     X(InputGetMouseScrollY, input_get_mouse_scroll_y) \
     X(InputGetMousePosition, input_get_mouse_position) \
+    X(InputGetMouseDelta, input_get_mouse_delta) \
+    X(InputIsGamepadConnected, input_is_gamepad_connected) \
+    X(InputGetGamepadButton, input_get_gamepad_button) \
+    X(InputGetGamepadButtonDown, input_get_gamepad_button_down) \
+    X(InputGetGamepadButtonUp, input_get_gamepad_button_up) \
+    X(InputGetGamepadAxis, input_get_gamepad_axis) \
+    X(InputGetAction, input_get_action) \
+    X(InputGetActionDown, input_get_action_down) \
+    X(InputGetActionUp, input_get_action_up) \
+    X(InputGetAxis, input_get_axis) \
+    X(InputGetActionVector, input_get_action_vector) \
+    X(InputEnableActionMap, input_enable_action_map) \
+    X(InputDisableActionMap, input_disable_action_map) \
+    X(InputClearActionRebinds, input_clear_action_rebinds) \
+    X(TimeGetDeltaTime, time_get_delta_time) \
     X(TimeGetTime, time_get_time) \
     X(TimeGetFixedDeltaTime, time_get_fixed_delta_time) \
     X(TimeGetSmoothDeltaTime, time_get_smooth_delta_time) \

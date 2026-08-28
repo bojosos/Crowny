@@ -156,6 +156,10 @@ namespace Crowny
         case TextureFormat::RGBA32F: return { GL_RGBA32F, GL_RGBA, GL_FLOAT, false };
         case TextureFormat::R32I: return { GL_R32I, GL_RED_INTEGER, GL_INT, false };
         case TextureFormat::R32F: return { GL_R32F, GL_RED, GL_FLOAT, false };
+        case TextureFormat::R16: return { GL_R16, GL_RED, GL_UNSIGNED_SHORT, false };
+        case TextureFormat::RG16: return { GL_RG16, GL_RG, GL_UNSIGNED_SHORT, false };
+        case TextureFormat::RGB16: return { GL_RGB16, GL_RGB, GL_UNSIGNED_SHORT, false };
+        case TextureFormat::RGBA16: return { GL_RGBA16, GL_RGBA, GL_UNSIGNED_SHORT, false };
         case TextureFormat::DEPTH32F: return { GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, false };
         case TextureFormat::DEPTH24STENCIL8: return { GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, false };
         case TextureFormat::BC1:

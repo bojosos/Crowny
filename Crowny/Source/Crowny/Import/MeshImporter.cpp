@@ -5,6 +5,7 @@
 #include "Crowny/Animation/AnimationClip.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Import/TextureImporter.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MeshProcessing.h"
@@ -1012,25 +1013,56 @@ namespace Crowny
 
         using TextureCache = UnorderedMap<String, Ref<Texture>>;
 
+        Ref<TextureImportOptions> CreateMaterialTextureOptions(TextureMipMode mode, bool sRGB)
+        {
+            Ref<TextureImportOptions> options = CreateRef<TextureImportOptions>();
+            options->MipMode = mode;
+            options->SRGB = sRGB;
+            options->DiskFormat = mode == TextureMipMode::Color ? TextureDiskFormat::ETC1S : TextureDiskFormat::UASTC;
+            return options;
+        }
+
+        Ref<PixelData> DecodeEmbeddedTexels(const aiTexture& embedded)
+        {
+            if (embedded.mWidth == 0 || embedded.mHeight == 0 || embedded.pcData == nullptr)
+                return nullptr;
+            Ref<PixelData> pixels = PixelData::Create(embedded.mWidth, embedded.mHeight, 1, TextureFormat::RGBA8);
+            if (!pixels || !pixels->IsValid())
+                return nullptr;
+            for (uint32_t y = 0; y < embedded.mHeight; y++)
+            {
+                for (uint32_t x = 0; x < embedded.mWidth; x++)
+                {
+                    const aiTexel& texel = embedded.pcData[static_cast<size_t>(y) * embedded.mWidth + x];
+                    uint8_t* destination = pixels->GetData() + static_cast<size_t>(y) * pixels->GetRowPitch() + x * 4u;
+                    destination[0] = texel.r;
+                    destination[1] = texel.g;
+                    destination[2] = texel.b;
+                    destination[3] = texel.a;
+                }
+            }
+            return pixels;
+        }
+
         Ref<Texture> ImportTexture(const aiScene& scene, const aiMaterial& sourceMaterial, const Path& meshPath, aiTextureType textureType,
-                                   const String& shaderParameter, const Ref<Material>& material, TextureCache& textureCache)
+                                   const String& shaderParameter, TextureMipMode mode, bool sRGB, const Ref<Material>& material,
+                                   TextureCache& textureCache)
         {
             aiString importedPath;
             if (sourceMaterial.GetTexture(textureType, 0, &importedPath) != aiReturn_SUCCESS)
                 return nullptr;
 
             const String rawPath = importedPath.C_Str();
-            if (scene.GetEmbeddedTexture(rawPath.c_str()) != nullptr)
-            {
-                CW_ENGINE_WARN("Embedded texture '{}' cannot be imported until TextureImporter supports memory streams.", rawPath);
-                return nullptr;
-            }
-
-            Path texturePath(rawPath);
-            if (texturePath.is_relative())
-                texturePath = meshPath.parent_path() / texturePath;
-            texturePath = texturePath.lexically_normal();
-            const String cacheKey = texturePath.generic_string();
+            const String profileKey = "|" + std::to_string(static_cast<uint32_t>(mode)) + (sRGB ? "|srgb" : "|linear");
+            const aiTexture* embedded = scene.GetEmbeddedTexture(rawPath.c_str());
+            Path texturePath;
+            const String cacheKey = embedded != nullptr ? "embedded:" + rawPath + profileKey : [&]() {
+                texturePath = Path(rawPath);
+                if (texturePath.is_relative())
+                    texturePath = meshPath.parent_path() / texturePath;
+                texturePath = texturePath.lexically_normal();
+                return texturePath.generic_string() + profileKey;
+            }();
 
             auto cached = textureCache.find(cacheKey);
             if (cached != textureCache.end())
@@ -1039,10 +1071,26 @@ namespace Crowny
                 return cached->second;
             }
 
-            Ref<Texture> texture = Importer::Get().Import<Texture>(texturePath);
+            const Ref<TextureImportOptions> options = CreateMaterialTextureOptions(mode, sRGB);
+            Ref<Texture> texture;
+            if (embedded != nullptr)
+            {
+                if (embedded->mHeight == 0)
+                {
+                    texture = TextureImporter::ImportFromMemory(reinterpret_cast<const uint8_t*>(embedded->pcData), embedded->mWidth, rawPath,
+                                                                options);
+                }
+                else
+                {
+                    const Ref<PixelData> pixels = DecodeEmbeddedTexels(*embedded);
+                    texture = TextureImporter::ImportFromPixels(pixels, rawPath, options, true);
+                }
+            }
+            else
+                texture = Importer::Get().Import<Texture>(texturePath, options);
             if (!texture)
             {
-                CW_ENGINE_WARN("Failed to import texture '{}' referenced by '{}'.", texturePath, meshPath);
+                CW_ENGINE_WARN("Failed to import texture '{}' referenced by '{}'.", rawPath, meshPath);
                 return nullptr;
             }
 
@@ -1053,11 +1101,11 @@ namespace Crowny
 
         Ref<Texture> ImportFirstTexture(const aiScene& scene, const aiMaterial& sourceMaterial, const Path& meshPath,
                                         std::initializer_list<aiTextureType> textureTypes, const String& shaderParameter,
-                                        const Ref<Material>& material, TextureCache& textureCache)
+                                        TextureMipMode mode, bool sRGB, const Ref<Material>& material, TextureCache& textureCache)
         {
             for (aiTextureType type : textureTypes)
             {
-                Ref<Texture> texture = ImportTexture(scene, sourceMaterial, meshPath, type, shaderParameter, material, textureCache);
+                Ref<Texture> texture = ImportTexture(scene, sourceMaterial, meshPath, type, shaderParameter, mode, sRGB, material, textureCache);
                 if (texture)
                     return texture;
             }
@@ -1091,15 +1139,16 @@ namespace Crowny
                         assets.push_back(texture);
                 };
                 addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE }, "albedoMap",
-                                              material, textureCache));
-                addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_METALNESS }, "metallicMap", material, textureCache));
-                addTexture(
-                  ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_DIFFUSE_ROUGHNESS }, "roughnessMap", material, textureCache));
+                                              TextureMipMode::Color, true, material, textureCache));
+                addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_METALNESS }, "metallicMap", TextureMipMode::Data,
+                                              false, material, textureCache));
+                addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_DIFFUSE_ROUGHNESS }, "roughnessMap",
+                                              TextureMipMode::Data, false, material, textureCache));
                 addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath,
-                                              { aiTextureType_NORMALS, aiTextureType_NORMAL_CAMERA, aiTextureType_HEIGHT }, "normalMap", material,
-                                              textureCache));
+                                              { aiTextureType_NORMALS, aiTextureType_NORMAL_CAMERA, aiTextureType_HEIGHT }, "normalMap",
+                                              TextureMipMode::NormalMap, false, material, textureCache));
                 addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_AMBIENT_OCCLUSION, aiTextureType_LIGHTMAP }, "aoMap",
-                                              material, textureCache));
+                                              TextureMipMode::Data, false, material, textureCache));
 
                 aiColor4D color(1.0f, 1.0f, 1.0f, 1.0f);
                 if (sourceMaterial.Get(AI_MATKEY_BASE_COLOR, color) == aiReturn_SUCCESS ||

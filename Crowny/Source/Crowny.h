@@ -48,3 +48,5 @@
 
 #include "Crowny/ImGui/ImGuiMenu.h"
 #include "Crowny/Input/Input.h"
+#include "Crowny/Input/InputAction.h"
+#include "Crowny/Input/InputMap.h"

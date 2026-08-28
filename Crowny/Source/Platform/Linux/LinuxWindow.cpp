@@ -12,6 +12,8 @@ namespace Crowny
 {
     namespace
     {
+        constexpr uint32_t PrimaryInputDeviceId = 0;
+
         WindowMode ResolveWindowMode(const WindowDesc& desc)
         {
             if (desc.Mode != WindowMode::Windowed)
@@ -22,6 +24,24 @@ namespace Crowny
         }
 
         int ToGLFWLimit(uint32_t value) { return value == 0 ? GLFW_DONT_CARE : static_cast<int>(std::min(value, static_cast<uint32_t>(INT_MAX))); }
+
+        InputModifiers ToInputModifiers(int modifiers)
+        {
+            InputModifiers result;
+            if ((modifiers & GLFW_MOD_SHIFT) != 0)
+                result.Set(InputModifierBits::Shift);
+            if ((modifiers & GLFW_MOD_CONTROL) != 0)
+                result.Set(InputModifierBits::Control);
+            if ((modifiers & GLFW_MOD_ALT) != 0)
+                result.Set(InputModifierBits::Alt);
+            if ((modifiers & GLFW_MOD_SUPER) != 0)
+                result.Set(InputModifierBits::Super);
+            if ((modifiers & GLFW_MOD_CAPS_LOCK) != 0)
+                result.Set(InputModifierBits::CapsLock);
+            if ((modifiers & GLFW_MOD_NUM_LOCK) != 0)
+                result.Set(InputModifierBits::NumLock);
+            return result;
+        }
     } // namespace
 
     LinuxWindow::LinuxWindow(const WindowDesc& windowDesc)
@@ -97,6 +117,7 @@ namespace Crowny
 
         glfwSetWindowUserPointer(m_Window, this);
         InstallCallbacks();
+        glfwSetInputMode(m_Window, GLFW_LOCK_KEY_MODS, GLFW_TRUE);
 
         if (m_Mode != WindowMode::Fullscreen)
         {
@@ -208,12 +229,13 @@ namespace Crowny
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
             if (focused == GLFW_TRUE)
             {
+                Input::OnFocusChanged(true);
                 WindowFocusEvent event;
                 window.Dispatch(event);
             }
             else
             {
-                Input::ResetState();
+                Input::OnFocusChanged(false);
                 WindowLostFocusEvent event;
                 window.Dispatch(event);
             }
@@ -238,35 +260,35 @@ namespace Crowny
             window.DispatchResizeIfChanged();
         });
 
-        glfwSetKeyCallback(m_Window, [](GLFWwindow* nativeWindow, int key, int, int action, int) {
+        glfwSetKeyCallback(m_Window, [](GLFWwindow* nativeWindow, int key, int scanCode, int action, int modifiers) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
             if (key < 0)
                 return;
             Input::OnKeyState(key, action != GLFW_RELEASE);
             if (action == GLFW_PRESS)
             {
-                KeyPressedEvent event(static_cast<KeyCode>(key), 0);
+                KeyPressedEvent event(static_cast<KeyCode>(key), 0, scanCode, ToInputModifiers(modifiers), glfwGetTime(), PrimaryInputDeviceId);
                 window.Dispatch(event);
             }
             else if (action == GLFW_RELEASE)
             {
-                KeyReleasedEvent event(static_cast<KeyCode>(key));
+                KeyReleasedEvent event(static_cast<KeyCode>(key), scanCode, ToInputModifiers(modifiers), glfwGetTime(), PrimaryInputDeviceId);
                 window.Dispatch(event);
             }
             else if (action == GLFW_REPEAT)
             {
-                KeyPressedEvent event(static_cast<KeyCode>(key), 1);
+                KeyPressedEvent event(static_cast<KeyCode>(key), 1, scanCode, ToInputModifiers(modifiers), glfwGetTime(), PrimaryInputDeviceId);
                 window.Dispatch(event);
             }
         });
 
         glfwSetCharCallback(m_Window, [](GLFWwindow* nativeWindow, unsigned int codepoint) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            KeyTypedEvent event(codepoint);
+            KeyTypedEvent event(codepoint, glfwGetTime(), PrimaryInputDeviceId);
             window.Dispatch(event);
         });
 
-        glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* nativeWindow, int button, int action, int) {
+        glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* nativeWindow, int button, int action, int modifiers) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
             Input::OnMouseButtonState(button, action != GLFW_RELEASE);
             double x = 0.0;
@@ -275,12 +297,14 @@ namespace Crowny
             const glm::vec2 position(static_cast<float>(x), static_cast<float>(y));
             if (action == GLFW_PRESS)
             {
-                MouseButtonPressedEvent event(static_cast<MouseCode>(button), position);
+                MouseButtonPressedEvent event(static_cast<MouseCode>(button), position, ToInputModifiers(modifiers), glfwGetTime(),
+                                              PrimaryInputDeviceId);
                 window.Dispatch(event);
             }
             else if (action == GLFW_RELEASE)
             {
-                MouseButtonReleasedEvent event(static_cast<MouseCode>(button), position);
+                MouseButtonReleasedEvent event(static_cast<MouseCode>(button), position, ToInputModifiers(modifiers), glfwGetTime(),
+                                               PrimaryInputDeviceId);
                 window.Dispatch(event);
             }
         });
@@ -297,13 +321,14 @@ namespace Crowny
 
         glfwSetScrollCallback(m_Window, [](GLFWwindow* nativeWindow, double xOffset, double yOffset) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            MouseScrolledEvent event(static_cast<float>(xOffset), static_cast<float>(yOffset));
+            MouseScrolledEvent event(static_cast<float>(xOffset), static_cast<float>(yOffset), glfwGetTime(), PrimaryInputDeviceId);
             window.Dispatch(event);
         });
 
         glfwSetCursorPosCallback(m_Window, [](GLFWwindow* nativeWindow, double x, double y) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            MouseMovedEvent event(static_cast<float>(x), static_cast<float>(y));
+            const glm::vec2 delta = Input::OnMousePosition(static_cast<float>(x), static_cast<float>(y));
+            MouseMovedEvent event(static_cast<float>(x), static_cast<float>(y), delta, glfwGetTime(), PrimaryInputDeviceId);
             window.Dispatch(event);
         });
     }

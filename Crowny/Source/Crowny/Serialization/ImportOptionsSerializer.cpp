@@ -185,7 +185,7 @@ namespace Crowny
             DeserializeValueYAML(textureImportOptionsNode, "AutoFormat", textureImportOptions->AutomaticFormat, true);
             DeserializeValueYAML(textureImportOptionsNode, "GenerateMips", textureImportOptions->GenerateMips, true);
             DeserializeValueYAML(textureImportOptionsNode, "CpuCached", textureImportOptions->CpuCached, false);
-            DeserializeValueYAML(textureImportOptionsNode, "sRGB", textureImportOptions->SRGB, false);
+            DeserializeValueYAML(textureImportOptionsNode, "sRGB", textureImportOptions->SRGB, true);
             DeserializeValueYAML(textureImportOptionsNode, "MaxMip", textureImportOptions->MaxMip, 0U);
             DeserializeEnumYAML(textureImportOptionsNode, "MipFilter", textureImportOptions->MipFilter, TextureMipFilter::Kaiser,
                                 "Texture mip filter '{}' in metadata file is invalid.", 0,

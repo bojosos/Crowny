@@ -111,13 +111,16 @@ try {
     $projectReadLock = Enter-CrownyProjectReadLock -RepositoryRoot $repositoryRoot -Wait
     $msbuild = Find-CrownyMSBuild -RepositoryRoot $repositoryRoot
     $buildInput = Join-Path $repositoryRoot "Crowny.sln"
-    $solutionTarget = switch ($Target) {
+    $solutionTargets = @(switch ($Target) {
         "Engine" { "Crowny" }
         "Editor" { "Crowny-Editor" }
         "Tests" { "Crowny-Tests" }
         "RenderTests" { "Crowny-RenderTests" }
-        "All" { $null }
-    }
+        # Managed assemblies are compiled once by Build-CrownyManagedAssemblies below. Keep the
+        # native aggregate target explicit so solution-wide builds do not compile the generated
+        # C# projects a second time or pull unrelated tooling projects into the build.
+        "All" { "Crowny"; "Crowny-Editor"; "Crowny-Builder"; "Crowny-Tests"; "Crowny-RenderTests" }
+    })
 
     $profileRoot = $null
     $binlogPath = $null
@@ -159,13 +162,8 @@ try {
         "/p:Configuration=$workspaceConfiguration",
         "/p:Platform=Win64"
     )
-    if ($solutionTarget) {
-        $targetAction = if ($Clean) { "$solutionTarget`:Rebuild" } else { $solutionTarget }
-        $msbuildArguments += "/t:$targetAction"
-    }
-    elseif ($Clean) {
-        $msbuildArguments += "/t:Rebuild"
-    }
+    $targetActions = @($solutionTargets | ForEach-Object { if ($Clean) { "$_`:Rebuild" } else { $_ } })
+    $msbuildArguments += "/t:$($targetActions -join ';')"
     if ($Profile) {
         $msbuildArguments += "/bl:$binlogPath"
         $msbuildArguments += "/clp:PerformanceSummary"

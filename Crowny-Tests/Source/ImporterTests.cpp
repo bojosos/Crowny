@@ -483,6 +483,13 @@ TEST_CASE("Texture import options survive metadata round trip", "[Assets][Import
     CHECK(restored->CpuCached);
     CHECK(restored->SRGB);
     CHECK(restored->DiskFormat == TextureDiskFormat::ETC1S);
+
+    const Ref<TextureImportOptions> defaults = CreateRef<TextureImportOptions>();
+    const Ref<TextureImportOptions> missingSRGB =
+      StaticRefCast<TextureImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load("TextureImporter: {}")));
+    REQUIRE(missingSRGB != nullptr);
+    CHECK(missingSRGB->SRGB == defaults->SRGB);
+    CHECK(missingSRGB->SRGB);
 }
 
 TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer][Font]")

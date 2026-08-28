@@ -124,7 +124,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
 - [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
-- [ ] Verify the complete depth-prepass output matrix: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID.
+- [ ] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
 
 ## Validation
 
@@ -137,5 +137,5 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Isolated GPU draw-bin validation: focused layout/graph/shader coverage passed 136 assertions in 11 cases; focused GPU-scene coverage passed 94 assertions in 13 cases; full Release Catch2 passed 25,405 assertions in 351 cases.
 - [x] Updated 54-resource built-in pack loaded successfully; Release render harness passed Vulkan 4/4 and OpenGL 4/4 on Intel Iris Xe, with all 4 cross-backend captures matching.
 - [x] Isolated transient-texture validation: focused ASan `[Renderer][Resources]` coverage passed 94 assertions in 8 cases, including descriptor separation, frame-delayed reuse, budget rejection, trimming, and render-graph retirement.
-- [ ] Run the focused renderer/shader regression batch for the pending temporal-history, custom-material, and motion-settling repairs. The first mode-stable project migration attempted a full engine compile and was intentionally stopped; do not repeat it as a separate renderer-only build.
+- [x] Run the focused renderer/shader regression batch for the temporal-history, custom-material, and motion-settling repairs. The final isolated ASan suite passed 29,142 assertions in 558 cases, and the Vulkan/OpenGL render harness passed 4/4 captures per backend with all 4 cross-backend comparisons matching.
 - [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.

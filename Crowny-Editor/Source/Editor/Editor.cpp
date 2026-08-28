@@ -4,6 +4,7 @@
 
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
+#include "Crowny/Input/Input.h"
 #include "Crowny/Serialization/FileEncoder.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 #include "Serialization/EditorSettingsSerializer.h"
@@ -80,6 +81,7 @@ namespace Crowny
         }
         if (m_ProjectSettings == nullptr)
             m_ProjectSettings = CreateRef<ProjectSettings>();
+        Input::SetActionMap(m_ProjectSettings->InputActions);
     }
 
     void Editor::LoadEditorSettings()
@@ -104,6 +106,8 @@ namespace Crowny
         ProjectLibrary::Get().UnloadLibrary();
         m_ProjectPath = "";
         m_ProjectName = "";
+        m_ProjectSettings = CreateRef<ProjectSettings>();
+        Input::ClearActionMap();
     }
 
     void Editor::SaveProjectSettings()

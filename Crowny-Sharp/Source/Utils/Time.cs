@@ -1,6 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
-
 namespace Crowny
 {
     
@@ -10,60 +7,36 @@ namespace Crowny
         /// The time that has passed since the last frame.
         /// </summary>
         /// <returns>Time since last frame in milliseconds.</returns>
-#if CROWNY_MONO
-        public extern static float deltaTime { [MethodImpl(MethodImplOptions.InternalCall)] get; }
-#else
-        public static float deltaTime => ManagedRuntimeContext.DeltaTime;
-#endif
+        public static float deltaTime => ManagedRuntimeContext.TimeGetDeltaTime();
         
         /// <summary>
         /// The time that has passed since the beginning.
         /// </summary>
         /// <returns>Time in milliseconds.</returns>
-#if CROWNY_MONO
-        public extern static float time { [MethodImpl(MethodImplOptions.InternalCall)] get; }
-#else
-        public static float time => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetTime);
-#endif
+        public static float time => ManagedRuntimeContext.TimeGetTime();
         
         /// <summary>
         /// Fixed delta time is fixed xd
         /// </summary>
         /// <returns></returns>
-#if CROWNY_MONO
-        public extern static float fixedDeltaTime { [MethodImpl(MethodImplOptions.InternalCall)] get; }
-#else
-        public static float fixedDeltaTime => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetFixedDeltaTime);
-#endif
+        public static float fixedDeltaTime => ManagedRuntimeContext.TimeGetFixedDeltaTime();
 
         /// <summary>
         /// smoothDeltaTime = deltaTime + time / (frameCount + 1);
         /// </summary>
         /// <returns>The smoothDeltaTime if milliseconds.</returns>
-#if CROWNY_MONO
-        public extern static float smoothDeltaTime { [MethodImpl(MethodImplOptions.InternalCall)] get; }
-#else
-        public static float smoothDeltaTime => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetSmoothDeltaTime);
-#endif
+        public static float smoothDeltaTime => ManagedRuntimeContext.TimeGetSmoothDeltaTime();
 
         /// <summary>
         /// The in between frame time since the beginning.
         /// </summary>
         /// <returns>The time in milliseconds.</returns>
-#if CROWNY_MONO
-        public extern static float realtimeSinceStartup { [MethodImpl(MethodImplOptions.InternalCall)] get; }
-#else
-        public static float realtimeSinceStartup => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetRealtimeSinceStartup);
-#endif
+        public static float realtimeSinceStartup => ManagedRuntimeContext.TimeGetRealtimeSinceStartup();
 
         /// <summary>
         /// The number of frames that have been rendered since the beginning.
         /// </summary>
         /// <returns>The number of frames.</returns>
-#if CROWNY_MONO
-        public extern static float frameCount { [MethodImpl(MethodImplOptions.InternalCall)] get; }
-#else
-        public static float frameCount => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.TimeGetFrameCount);
-#endif
+        public static float frameCount => ManagedRuntimeContext.TimeGetFrameCount();
     }
 }

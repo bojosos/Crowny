@@ -172,24 +172,24 @@ namespace Crowny
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_ClearFallbacks(IntPtr thisptr);
 #else
-        private bool GetIsValid() => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.FontGetIsValid, uuid);
-        private uint GetGlyphCount() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetGlyphCount, uuid);
-        private uint GetTabWidth() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetTabWidth, uuid);
-        private uint GetAtlasWidth() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetAtlasWidth, uuid);
-        private uint GetAtlasHeight() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetAtlasHeight, uuid);
-        private float GetAtlasPixelRange() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.FontGetAtlasPixelRange, uuid);
-        private bool HasGlyphNative(uint codePoint) => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.FontHasGlyph, uuid, codePoint);
+        private bool GetIsValid() => ManagedRuntimeContext.FontGetIsValid(uuid);
+        private uint GetGlyphCount() => ManagedRuntimeContext.FontGetGlyphCount(uuid);
+        private uint GetTabWidth() => ManagedRuntimeContext.FontGetTabWidth(uuid);
+        private uint GetAtlasWidth() => ManagedRuntimeContext.FontGetAtlasWidth(uuid);
+        private uint GetAtlasHeight() => ManagedRuntimeContext.FontGetAtlasHeight(uuid);
+        private float GetAtlasPixelRange() => ManagedRuntimeContext.FontGetAtlasPixelRange(uuid);
+        private bool HasGlyphNative(uint codePoint) => ManagedRuntimeContext.FontHasGlyph(uuid, codePoint);
         private bool TryGetCharacterInfoNative(uint codePoint, bool useFallbacks, out CharacterInfo characterInfo)
         {
-            characterInfo = ManagedRuntimeContext.GetBindingCharacterInfo(ManagedBindingId.FontGetCharacterInfo, uuid, codePoint, useFallbacks);
+            characterInfo = ManagedRuntimeContext.FontGetCharacterInfo(uuid, codePoint, useFallbacks);
             return characterInfo.valid;
         }
-        private uint GetFallbackCount() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetFallbackCount, uuid);
+        private uint GetFallbackCount() => ManagedRuntimeContext.FontGetFallbackCount(uuid);
         private Font GetFallbackNative(uint index) =>
-            ManagedRuntimeContext.CreateAsset<Font>(ManagedRuntimeContext.GetBindingUuid(ManagedBindingId.FontGetFallback, uuid, index));
+            ManagedRuntimeContext.CreateAsset<Font>(ManagedRuntimeContext.FontGetFallback(uuid, index));
         private bool AddFallbackNative(Font font) =>
-            ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.FontAddFallback, uuid, font.uuid);
-        private void ClearFallbacksNative() => ManagedRuntimeContext.InvokeBinding(ManagedBindingId.FontClearFallbacks, uuid);
+            ManagedRuntimeContext.FontAddFallback(uuid, font.uuid);
+        private void ClearFallbacksNative() => ManagedRuntimeContext.FontClearFallbacks(uuid);
 #endif
     }
 }

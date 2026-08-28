@@ -134,6 +134,8 @@ namespace Crowny
         uint64_t HistoryOwnerId = 0;
         uint64_t HistoryNamespace = 0;
         bool CameraCut = true;
+        bool EnableObjectID = false;
+        bool EnableMotionVectors = true;
         bool DrawGrid = false;
         GridSettings Grid;
         PolygonMode OverridePolygonMode = PolygonMode::Solid;
@@ -175,6 +177,8 @@ namespace Crowny
             HistoryOwnerId = 0;
             HistoryNamespace = 0;
             CameraCut = true;
+            EnableObjectID = false;
+            EnableMotionVectors = true;
             PreviousViewProjection = glm::mat4(1.0f);
             DrawGrid = false;
             Grid = {};

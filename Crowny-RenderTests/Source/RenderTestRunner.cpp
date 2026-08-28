@@ -13,6 +13,8 @@
 #include "Crowny/Utils/ShaderCompiler.h"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -73,20 +75,26 @@ namespace Crowny::RenderTests
             return result;
         }
 
-        Ref<Texture> CreateColorTexture(uint32_t width, uint32_t height, StringView debugName)
+        Ref<Texture> CreateRenderTexture(uint32_t width, uint32_t height, TextureFormat format, StringView debugName)
         {
             TextureDesc textureDesc;
             textureDesc.Width = width;
             textureDesc.Height = height;
-            textureDesc.Format = TextureFormat::RGBA8;
-            textureDesc.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+            textureDesc.Format = format;
+            textureDesc.Usage = PixelUtils::IsDepthFormat(format) ? TextureUsage::TEXTURE_DEPTHSTENCIL : TextureUsage::TEXTURE_RENDERTARGET;
             textureDesc.sRGB = false;
             textureDesc.ReadWrite = true;
             textureDesc.DebugName = String(debugName);
             return Texture::Create(textureDesc);
         }
 
-        Ref<RenderTexture> CreateTarget(const Vector<Ref<Texture>>& colors, uint32_t width, uint32_t height)
+        Ref<Texture> CreateColorTexture(uint32_t width, uint32_t height, StringView debugName)
+        {
+            return CreateRenderTexture(width, height, TextureFormat::RGBA8, debugName);
+        }
+
+        Ref<RenderTexture> CreateTarget(const Vector<Ref<Texture>>& colors, uint32_t width, uint32_t height,
+                                        const Ref<Texture>& depth = nullptr)
         {
             RenderTextureDesc targetDesc;
             targetDesc.Width = width;
@@ -94,7 +102,25 @@ namespace Crowny::RenderTests
             targetDesc.Samples = 1u;
             for (uint32_t index = 0; index < colors.size(); ++index)
                 targetDesc.ColorSurfaces[index].Texture = colors[index];
+            targetDesc.DepthSurface.Texture = depth;
             return RenderTexture::Create(targetDesc);
+        }
+
+        bool ReadTexture(const Ref<Texture>& texture, PixelData& pixels, String& error)
+        {
+            if (!texture)
+            {
+                error = "The render target texture is missing";
+                return false;
+            }
+            pixels.AllocateInternalBuffer();
+            texture->ReadData(pixels);
+            if (!pixels.IsValid())
+            {
+                error = "Texture readback returned invalid pixel data";
+                return false;
+            }
+            return true;
         }
 
         bool Capture(const Ref<Texture>& texture, Image& image, String& error)
@@ -105,13 +131,8 @@ namespace Crowny::RenderTests
                 return false;
             }
             PixelData pixels(texture->GetWidth(), texture->GetHeight(), 1u, TextureFormat::RGBA8);
-            pixels.AllocateInternalBuffer();
-            texture->ReadData(pixels);
-            if (!pixels.IsValid())
-            {
-                error = "Texture readback returned invalid pixel data";
+            if (!ReadTexture(texture, pixels, error))
                 return false;
-            }
 
             Image captured(texture->GetWidth(), texture->GetHeight());
             const bool flipVertically = RenderAPI::GetAPI() == RenderAPI::API::OpenGL;
@@ -134,6 +155,175 @@ namespace Crowny::RenderTests
             RenderAPI::Get().ClearRenderTarget(FBT_COLOR, glm::vec4(0.25f, 0.5f, 0.75f, 1.0f));
             RenderAPI::Get().SubmitCommandBuffer(nullptr);
             return Capture(color, image, error);
+        }
+
+        bool RenderDepthOutputCase(bool writeVelocity, bool writeObjectID, Image& image, uint32_t destinationX, uint32_t destinationY,
+                                   String& error)
+        {
+            static const String source = R"(#lang glsl
+#pragma depth_read true
+#pragma depth_write true
+#pragma depth_compare greater_equal
+#pragma cull none
+#type vertex
+#version 450
+
+void main()
+{
+    vec2 uv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+    gl_Position = vec4(uv * 2.0 - 1.0, 0.75, 1.0);
+}
+
+#type fragment
+#version 450
+
+#ifdef CROWNY_TEST_VELOCITY
+layout(location = 0) out vec2 cwVelocity;
+#endif
+#ifdef CROWNY_TEST_OBJECT_ID
+#ifdef CROWNY_TEST_VELOCITY
+layout(location = 1) out int cwObjectId;
+#else
+layout(location = 0) out int cwObjectId;
+#endif
+#endif
+
+void main()
+{
+#ifdef CROWNY_TEST_VELOCITY
+    cwVelocity = vec2(0.25, -0.5);
+#endif
+#ifdef CROWNY_TEST_OBJECT_ID
+    cwObjectId = 37;
+#endif
+}
+)";
+
+            UnorderedMap<String, String> defines;
+            if (writeVelocity)
+                defines["CROWNY_TEST_VELOCITY"] = "1";
+            if (writeObjectID)
+                defines["CROWNY_TEST_OBJECT_ID"] = "1";
+            const String caseName = "Crowny-RenderTests/DepthOutput" + std::to_string(writeVelocity) + std::to_string(writeObjectID) + ".glsl";
+            const ShaderCompileResult compileResult =
+              ShaderCompiler::CompileWithDiagnostics(caseName, source, ShaderLanguage::VKSL, defines);
+            if (!compileResult.Succeeded())
+            {
+                for (const ShaderDiagnostic& diagnostic : compileResult.Diagnostics)
+                {
+                    if (!error.empty())
+                        error += "; ";
+                    error += diagnostic.Message;
+                }
+                if (error.empty())
+                    error = "Depth-output shader compilation failed without diagnostics";
+                return false;
+            }
+
+            constexpr uint32_t quadrantSize = TEST_WIDTH / 2u;
+            const Ref<Texture> depth = CreateRenderTexture(quadrantSize, quadrantSize, TextureFormat::DEPTH32F, "RenderTests/DepthOutputDepth");
+            const Ref<Texture> velocity =
+              writeVelocity ? CreateRenderTexture(quadrantSize, quadrantSize, TextureFormat::RG16F, "RenderTests/DepthOutputVelocity") : nullptr;
+            const Ref<Texture> objectID =
+              writeObjectID ? CreateRenderTexture(quadrantSize, quadrantSize, TextureFormat::R32I, "RenderTests/DepthOutputObjectID") : nullptr;
+            Vector<Ref<Texture>> colors;
+            if (velocity)
+                colors.push_back(velocity);
+            if (objectID)
+                colors.push_back(objectID);
+            const Ref<RenderTexture> target = CreateTarget(colors, quadrantSize, quadrantSize, depth);
+            if (!depth || (writeVelocity && !velocity) || (writeObjectID && !objectID) || !target)
+            {
+                error = "Could not create the depth-output render target";
+                return false;
+            }
+
+            if (compileResult.Description.Techniques.empty() || compileResult.Description.Techniques.front()->GetRenderPasses().empty())
+            {
+                error = "Depth-output shader compilation produced no graphics pass";
+                return false;
+            }
+            const Ref<ShaderTechnique>& technique = compileResult.Description.Techniques.front();
+            technique->Compile();
+            const Ref<ShaderRenderPass>& pass = technique->GetRenderPasses().front();
+            if (!pass || !pass->GetGraphicsPipeline())
+            {
+                error = "Depth-output shader compilation produced no graphics pipeline";
+                return false;
+            }
+            RenderAPI::Get().SetRenderTarget(target);
+            RenderAPI::Get().SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+            RenderAPI::Get().ClearRenderTarget(FBT_DEPTH, glm::vec4(0.0f), 0.0f);
+            RenderAPI::Get().SetGraphicsPipeline(pass->GetGraphicsPipeline());
+            RenderAPI::Get().SetVertexLayout(CreateRef<BufferLayout>());
+            RenderAPI::Get().SetDrawMode(DrawMode::TRIANGLE_LIST);
+            RenderAPI::Get().Draw(0u, 3u, 1u);
+            RenderAPI::Get().SubmitCommandBuffer(nullptr);
+
+            PixelData depthPixels(quadrantSize, quadrantSize, 1u, TextureFormat::DEPTH32F);
+            if (!ReadTexture(depth, depthPixels, error))
+                return false;
+            const float depthValue = depthPixels.GetColorAt(quadrantSize / 2u, quadrantSize / 2u).r;
+            if (depthValue < 0.5f)
+            {
+                error = "Depth-only attachment was not written";
+                return false;
+            }
+            glm::vec4 velocityValue(0.0f);
+            if (velocity)
+            {
+                PixelData velocityPixels(quadrantSize, quadrantSize, 1u, TextureFormat::RG16F);
+                if (!ReadTexture(velocity, velocityPixels, error))
+                    return false;
+                velocityValue = velocityPixels.GetColorAt(quadrantSize / 2u, quadrantSize / 2u);
+                if (std::abs(velocityValue.x - 0.25f) > 0.01f || std::abs(velocityValue.y + 0.5f) > 0.01f)
+                {
+                    error = "RG16F velocity attachment returned the wrong value";
+                    return false;
+                }
+            }
+            float objectIdValue = 0.0f;
+            if (objectID)
+            {
+                PixelData objectIdPixels(quadrantSize, quadrantSize, 1u, TextureFormat::R32I);
+                if (!ReadTexture(objectID, objectIdPixels, error))
+                    return false;
+                objectIdValue = objectIdPixels.GetColorAt(quadrantSize / 2u, quadrantSize / 2u).r;
+                if (objectIdValue != 37.0f)
+                {
+                    error = "R32I object-ID attachment returned the wrong value";
+                    return false;
+                }
+            }
+
+            const auto encodeUnit = [](float value) {
+                return static_cast<uint8_t>(std::round(glm::clamp(value, 0.0f, 1.0f) * 255.0f));
+            };
+            const auto encodeSigned = [&](float value) { return encodeUnit(value * 0.5f + 0.5f); };
+            const std::array<uint8_t, 4> readbackColor = {
+                encodeUnit(depthValue),
+                writeVelocity ? encodeSigned(velocityValue.x) : uint8_t{ 0 },
+                writeVelocity ? encodeSigned(velocityValue.y) : uint8_t{ 0 },
+                writeObjectID ? static_cast<uint8_t>(glm::clamp(objectIdValue, 0.0f, 255.0f)) : uint8_t{ 255 },
+            };
+            for (uint32_t y = 0; y < quadrantSize; ++y)
+            {
+                for (uint32_t x = 0; x < quadrantSize; ++x)
+                    std::memcpy(image.Pixel(destinationX + x, destinationY + y), readbackColor.data(), readbackColor.size());
+            }
+            return true;
+        }
+
+        bool RenderDepthOutputMatrix(Image& image, String& error)
+        {
+            Image matrix(TEST_WIDTH, TEST_HEIGHT);
+            if (!RenderDepthOutputCase(false, false, matrix, 0u, 0u, error) ||
+                !RenderDepthOutputCase(true, false, matrix, TEST_WIDTH / 2u, 0u, error) ||
+                !RenderDepthOutputCase(false, true, matrix, 0u, TEST_HEIGHT / 2u, error) ||
+                !RenderDepthOutputCase(true, true, matrix, TEST_WIDTH / 2u, TEST_HEIGHT / 2u, error))
+                return false;
+            image = std::move(matrix);
+            return true;
         }
 
         bool RenderMrtClear(Image& image, String& error)
@@ -363,6 +553,7 @@ void main()
                 { "mrt-clear", exact, RenderMrtClear },
                 { "fullscreen-pattern", shaderTolerance, RenderFullscreenPattern },
                 { "texture-mip-selection", shaderTolerance, RenderMipSelection },
+                { "depth-output-matrix", exact, RenderDepthOutputMatrix },
             };
         }
 
