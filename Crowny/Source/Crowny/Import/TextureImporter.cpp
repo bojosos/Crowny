@@ -57,7 +57,7 @@ namespace Crowny
             case TextureFormat::R8:
             case TextureFormat::RG8: return alpha ? TextureFormat::RGBA8 : TextureFormat::RGB8;
             case TextureFormat::R16:
-            case TextureFormat::RG16: return alpha ? TextureFormat::RGBA16 : TextureFormat::RGB16;
+            case TextureFormat::RG16: return TextureFormat::RGBA16;
             case TextureFormat::R32F:
             case TextureFormat::RG32F: return alpha ? TextureFormat::RGBA32F : TextureFormat::RGB32F;
             default: return TextureFormat::NONE;
@@ -272,6 +272,14 @@ namespace Crowny
                 return nullptr;
             source = converted;
             sourceFormat = options->Format;
+        }
+        else if (sourceFormat == TextureFormat::RGB16)
+        {
+            Ref<PixelData> converted = PixelData::Create(source->GetWidth(), source->GetHeight(), source->GetDepth(), TextureFormat::RGBA16);
+            if (!converted || !PixelUtils::ConvertPixels(*source, *converted))
+                return nullptr;
+            source = std::move(converted);
+            sourceFormat = TextureFormat::RGBA16;
         }
 
         const bool highPrecision = IsHighPrecisionFormat(sourceFormat);

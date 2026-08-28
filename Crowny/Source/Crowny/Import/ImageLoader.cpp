@@ -234,7 +234,10 @@ namespace Crowny
             case 2:
                 return TextureFormat::RG16;
             case 3:
-                return TextureFormat::RGB16;
+                // Three-component 16-bit formats are not guaranteed to support
+                // sampled images on Vulkan. Preserve the source channel layout
+                // in ImageInfo, but use portable RGBA16 storage.
+                return TextureFormat::RGBA16;
             case 4:
                 return TextureFormat::RGBA16;
             default:
@@ -298,6 +301,40 @@ namespace Crowny
             return true;
         }
 
+        bool CheckedAdd(uint64_t value, uint64_t addend, uint64_t& output)
+        {
+            if (value > std::numeric_limits<uint64_t>::max() - addend)
+                return false;
+            output = value + addend;
+            return true;
+        }
+
+        bool CalculateDecodedBytes(const ImageInfo& info, uint64_t bytesPerPixel, uint64_t& output)
+        {
+            if (bytesPerPixel == 0 || info.Width == 0 || info.Height == 0 || info.Depth == 0 || info.Layers == 0 || info.Faces == 0)
+                return false;
+
+            uint64_t bytesPerSlice = 0;
+            uint32_t width = info.Width;
+            uint32_t height = info.Height;
+            uint32_t depth = info.Depth;
+            const uint32_t mipLevels = std::max(info.MipLevels, 1u);
+            for (uint32_t mipLevel = 0; mipLevel < mipLevels; mipLevel++)
+            {
+                uint64_t mipBytes = bytesPerPixel;
+                if (!CheckedMultiply(mipBytes, width, mipBytes) || !CheckedMultiply(mipBytes, height, mipBytes) ||
+                    !CheckedMultiply(mipBytes, depth, mipBytes) || !CheckedAdd(bytesPerSlice, mipBytes, bytesPerSlice))
+                    return false;
+
+                width = std::max(width >> 1u, 1u);
+                height = std::max(height >> 1u, 1u);
+                depth = std::max(depth >> 1u, 1u);
+            }
+
+            output = bytesPerSlice;
+            return CheckedMultiply(output, info.Layers, output) && CheckedMultiply(output, info.Faces, output);
+        }
+
         bool ValidateImageLimits(const ImageInfo& info, const ImageLoadOptions& options, ImageDiagnosticCode& code, String& message)
         {
             if (options.MaximumDimension != 0 &&
@@ -313,14 +350,11 @@ namespace Crowny
             if (!decodesPixels || options.MaximumDecodedBytes == 0)
                 return true;
 
-            uint64_t decodedBytes = 1;
-            const uint64_t componentBytes = info.Container == ImageContainerFormat::KTX2
-                                              ? 4u
-                                              : static_cast<uint64_t>(PixelUtils::GetNumBytes(info.PixelFormat));
-            if (componentBytes == 0 || !CheckedMultiply(decodedBytes, info.Width, decodedBytes) ||
-                !CheckedMultiply(decodedBytes, info.Height, decodedBytes) || !CheckedMultiply(decodedBytes, info.Depth, decodedBytes) ||
-                !CheckedMultiply(decodedBytes, info.Layers, decodedBytes) || !CheckedMultiply(decodedBytes, info.Faces, decodedBytes) ||
-                !CheckedMultiply(decodedBytes, componentBytes, decodedBytes) || decodedBytes > options.MaximumDecodedBytes)
+            uint64_t decodedBytes = 0;
+            const uint64_t bytesPerPixel = info.Container == ImageContainerFormat::KTX2
+                                             ? PixelUtils::GetNumBytes(TextureFormat::RGBA8)
+                                             : static_cast<uint64_t>(PixelUtils::GetNumBytes(info.PixelFormat));
+            if (!CalculateDecodedBytes(info, bytesPerPixel, decodedBytes) || decodedBytes > options.MaximumDecodedBytes)
             {
                 code = ImageDiagnosticCode::DecodedImageTooLarge;
                 message = "Decoded image exceeds the configured memory limit";
@@ -469,7 +503,8 @@ namespace Crowny
             if (!pixels || !pixels->IsValid())
                 return nullptr;
 
-            const uint64_t rowBytes64 = static_cast<uint64_t>(info.Width) * info.Channels * sizeof(T);
+            const uint32_t storageChannels = PixelUtils::GetComponentCount(info.PixelFormat);
+            const uint64_t rowBytes64 = static_cast<uint64_t>(info.Width) * storageChannels * sizeof(T);
             if (rowBytes64 != pixels->GetRowPitch())
                 return nullptr;
             const size_t rowBytes = static_cast<size_t>(rowBytes64);
@@ -478,7 +513,7 @@ namespace Crowny
                 if (options.IsCancellationRequested())
                     return nullptr;
                 const uint32_t sourceY = flipVertically ? info.Height - y - 1u : y;
-                const T* sourceRow = source + static_cast<size_t>(sourceY) * info.Width * info.Channels;
+                const T* sourceRow = source + static_cast<size_t>(sourceY) * info.Width * storageChannels;
                 uint8_t* destination = pixels->GetData() + static_cast<size_t>(y) * pixels->GetRowPitch();
                 std::memcpy(destination, sourceRow, rowBytes);
             }
@@ -561,16 +596,23 @@ namespace Crowny
 
                 BasisTextureTranscodeResult transcode;
                 String error;
-                const bool decoded = BasisTextureCodec::Transcode(data, size, result.Info.PixelFormat, TextureFormat::RGBA8, 1, transcode, &error);
+                const bool decoded = BasisTextureCodec::Transcode(data, size, result.Info.PixelFormat, TextureFormat::RGBA8, 0, transcode, &error);
                 if (options.IsCancellationRequested())
                     return CanceledResult(ImageLoadStage::Decode);
                 if (!decoded || transcode.Subresources.empty())
                     return ErrorResult(ImageDiagnosticCode::DecodeFailed, ImageLoadStage::Decode, "KTX2 decode failed: " + error);
                 result.Info.PixelFormat = TextureFormat::RGBA8;
+                result.Info.Width = transcode.Info.Width;
+                result.Info.Height = transcode.Info.Height;
+                result.Info.Depth = 1;
+                result.Info.Layers = transcode.Info.Layers;
+                result.Info.Faces = transcode.Info.Faces;
+                result.Info.MipLevels = transcode.Info.Levels;
                 result.Info.Channels = 4;
                 result.Info.BitDepth = 8;
                 result.Info.ChannelLayout = ImageChannelLayout::RGBA;
                 result.Info.IsFloat = false;
+                result.Info.IsCompressed = false;
                 result.Info.Orientation = options.FlipVertically ? ImageOrientation::BottomLeft : ImageOrientation::TopLeft;
                 result.Subresources.reserve(transcode.Subresources.size());
                 for (BasisTextureSubresource& subresource : transcode.Subresources)
@@ -617,7 +659,7 @@ namespace Crowny
                 return result;
             }
 
-            const int channels = static_cast<int>(result.Info.Channels);
+            const int channels = static_cast<int>(PixelUtils::GetComponentCount(result.Info.PixelFormat));
             if (result.Info.IsHDR)
             {
                 int width = 0;

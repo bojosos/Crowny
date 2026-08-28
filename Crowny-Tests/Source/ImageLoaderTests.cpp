@@ -114,11 +114,13 @@ TEST_CASE("Image loader preserves 16-bit PNM channel semantics", "[Assets][Impor
     CHECK(precise.Info.Channels == 3);
     CHECK(precise.Info.BitDepth == 16);
     CHECK_FALSE(precise.Info.IsFloat);
-    CHECK(precise.Info.PixelFormat == TextureFormat::RGB16);
+    CHECK(precise.Info.PixelFormat == TextureFormat::RGBA16);
+    CHECK(PixelUtils::GetComponentCount(precise.Info.PixelFormat) == 4);
     const glm::vec4 preciseColor = precise.Pixels->GetColorAt(0, 0);
     CHECK_THAT(preciseColor.r, Catch::Matchers::WithinAbs(1.0f, 0.0001f));
     CHECK_THAT(preciseColor.g, Catch::Matchers::WithinAbs(32768.0f / 65535.0f, 0.0001f));
     CHECK_THAT(preciseColor.b, Catch::Matchers::WithinAbs(0.0f, 0.0001f));
+    CHECK_THAT(preciseColor.a, Catch::Matchers::WithinAbs(1.0f, 0.0001f));
 
     ImageLoadOptions byteOptions;
     byteOptions.Preserve16Bit = false;
@@ -271,14 +273,31 @@ TEST_CASE("Image loader reports KTX2 array topology without decoding", "[Assets]
     CHECK(result.Info.GetRuntimeShape() == TextureShape::TEXTURE_2D);
     CHECK(result.Pixels == nullptr);
 
-    const ImageLoadResult decoded = ImageLoader::DecodeMemory(encoded.data(), encoded.size());
+    ImageLoadOptions exactLimitOptions;
+    exactLimitOptions.MaximumDecodedBytes = 160;
+    const ImageLoadResult decoded = ImageLoader::DecodeMemory(encoded.data(), encoded.size(), exactLimitOptions);
     REQUIRE(decoded);
     REQUIRE(decoded.Pixels != nullptr);
-    REQUIRE(decoded.Subresources.size() == 2);
+    CHECK(decoded.Info.MipLevels == 2);
+    CHECK_FALSE(decoded.Info.IsCompressed);
+    REQUIRE(decoded.Subresources.size() == 4);
     CHECK(decoded.Subresources[0].MipLevel == 0);
     CHECK(decoded.Subresources[0].Layer == 0);
     CHECK(decoded.Subresources[1].MipLevel == 0);
     CHECK(decoded.Subresources[1].Layer == 1);
+    CHECK(decoded.Subresources[2].MipLevel == 1);
+    CHECK(decoded.Subresources[2].Layer == 0);
+    CHECK(decoded.Subresources[2].Pixels->GetWidth() == 2);
+    CHECK(decoded.Subresources[2].Pixels->GetHeight() == 2);
+    CHECK(decoded.Subresources[3].MipLevel == 1);
+    CHECK(decoded.Subresources[3].Layer == 1);
+
+    ImageLoadOptions insufficientLimitOptions;
+    insufficientLimitOptions.MaximumDecodedBytes = 159;
+    const ImageLoadResult limited = ImageLoader::DecodeMemory(encoded.data(), encoded.size(), insufficientLimitOptions);
+    REQUIRE_FALSE(limited);
+    REQUIRE(limited.Diagnostics.size() == 1);
+    CHECK(limited.Diagnostics[0].Code == ImageDiagnosticCode::DecodedImageTooLarge);
 }
 
 TEST_CASE("Image loader recognizes common image signatures", "[Assets][Importer][Image]")

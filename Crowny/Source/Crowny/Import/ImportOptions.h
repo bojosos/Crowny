@@ -45,6 +45,7 @@ namespace Crowny
         bool PreserveAlphaCoverage = false;
         float AlphaCutoff = 0.5f;
         bool CpuCached = false;
+        // New and legacy metadata without an explicit value use the color-texture default.
         bool SRGB = true;
         TextureDiskFormat DiskFormat = TextureDiskFormat::UASTC; // TODO: Auto based on texture type.
         // CubemapSourceType CubemapSource = CubemapSourceType::Faces;
