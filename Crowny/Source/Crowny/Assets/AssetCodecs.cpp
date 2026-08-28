@@ -274,24 +274,41 @@ namespace Crowny
 
     void Save(BinaryDataStreamOutputArchive& archive, const Font& font)
     {
+        if (font.m_MSDFData == nullptr || font.m_AtlasTexture == nullptr)
+            throw cereal::Exception("Cannot serialize an invalid font asset.");
         WriteAssetHeader(archive, AssetType::Font, FONT_FORMAT_VERSION, font.GetSourceTimestamp(), font.GetSourceContentHash());
         archive(cereal::base_class<Asset>(&font));
-        const MSDFData* const data = font.GetMSDFData();
-        archive(data->FontGeometry);
+        archive(font.m_MSDFData->FontGeometry);
+        const msdfgen::FontMetrics& metrics = font.m_MSDFData->FontGeometry.getMetrics();
+        archive(metrics.emSize, metrics.underlineY, metrics.underlineThickness, metrics.strikethroughY);
         archive(font.m_TabWidth);
+        archive(font.m_AtlasPixelRange);
         archive(font.m_AtlasTexture);
     }
 
     void Load(BinaryDataStreamInputArchive& archive, Font& font)
     {
         const AssetFileHeader header = ReadAssetHeader(archive);
-        ValidateAssetHeader(header, AssetType::Font, FONT_FORMAT_VERSION);
+        if (header.Magic == ASSET_FILE_MAGIC && (header.Type != AssetType::Font || (header.Version != 2 && header.Version != FONT_FORMAT_VERSION)))
+            throw cereal::Exception("Font asset format is not supported. Reimport the source font.");
         archive(cereal::base_class<Asset>(&font));
-        font.m_MSDFData = new MSDFData();
+        font.m_MSDFData = CreateScope<MSDFData>();
         archive(font.m_MSDFData->FontGeometry);
+        if (header.Magic == ASSET_FILE_MAGIC && header.Version >= 3)
+        {
+            msdfgen::FontMetrics& metrics = font.m_MSDFData->FontGeometry.metrics;
+            archive(metrics.emSize, metrics.underlineY, metrics.underlineThickness, metrics.strikethroughY);
+        }
         archive(font.m_TabWidth);
-        font.m_TabWidth = std::max(1U, font.m_TabWidth);
+        font.m_TabWidth = std::clamp(font.m_TabWidth, 1U, 64U);
+        if (header.Magic == ASSET_FILE_MAGIC && header.Version >= 3)
+            archive(font.m_AtlasPixelRange);
+        else
+            font.m_AtlasPixelRange = 2.0f;
+        if (!std::isfinite(font.m_AtlasPixelRange) || font.m_AtlasPixelRange <= 0.0f)
+            throw cereal::Exception("Font atlas pixel range is invalid. Reimport the source font.");
         archive(font.m_AtlasTexture);
+        font.m_FallbackFonts.clear();
     }
 
     void Load(BinaryDataStreamInputArchive& archive, Texture& texture)
