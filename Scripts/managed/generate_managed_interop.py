@@ -380,6 +380,13 @@ enum cw_managed_event_kind
 {native_enum_members(manifest['eventKinds'], 'CW_MANAGED_EVENT_')}
 }};
 
+/* Compatibility IDs for the CoreCLR adapter while it forwards typed calls
+ * through its existing dispatcher. New managed code uses the typed host API. */
+enum cw_managed_host_binding
+{{
+{native_enum_members(manifest['hostBindings'], 'CW_MANAGED_BINDING_')}
+}};
+
 typedef struct cw_managed_string_view
 {{
     const uint8_t* data;

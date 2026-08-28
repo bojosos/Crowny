@@ -347,7 +347,7 @@ namespace Crowny
 #define CW_TRANSFORM_GET_VEC3(functionName, expression)                                                                              \
     cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, cw_managed_vec3* result)                 \
     {                                                                                                                                \
-        return Execute(context, [&]() {                                                                                              \
+        return Execute(context, [&]() -> cw_managed_status {                                                                        \
             const Entity entity = ResolveEntity(entityId);                                                                          \
             if (!entity)                                                                                                             \
                 return CW_MANAGED_STATUS_STALE_HANDLE;                                                                               \
@@ -442,7 +442,7 @@ namespace Crowny
 
         cw_managed_status CW_MANAGED_CALL TransformIsDirty(void* context, cw_managed_uuid entityId, int32_t flag, uint8_t* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 const Entity entity = ResolveEntity(entityId);
                 if (!entity)
                     return CW_MANAGED_STATUS_STALE_HANDLE;
@@ -494,7 +494,7 @@ namespace Crowny
         cw_managed_status CW_MANAGED_CALL InputGetGamepadAxis(void* context, uint32_t gamepad, uint32_t code,
                                                                float* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 if (result == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 *result = Input::GetGamepadAxis(gamepad, static_cast<GamepadAxisCode>(code));
@@ -523,17 +523,17 @@ namespace Crowny
 
         cw_managed_status CW_MANAGED_CALL TimeGetFrameCount(void* context, uint32_t* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 if (result == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
-                *result = Time::GetFrameCount();
+                *result = static_cast<uint32_t>(Time::GetFrameCount());
                 return CW_MANAGED_STATUS_OK;
             });
         }
 
         cw_managed_status CW_MANAGED_CALL InputGetMousePosition(void* context, cw_managed_vec2* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 if (result == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 const glm::vec2 value = Input::GetMousePosition();
@@ -1040,7 +1040,7 @@ namespace Crowny
 #define CW_FONT_GET(functionName, resultType, expression)                                                                            \
     cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid fontId, resultType* result)                       \
     {                                                                                                                                \
-        return Execute(context, [&]() {                                                                                              \
+        return Execute(context, [&]() -> cw_managed_status {                                                                        \
             AssetHandle<Font> font;                                                                                                  \
             const cw_managed_status status = ResolveFontHandle(fontId, font);                                                       \
             if (status != CW_MANAGED_STATUS_OK)                                                                                      \
@@ -1065,7 +1065,7 @@ namespace Crowny
         cw_managed_status CW_MANAGED_CALL FontHasGlyph(void* context, cw_managed_uuid fontId, uint32_t codePoint,
                                                         uint8_t* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 AssetHandle<Font> font;
                 const cw_managed_status status = ResolveFontHandle(fontId, font);
                 if (status != CW_MANAGED_STATUS_OK)
@@ -1081,7 +1081,7 @@ namespace Crowny
                                                                 uint32_t codePoint, uint8_t useFallbacks,
                                                                 cw_managed_font_character_info* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 AssetHandle<Font> font;
                 const cw_managed_status status = ResolveFontHandle(fontId, font);
                 if (status != CW_MANAGED_STATUS_OK)
@@ -1096,7 +1096,7 @@ namespace Crowny
         cw_managed_status CW_MANAGED_CALL FontGetFallback(void* context, cw_managed_uuid fontId, uint32_t index,
                                                            cw_managed_uuid* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 AssetHandle<Font> font;
                 const cw_managed_status status = ResolveFontHandle(fontId, font);
                 if (status != CW_MANAGED_STATUS_OK)
@@ -1113,7 +1113,7 @@ namespace Crowny
         cw_managed_status CW_MANAGED_CALL FontAddFallback(void* context, cw_managed_uuid fontId,
                                                            cw_managed_uuid fallbackId, uint8_t* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 AssetHandle<Font> font;
                 cw_managed_status status = ResolveFontHandle(fontId, font);
                 if (status != CW_MANAGED_STATUS_OK)
@@ -1131,7 +1131,7 @@ namespace Crowny
 
         cw_managed_status CW_MANAGED_CALL FontClearFallbacks(void* context, cw_managed_uuid fontId)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 AssetHandle<Font> font;
                 const cw_managed_status status = ResolveFontHandle(fontId, font);
                 if (status != CW_MANAGED_STATUS_OK)
