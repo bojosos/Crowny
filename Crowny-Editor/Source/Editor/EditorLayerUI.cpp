@@ -10,6 +10,7 @@
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/ImGui/ImGuiMenu.h"
+#include "Crowny/Input/Input.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
@@ -17,8 +18,8 @@
 #include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
-#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
+#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/PrefabUtils.h"
@@ -29,6 +30,7 @@
 #include "Panels/ConsolePanel.h"
 #include "Panels/EditorPanelRegistry.h"
 #include "Panels/HierarchyPanel.h"
+#include "Panels/InputSettingsEditor.h"
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
 #ifdef CW_WITH_NODES
@@ -44,6 +46,7 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
@@ -53,7 +56,6 @@
 #include "Crowny/Scripting/Bindings/Utils/ScriptCompression.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptJSON.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
-#include "Crowny/Renderer/Font.h"
 
 #include "Build/BuildManager.h"
 #include "Editor/Script/CodeEditor.h"
@@ -741,8 +743,7 @@ namespace Crowny
         if (ImGui::TreeNode(label.c_str()))
         {
             ImGui::Text("Stable id: %llu", static_cast<unsigned long long>(type.StableId));
-            ImGui::Text("Runs in editor: %s",
-                        (type.Flags & ScriptTypeFlags::RunInEditor) != ScriptTypeFlags::None ? "yes" : "no");
+            ImGui::Text("Runs in editor: %s", (type.Flags & ScriptTypeFlags::RunInEditor) != ScriptTypeFlags::None ? "yes" : "no");
             if (ImGui::TreeNode("Callbacks"))
             {
                 for (ScriptEventKind event : type.Events)
@@ -1259,6 +1260,25 @@ namespace Crowny
             }
         }
 
+        if (matchesSection({ "input actions bindings keyboard mouse gamepad controls rebinding" }) &&
+            beginSection("Input actions", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (!Editor::Get().IsProjectLoaded())
+                ImGui::TextDisabled("Open a project to edit its input actions.");
+            else
+            {
+                InputMap& inputMap = Editor::Get().GetProjectSettings()->InputActions;
+                if (InputSettingsEditor::Render(inputMap))
+                    Input::SetActionMap(inputMap);
+                ImGui::Spacing();
+                if (ImGui::Button("Save input settings"))
+                    Editor::Get().SaveProjectSettings();
+                ImGui::SameLine();
+                if (ImGui::Button("Clear runtime rebinds"))
+                    Input::ClearActionRebinds();
+            }
+        }
+
         if (matchesSection({ "time scale fixed timestep maximum" }) && beginSection("Time", ImGuiTreeNodeFlags_DefaultOpen))
             UI_TimeSettings();
 
@@ -1311,8 +1331,8 @@ namespace Crowny
         if (!m_SettingsSearch.empty() &&
             !matchesSection({ "startup project recent auto load", "code editor IDE Visual Studio", "viewport grid wireframe collider rendering",
                               "time scale fixed timestep maximum", "physics 2D gravity solver layers collision matrix",
-                              "workspace layout reset panels command palette", "developer debug diagnostics ImGui asset entity C#",
-                              "renderer test albedo metalness roughness" }))
+                              "input actions bindings keyboard mouse gamepad controls rebinding", "workspace layout reset panels command palette",
+                              "developer debug diagnostics ImGui asset entity C#", "renderer test albedo metalness roughness" }))
             ImGui::TextDisabled("No matching settings.");
 
         ImGui::End();
