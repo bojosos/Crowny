@@ -6,9 +6,27 @@
 
 namespace Crowny::Test
 {
+    inline String ReadEnvironmentVariable(const char* name)
+    {
+#ifdef CW_PLATFORM_WIN32
+        char* value = nullptr;
+        size_t length = 0;
+        if (_dupenv_s(&value, &length, name) != 0 || value == nullptr)
+            return {};
+
+        String result(value);
+        std::free(value);
+        return result;
+#else
+        const char* value = std::getenv(name);
+        return value != nullptr ? String(value) : String();
+#endif
+    }
+
     inline Path ResolveManagedAssembly(const char* filename, const Path& fallback)
     {
-        if (const char* configuredRoot = std::getenv("CROWNY_MANAGED_ASSEMBLY_ROOT"); configuredRoot != nullptr && configuredRoot[0] != '\0')
+        const String configuredRoot = ReadEnvironmentVariable("CROWNY_MANAGED_ASSEMBLY_ROOT");
+        if (!configuredRoot.empty())
         {
             const Path configured = Path(configuredRoot) / filename;
             if (fs::is_regular_file(configured))
