@@ -37,6 +37,6 @@ namespace Crowny
         /// The number of frames that have been rendered since the beginning.
         /// </summary>
         /// <returns>The number of frames.</returns>
-        public static float frameCount => ManagedRuntimeContext.TimeGetFrameCount();
+        public static uint frameCount => ManagedRuntimeContext.TimeGetFrameCount();
     }
 }

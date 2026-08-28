@@ -56,8 +56,7 @@ namespace Crowny
 
         uint64_t CurrentSimulationFrameNumber()
         {
-            const float frameCount = Time::GetFrameCount();
-            return frameCount >= 1.0f ? static_cast<uint64_t>(frameCount) : 1u;
+            return std::max(Time::GetFrameCount(), uint64_t{ 1 });
         }
 
         uint64_t CameraHistoryNamespace(uint64_t historyOwnerId, const Scene* scene, uint64_t cameraIdentity, uint64_t identityKind)

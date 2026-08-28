@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace Crowny
 {
 
@@ -8,7 +10,7 @@ namespace Crowny
     public:
         static float GetTime();
         static float GetDeltaTime();
-        static float GetFrameCount();
+        static uint64_t GetFrameCount();
         static float GetFixedDeltaTime();
         static float GetRealtimeSinceStartup();
         static float GetSmoothDeltaTime();

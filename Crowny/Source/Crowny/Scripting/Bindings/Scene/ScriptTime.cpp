@@ -30,6 +30,6 @@ namespace Crowny
 
     float ScriptTime::Internal_RealtimeSinceStartup() { return Time::GetRealtimeSinceStartup(); }
 
-    float ScriptTime::Internal_GetFrameCount() { return Time::GetFrameCount(); }
+    uint32_t ScriptTime::Internal_GetFrameCount() { return static_cast<uint32_t>(Time::GetFrameCount()); }
 
 } // namespace Crowny
