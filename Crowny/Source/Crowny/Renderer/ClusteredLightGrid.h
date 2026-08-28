@@ -53,13 +53,13 @@ namespace Crowny
             bool Valid = false;
         };
 
-        // Build scratch survives Clear so repeated compatibility frames reuse it.
+        // Build scratch survives Clear so repeated CPU reference builds reuse it.
         Vector<uint32_t> m_BuildCounts;
         Vector<BuildBounds> m_BuildLightBounds;
     };
 
-    // Deterministic CPU reference and compatibility fallback. Vulkan uses the
-    // same projection and logarithmic-slice equations in compute.
+    // Deterministic CPU reference for tests and tools. Runtime clustered
+    // rendering uses the same projection and logarithmic-slice equations in compute.
     class ClusteredLightBuilder
     {
     public:
