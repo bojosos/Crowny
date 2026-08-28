@@ -46,6 +46,14 @@ namespace Crowny
     DepthPrepassProgramSelection ResolveDepthPrepassProgram(DepthPrepassOutputMode outputMode, bool animated);
     constexpr bool ParticipatesInDepthPrepass(AlphaMode alphaMode) { return alphaMode == AlphaMode::Opaque || alphaMode == AlphaMode::Mask; }
 
+    // Weighted OIT is one order-independent group before strict transparency.
+    // Render layers order within each group rather than interleaving them.
+    constexpr bool DrawsInForwardTransparency(AlphaMode alphaMode, bool weightedOitComposited)
+    {
+        return alphaMode == AlphaMode::Premultiplied || alphaMode == AlphaMode::Additive ||
+               (alphaMode == AlphaMode::WeightedOIT && !weightedOitComposited);
+    }
+
     enum class RenderPipelinePass : uint8_t
     {
         ClearVisibilityCounters,
@@ -67,6 +75,8 @@ namespace Crowny
         ForwardPlusOpaque,
         SkyAndForwardOnlyOpaque,
         ToonOutlines,
+        WeightedOitAccumulation,
+        WeightedOitComposite,
         ForwardPlusTransparencyAndWorld2D,
         TemporalResolve,
         Bloom,
@@ -106,6 +116,7 @@ namespace Crowny
         uint32_t DrawBinLookupCapacity = 0;
         bool EnableGpuDrawBins = false;
         bool EnableTransparency = true;
+        bool EnableWeightedOIT = false;
         bool EnablePostProcessing = true;
     };
 

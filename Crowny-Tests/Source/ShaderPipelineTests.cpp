@@ -664,7 +664,7 @@ void main() { color = texture(textures[nonuniformEXT(0)], vec2(0.5)); }
 
 TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
 {
-    const std::array<Path, 20> shaders = {
+    const std::array<Path, 21> shaders = {
         "Crowny-Editor/Resources/Shaders/BinAndCompactIndirectDraws.glsl",
         "Crowny-Editor/Resources/Shaders/GpuDepthOnly.glsl",
         "Crowny-Editor/Resources/Shaders/GpuAnimatedDepthOnly.glsl",
@@ -682,6 +682,7 @@ TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
         "Crowny-Editor/Resources/Shaders/Unlit.glsl",
         "Crowny-Editor/Resources/Shaders/Gtao.glsl",
         "Crowny-Editor/Resources/Shaders/TemporalResolve.glsl",
+        "Crowny-Editor/Resources/Shaders/WeightedOitComposite.glsl",
         "Crowny-Editor/Resources/Shaders/Bloom.glsl",
         "Crowny-Editor/Resources/Shaders/Sky.glsl",
         "Crowny-Editor/Resources/Shaders/ToneMap.glsl",
@@ -697,6 +698,12 @@ TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
         for (const ShaderDiagnostic& diagnostic : result.Diagnostics)
             INFO(diagnostic.Message);
         CHECK(result.Succeeded());
+        if (path.filename() == "ForwardPlusStandard.glsl")
+        {
+            CHECK(result.Description.Techniques.size() == 4);
+            CHECK(source.find("CW_WEIGHTED_OIT_ACCUMULATION") != String::npos);
+            CHECK(source.find("CW_WEIGHTED_OIT_REVEALAGE") != String::npos);
+        }
     }
 }
 

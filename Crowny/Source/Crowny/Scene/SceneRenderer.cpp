@@ -203,6 +203,7 @@ namespace Crowny
                 m_GpuMeshletExpansionReady = false;
                 m_GpuMeshletCullingReady = false;
                 m_GpuDrawCompactionReady = false;
+                m_WeightedOitReady = false;
             }
 
             void Execute(RenderPipelinePass pass, RenderGraphContext& context) override
@@ -266,6 +267,12 @@ namespace Crowny
                     return;
                 case RenderPipelinePass::ToonOutlines:
                     RenderToonOutlines(context);
+                    return;
+                case RenderPipelinePass::WeightedOitAccumulation:
+                    RenderWeightedOit(context);
+                    return;
+                case RenderPipelinePass::WeightedOitComposite:
+                    RenderWeightedOitComposite(context);
                     return;
                 case RenderPipelinePass::ForwardPlusTransparencyAndWorld2D:
                     RenderTransparency(context);
@@ -442,6 +449,12 @@ namespace Crowny
                 float Feedback = 0.9f;
             };
 
+            struct alignas(16) WeightedOitConstants
+            {
+                glm::uvec2 Resolution = glm::uvec2(1u);
+                glm::uvec2 Padding = glm::uvec2(0u);
+            };
+
             struct alignas(16) BloomConstants
             {
                 glm::uvec2 OutputSize = glm::uvec2(1u);
@@ -583,6 +596,33 @@ namespace Crowny
                 depth->DepthCompareFunction = CompareFunction::GREATER_EQUAL;
                 if (!material.Initialize(shader, blend, depth))
                     CW_ENGINE_ERROR("Failed to initialize Forward+ {} transparency: {}", additive ? "additive" : "premultiplied",
+                                    material.GetError());
+                return material.IsValid();
+            }
+
+            bool EnsureWeightedOit(GraphicsMaterial& material, bool& attempted, bool revealage)
+            {
+                if (material.IsValid())
+                    return true;
+                if (attempted || AssetManager::TryGet() == nullptr)
+                    return false;
+                attempted = true;
+                const AssetHandle<Shader> shader = AssetManager::TryGet()->Load<Shader>("Resources/Shaders/ForwardPlusStandard.asset");
+                ShaderVariation variation;
+                variation.Set("CW_WEIGHTED_OIT_ACCUMULATION", !revealage);
+                variation.Set("CW_WEIGHTED_OIT_REVEALAGE", revealage);
+                Ref<BlendStateDesc> blend = CreateRef<BlendStateDesc>();
+                blend->EnableBlending = true;
+                blend->SrcBlend = revealage ? BlendFactor::Zero : BlendFactor::One;
+                blend->DstBlend = revealage ? BlendFactor::InvSourceAlpha : BlendFactor::One;
+                blend->SrcBlendAlpha = revealage ? BlendFactor::Zero : BlendFactor::One;
+                blend->DstBlendAlpha = revealage ? BlendFactor::InvSourceAlpha : BlendFactor::One;
+                Ref<DepthStencilStateDesc> depth = CreateRef<DepthStencilStateDesc>();
+                depth->EnableDepthRead = true;
+                depth->EnableDepthWrite = false;
+                depth->DepthCompareFunction = CompareFunction::GREATER_EQUAL;
+                if (!material.Initialize(shader, variation, blend, depth))
+                    CW_ENGINE_ERROR("Failed to initialize weighted OIT {} pass: {}", revealage ? "revealage" : "accumulation",
                                     material.GetError());
                 return material.IsValid();
             }
@@ -1193,6 +1233,93 @@ namespace Crowny
                 m_ToonOutlines.Dispatch((width + 7u) / 8u, (height + 7u) / 8u);
             }
 
+            void RenderWeightedOit(RenderGraphContext& context)
+            {
+                m_WeightedOitReady = false;
+                if (m_DepthDrawList == nullptr || m_DepthDrawList->WeightedOitCommandCount == 0 ||
+                    !EnsureWeightedOit(m_WeightedOitAccumulation, m_WeightedOitAccumulationAttempted, false) ||
+                    !EnsureWeightedOit(m_WeightedOitRevealage, m_WeightedOitRevealageAttempted, true))
+                    return;
+                const Ref<GenericGpuBuffer> instances = Buffer(context, "InstanceTable");
+                const Ref<GenericGpuBuffer> instanceIds = Buffer(context, "DepthInstanceIds");
+                const Ref<GenericGpuBuffer> commands = Buffer(context, "DepthIndirectCommands");
+                if (!instances || !instanceIds || !commands)
+                    return;
+
+                auto prepare = [&](GraphicsMaterial& material, uint64_t& textureVersion) {
+                    material.SetBuffer(0, 1, instances);
+                    material.SetBuffer(0, 2, instanceIds);
+                    BindSharedLighting(material, context);
+                    material.SetTexture(0, 16,
+                                        TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
+                    BindMaterialTable(material, textureVersion, context);
+                };
+                prepare(m_WeightedOitAccumulation, m_WeightedOitAccumulationTextureVersion);
+                prepare(m_WeightedOitRevealage, m_WeightedOitRevealageTextureVersion);
+
+                auto draw = [&](StringView targetName, GraphicsMaterial& material, const glm::vec4& clearColor) {
+                    RenderGraphRenderTargetDesc attachments;
+                    attachments.Colors[0] = Resource(targetName);
+                    attachments.ColorCount = 1;
+                    attachments.Depth = Resource("SceneDepth");
+                    const Ref<RenderTarget> target = context.GetRenderTarget(attachments);
+                    if (!target)
+                        return false;
+                    RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
+                    RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+                    RenderAPI::TryGet()->ClearViewport(FBT_COLOR, clearColor, 0.0f, 0, RT_COLOR0);
+                    if (!material.Bind())
+                        return false;
+                    for (const GpuDrawRun& run : m_DepthDrawList->Runs)
+                    {
+                        if (run.Bin.Alpha != AlphaMode::WeightedOIT || run.CommandCount == 0)
+                            continue;
+                        const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
+                        const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
+                        if (!vertexBuffer || !indexBuffer)
+                            continue;
+                        RenderAPI::TryGet()->SetVertexLayout(vertexBuffer->GetLayout());
+                        Ref<VertexBuffer> boundVertexBuffer = vertexBuffer;
+                        RenderAPI::TryGet()->SetVertexBuffers(0, &boundVertexBuffer, 1);
+                        RenderAPI::TryGet()->SetIndexBuffer(indexBuffer);
+                        RenderAPI::TryGet()->SetDrawMode(m_Scene->GetGeometryDrawMode(run.Bin.GeometryHeap));
+                        RenderAPI::TryGet()->DrawIndexedIndirect(commands, run.FirstCommand * sizeof(DrawIndexedIndirectCommand), run.CommandCount);
+                    }
+                    return true;
+                };
+                const bool accumulated = draw("OitAccumulation", m_WeightedOitAccumulation, glm::vec4(0.0f));
+                const bool revealed = draw("OitRevealage", m_WeightedOitRevealage, glm::vec4(1.0f));
+                m_WeightedOitReady = accumulated && revealed;
+            }
+
+            void RenderWeightedOitComposite(RenderGraphContext& context)
+            {
+                if (!m_WeightedOitReady || m_DepthDrawList == nullptr || m_DepthDrawList->WeightedOitCommandCount == 0 ||
+                    !Ensure(m_WeightedOitComposite, m_WeightedOitCompositeAttempted, "Resources/Shaders/WeightedOitComposite.asset"))
+                {
+                    m_WeightedOitReady = false;
+                    return;
+                }
+                const Ref<Texture> hdrColor = TextureResource(context, "HdrColor");
+                const Ref<Texture> accumulation = TextureResource(context, "OitAccumulation");
+                const Ref<Texture> revealage = TextureResource(context, "OitRevealage");
+                if (!hdrColor || !accumulation || !revealage)
+                {
+                    m_WeightedOitReady = false;
+                    return;
+                }
+
+                WeightedOitConstants constants;
+                constants.Resolution = { hdrColor->GetWidth(), hdrColor->GetHeight() };
+                const bool resourcesBound = m_WeightedOitComposite.WriteUniformBlock(0, 0, &constants, sizeof(constants)) &&
+                                            m_WeightedOitComposite.SetLoadStoreTexture(0, 1, hdrColor) &&
+                                            m_WeightedOitComposite.SetTexture(0, 2, accumulation) &&
+                                            m_WeightedOitComposite.SetTexture(0, 3, revealage);
+                m_WeightedOitReady = resourcesBound &&
+                                     m_WeightedOitComposite.Dispatch((constants.Resolution.x + 7u) / 8u,
+                                                                     (constants.Resolution.y + 7u) / 8u);
+            }
+
             void RenderTransparency(RenderGraphContext& context)
             {
                 if (m_DepthDrawList == nullptr || m_DepthDrawList->Commands.empty())
@@ -1210,7 +1337,8 @@ namespace Crowny
                     if (run.Bin.Phase != RenderDrawPhase::Transparent || run.CommandCount == 0)
                         continue;
                     needsAdditive |= run.Bin.Alpha == AlphaMode::Additive;
-                    needsPremultiplied |= run.Bin.Alpha == AlphaMode::Premultiplied || run.Bin.Alpha == AlphaMode::WeightedOIT;
+                    needsPremultiplied |= run.Bin.Alpha == AlphaMode::Premultiplied ||
+                                          (run.Bin.Alpha == AlphaMode::WeightedOIT && !m_WeightedOitReady);
                 }
                 if (needsPremultiplied && !EnsureTransparent(m_ForwardPremultiplied, m_ForwardPremultipliedAttempted, false))
                     return;
@@ -1243,7 +1371,8 @@ namespace Crowny
                 GraphicsMaterial* boundMaterial = nullptr;
                 for (const GpuDrawRun& run : m_DepthDrawList->Runs)
                 {
-                    if (run.Bin.Phase != RenderDrawPhase::Transparent || run.CommandCount == 0)
+                    if (run.Bin.Phase != RenderDrawPhase::Transparent || !DrawsInForwardTransparency(run.Bin.Alpha, m_WeightedOitReady) ||
+                        run.CommandCount == 0)
                         continue;
                     GraphicsMaterial* material = run.Bin.Alpha == AlphaMode::Additive ? &m_ForwardAdditive : &m_ForwardPremultiplied;
                     if (material != boundMaterial)
@@ -1395,6 +1524,7 @@ namespace Crowny
             ComputeMaterial m_Gtao;
             ComputeMaterial m_DeferredLighting;
             ComputeMaterial m_ToonOutlines;
+            ComputeMaterial m_WeightedOitComposite;
             ComputeMaterial m_TemporalResolve;
             ComputeMaterial m_Bloom;
             GraphicsMaterial m_Depth;
@@ -1406,6 +1536,8 @@ namespace Crowny
             GraphicsMaterial m_ForwardPlus;
             GraphicsMaterial m_ForwardPremultiplied;
             GraphicsMaterial m_ForwardAdditive;
+            GraphicsMaterial m_WeightedOitAccumulation;
+            GraphicsMaterial m_WeightedOitRevealage;
             GraphicsMaterial m_DeferredGBuffer;
             GraphicsMaterial m_ToneMap;
             GraphicsMaterial m_Sky;
@@ -1415,6 +1547,8 @@ namespace Crowny
             uint64_t m_ForwardTextureVersion = 0;
             uint64_t m_PremultipliedTextureVersion = 0;
             uint64_t m_AdditiveTextureVersion = 0;
+            uint64_t m_WeightedOitAccumulationTextureVersion = 0;
+            uint64_t m_WeightedOitRevealageTextureVersion = 0;
             uint64_t m_DeferredTextureVersion = 0;
             uint64_t m_DeferredLightingTextureVersion = 0;
             uint64_t m_ShadowTextureVersion = 0;
@@ -1427,6 +1561,7 @@ namespace Crowny
             bool m_GpuMeshletExpansionReady = false;
             bool m_GpuMeshletCullingReady = false;
             bool m_GpuDrawCompactionReady = false;
+            bool m_WeightedOitReady = false;
             bool m_BuildClustersAttempted = false;
             bool m_BuildHiZAttempted = false;
             bool m_GtaoAttempted = false;
@@ -1439,9 +1574,12 @@ namespace Crowny
             bool m_ForwardPlusAttempted = false;
             bool m_ForwardPremultipliedAttempted = false;
             bool m_ForwardAdditiveAttempted = false;
+            bool m_WeightedOitAccumulationAttempted = false;
+            bool m_WeightedOitRevealageAttempted = false;
             bool m_DeferredGBufferAttempted = false;
             bool m_DeferredLightingAttempted = false;
             bool m_ToonOutlinesAttempted = false;
+            bool m_WeightedOitCompositeAttempted = false;
             bool m_TemporalResolveAttempted = false;
             bool m_BloomAttempted = false;
             bool m_ToneMapAttempted = false;
@@ -2848,6 +2986,7 @@ namespace Crowny
         graphDesc.DrawBinCount = gpuDrawBinsEnabled ? static_cast<uint32_t>(gpuScene.GetGpuDrawBinLayout().GetBins().size()) : 0u;
         graphDesc.DrawBinLookupCapacity = gpuDrawBinsEnabled ? static_cast<uint32_t>(gpuScene.GetGpuDrawBinLayout().GetLookupEntries().size()) : 0u;
         graphDesc.EnableGpuDrawBins = gpuDrawBinsEnabled;
+        graphDesc.EnableWeightedOIT = depthDrawList.WeightedOitCommandCount != 0;
         graphDesc.EnablePostProcessing = true;
         GpuDrivenPassExecutor& gpuDrivenExecutor = threadResources.GpuDrivenExecutor;
         if (featureTier == RenderFeatureTier::VulkanBaseline || featureTier == RenderFeatureTier::GPUDriven ||

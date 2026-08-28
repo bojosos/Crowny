@@ -228,6 +228,28 @@ TEST_CASE("Weighted OIT draws are binned and instanced", "[Renderer][GpuDriven]"
     REQUIRE(output.Commands.size() == 1);
     CHECK(output.Commands[0].InstanceCount == 2);
     CHECK(output.StrictTransparentCommandCount == 0);
+    CHECK(output.WeightedOitCommandCount == 1);
+
+    output.Clear();
+    CHECK(output.WeightedOitCommandCount == 0);
+}
+
+TEST_CASE("Weighted OIT uses a fixed group before strict transparency across render layers", "[Renderer][GpuDriven]")
+{
+    Vector<GpuDrawCandidate> candidates = {
+        Candidate(1, 1, 1, 1, 0, 3.0f, AlphaMode::Premultiplied, -5),
+        Candidate(2, 1, 1, 1, 0, 2.0f, AlphaMode::WeightedOIT, 20),
+    };
+
+    GpuDrawListBuilder builder;
+    GpuDrawList output;
+    builder.Build(candidates.data(), static_cast<uint32_t>(candidates.size()), output);
+
+    REQUIRE(output.Instances.size() == 2);
+    CHECK(output.Instances[0].InstanceID == 2);
+    CHECK(output.Instances[1].InstanceID == 1);
+    CHECK(output.WeightedOitCommandCount == 1);
+    CHECK(output.StrictTransparentCommandCount == 1);
 }
 
 TEST_CASE("GPU draw-list preparation allocates nothing after warm-up", "[Renderer][GpuDriven][Memory][Frame]")

@@ -33,6 +33,19 @@ namespace
     public:
         void Execute(RenderPipelinePass, RenderGraphContext&) override {}
     };
+
+    class AmbientOcclusionWriteFeature final : public IRenderFeature
+    {
+    public:
+        RenderGraphInsertionPoint GetInsertionPoint() const override { return RenderGraphInsertionPoint::BeforeTransparency; }
+
+        void AddPasses(RenderGraph& graph, RenderView&, RenderBlackboard& blackboard) override
+        {
+            const RenderGraphResourceHandle ambientOcclusion = blackboard.Get("AmbientOcclusion");
+            graph.AddPass("TestAmbientOcclusionWrite", RenderGraphQueue::Compute,
+                          [&](RenderGraphPassBuilder& builder) { builder.Write(ambientOcclusion); });
+        }
+    };
 } // namespace
 
 TEST_CASE("Render snapshots reset optional outputs to runtime defaults", "[Renderer][Pipeline]")
@@ -145,6 +158,8 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     CHECK(blackboard.Contains("AmbientOcclusion"));
     CHECK(blackboard.Contains("Velocity"));
     CHECK(blackboard.Contains("Bloom"));
+    CHECK_FALSE(blackboard.Contains("OitAccumulation"));
+    CHECK_FALSE(blackboard.Contains("OitRevealage"));
 
     Vector<String> passNames;
     for (RenderGraphPassHandle pass : compiled.PassOrder)
@@ -183,6 +198,70 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
                barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
                graph.GetPassName(barrier.BeforePass) == "ForwardPlusOpaque";
     }));
+}
+
+TEST_CASE("Weighted OIT allocates transient accumulation targets only when requested", "[Renderer][Pipeline][Transparency]")
+{
+    RenderGraph graph;
+    RenderBlackboard blackboard;
+    RenderView view;
+    RenderPipelineSettings settings;
+    settings.EnableTaa = false;
+    settings.EnableBloom = false;
+    RenderPipelineAsset pipeline(settings);
+    pipeline.AddFeature(CreateRef<AmbientOcclusionWriteFeature>());
+    RenderPipelineGraphDesc desc;
+    desc.Width = 1920;
+    desc.Height = 1080;
+    desc.Path = RenderingPath::ForwardPlus;
+    desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+    desc.EnableWeightedOIT = true;
+
+    const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+    const RenderGraphCompileResult& compiled = graph.Compile();
+    INFO(compiled.Error);
+    REQUIRE(compiled.Succeeded);
+    CHECK(compiled.TransientTextureBytes + compiled.TransientBufferBytes <= 256ull * 1024ull * 1024ull);
+
+    const RenderGraphResourceHandle accumulation = blackboard.Get("OitAccumulation");
+    const RenderGraphResourceHandle revealage = blackboard.Get("OitRevealage");
+    REQUIRE(accumulation.IsValid());
+    REQUIRE(revealage.IsValid());
+    CHECK(compiled.Resources[accumulation.Index].Desc.Texture.Format == TextureFormat::RGBA16F);
+    CHECK(compiled.Resources[revealage.Index].Desc.Texture.Format == TextureFormat::R32F);
+
+    Vector<String> passNames;
+    for (RenderGraphPassHandle pass : compiled.PassOrder)
+        passNames.push_back(graph.GetPassName(pass));
+    const auto accumulationPass = std::find(passNames.begin(), passNames.end(), "WeightedOitAccumulation");
+    const auto compositePass = std::find(passNames.begin(), passNames.end(), "WeightedOitComposite");
+    const auto strictTransparencyPass = std::find(passNames.begin(), passNames.end(), "ForwardPlusTransparencyAndWorld2D");
+    REQUIRE(accumulationPass != passNames.end());
+    REQUIRE(compositePass != passNames.end());
+    REQUIRE(strictTransparencyPass != passNames.end());
+    CHECK(accumulationPass < compositePass);
+    CHECK(compositePass < strictTransparencyPass);
+    const RenderGraphResourceHandle ambientOcclusion = blackboard.Get("AmbientOcclusion");
+    REQUIRE(ambientOcclusion.IsValid());
+    CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
+        return barrier.Resource == ambientOcclusion && graph.GetPassName(barrier.BeforePass) == "WeightedOitAccumulation" &&
+               barrier.DestinationState == RenderGraphResourceState::ShaderRead;
+    }));
+    CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
+        return barrier.Resource == output.HdrColor &&
+               barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
+               graph.GetPassName(barrier.BeforePass) == "ForwardPlusTransparencyAndWorld2D";
+    }));
+}
+
+TEST_CASE("Weighted OIT falls back to forward transparency until composited", "[Renderer][Pipeline][Transparency]")
+{
+    CHECK(DrawsInForwardTransparency(AlphaMode::Premultiplied, false));
+    CHECK(DrawsInForwardTransparency(AlphaMode::Premultiplied, true));
+    CHECK(DrawsInForwardTransparency(AlphaMode::Additive, false));
+    CHECK(DrawsInForwardTransparency(AlphaMode::WeightedOIT, false));
+    CHECK_FALSE(DrawsInForwardTransparency(AlphaMode::WeightedOIT, true));
+    CHECK_FALSE(DrawsInForwardTransparency(AlphaMode::Opaque, false));
 }
 
 TEST_CASE("Depth prepass configures motion-vector and object-ID outputs independently", "[Renderer][Pipeline]")

@@ -574,6 +574,49 @@ namespace Crowny
         AddFeaturePasses(RenderGraphInsertionPoint::AfterOpaque, graph, view, blackboard);
         AddFeaturePasses(RenderGraphInsertionPoint::BeforeTransparency, graph, view, blackboard);
 
+        if (desc.EnableTransparency && desc.EnableWeightedOIT)
+        {
+            const RenderGraphResourceHandle oitAccumulation =
+              graph.CreateTexture("OitAccumulation", Texture2D(width, height, TextureFormat::RGBA16F));
+            const RenderGraphResourceHandle oitRevealage =
+              graph.CreateTexture("OitRevealage", Texture2D(width, height, TextureFormat::R32F));
+            blackboard.Set("OitAccumulation", oitAccumulation);
+            blackboard.Set("OitRevealage", oitRevealage);
+
+            graph.AddPass(
+              "WeightedOitAccumulation", RenderGraphQueue::Graphics,
+              [&](RenderGraphPassBuilder& builder) {
+                  builder.Read(instances);
+                  builder.Read(materials);
+                  builder.Read(depthCommands, RenderGraphResourceState::IndirectArgument);
+                  builder.Read(depthInstanceIds);
+                  builder.Read(lights);
+                  builder.Read(output.SceneDepth, RenderGraphResourceState::DepthRead);
+                  builder.Read(clusterCells);
+                  builder.Read(clusterLightIndices);
+                  builder.Read(directionalLightIndices);
+                  builder.Read(clusterCounters);
+                  builder.Read(shadowAtlas, RenderGraphResourceState::DepthRead);
+                  builder.Read(pointShadowArray, RenderGraphResourceState::DepthRead);
+                  builder.Read(directionalShadowArray, RenderGraphResourceState::DepthRead);
+                  builder.Read(shadowLightTable);
+                  builder.Read(shadowViewTable);
+                  if (ambientOcclusion)
+                      builder.Read(ambientOcclusion);
+                  builder.Write(oitAccumulation, RenderGraphResourceState::ColorAttachment);
+                  builder.Write(oitRevealage, RenderGraphResourceState::ColorAttachment);
+              },
+              executePass(RenderPipelinePass::WeightedOitAccumulation));
+            graph.AddPass(
+              "WeightedOitComposite", RenderGraphQueue::Compute,
+              [&](RenderGraphPassBuilder& builder) {
+                  builder.Read(oitAccumulation);
+                  builder.Read(oitRevealage);
+                  builder.ReadWrite(output.HdrColor);
+              },
+              executePass(RenderPipelinePass::WeightedOitComposite));
+        }
+
         if (desc.EnableTransparency)
         {
             graph.AddPass(
@@ -596,6 +639,8 @@ namespace Crowny
                   builder.Read(directionalShadowArray, RenderGraphResourceState::DepthRead);
                   builder.Read(shadowLightTable);
                   builder.Read(shadowViewTable);
+                  if (ambientOcclusion)
+                      builder.Read(ambientOcclusion);
                   builder.Write(output.HdrColor, RenderGraphResourceState::ColorAttachmentReadWrite);
               },
               executePass(RenderPipelinePass::ForwardPlusTransparencyAndWorld2D));
