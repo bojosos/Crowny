@@ -2,6 +2,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/TextLayout.h"
 
 using namespace Crowny;
@@ -10,8 +11,7 @@ namespace
 {
     constexpr TextLayoutFontData UNIT_LAYOUT_FONT{ 0.8, -0.2, 1.0, 1.0, 1.0, 4, nullptr };
 
-    void AddLayoutToken(TextLayoutScratch& scratch, char32_t codePoint, bool whitespace = false, bool newLine = false,
-                        size_t sourceByteCount = 1)
+    void AddLayoutToken(TextLayoutScratch& scratch, char32_t codePoint, bool whitespace = false, bool newLine = false, size_t sourceByteCount = 1)
     {
         TextLayoutToken& token = scratch.Tokens.Acquire();
         token = {};
@@ -35,6 +35,203 @@ namespace
         return component;
     }
 } // namespace
+
+TEST_CASE("Text layout decodes UTF-8 into code point and byte clusters", "[Text][Layout][Unicode]")
+{
+    TextLayoutScratch scratch;
+
+    TextLayout::DecodeUTF8("A\xc3\xa9"
+                           "e\xcc\x81\xf0\x9f\x99\x82",
+                           scratch);
+
+    REQUIRE(scratch.Tokens.Size() == 5);
+    CHECK(scratch.SourceByteLength == 10);
+
+    CHECK(scratch.Tokens[0].CodePoint == U'A');
+    CHECK(scratch.Tokens[0].SourceByteStart == 0);
+    CHECK(scratch.Tokens[0].SourceByteEnd == 1);
+    CHECK(scratch.Tokens[0].ClusterByteStart == 0);
+    CHECK(scratch.Tokens[0].ClusterByteEnd == 1);
+
+    CHECK(scratch.Tokens[1].CodePoint == U'\u00e9');
+    CHECK(scratch.Tokens[1].SourceByteStart == 1);
+    CHECK(scratch.Tokens[1].SourceByteEnd == 3);
+    CHECK(scratch.Tokens[1].ClusterByteStart == 1);
+    CHECK(scratch.Tokens[1].ClusterByteEnd == 3);
+
+    CHECK(scratch.Tokens[2].CodePoint == U'e');
+    CHECK(scratch.Tokens[2].ClusterByteStart == 3);
+    CHECK(scratch.Tokens[2].ClusterByteEnd == 6);
+    CHECK(scratch.Tokens[3].CodePoint == U'\u0301');
+    CHECK(scratch.Tokens[3].SourceByteStart == 4);
+    CHECK(scratch.Tokens[3].SourceByteEnd == 6);
+    CHECK(scratch.Tokens[3].ClusterByteStart == 3);
+    CHECK(scratch.Tokens[3].ClusterByteEnd == 6);
+
+    CHECK(scratch.Tokens[4].CodePoint == U'\U0001f642');
+    CHECK(scratch.Tokens[4].SourceByteStart == 6);
+    CHECK(scratch.Tokens[4].SourceByteEnd == 10);
+    CHECK(scratch.Tokens[4].ClusterByteStart == 6);
+    CHECK(scratch.Tokens[4].ClusterByteEnd == 10);
+}
+
+TEST_CASE("Text layout replaces each malformed UTF-8 byte deterministically", "[Text][Layout][Unicode]")
+{
+    const String malformed("\xf0\x28\x8c\x28", 4);
+    TextLayoutScratch scratch;
+
+    TextLayout::DecodeUTF8(malformed, scratch);
+
+    REQUIRE(scratch.Tokens.Size() == 4);
+    CHECK(scratch.Tokens[0].CodePoint == U'\ufffd');
+    CHECK(scratch.Tokens[0].SourceByteStart == 0);
+    CHECK(scratch.Tokens[0].SourceByteEnd == 1);
+    CHECK(scratch.Tokens[1].CodePoint == U'(');
+    CHECK(scratch.Tokens[1].SourceByteStart == 1);
+    CHECK(scratch.Tokens[1].SourceByteEnd == 2);
+    CHECK(scratch.Tokens[2].CodePoint == U'\ufffd');
+    CHECK(scratch.Tokens[2].SourceByteStart == 2);
+    CHECK(scratch.Tokens[2].SourceByteEnd == 3);
+    CHECK(scratch.Tokens[3].CodePoint == U'(');
+    CHECK(scratch.Tokens[3].SourceByteStart == 3);
+    CHECK(scratch.Tokens[3].SourceByteEnd == 4);
+}
+
+TEST_CASE("Text layout groups regional indicators and emoji joiner sequences", "[Text][Layout][Unicode]")
+{
+    TextLayoutScratch scratch;
+    const String text = "\xf0\x9f\x87\xa7\xf0\x9f\x87\xac"
+                        "\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x92\xbb";
+
+    TextLayout::DecodeUTF8(text, scratch);
+
+    REQUIRE(scratch.Tokens.Size() == 5);
+    CHECK(scratch.Tokens[0].CodePoint == U'\U0001f1e7');
+    CHECK(scratch.Tokens[0].ClusterByteStart == 0);
+    CHECK(scratch.Tokens[0].ClusterByteEnd == 8);
+    CHECK(scratch.Tokens[1].CodePoint == U'\U0001f1ec');
+    CHECK(scratch.Tokens[1].ClusterByteStart == 0);
+    CHECK(scratch.Tokens[1].ClusterByteEnd == 8);
+    CHECK(scratch.Tokens[2].CodePoint == U'\U0001f469');
+    CHECK(scratch.Tokens[2].ClusterByteStart == 8);
+    CHECK(scratch.Tokens[2].ClusterByteEnd == 19);
+    CHECK(scratch.Tokens[3].CodePoint == U'\u200d');
+    CHECK(scratch.Tokens[3].ClusterByteStart == 8);
+    CHECK(scratch.Tokens[3].ClusterByteEnd == 19);
+    CHECK(scratch.Tokens[4].CodePoint == U'\U0001f4bb');
+    CHECK(scratch.Tokens[4].ClusterByteStart == 8);
+    CHECK(scratch.Tokens[4].ClusterByteEnd == 19);
+}
+
+TEST_CASE("Text layout normalizes newline sequences without losing byte offsets", "[Text][Layout][Unicode]")
+{
+    TextLayoutScratch scratch;
+
+    TextLayout::DecodeUTF8("\r\n\n\r", scratch);
+
+    REQUIRE(scratch.Tokens.Size() == 3);
+    for (size_t index = 0; index < scratch.Tokens.Size(); index++)
+        CHECK(scratch.Tokens[index].NewLine);
+    CHECK(scratch.Tokens[0].SourceByteStart == 0);
+    CHECK(scratch.Tokens[0].SourceByteEnd == 2);
+    CHECK(scratch.Tokens[1].SourceByteStart == 2);
+    CHECK(scratch.Tokens[1].SourceByteEnd == 3);
+    CHECK(scratch.Tokens[2].SourceByteStart == 3);
+    CHECK(scratch.Tokens[2].SourceByteEnd == 4);
+}
+
+TEST_CASE("Prepared text layout preserves contiguous font ownership runs", "[Text][Layout][Fonts]")
+{
+    Font primary;
+    Font fallback;
+    TextComponent component = MakeUnitTextComponent();
+    component.Wrapping = false;
+    TextLayoutScratch scratch;
+    AddLayoutToken(scratch, U'a');
+    AddLayoutToken(scratch, U'\u03b2');
+    AddLayoutToken(scratch, U'\u03b3');
+    scratch.Tokens[0].SourceFont = &primary;
+    scratch.Tokens[1].SourceFont = &fallback;
+    scratch.Tokens[2].SourceFont = &fallback;
+
+    const TextLayoutResult layout = TextLayout::BuildPrepared(component, UNIT_LAYOUT_FONT, scratch);
+
+    REQUIRE(layout.GlyphCount == 3);
+    CHECK(layout.Glyphs[0].SourceFont == &primary);
+    CHECK(layout.Glyphs[1].SourceFont == &fallback);
+    CHECK(layout.Glyphs[2].SourceFont == &fallback);
+    REQUIRE(layout.FontRunCount == 2);
+    CHECK(layout.FontRuns[0].SourceFont == &primary);
+    CHECK(layout.FontRuns[0].FirstGlyph == 0);
+    CHECK(layout.FontRuns[0].GlyphCount == 1);
+    CHECK(layout.FontRuns[1].SourceFont == &fallback);
+    CHECK(layout.FontRuns[1].FirstGlyph == 1);
+    CHECK(layout.FontRuns[1].GlyphCount == 2);
+}
+
+TEST_CASE("Text layout keeps grapheme clusters on one wrapped line", "[Text][Layout][Unicode]")
+{
+    TextComponent component = MakeUnitTextComponent();
+    component.LayoutSize = { 1.0f, 0.0f };
+    component.WrapMode = TextWrapMode::Character;
+    TextLayoutScratch scratch;
+    TextLayout::DecodeUTF8("e\xcc\x81x", scratch);
+    for (size_t index = 0; index < scratch.Tokens.Size(); index++)
+    {
+        scratch.Tokens[index].Advance = 1.0;
+        scratch.Tokens[index].Renderable = true;
+    }
+
+    const TextLayoutResult layout = TextLayout::BuildPrepared(component, UNIT_LAYOUT_FONT, scratch);
+
+    REQUIRE(layout.LineCount == 2);
+    CHECK(layout.Lines[0].TokenStart == 0);
+    CHECK(layout.Lines[0].TokenEnd == 2);
+    CHECK(layout.Lines[0].CaretCount == 2);
+    CHECK(layout.Carets[0].SourceByteOffset == 0);
+    CHECK(layout.Carets[1].SourceByteOffset == 3);
+    CHECK(layout.Lines[1].TokenStart == 2);
+}
+
+TEST_CASE("Text layout tabs advance to configurable tab stops", "[Text][Layout]")
+{
+    TextComponent component = MakeUnitTextComponent();
+    component.Wrapping = false;
+    TextLayoutScratch scratch;
+    AddLayoutToken(scratch, U'a');
+    AddLayoutToken(scratch, U'\t', true);
+    AddLayoutToken(scratch, U'b');
+
+    TextLayoutFontData fontData = UNIT_LAYOUT_FONT;
+    fontData.TabWidth = 4;
+    const TextLayoutResult fourSpaces = TextLayout::BuildPrepared(component, fontData, scratch);
+    REQUIRE(fourSpaces.GlyphCount == 2);
+    CHECK_THAT(fourSpaces.Glyphs[1].PenPosition.x, Catch::Matchers::WithinAbs(4.0f, 0.0001f));
+
+    fontData.TabWidth = 8;
+    const TextLayoutResult eightSpaces = TextLayout::BuildPrepared(component, fontData, scratch);
+    REQUIRE(eightSpaces.GlyphCount == 2);
+    CHECK_THAT(eightSpaces.Glyphs[1].PenPosition.x, Catch::Matchers::WithinAbs(8.0f, 0.0001f));
+}
+
+TEST_CASE("Text layout reports line and paragraph metrics", "[Text][Layout]")
+{
+    TextComponent component = MakeUnitTextComponent();
+    component.LineSpacing = 0.25f;
+    component.ParagraphSpacing = 0.5f;
+    TextLayoutScratch scratch;
+    AddLayoutToken(scratch, U'a');
+    AddLayoutToken(scratch, U'\n', false, true);
+    AddLayoutToken(scratch, U'b');
+
+    const TextLayoutResult layout = TextLayout::BuildPrepared(component, UNIT_LAYOUT_FONT, scratch);
+
+    REQUIRE(layout.LineCount == 2);
+    CHECK_THAT(layout.LineAdvance, Catch::Matchers::WithinAbs(1.25f, 0.0001f));
+    CHECK_THAT(layout.Lines[0].Baseline, Catch::Matchers::WithinAbs(0.0f, 0.0001f));
+    CHECK_THAT(layout.Lines[1].Baseline, Catch::Matchers::WithinAbs(-1.75f, 0.0001f));
+    CHECK_THAT(layout.Size.y, Catch::Matchers::WithinAbs(2.75f, 0.0001f));
+}
 
 TEST_CASE("Text layout hit testing follows visible caret geometry", "[Text][Layout]")
 {

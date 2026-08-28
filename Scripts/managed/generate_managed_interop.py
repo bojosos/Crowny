@@ -48,6 +48,7 @@ NATIVE_TYPES = {
     "string": "cw_managed_string_view",
     "vec2": "cw_managed_vec2",
     "vec3": "cw_managed_vec3",
+    "vec4": "cw_managed_vec4",
     "quat": "cw_managed_quat",
     "mat4": "cw_managed_mat4",
 }
@@ -61,6 +62,7 @@ HOST_CS_TYPES = {
     "string": "NativeStringView",
     "vec2": "NativeVec2",
     "vec3": "NativeVec3",
+    "vec4": "NativeVec4",
     "quat": "NativeQuaternion",
     "mat4": "NativeMatrix4",
 }
@@ -74,11 +76,12 @@ SHARP_CS_TYPES = {
     "string": "ManagedNativeStringView",
     "vec2": "ManagedNativeVec2",
     "vec3": "ManagedNativeVec3",
+    "vec4": "ManagedNativeVec4",
     "quat": "ManagedNativeQuaternion",
     "mat4": "ManagedNativeMatrix4",
 }
 
-POINTER_INPUT_TYPES = {"vec2", "vec3", "quat", "mat4"}
+POINTER_INPUT_TYPES = {"vec2", "vec3", "vec4", "quat", "mat4"}
 
 
 def native_host_function_typedefs(functions: dict) -> str:
@@ -216,6 +219,14 @@ typedef struct cw_managed_vec3
     float z;
 }} cw_managed_vec3;
 
+typedef struct cw_managed_vec4
+{{
+    float x;
+    float y;
+    float z;
+    float w;
+}} cw_managed_vec4;
+
 typedef struct cw_managed_quat
 {{
     float x;
@@ -336,6 +347,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_api_fn)(cw_managed_pro
 static_assert(sizeof(cw_managed_uuid) == 16, "Managed UUID ABI layout changed.");
 static_assert(sizeof(cw_managed_vec2) == 8, "Managed Vector2 ABI layout changed.");
 static_assert(sizeof(cw_managed_vec3) == 12, "Managed Vector3 ABI layout changed.");
+static_assert(sizeof(cw_managed_vec4) == 16, "Managed Vector4 ABI layout changed.");
 static_assert(sizeof(cw_managed_quat) == 16, "Managed quaternion ABI layout changed.");
 static_assert(sizeof(cw_managed_mat4) == 64, "Managed Matrix4 ABI layout changed.");
 static_assert(sizeof(cw_managed_contact_point) == 32, "Managed contact ABI layout changed.");
@@ -403,6 +415,15 @@ namespace Crowny.ManagedHost.Interop
         public float X;
         public float Y;
         public float Z;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeVec4
+    {{
+        public float X;
+        public float Y;
+        public float Z;
+        public float W;
     }}
 
     [StructLayout(LayoutKind.Sequential)]
@@ -564,6 +585,15 @@ namespace Crowny
         internal float X;
         internal float Y;
         internal float Z;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativeVec4
+    {{
+        internal float X;
+        internal float Y;
+        internal float Z;
+        internal float W;
     }}
 
     [StructLayout(LayoutKind.Sequential)]
