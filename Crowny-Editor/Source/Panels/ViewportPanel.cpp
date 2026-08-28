@@ -2,6 +2,7 @@
 
 #include "Editor/Editor.h"
 #include "Editor/EditorLayer.h"
+#include "Editor/ViewportTransformInteraction.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Events/ImGuiEvent.h"
@@ -727,8 +728,14 @@ namespace Crowny
                 }
 
                 const bool usingGizmo = ImGuizmo::IsUsing();
-                if (m_GizmoWasUsing && !usingGizmo)
+                const TransformInteractionCompletion completion = ResolveTransformInteractionCompletion(
+                  m_TransformTransaction.IsActive(), usingGizmo, Input::IsKeyPressed(Key::Escape));
+                if (completion == TransformInteractionCompletion::Cancel)
+                    CancelTransformInteraction();
+                else if (completion == TransformInteractionCompletion::Commit)
                     EndTransformInteraction();
+                // Keep the capture latched until ImGuizmo releases the mouse so
+                // an Escape cancellation cannot begin a second transaction.
                 m_GizmoWasUsing = usingGizmo;
             }
         }
