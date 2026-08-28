@@ -290,6 +290,12 @@ namespace Crowny
         [Obsolete("Use OrderInLayer instead.")]
         public int orderInLayer { get { return OrderInLayer; } set { OrderInLayer = value; } }
 
+        /// <summary>
+        /// Finds the nearest visible caret to a point in local text-layout coordinates.
+        /// The returned value is a UTF-8 byte offset into <see cref="text"/>.
+        /// </summary>
+        public uint HitTest(Vector2 localPosition) => HitTestNative(localPosition);
+
 #if CROWNY_MONO
         private string GetText() => Internal_GetText(m_InternalPtr);
         private void SetText(string value) => Internal_SetText(m_InternalPtr, value);
@@ -359,6 +365,7 @@ namespace Crowny
         private void SetSortingLayer(int value) => Internal_SetSortingLayer(m_InternalPtr, value);
         private int GetOrderInLayer() => Internal_GetOrderInLayer(m_InternalPtr);
         private void SetOrderInLayer(int value) => Internal_SetOrderInLayer(m_InternalPtr, value);
+        private uint HitTestNative(Vector2 localPosition) => Internal_HitTest(m_InternalPtr, ref localPosition);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern string Internal_GetText(IntPtr thisptr);
@@ -496,6 +503,8 @@ namespace Crowny
         private static extern int Internal_GetOrderInLayer(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_SetOrderInLayer(IntPtr thisptr, int value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern uint Internal_HitTest(IntPtr thisptr, ref Vector2 localPosition);
 #else
         private UUID EntityId => entity.uuid;
         private string GetText() => ManagedRuntimeContext.TextGetText(EntityId);
@@ -566,6 +575,7 @@ namespace Crowny
         private void SetSortingLayer(int value) => ManagedRuntimeContext.TextSetSortingLayer(EntityId, value);
         private int GetOrderInLayer() => ManagedRuntimeContext.TextGetOrderInLayer(EntityId);
         private void SetOrderInLayer(int value) => ManagedRuntimeContext.TextSetOrderInLayer(EntityId, value);
+        private uint HitTestNative(Vector2 localPosition) => ManagedRuntimeContext.TextHitTest(EntityId, localPosition);
 #endif
     }
 }

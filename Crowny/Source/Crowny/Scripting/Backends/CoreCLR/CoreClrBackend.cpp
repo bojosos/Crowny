@@ -7,6 +7,8 @@
 #include "Crowny/Input/Input.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Renderer/Font.h"
+#include "Crowny/Renderer/FontManager.h"
+#include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
 #include "Crowny/Scripting/Managed/Interop/CrownyManagedAbi.h"
@@ -216,12 +218,7 @@ namespace Crowny
                 return font.GetUUID();
             if (!font)
                 return {};
-            for (const AssetHandle<Font>& fallback : font->GetFallbackFonts())
-            {
-                if (fallback.Get() == source)
-                    return fallback.GetUUID();
-            }
-            return {};
+            return font->FindFallbackFontUUID(source);
         }
 
         cw_managed_font_character_info ToAbiCharacterInfo(const AssetHandle<Font>& font, const CharacterInfo& source)
@@ -1348,6 +1345,14 @@ namespace Crowny
             CW_TYPED_ENTITY_GET(TextGetOrderInLayer, CW_MANAGED_BINDING_TEXT_GET_ORDER_IN_LAYER, int32_t)
             CW_TYPED_ENTITY_SET_VALUE(TextSetOrderInLayer, CW_MANAGED_BINDING_TEXT_SET_ORDER_IN_LAYER, int32_t)
 
+            static cw_managed_status CW_MANAGED_CALL TextHitTest(void* context, cw_managed_uuid entity, const cw_managed_vec2* position,
+                                                                 uint32_t* result)
+            {
+                if (position == nullptr || result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_TEXT_HIT_TEST, entity, position, sizeof(*position), result, sizeof(*result));
+            }
+
             CW_TYPED_ENTITY_GET(FontGetIsValid, CW_MANAGED_BINDING_FONT_GET_IS_VALID, uint8_t)
             CW_TYPED_ENTITY_GET(FontGetGlyphCount, CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT, uint32_t)
             CW_TYPED_ENTITY_GET(FontGetTabWidth, CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH, uint32_t)
@@ -1362,8 +1367,7 @@ namespace Crowny
             }
 
             static cw_managed_status CW_MANAGED_CALL FontGetCharacterInfo(void* context, cw_managed_uuid font, uint32_t codePoint,
-                                                                          uint8_t useFallbacks,
-                                                                          cw_managed_font_character_info* result)
+                                                                          uint8_t useFallbacks, cw_managed_font_character_info* result)
             {
                 Array<uint8_t, sizeof(codePoint) + sizeof(useFallbacks)> payload{};
                 std::memcpy(payload.data(), &codePoint, sizeof(codePoint));
@@ -1372,14 +1376,12 @@ namespace Crowny
                                            sizeof(*result));
             }
 
-            static cw_managed_status CW_MANAGED_CALL FontGetFallback(void* context, cw_managed_uuid font, uint32_t index,
-                                                                      cw_managed_uuid* result)
+            static cw_managed_status CW_MANAGED_CALL FontGetFallback(void* context, cw_managed_uuid font, uint32_t index, cw_managed_uuid* result)
             {
                 return ForwardTypedBinding(context, CW_MANAGED_BINDING_FONT_GET_FALLBACK, font, &index, sizeof(index), result, sizeof(*result));
             }
 
-            static cw_managed_status CW_MANAGED_CALL FontAddFallback(void* context, cw_managed_uuid font, cw_managed_uuid value,
-                                                                      uint8_t* result)
+            static cw_managed_status CW_MANAGED_CALL FontAddFallback(void* context, cw_managed_uuid font, cw_managed_uuid value, uint8_t* result)
             {
                 return ForwardTypedBinding(context, CW_MANAGED_BINDING_FONT_ADD_FALLBACK, font, &value, sizeof(value), result, sizeof(*result));
             }
@@ -1998,6 +2000,31 @@ namespace Crowny
                             source.SetTime(value);
                         return CW_MANAGED_STATUS_OK;
                     }
+                    case CW_MANAGED_BINDING_TEXT_HIT_TEST: {
+                        float position[2]{};
+                        if (!ReadBindingFloats(input, position, 2))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+
+                        Entity entity = resolveEntity();
+                        if (!entity || !entity.HasComponent<TextComponent>())
+                            return CW_MANAGED_STATUS_STALE_HANDLE;
+
+                        const TextComponent& component = entity.GetComponent<TextComponent>();
+                        AssetHandle<Font> font = component.Font;
+                        if (!font)
+                            font = FontManager::GetDefaultFont();
+                        uint32_t sourceByteOffset = 0;
+                        if (font && font->IsValid())
+                        {
+                            TextLayoutScratch scratch;
+                            const TextLayoutResult layout = TextLayout::Build(component, *font, scratch);
+                            const TextHitTestResult hit = TextLayout::HitTest(layout, glm::vec2(position[0], position[1]));
+                            if (hit.Valid)
+                                sourceByteOffset =
+                                  static_cast<uint32_t>(std::min(hit.SourceByteOffset, size_t(std::numeric_limits<uint32_t>::max())));
+                        }
+                        return WriteBindingResult(output, sourceByteOffset);
+                    }
                     case CW_MANAGED_BINDING_TEXT_GET_TEXT:
                     case CW_MANAGED_BINDING_TEXT_GET_FONT:
                     case CW_MANAGED_BINDING_TEXT_GET_COLOR:
@@ -2332,22 +2359,18 @@ namespace Crowny
                         case CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT: {
                             if (input.length != 0)
                                 return CW_MANAGED_STATUS_INVALID_ARGUMENT;
-                            const uint32_t result = static_cast<uint32_t>(
-                              std::min(font->GetGlyphCount(), static_cast<size_t>(std::numeric_limits<uint32_t>::max())));
+                            const uint32_t result =
+                              static_cast<uint32_t>(std::min(font->GetGlyphCount(), static_cast<size_t>(std::numeric_limits<uint32_t>::max())));
                             return WriteBindingResult(output, result);
                         }
                         case CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH:
-                            return input.length == 0 ? WriteBindingResult(output, font->GetTabWidth())
-                                                     : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            return input.length == 0 ? WriteBindingResult(output, font->GetTabWidth()) : CW_MANAGED_STATUS_INVALID_ARGUMENT;
                         case CW_MANAGED_BINDING_FONT_GET_ATLAS_WIDTH:
-                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasWidth())
-                                                     : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasWidth()) : CW_MANAGED_STATUS_INVALID_ARGUMENT;
                         case CW_MANAGED_BINDING_FONT_GET_ATLAS_HEIGHT:
-                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasHeight())
-                                                     : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasHeight()) : CW_MANAGED_STATUS_INVALID_ARGUMENT;
                         case CW_MANAGED_BINDING_FONT_GET_ATLAS_PIXEL_RANGE:
-                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasPixelRange())
-                                                     : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasPixelRange()) : CW_MANAGED_STATUS_INVALID_ARGUMENT;
                         case CW_MANAGED_BINDING_FONT_HAS_GLYPH: {
                             uint32_t codePoint = 0;
                             if (!ReadBindingValue(input, codePoint))

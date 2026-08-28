@@ -20,17 +20,17 @@
 #include "Crowny/Physics/Physics3D.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/SamplerState.h"
-#include "Crowny/Renderer/Font.h"
+#include "Crowny/Renderer/FontManager.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Threading/TaskSystem.h"
 
-#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Managed/ManagedBackendSelection.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
+#include "Crowny/Scripting/ManagedReload.h"
 
 namespace Crowny
 {
@@ -99,7 +99,7 @@ namespace Crowny
 
         void LoadDefaultFont()
         {
-            if (!RenderAPI::IsStartedUp() || Font::GetDefaultFont())
+            if (!RenderAPI::IsStartedUp() || FontManager::GetDefaultFont())
                 return;
 
             const Path defaultFontPath = "Resources/Fonts/Roboto/roboto-thin.ttf.asset";
@@ -107,7 +107,7 @@ namespace Crowny
             {
                 const AssetHandle<Font> defaultFont = AssetManager::Get().Load<Font>(defaultFontPath);
                 if (defaultFont)
-                    Font::SetDefaultFont(defaultFont);
+                    FontManager::SetDefaultFont(defaultFont);
                 else
                     CW_ENGINE_ERROR("Default font cache could not be loaded.");
                 return;
@@ -346,8 +346,7 @@ namespace Crowny
                 engineAssemblyPath = m_State->Description.WorkingDirectory / engineAssemblyPath;
             if (m_State->Description.EngineAssemblyPath.empty())
                 return;
-            program.Artifacts.push_back(
-              { ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, std::move(engineAssemblyPath) });
+            program.Artifacts.push_back({ ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, std::move(engineAssemblyPath) });
 
             Path gameAssemblyPath = m_State->Description.GameAssemblyPath;
             if (gameAssemblyPath.is_relative())
@@ -385,7 +384,7 @@ namespace Crowny
         if (!m_State->RendererResourcesStarted)
             return;
 
-        Font::SetDefaultFont({});
+        FontManager::Clear();
         SamplerState::s_DefaultSamplerState = nullptr;
         SamplerState::ClearCache();
         Renderer2D::Shutdown();

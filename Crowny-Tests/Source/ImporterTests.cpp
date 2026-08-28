@@ -6,6 +6,7 @@
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
 
 #include <chrono>
+#include <cmath>
 #include <fstream>
 #include <rapidjson/document.h>
 #include <yaml-cpp/yaml.h>
@@ -502,6 +503,7 @@ TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer]
     source->SamplingFontSize = 48;
     source->AutoSizeAtlas = true;
     source->AtlasDimensionsConstraint = Font::AtlasDimensionsConstraint::POWER_OF_TWO_RECTANGLE;
+    source->AtlasPixelRange = 4.5f;
     source->Range = CharsetRange::SymbolRange;
     source->CustomCharset = "\xE4\xB8\x96\xF0\x9F\x8C\x8D";
     source->Padding = 3;
@@ -521,6 +523,7 @@ TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer]
     CHECK(restored->SamplingFontSize == 48);
     CHECK(restored->AutoSizeAtlas);
     CHECK(restored->AtlasDimensionsConstraint == Font::AtlasDimensionsConstraint::POWER_OF_TWO_RECTANGLE);
+    CHECK(restored->AtlasPixelRange == Catch::Approx(4.5f));
     CHECK(restored->Range == CharsetRange::SymbolRange);
     CHECK(restored->CustomCharset == source->CustomCharset);
     CHECK(restored->Padding == 3);
@@ -529,4 +532,25 @@ TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer]
     REQUIRE(restored->FallbackFonts.size() == 2);
     CHECK(restored->FallbackFonts[0] == firstFallback);
     CHECK(restored->FallbackFonts[1] == secondFallback);
+}
+
+TEST_CASE("Font import metadata sanitizes the MSDF pixel range", "[Assets][Importer][Font]")
+{
+    const auto deserializeRange = [](StringView value) {
+        const String yaml = fmt::format("FontImporter:\n  AtlasPixelRange: {}\n", value);
+        return StaticRefCast<FontImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load(yaml)));
+    };
+
+    const Ref<FontImportOptions> notANumber = deserializeRange(".nan");
+    REQUIRE(notANumber != nullptr);
+    CHECK(std::isfinite(notANumber->AtlasPixelRange));
+    CHECK(notANumber->AtlasPixelRange == Catch::Approx(FontImportOptions::DEFAULT_ATLAS_PIXEL_RANGE));
+
+    const Ref<FontImportOptions> belowMinimum = deserializeRange("0.1");
+    REQUIRE(belowMinimum != nullptr);
+    CHECK(belowMinimum->AtlasPixelRange == Catch::Approx(FontImportOptions::MIN_ATLAS_PIXEL_RANGE));
+
+    const Ref<FontImportOptions> aboveMaximum = deserializeRange("32.0");
+    REQUIRE(aboveMaximum != nullptr);
+    CHECK(aboveMaximum->AtlasPixelRange == Catch::Approx(FontImportOptions::MAX_ATLAS_PIXEL_RANGE));
 }

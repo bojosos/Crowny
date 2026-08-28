@@ -3,6 +3,7 @@
 #include "Crowny/Renderer/TextLayout.h"
 
 #include "Crowny/Common/UTF8.h"
+#include "Crowny/Common/UnicodeGrapheme.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/MSDFdata.h"
@@ -19,13 +20,6 @@ namespace Crowny
         {
             return codePoint == U'\t' || codePoint == U' ' || codePoint == 0x00A0 || codePoint == 0x1680 ||
                    (codePoint >= 0x2000 && codePoint <= 0x200A) || codePoint == 0x202F || codePoint == 0x205F || codePoint == 0x3000;
-        }
-
-        bool IsCombiningMark(char32_t codePoint)
-        {
-            return (codePoint >= 0x0300 && codePoint <= 0x036F) || (codePoint >= 0x1AB0 && codePoint <= 0x1AFF) ||
-                   (codePoint >= 0x1DC0 && codePoint <= 0x1DFF) || (codePoint >= 0x20D0 && codePoint <= 0x20FF) ||
-                   (codePoint >= 0xFE20 && codePoint <= 0xFE2F);
         }
 
         bool IsBreakableWhitespace(char32_t codePoint) { return IsTextWhitespace(codePoint) && codePoint != 0x00A0 && codePoint != 0x202F; }
@@ -74,22 +68,83 @@ namespace Crowny
             return (codePoint >= 0xFE00 && codePoint <= 0xFE0F) || (codePoint >= 0xE0100 && codePoint <= 0xE01EF);
         }
 
-        bool IsEmojiModifier(char32_t codePoint) { return codePoint >= 0x1F3FB && codePoint <= 0x1F3FF; }
+        bool IsRegionalIndicator(char32_t codePoint)
+        {
+            return UnicodeGrapheme::GetBreakProperty(codePoint) == GraphemeBreakProperty::RegionalIndicator;
+        }
 
-        bool IsRegionalIndicator(char32_t codePoint) { return codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF; }
+        bool IsNonspacingGrapheme(char32_t codePoint)
+        {
+            const GraphemeBreakProperty property = UnicodeGrapheme::GetBreakProperty(codePoint);
+            return property == GraphemeBreakProperty::ZWJ ||
+                   (property == GraphemeBreakProperty::Extend && !UnicodeGrapheme::IsSpacingMark(codePoint));
+        }
+
+        bool IsIndicConjunct(const FrameVector<TextLayoutToken>& tokens, size_t index)
+        {
+            if (UnicodeGrapheme::GetIndicConjunctBreakProperty(tokens[index].CodePoint) != IndicConjunctBreakProperty::Consonant)
+                return false;
+
+            bool hasLinker = false;
+            size_t cursor = index;
+            while (cursor > 0)
+            {
+                const IndicConjunctBreakProperty property = UnicodeGrapheme::GetIndicConjunctBreakProperty(tokens[--cursor].CodePoint);
+                if (property == IndicConjunctBreakProperty::Linker)
+                {
+                    hasLinker = true;
+                    continue;
+                }
+                if (property == IndicConjunctBreakProperty::Extend)
+                    continue;
+                return hasLinker && property == IndicConjunctBreakProperty::Consonant;
+            }
+            return false;
+        }
+
+        bool IsEmojiJoin(const FrameVector<TextLayoutToken>& tokens, size_t index)
+        {
+            if (!UnicodeGrapheme::IsExtendedPictographic(tokens[index].CodePoint) || index == 0 ||
+                UnicodeGrapheme::GetBreakProperty(tokens[index - 1].CodePoint) != GraphemeBreakProperty::ZWJ)
+                return false;
+
+            size_t cursor = index - 1;
+            while (cursor > 0 && UnicodeGrapheme::GetBreakProperty(tokens[cursor - 1].CodePoint) == GraphemeBreakProperty::Extend)
+                cursor--;
+            return cursor > 0 && UnicodeGrapheme::IsExtendedPictographic(tokens[cursor - 1].CodePoint);
+        }
 
         bool ContinuesCluster(const FrameVector<TextLayoutToken>& tokens, size_t index, uint32_t regionalIndicatorCount)
         {
             if (index == 0 || tokens[index].NewLine || tokens[index - 1].NewLine)
                 return false;
 
-            const char32_t codePoint = tokens[index].CodePoint;
-            const char32_t previous = tokens[index - 1].CodePoint;
-            if (IsCombiningMark(codePoint) || IsVariationSelector(codePoint) || IsEmojiModifier(codePoint) || codePoint == 0x200D ||
-                previous == 0x200D)
+            const GraphemeBreakProperty current = UnicodeGrapheme::GetBreakProperty(tokens[index].CodePoint);
+            const GraphemeBreakProperty previous = UnicodeGrapheme::GetBreakProperty(tokens[index - 1].CodePoint);
+
+            if (previous == GraphemeBreakProperty::CR && current == GraphemeBreakProperty::LF)
+                return true;
+            if (previous == GraphemeBreakProperty::CR || previous == GraphemeBreakProperty::LF || previous == GraphemeBreakProperty::Control ||
+                current == GraphemeBreakProperty::CR || current == GraphemeBreakProperty::LF || current == GraphemeBreakProperty::Control)
+                return false;
+
+            if (previous == GraphemeBreakProperty::L && (current == GraphemeBreakProperty::L || current == GraphemeBreakProperty::V ||
+                                                         current == GraphemeBreakProperty::LV || current == GraphemeBreakProperty::LVT))
+                return true;
+            if ((previous == GraphemeBreakProperty::LV || previous == GraphemeBreakProperty::V) &&
+                (current == GraphemeBreakProperty::V || current == GraphemeBreakProperty::T))
+                return true;
+            if ((previous == GraphemeBreakProperty::LVT || previous == GraphemeBreakProperty::T) && current == GraphemeBreakProperty::T)
                 return true;
 
-            return IsRegionalIndicator(previous) && IsRegionalIndicator(codePoint) && regionalIndicatorCount % 2 == 1;
+            if (current == GraphemeBreakProperty::Extend || current == GraphemeBreakProperty::ZWJ || current == GraphemeBreakProperty::SpacingMark ||
+                previous == GraphemeBreakProperty::Prepend)
+                return true;
+            if (IsIndicConjunct(tokens, index) || IsEmojiJoin(tokens, index))
+                return true;
+
+            return previous == GraphemeBreakProperty::RegionalIndicator && current == GraphemeBreakProperty::RegionalIndicator &&
+                   regionalIndicatorCount % 2 == 1;
         }
 
         void AssignClusterRanges(TextLayoutScratch& scratch)
@@ -133,28 +188,15 @@ namespace Crowny
             char32_t CodePoint = 0;
         };
 
-        template <typename FontType> ResolvedGlyph ResolveGlyph(const FontType& font, char32_t codePoint)
+        ResolvedGlyph ResolveGlyph(const Font& font, char32_t codePoint)
         {
-            if constexpr (requires { font.ResolveGlyph(codePoint); })
-            {
-                const auto lookup = font.ResolveGlyph(codePoint);
-                return { lookup.SourceFont, lookup.Glyph, lookup.ResolvedCodePoint };
-            }
-            else
-            {
-                char32_t resolvedCodePoint = 0;
-                const msdf_atlas::GlyphGeometry* glyph = font.GetGlyph(codePoint, &resolvedCodePoint);
-                return { glyph != nullptr ? &font : nullptr, glyph, resolvedCodePoint };
-            }
+            const Font::GlyphLookup lookup = font.ResolveGlyph(codePoint);
+            return { lookup.SourceFont, lookup.Glyph, lookup.ResolvedCodePoint };
         }
 
-        template <typename ComponentType> uint32_t ResolveTabWidth(const ComponentType& component, const Font& font)
-        {
-            if constexpr (requires { component.TabWidth; })
-                return std::max(1U, static_cast<uint32_t>(component.TabWidth));
-            else
-                return font.GetTabWidth();
-        }
+        uint32_t ResolveTabWidth(const TextComponent& component) { return std::max(1U, component.TabWidth); }
+
+        bool TokensShareCluster(const TextLayoutToken& left, const TextLayoutToken& right);
 
         void ResolveTokenFonts(const TextComponent& component, const Font& font, TextLayoutScratch& scratch)
         {
@@ -177,10 +219,13 @@ namespace Crowny
                 if (token.NewLine || token.Invisible || token.CodePoint == U'\t' || token.SourceFont == nullptr)
                     continue;
 
+                size_t nextIndex = index + 1;
+                while (nextIndex < scratch.Tokens.Size() && TokensShareCluster(token, scratch.Tokens[nextIndex]))
+                    nextIndex++;
                 char32_t nextCodePoint = 0;
-                if (index + 1 < scratch.Tokens.Size() && token.SourceFont == scratch.Tokens[index + 1].SourceFont &&
-                    !scratch.Tokens[index + 1].NewLine)
-                    nextCodePoint = scratch.Tokens[index + 1].ResolvedCodePoint;
+                if (nextIndex < scratch.Tokens.Size() && token.SourceFont == scratch.Tokens[nextIndex].SourceFont &&
+                    !scratch.Tokens[nextIndex].NewLine)
+                    nextCodePoint = scratch.Tokens[nextIndex].ResolvedCodePoint;
                 token.Advance = token.SourceFont->GetAdvance(token.ResolvedCodePoint, nextCodePoint, component.UseKerning);
             }
         }
@@ -194,8 +239,7 @@ namespace Crowny
         double TokenAdvance(const TextLayoutToken& token, double penX, double glyphScale, const TextComponent& component,
                             const TextLayoutFontData& fontData)
         {
-            if (token.NewLine || token.CodePoint == 0x200B || token.CodePoint == 0x00AD || token.CodePoint == 0x200D ||
-                IsVariationSelector(token.CodePoint))
+            if (token.NewLine || token.CodePoint == 0x200B || token.CodePoint == 0x00AD || IsNonspacingGrapheme(token.CodePoint))
                 return 0.0;
 
             if (token.CodePoint == U'\t')
@@ -483,7 +527,9 @@ namespace Crowny
             token.NewLine = codePoint == U'\n';
             token.WhiteSpace = IsTextWhitespace(codePoint);
             token.Invisible = codePoint == 0x200B || codePoint == 0x00AD || codePoint == 0x200D || IsVariationSelector(codePoint);
-            token.CombiningMark = IsCombiningMark(codePoint) || IsVariationSelector(codePoint) || IsEmojiModifier(codePoint) || codePoint == 0x200D;
+            const GraphemeBreakProperty graphemeProperty = UnicodeGrapheme::GetBreakProperty(codePoint);
+            token.CombiningMark = graphemeProperty == GraphemeBreakProperty::Extend || graphemeProperty == GraphemeBreakProperty::SpacingMark ||
+                                  graphemeProperty == GraphemeBreakProperty::ZWJ;
         }
 
         AssignClusterRanges(scratch);
@@ -515,7 +561,7 @@ namespace Crowny
                                            fontMetrics->lineHeight,
                                            space.SourceFont != nullptr ? space.SourceFont->GetAdvance(space.CodePoint, 0, false) : 0.0,
                                            ellipsis.SourceFont != nullptr ? ellipsis.SourceFont->GetAdvance(ellipsis.CodePoint) : 0.0,
-                                           ResolveTabWidth(component, font),
+                                           ResolveTabWidth(component),
                                            ellipsis.Glyph,
                                            ellipsis.SourceFont };
         return BuildPrepared(component, fontData, scratch);
@@ -676,6 +722,7 @@ namespace Crowny
             const double gapExpansion = line.ExpandableGaps > 0 ? (relativeWidth - naturalOutputWidth) / line.ExpandableGaps : 0.0;
             const bool whitespaceGaps = CountWhitespaceGaps(scratch, line.TokenStart, line.RenderTokenEnd) > 0;
             uint32_t expandedCharacterGaps = 0;
+            double clusterPen = pen;
 
             const size_t initialSourceByteOffset =
               line.TokenStart < scratch.Tokens.Size() ? scratch.Tokens[line.TokenStart].SourceByteStart : scratch.SourceByteLength;
@@ -687,6 +734,8 @@ namespace Crowny
             for (size_t index = line.TokenStart; index < line.RenderTokenEnd; index++)
             {
                 const TextLayoutToken& token = scratch.Tokens[index];
+                if (index == line.TokenStart || !TokensShareCluster(scratch.Tokens[index - 1], token))
+                    clusterPen = pen;
                 const double advance = TokenAdvance(token, pen - line.X, natural.GlyphScale, component, fontData);
                 if (token.Renderable && !token.WhiteSpace && !token.Invisible)
                 {
@@ -694,7 +743,8 @@ namespace Crowny
                     glyph.CodePoint = token.ResolvedCodePoint != 0 ? token.ResolvedCodePoint : token.CodePoint;
                     glyph.Glyph = token.Glyph;
                     glyph.SourceFont = token.SourceFont;
-                    glyph.PenPosition = { static_cast<float>(pen), line.Baseline };
+                    const double glyphPen = token.CombiningMark && IsNonspacingGrapheme(token.CodePoint) ? clusterPen : pen;
+                    glyph.PenPosition = { static_cast<float>(glyphPen), line.Baseline };
                     glyph.Advance = static_cast<float>(advance);
                     glyph.LineIndex = static_cast<uint32_t>(lineIndex);
                     AddGlyphToFontRun(scratch, glyph);

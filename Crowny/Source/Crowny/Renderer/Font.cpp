@@ -16,6 +16,53 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        constexpr size_t MAX_FALLBACK_SEARCH_FONTS = 64;
+
+        Font::GlyphLookup FindGlyphInFallbackGraph(const Font& font, char32_t codePoint, UnorderedSet<const Font*>& visited, size_t& remainingFonts)
+        {
+            if (remainingFonts == 0 || !visited.insert(&font).second)
+                return {};
+            remainingFonts--;
+
+            if (font.IsValid())
+            {
+                if (const msdf_atlas::GlyphGeometry* glyph = font.FindGlyph(codePoint))
+                    return { &font, glyph, codePoint };
+            }
+
+            for (const AssetHandle<Font>& fallback : font.GetFallbackFonts())
+            {
+                if (fallback)
+                {
+                    if (Font::GlyphLookup lookup = FindGlyphInFallbackGraph(*fallback, codePoint, visited, remainingFonts))
+                        return lookup;
+                }
+            }
+            return {};
+        }
+
+        UUID FindFallbackUuid(const Font& font, const Font* source, UnorderedSet<const Font*>& visited, size_t& remainingFonts)
+        {
+            if (source == nullptr || remainingFonts == 0 || !visited.insert(&font).second)
+                return {};
+            remainingFonts--;
+
+            for (const AssetHandle<Font>& fallback : font.GetFallbackFonts())
+            {
+                if (!fallback)
+                    continue;
+                if (fallback.Get() == source)
+                    return fallback.GetUUID();
+                const UUID nested = FindFallbackUuid(*fallback, source, visited, remainingFonts);
+                if (!nested.Empty())
+                    return nested;
+            }
+            return {};
+        }
+    } // namespace
+
     AssetHandle<Font> Font::s_DefaultFont;
 
     Font::Font() = default;
@@ -75,49 +122,28 @@ namespace Crowny
 
     Font::GlyphLookup Font::ResolveGlyph(char32_t codePoint, bool useFallbacks) const
     {
-        auto findExact = [codePoint](const Font& font) -> GlyphLookup {
-            if (!font.IsValid())
-                return {};
-            const msdf_atlas::GlyphGeometry* glyph = font.FindGlyph(codePoint);
-            return glyph != nullptr ? GlyphLookup{ &font, glyph, codePoint } : GlyphLookup{};
+        auto find = [this, useFallbacks](char32_t candidate) {
+            if (!useFallbacks)
+            {
+                if (!IsValid())
+                    return GlyphLookup{};
+                const msdf_atlas::GlyphGeometry* glyph = FindGlyph(candidate);
+                return glyph != nullptr ? GlyphLookup{ this, glyph, candidate } : GlyphLookup{};
+            }
+
+            UnorderedSet<const Font*> visited;
+            size_t remainingFonts = MAX_FALLBACK_SEARCH_FONTS;
+            return FindGlyphInFallbackGraph(*this, candidate, visited, remainingFonts);
         };
 
-        if (GlyphLookup lookup = findExact(*this))
+        if (GlyphLookup lookup = find(codePoint))
             return lookup;
-        if (useFallbacks)
-        {
-            for (const AssetHandle<Font>& fallback : m_FallbackFonts)
-            {
-                if (fallback)
-                {
-                    if (GlyphLookup lookup = findExact(*fallback))
-                        return lookup;
-                }
-            }
-        }
 
         constexpr Array<char32_t, 3> replacementCodePoints = { 0xFFFD, 0x25A1, U'?' };
         for (char32_t replacement : replacementCodePoints)
         {
-            auto findReplacement = [replacement](const Font& font) -> GlyphLookup {
-                if (!font.IsValid())
-                    return {};
-                const msdf_atlas::GlyphGeometry* glyph = font.FindGlyph(replacement);
-                return glyph != nullptr ? GlyphLookup{ &font, glyph, replacement } : GlyphLookup{};
-            };
-
-            if (GlyphLookup lookup = findReplacement(*this))
+            if (GlyphLookup lookup = find(replacement))
                 return lookup;
-            if (!useFallbacks)
-                continue;
-            for (const AssetHandle<Font>& fallback : m_FallbackFonts)
-            {
-                if (fallback)
-                {
-                    if (GlyphLookup lookup = findReplacement(*fallback))
-                        return lookup;
-                }
-            }
         }
         return {};
     }
@@ -293,6 +319,13 @@ namespace Crowny
     {
         m_FallbackFonts.clear();
         m_FallbackFontIds.clear();
+    }
+
+    UUID Font::FindFallbackFontUUID(const Font* font) const
+    {
+        UnorderedSet<const Font*> visited;
+        size_t remainingFonts = MAX_FALLBACK_SEARCH_FONTS;
+        return FindFallbackUuid(*this, font, visited, remainingFonts);
     }
 
     bool Font::ReferencesFont(const Font* font, UnorderedSet<const Font*>& visited) const

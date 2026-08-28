@@ -631,8 +631,7 @@ namespace Crowny
         }
         else
         {
-            Vector<String> atlasSizeUIValues = { "4",   "8",    "16",   "32",   "64",   "128",  "256",
-                                                 "512", "1024", "2048", "4096", "8192", "16384" };
+            Vector<String> atlasSizeUIValues = { "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192", "16384" };
             auto findSizeIdx = [&atlasSizeUIValues](uint32_t size) -> uint32_t {
                 const String value = std::to_string(size);
                 const auto iter = std::find(atlasSizeUIValues.begin(), atlasSizeUIValues.end(), value);
@@ -653,6 +652,8 @@ namespace Crowny
                 m_HasPropertyChanged = true;
             }
         }
+        m_HasPropertyChanged |= UI::Property("MSDF Pixel Range", opts->AtlasPixelRange, 0.1f, FontImportOptions::MIN_ATLAS_PIXEL_RANGE,
+                                             FontImportOptions::MAX_ATLAS_PIXEL_RANGE);
         m_HasPropertyChanged |= UI::PropertyDropdown(
           "Charset Range",
           { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols", "Symbol Range", "Decimal Range", "Hex Range" },
@@ -691,8 +692,9 @@ namespace Crowny
                     continue;
                 }
 
-                const bool isDuplicate = std::find(opts->FallbackFonts.begin(), opts->FallbackFonts.end(), selectedFont) != opts->FallbackFonts.end() &&
-                                         selectedFont != opts->FallbackFonts[index];
+                const bool isDuplicate =
+                  std::find(opts->FallbackFonts.begin(), opts->FallbackFonts.end(), selectedFont) != opts->FallbackFonts.end() &&
+                  selectedFont != opts->FallbackFonts[index];
                 if (selectedFont != inspectedFont && !isDuplicate)
                 {
                     opts->FallbackFonts[index] = selectedFont;
@@ -808,14 +810,12 @@ namespace Crowny
         m_HasPropertyChanged |= UI::Property("Detect format", opts->AutomaticFormat);
         {
             static constexpr std::array<TextureFormat, 15> formats = {
-                TextureFormat::R8,      TextureFormat::RG8,      TextureFormat::RGB8,    TextureFormat::RGBA8,
-                TextureFormat::BGRA8,   TextureFormat::R16,      TextureFormat::RG16,    TextureFormat::RGB16,
-                TextureFormat::RGBA16,  TextureFormat::RG16F,    TextureFormat::RGBA16F, TextureFormat::R32F,
-                TextureFormat::RG32F,   TextureFormat::RGB32F,   TextureFormat::RGBA32F,
+                TextureFormat::R8,      TextureFormat::RG8,  TextureFormat::RGB8,  TextureFormat::RGBA8,  TextureFormat::BGRA8,
+                TextureFormat::R16,     TextureFormat::RG16, TextureFormat::RGB16, TextureFormat::RGBA16, TextureFormat::RG16F,
+                TextureFormat::RGBA16F, TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGB32F, TextureFormat::RGBA32F,
             };
-            static const Vector<String> formatNames = { "R8",      "RG8",      "RGB8",    "RGBA8",  "BGRA8",
-                                                        "R16",     "RG16",     "RGB16",   "RGBA16", "RG16F",
-                                                        "RGBA16F", "R32F",     "RG32F",   "RGB32F", "RGBA32F" };
+            static const Vector<String> formatNames = { "R8",     "RG8",   "RGB8",    "RGBA8", "BGRA8", "R16",    "RG16",   "RGB16",
+                                                        "RGBA16", "RG16F", "RGBA16F", "R32F",  "RG32F", "RGB32F", "RGBA32F" };
             uint32_t formatIndex = 0;
             const auto selected = std::find(formats.begin(), formats.end(), opts->Format);
             if (selected != formats.end())

@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 8u
+#define CW_MANAGED_ABI_VERSION 9u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -236,6 +236,7 @@ enum cw_managed_host_binding
     CW_MANAGED_BINDING_TEXT_SET_SORTING_LAYER = 265,
     CW_MANAGED_BINDING_TEXT_GET_ORDER_IN_LAYER = 266,
     CW_MANAGED_BINDING_TEXT_SET_ORDER_IN_LAYER = 267,
+    CW_MANAGED_BINDING_TEXT_HIT_TEST = 268,
     CW_MANAGED_BINDING_FONT_GET_IS_VALID = 300,
     CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT = 301,
     CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH = 302,
@@ -544,6 +545,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_sorting_layer_fn)
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_hit_test_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* position, uint32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_is_valid_fn)(void* context, cw_managed_uuid font, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_glyph_count_fn)(void* context, cw_managed_uuid font, uint32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_tab_width_fn)(void* context, cw_managed_uuid font, uint32_t* result);
@@ -751,6 +753,7 @@ typedef struct cw_managed_host_api
     cw_managed_text_set_sorting_layer_fn text_set_sorting_layer;
     cw_managed_text_get_order_in_layer_fn text_get_order_in_layer;
     cw_managed_text_set_order_in_layer_fn text_set_order_in_layer;
+    cw_managed_text_hit_test_fn text_hit_test;
     cw_managed_font_get_is_valid_fn font_get_is_valid;
     cw_managed_font_get_glyph_count_fn font_get_glyph_count;
     cw_managed_font_get_tab_width_fn font_get_tab_width;
@@ -948,6 +951,7 @@ typedef struct cw_managed_host_api
     X(TextSetSortingLayer, text_set_sorting_layer) \
     X(TextGetOrderInLayer, text_get_order_in_layer) \
     X(TextSetOrderInLayer, text_set_order_in_layer) \
+    X(TextHitTest, text_hit_test) \
     X(FontGetIsValid, font_get_is_valid) \
     X(FontGetGlyphCount, font_get_glyph_count) \
     X(FontGetTabWidth, font_get_tab_width) \

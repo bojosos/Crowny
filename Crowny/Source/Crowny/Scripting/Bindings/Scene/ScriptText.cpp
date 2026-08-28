@@ -1,8 +1,12 @@
 #include "cwpch.h"
 
+#include "Crowny/Renderer/FontManager.h"
+#include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptText.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
+
+#include <limits>
 
 namespace Crowny
 {
@@ -79,6 +83,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetSortingLayer", (void*)&Internal_SetSortingLayer);
         MetaData.ScriptClass->AddInternalCall("Internal_GetOrderInLayer", (void*)&Internal_GetOrderInLayer);
         MetaData.ScriptClass->AddInternalCall("Internal_SetOrderInLayer", (void*)&Internal_SetOrderInLayer);
+        MetaData.ScriptClass->AddInternalCall("Internal_HitTest", (void*)&Internal_HitTest);
     }
 
     MonoString* ScriptText::Internal_GetText(ScriptText* thisPtr) { return MonoUtils::ToMonoString(thisPtr->GetComponent().Text); }
@@ -257,5 +262,23 @@ namespace Crowny
     int32_t ScriptText::Internal_GetOrderInLayer(ScriptText* thisPtr) { return thisPtr->GetComponent().OrderInLayer; }
 
     void ScriptText::Internal_SetOrderInLayer(ScriptText* thisPtr, int32_t value) { thisPtr->GetComponent().OrderInLayer = value; }
+
+    uint32_t ScriptText::Internal_HitTest(ScriptText* thisPtr, glm::vec2* localPosition)
+    {
+        if (thisPtr == nullptr || localPosition == nullptr)
+            return 0;
+
+        const TextComponent& component = thisPtr->GetComponent();
+        AssetHandle<Font> font = component.Font;
+        if (!font)
+            font = FontManager::GetDefaultFont();
+        if (!font || !font->IsValid())
+            return 0;
+
+        TextLayoutScratch scratch;
+        const TextLayoutResult layout = TextLayout::Build(component, *font, scratch);
+        const TextHitTestResult hit = TextLayout::HitTest(layout, *localPosition);
+        return hit.Valid ? static_cast<uint32_t>(std::min(hit.SourceByteOffset, size_t(std::numeric_limits<uint32_t>::max()))) : 0;
+    }
 
 } // namespace Crowny

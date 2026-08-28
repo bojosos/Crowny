@@ -277,6 +277,7 @@ namespace Crowny
         internal IntPtr TextSetSortingLayer;
         internal IntPtr TextGetOrderInLayer;
         internal IntPtr TextSetOrderInLayer;
+        internal IntPtr TextHitTest;
         internal IntPtr FontGetIsValid;
         internal IntPtr FontGetGlyphCount;
         internal IntPtr FontGetTabWidth;
@@ -311,7 +312,7 @@ namespace Crowny
                 api = value;
                 return;
             }
-            if (value.AbiVersion != 8 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
+            if (value.AbiVersion != 9 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
                 throw new InvalidOperationException("The native host uses an incompatible managed scripting ABI.");
             bool complete =
                 value.GetEntityName != IntPtr.Zero &&
@@ -498,6 +499,7 @@ namespace Crowny
                    value.TextSetSortingLayer != IntPtr.Zero &&
                    value.TextGetOrderInLayer != IntPtr.Zero &&
                    value.TextSetOrderInLayer != IntPtr.Zero &&
+                   value.TextHitTest != IntPtr.Zero &&
                    value.FontGetIsValid != IntPtr.Zero &&
                    value.FontGetGlyphCount != IntPtr.Zero &&
                    value.FontGetTabWidth != IntPtr.Zero &&
@@ -700,22 +702,23 @@ namespace Crowny
             TextSetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetSortingLayer);
             TextGetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetOrderInLayer);
             TextSetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetOrderInLayer);
-            FontGetIsValidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall43>(value.FontGetIsValid);
-            FontGetGlyphCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.FontGetGlyphCount);
-            FontGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.FontGetTabWidth);
-            FontGetAtlasWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.FontGetAtlasWidth);
-            FontGetAtlasHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.FontGetAtlasHeight);
-            FontGetAtlasPixelRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetAtlasPixelRange);
-            FontHasGlyphCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.FontHasGlyph);
-            FontGetCharacterInfoCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.FontGetCharacterInfo);
-            FontGetFallbackCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.FontGetFallbackCount);
-            FontGetFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall48>(value.FontGetFallback);
-            FontAddFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall49>(value.FontAddFallback);
-            FontClearFallbacksCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall50>(value.FontClearFallbacks);
-            MathMatrixDeterminantCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall51>(value.MathMatrixDeterminant);
-            MathMatrixInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall52>(value.MathMatrixInverse);
-            MathMatrixAffineInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall52>(value.MathMatrixAffineInverse);
-            MathLookAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall53>(value.MathLookAt);
+            TextHitTestCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall43>(value.TextHitTest);
+            FontGetIsValidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.FontGetIsValid);
+            FontGetGlyphCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetGlyphCount);
+            FontGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetTabWidth);
+            FontGetAtlasWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetAtlasWidth);
+            FontGetAtlasHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetAtlasHeight);
+            FontGetAtlasPixelRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.FontGetAtlasPixelRange);
+            FontHasGlyphCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.FontHasGlyph);
+            FontGetCharacterInfoCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall48>(value.FontGetCharacterInfo);
+            FontGetFallbackCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetFallbackCount);
+            FontGetFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall49>(value.FontGetFallback);
+            FontAddFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall50>(value.FontAddFallback);
+            FontClearFallbacksCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall51>(value.FontClearFallbacks);
+            MathMatrixDeterminantCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall52>(value.MathMatrixDeterminant);
+            MathMatrixInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall53>(value.MathMatrixInverse);
+            MathMatrixAffineInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall53>(value.MathMatrixAffineInverse);
+            MathLookAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall54>(value.MathLookAt);
             api = value;
         }
 
@@ -806,27 +809,29 @@ namespace Crowny
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int ManagedHostCall42(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall43(void* context, ManagedNativeUuid font, byte* result);
+        private delegate int ManagedHostCall43(void* context, ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall44(void* context, ManagedNativeUuid font, uint* result);
+        private delegate int ManagedHostCall44(void* context, ManagedNativeUuid font, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall45(void* context, ManagedNativeUuid font, float* result);
+        private delegate int ManagedHostCall45(void* context, ManagedNativeUuid font, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall46(void* context, ManagedNativeUuid font, uint codePoint, byte* result);
+        private delegate int ManagedHostCall46(void* context, ManagedNativeUuid font, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall47(void* context, ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result);
+        private delegate int ManagedHostCall47(void* context, ManagedNativeUuid font, uint codePoint, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall48(void* context, ManagedNativeUuid font, uint index, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall48(void* context, ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall49(void* context, ManagedNativeUuid font, ManagedNativeUuid value, byte* result);
+        private delegate int ManagedHostCall49(void* context, ManagedNativeUuid font, uint index, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall50(void* context, ManagedNativeUuid font);
+        private delegate int ManagedHostCall50(void* context, ManagedNativeUuid font, ManagedNativeUuid value, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall51(void* context, ManagedNativeMatrix4* matrix, float* result);
+        private delegate int ManagedHostCall51(void* context, ManagedNativeUuid font);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall52(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
+        private delegate int ManagedHostCall52(void* context, ManagedNativeMatrix4* matrix, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall53(void* context, ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result);
+        private delegate int ManagedHostCall53(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall54(void* context, ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result);
 
         private static ManagedHostCall0 GetEntityNameCallback;
         private static ManagedHostCall1 SetEntityNameCallback;
@@ -1012,22 +1017,23 @@ namespace Crowny
         private static ManagedHostCall29 TextSetSortingLayerCallback;
         private static ManagedHostCall28 TextGetOrderInLayerCallback;
         private static ManagedHostCall29 TextSetOrderInLayerCallback;
-        private static ManagedHostCall43 FontGetIsValidCallback;
-        private static ManagedHostCall44 FontGetGlyphCountCallback;
-        private static ManagedHostCall44 FontGetTabWidthCallback;
-        private static ManagedHostCall44 FontGetAtlasWidthCallback;
-        private static ManagedHostCall44 FontGetAtlasHeightCallback;
-        private static ManagedHostCall45 FontGetAtlasPixelRangeCallback;
-        private static ManagedHostCall46 FontHasGlyphCallback;
-        private static ManagedHostCall47 FontGetCharacterInfoCallback;
-        private static ManagedHostCall44 FontGetFallbackCountCallback;
-        private static ManagedHostCall48 FontGetFallbackCallback;
-        private static ManagedHostCall49 FontAddFallbackCallback;
-        private static ManagedHostCall50 FontClearFallbacksCallback;
-        private static ManagedHostCall51 MathMatrixDeterminantCallback;
-        private static ManagedHostCall52 MathMatrixInverseCallback;
-        private static ManagedHostCall52 MathMatrixAffineInverseCallback;
-        private static ManagedHostCall53 MathLookAtCallback;
+        private static ManagedHostCall43 TextHitTestCallback;
+        private static ManagedHostCall44 FontGetIsValidCallback;
+        private static ManagedHostCall45 FontGetGlyphCountCallback;
+        private static ManagedHostCall45 FontGetTabWidthCallback;
+        private static ManagedHostCall45 FontGetAtlasWidthCallback;
+        private static ManagedHostCall45 FontGetAtlasHeightCallback;
+        private static ManagedHostCall46 FontGetAtlasPixelRangeCallback;
+        private static ManagedHostCall47 FontHasGlyphCallback;
+        private static ManagedHostCall48 FontGetCharacterInfoCallback;
+        private static ManagedHostCall45 FontGetFallbackCountCallback;
+        private static ManagedHostCall49 FontGetFallbackCallback;
+        private static ManagedHostCall50 FontAddFallbackCallback;
+        private static ManagedHostCall51 FontClearFallbacksCallback;
+        private static ManagedHostCall52 MathMatrixDeterminantCallback;
+        private static ManagedHostCall53 MathMatrixInverseCallback;
+        private static ManagedHostCall53 MathMatrixAffineInverseCallback;
+        private static ManagedHostCall54 MathLookAtCallback;
 
         internal static int GetEntityName(ManagedNativeUuid entity, ManagedNativeStringView* result) => GetEntityNameCallback(api.Context.ToPointer(), entity, result);
         internal static int SetEntityName(ManagedNativeUuid entity, ManagedNativeStringView name) => SetEntityNameCallback(api.Context.ToPointer(), entity, name);
@@ -1213,6 +1219,7 @@ namespace Crowny
         internal static int TextSetSortingLayer(ManagedNativeUuid entity, int value) => TextSetSortingLayerCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetOrderInLayer(ManagedNativeUuid entity, int* result) => TextGetOrderInLayerCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetOrderInLayer(ManagedNativeUuid entity, int value) => TextSetOrderInLayerCallback(api.Context.ToPointer(), entity, value);
+        internal static int TextHitTest(ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result) => TextHitTestCallback(api.Context.ToPointer(), entity, position, result);
         internal static int FontGetIsValid(ManagedNativeUuid font, byte* result) => FontGetIsValidCallback(api.Context.ToPointer(), font, result);
         internal static int FontGetGlyphCount(ManagedNativeUuid font, uint* result) => FontGetGlyphCountCallback(api.Context.ToPointer(), font, result);
         internal static int FontGetTabWidth(ManagedNativeUuid font, uint* result) => FontGetTabWidthCallback(api.Context.ToPointer(), font, result);
@@ -2629,6 +2636,15 @@ namespace Crowny
         {
             EnsureHostBindings();
             EnsureStatus(ManagedHostTransport.TextSetOrderInLayer(EncodeUuid(entity), value), "TextSetOrderInLayer");
+        }
+
+        internal static uint TextHitTest(UUID entity, Vector2 position)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 nativePosition = new ManagedNativeVec2 { X = position.x, Y = position.y };
+            uint result = default(uint);
+            EnsureStatus(ManagedHostTransport.TextHitTest(EncodeUuid(entity), &nativePosition, &result), "TextHitTest");
+            return result;
         }
 
         internal static bool FontGetIsValid(UUID font)

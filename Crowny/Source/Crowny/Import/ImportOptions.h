@@ -143,6 +143,10 @@ namespace Crowny
     class FontImportOptions : public ImportOptions
     {
     public:
+        static constexpr float DEFAULT_ATLAS_PIXEL_RANGE = 2.0f;
+        static constexpr float MIN_ATLAS_PIXEL_RANGE = 0.5f;
+        static constexpr float MAX_ATLAS_PIXEL_RANGE = 16.0f;
+
         // TODO: Somehow integrate the ImageType font type stuff from msdfgen.
         // The first two modes are rasterized fonts I think, the others are fancy sdf stuff.
         bool GetKerningData = true;
@@ -152,6 +156,7 @@ namespace Crowny
         Font::AtlasDimensionsConstraint AtlasDimensionsConstraint = Font::AtlasDimensionsConstraint::POWER_OF_TWO_SQUARE;
         uint32_t AtlasWidth = 1024;
         uint32_t AtlasHeight = 1024;
+        float AtlasPixelRange = DEFAULT_ATLAS_PIXEL_RANGE;
         CharsetRange Range = CharsetRange::ASCII;
         String CustomCharset;
         uint32_t Padding = 0;

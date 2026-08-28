@@ -26,8 +26,6 @@ namespace Crowny
     namespace
     {
         constexpr uint32_t MAX_CUSTOM_CHARACTERS = 65536;
-        constexpr float ATLAS_PIXEL_RANGE = 2.0f;
-
         uint32_t GetFontWorkerCount()
         {
             const uint32_t hardwareThreads = std::thread::hardware_concurrency();
@@ -305,7 +303,11 @@ namespace Crowny
 
         msdf_atlas::TightAtlasPacker atlasPacker;
         atlasPacker.setMiterLimit(1.0);
-        atlasPacker.setPixelRange(ATLAS_PIXEL_RANGE);
+        const float requestedPixelRange =
+          std::isfinite(options->AtlasPixelRange) ? options->AtlasPixelRange : FontImportOptions::DEFAULT_ATLAS_PIXEL_RANGE;
+        const float atlasPixelRange =
+          std::clamp(requestedPixelRange, FontImportOptions::MIN_ATLAS_PIXEL_RANGE, FontImportOptions::MAX_ATLAS_PIXEL_RANGE);
+        atlasPacker.setPixelRange(atlasPixelRange);
         atlasPacker.setPadding(static_cast<int>(std::min(options->Padding, 256U)));
         const double requestedScale = static_cast<double>(std::clamp(options->SamplingFontSize, 4U, 512U));
         if (options->AutoSizeAtlas)
@@ -362,7 +364,7 @@ namespace Crowny
         CW_ENGINE_INFO("Generated font atlas in {}s.", timer.ElapsedSeconds());
 
         const String fontFilename = path.filename().string();
-        const Ref<Font> font = CreateRef<Font>(std::move(fontData), atlasTexture, std::clamp(options->TabMultiple, 1U, 64U), ATLAS_PIXEL_RANGE);
+        const Ref<Font> font = CreateRef<Font>(std::move(fontData), atlasTexture, std::clamp(options->TabMultiple, 1U, 64U), atlasPixelRange);
         font->SetFallbackFontIds(options->FallbackFonts);
         font->SetName(fontFilename);
         return font;

@@ -18,12 +18,7 @@ namespace Crowny
                 return font.GetUUID();
             if (!font)
                 return {};
-            for (const AssetHandle<Font>& fallback : font->GetFallbackFonts())
-            {
-                if (fallback.Get() == source)
-                    return fallback.GetUUID();
-            }
-            return {};
+            return font->FindFallbackFontUUID(source);
         }
 
         ScriptFontCharacterInfo ToScriptCharacterInfo(const AssetHandle<Font>& font, const CharacterInfo& source)
@@ -107,8 +102,7 @@ namespace Crowny
         return thisptr != nullptr && thisptr->GetHandle() && thisptr->GetHandle()->HasGlyph(static_cast<char32_t>(codePoint));
     }
 
-    bool ScriptFont::Internal_GetCharacterInfo(ScriptFont* thisptr, uint32_t codePoint, bool useFallbacks,
-                                               ScriptFontCharacterInfo* characterInfo)
+    bool ScriptFont::Internal_GetCharacterInfo(ScriptFont* thisptr, uint32_t codePoint, bool useFallbacks, ScriptFontCharacterInfo* characterInfo)
     {
         if (characterInfo == nullptr)
             return false;
@@ -122,9 +116,7 @@ namespace Crowny
 
     uint32_t ScriptFont::Internal_GetFallbackCount(ScriptFont* thisptr)
     {
-        return thisptr != nullptr && thisptr->GetHandle()
-                 ? static_cast<uint32_t>(thisptr->GetHandle()->GetFallbackFonts().size())
-                 : 0;
+        return thisptr != nullptr && thisptr->GetHandle() ? static_cast<uint32_t>(thisptr->GetHandle()->GetFallbackFonts().size()) : 0;
     }
 
     MonoObject* ScriptFont::Internal_GetFallback(ScriptFont* thisptr, uint32_t index)
