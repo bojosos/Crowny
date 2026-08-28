@@ -1243,7 +1243,7 @@ namespace Crowny
         internal static string GetEntityName(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeStringView result = default;
+            ManagedNativeStringView result = default(ManagedNativeStringView);
             EnsureStatus(ManagedHostTransport.GetEntityName(EncodeUuid(entity), &result), "GetEntityName");
             return DecodeString(result);
         }
@@ -1262,7 +1262,7 @@ namespace Crowny
         internal static UUID FindEntityByName(string name)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default;
+            ManagedNativeUuid result = default(ManagedNativeUuid);
             byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
             fixed (byte* nameBytes = encodedName)
             {
@@ -1275,7 +1275,7 @@ namespace Crowny
         internal static UUID GetEntityParent(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default;
+            ManagedNativeUuid result = default(ManagedNativeUuid);
             EnsureStatus(ManagedHostTransport.GetEntityParent(EncodeUuid(entity), &result), "GetEntityParent");
             return DecodeUuid(result);
         }
@@ -1295,7 +1295,7 @@ namespace Crowny
         internal static bool EntityHasComponent(UUID entity, string typeName)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             byte[] encodedTypeName = Encoding.UTF8.GetBytes(typeName ?? string.Empty);
             fixed (byte* typeNameBytes = encodedTypeName)
             {
@@ -1330,7 +1330,7 @@ namespace Crowny
         internal static Vector3 TransformGetPosition(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default;
+            ManagedNativeVec3 result = default(ManagedNativeVec3);
             EnsureStatus(ManagedHostTransport.TransformGetPosition(EncodeUuid(entity), &result), "TransformGetPosition");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1345,7 +1345,7 @@ namespace Crowny
         internal static Vector3 TransformGetLocalPosition(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default;
+            ManagedNativeVec3 result = default(ManagedNativeVec3);
             EnsureStatus(ManagedHostTransport.TransformGetLocalPosition(EncodeUuid(entity), &result), "TransformGetLocalPosition");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1360,7 +1360,7 @@ namespace Crowny
         internal static Vector3 TransformGetScale(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default;
+            ManagedNativeVec3 result = default(ManagedNativeVec3);
             EnsureStatus(ManagedHostTransport.TransformGetScale(EncodeUuid(entity), &result), "TransformGetScale");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1375,7 +1375,7 @@ namespace Crowny
         internal static Vector3 TransformGetLocalScale(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default;
+            ManagedNativeVec3 result = default(ManagedNativeVec3);
             EnsureStatus(ManagedHostTransport.TransformGetLocalScale(EncodeUuid(entity), &result), "TransformGetLocalScale");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1390,7 +1390,7 @@ namespace Crowny
         internal static Quaternion TransformGetRotation(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeQuaternion result = default;
+            ManagedNativeQuaternion result = default(ManagedNativeQuaternion);
             EnsureStatus(ManagedHostTransport.TransformGetRotation(EncodeUuid(entity), &result), "TransformGetRotation");
             return new Quaternion(result.X, result.Y, result.Z, result.W);
         }
@@ -1405,7 +1405,7 @@ namespace Crowny
         internal static Quaternion TransformGetLocalRotation(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeQuaternion result = default;
+            ManagedNativeQuaternion result = default(ManagedNativeQuaternion);
             EnsureStatus(ManagedHostTransport.TransformGetLocalRotation(EncodeUuid(entity), &result), "TransformGetLocalRotation");
             return new Quaternion(result.X, result.Y, result.Z, result.W);
         }
@@ -1420,7 +1420,7 @@ namespace Crowny
         internal static Matrix4 TransformGetLocalToWorldMatrix(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeMatrix4 result = default;
+            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
             EnsureStatus(ManagedHostTransport.TransformGetLocalToWorldMatrix(EncodeUuid(entity), &result), "TransformGetLocalToWorldMatrix");
             return DecodeMatrix(result);
         }
@@ -1428,7 +1428,7 @@ namespace Crowny
         internal static Matrix4 TransformGetWorldToLocalMatrix(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeMatrix4 result = default;
+            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
             EnsureStatus(ManagedHostTransport.TransformGetWorldToLocalMatrix(EncodeUuid(entity), &result), "TransformGetWorldToLocalMatrix");
             return DecodeMatrix(result);
         }
@@ -1436,7 +1436,7 @@ namespace Crowny
         internal static Vector3 TransformGetEulerAngles(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default;
+            ManagedNativeVec3 result = default(ManagedNativeVec3);
             EnsureStatus(ManagedHostTransport.TransformGetEulerAngles(EncodeUuid(entity), &result), "TransformGetEulerAngles");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1451,7 +1451,7 @@ namespace Crowny
         internal static Vector3 TransformGetLocalEulerAngles(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default;
+            ManagedNativeVec3 result = default(ManagedNativeVec3);
             EnsureStatus(ManagedHostTransport.TransformGetLocalEulerAngles(EncodeUuid(entity), &result), "TransformGetLocalEulerAngles");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1466,7 +1466,7 @@ namespace Crowny
         internal static bool TransformIsDirty(UUID entity, int flag)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.TransformIsDirty(EncodeUuid(entity), flag, &result), "TransformIsDirty");
             return result != 0;
         }
@@ -1474,7 +1474,7 @@ namespace Crowny
         internal static bool InputGetKey(uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetKey(code, &result), "InputGetKey");
             return result != 0;
         }
@@ -1482,7 +1482,7 @@ namespace Crowny
         internal static bool InputGetKeyDown(uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetKeyDown(code, &result), "InputGetKeyDown");
             return result != 0;
         }
@@ -1490,7 +1490,7 @@ namespace Crowny
         internal static bool InputGetKeyUp(uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetKeyUp(code, &result), "InputGetKeyUp");
             return result != 0;
         }
@@ -1498,7 +1498,7 @@ namespace Crowny
         internal static bool InputGetMouseButton(uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetMouseButton(code, &result), "InputGetMouseButton");
             return result != 0;
         }
@@ -1506,7 +1506,7 @@ namespace Crowny
         internal static bool InputGetMouseButtonDown(uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetMouseButtonDown(code, &result), "InputGetMouseButtonDown");
             return result != 0;
         }
@@ -1514,7 +1514,7 @@ namespace Crowny
         internal static bool InputGetMouseButtonUp(uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetMouseButtonUp(code, &result), "InputGetMouseButtonUp");
             return result != 0;
         }
@@ -1522,7 +1522,7 @@ namespace Crowny
         internal static float InputGetMouseScrollX()
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.InputGetMouseScrollX(&result), "InputGetMouseScrollX");
             return result;
         }
@@ -1530,7 +1530,7 @@ namespace Crowny
         internal static float InputGetMouseScrollY()
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.InputGetMouseScrollY(&result), "InputGetMouseScrollY");
             return result;
         }
@@ -1538,7 +1538,7 @@ namespace Crowny
         internal static Vector2 InputGetMousePosition()
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default;
+            ManagedNativeVec2 result = default(ManagedNativeVec2);
             EnsureStatus(ManagedHostTransport.InputGetMousePosition(&result), "InputGetMousePosition");
             return new Vector2(result.X, result.Y);
         }
@@ -1546,7 +1546,7 @@ namespace Crowny
         internal static Vector2 InputGetMouseDelta()
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default;
+            ManagedNativeVec2 result = default(ManagedNativeVec2);
             EnsureStatus(ManagedHostTransport.InputGetMouseDelta(&result), "InputGetMouseDelta");
             return new Vector2(result.X, result.Y);
         }
@@ -1554,7 +1554,7 @@ namespace Crowny
         internal static bool InputIsGamepadConnected(uint gamepad)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputIsGamepadConnected(gamepad, &result), "InputIsGamepadConnected");
             return result != 0;
         }
@@ -1562,7 +1562,7 @@ namespace Crowny
         internal static bool InputGetGamepadButton(uint gamepad, uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetGamepadButton(gamepad, code, &result), "InputGetGamepadButton");
             return result != 0;
         }
@@ -1570,7 +1570,7 @@ namespace Crowny
         internal static bool InputGetGamepadButtonDown(uint gamepad, uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetGamepadButtonDown(gamepad, code, &result), "InputGetGamepadButtonDown");
             return result != 0;
         }
@@ -1578,7 +1578,7 @@ namespace Crowny
         internal static bool InputGetGamepadButtonUp(uint gamepad, uint code)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.InputGetGamepadButtonUp(gamepad, code, &result), "InputGetGamepadButtonUp");
             return result != 0;
         }
@@ -1586,7 +1586,7 @@ namespace Crowny
         internal static float InputGetGamepadAxis(uint gamepad, uint code)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.InputGetGamepadAxis(gamepad, code, &result), "InputGetGamepadAxis");
             return result;
         }
@@ -1594,7 +1594,7 @@ namespace Crowny
         internal static bool InputGetAction(string actionName)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
             fixed (byte* actionNameBytes = encodedActionName)
             {
@@ -1607,7 +1607,7 @@ namespace Crowny
         internal static bool InputGetActionDown(string actionName)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
             fixed (byte* actionNameBytes = encodedActionName)
             {
@@ -1620,7 +1620,7 @@ namespace Crowny
         internal static bool InputGetActionUp(string actionName)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
             fixed (byte* actionNameBytes = encodedActionName)
             {
@@ -1633,7 +1633,7 @@ namespace Crowny
         internal static float InputGetAxis(string actionName)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
             fixed (byte* actionNameBytes = encodedActionName)
             {
@@ -1646,7 +1646,7 @@ namespace Crowny
         internal static Vector2 InputGetActionVector(string actionName)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default;
+            ManagedNativeVec2 result = default(ManagedNativeVec2);
             byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
             fixed (byte* actionNameBytes = encodedActionName)
             {
@@ -1659,7 +1659,7 @@ namespace Crowny
         internal static bool InputEnableActionMap(string mapName)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             byte[] encodedMapName = Encoding.UTF8.GetBytes(mapName ?? string.Empty);
             fixed (byte* mapNameBytes = encodedMapName)
             {
@@ -1672,7 +1672,7 @@ namespace Crowny
         internal static bool InputDisableActionMap(string mapName)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             byte[] encodedMapName = Encoding.UTF8.GetBytes(mapName ?? string.Empty);
             fixed (byte* mapNameBytes = encodedMapName)
             {
@@ -1691,7 +1691,7 @@ namespace Crowny
         internal static float TimeGetDeltaTime()
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TimeGetDeltaTime(&result), "TimeGetDeltaTime");
             return result;
         }
@@ -1699,7 +1699,7 @@ namespace Crowny
         internal static float TimeGetTime()
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TimeGetTime(&result), "TimeGetTime");
             return result;
         }
@@ -1707,7 +1707,7 @@ namespace Crowny
         internal static float TimeGetFixedDeltaTime()
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TimeGetFixedDeltaTime(&result), "TimeGetFixedDeltaTime");
             return result;
         }
@@ -1715,7 +1715,7 @@ namespace Crowny
         internal static float TimeGetSmoothDeltaTime()
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TimeGetSmoothDeltaTime(&result), "TimeGetSmoothDeltaTime");
             return result;
         }
@@ -1723,7 +1723,7 @@ namespace Crowny
         internal static float TimeGetRealtimeSinceStartup()
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TimeGetRealtimeSinceStartup(&result), "TimeGetRealtimeSinceStartup");
             return result;
         }
@@ -1731,7 +1731,7 @@ namespace Crowny
         internal static uint TimeGetFrameCount()
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.TimeGetFrameCount(&result), "TimeGetFrameCount");
             return result;
         }
@@ -1739,7 +1739,7 @@ namespace Crowny
         internal static float Rigidbody2DGetMass(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetMass(EncodeUuid(entity), &result), "Rigidbody2DGetMass");
             return result;
         }
@@ -1753,7 +1753,7 @@ namespace Crowny
         internal static int Rigidbody2DGetBodyType(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetBodyType(EncodeUuid(entity), &result), "Rigidbody2DGetBodyType");
             return result;
         }
@@ -1767,7 +1767,7 @@ namespace Crowny
         internal static int Rigidbody2DGetSleepMode(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetSleepMode(EncodeUuid(entity), &result), "Rigidbody2DGetSleepMode");
             return result;
         }
@@ -1781,7 +1781,7 @@ namespace Crowny
         internal static int Rigidbody2DGetCollisionDetectionMode(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetCollisionDetectionMode(EncodeUuid(entity), &result), "Rigidbody2DGetCollisionDetectionMode");
             return result;
         }
@@ -1795,7 +1795,7 @@ namespace Crowny
         internal static int Rigidbody2DGetInterpolation(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetInterpolation(EncodeUuid(entity), &result), "Rigidbody2DGetInterpolation");
             return result;
         }
@@ -1809,7 +1809,7 @@ namespace Crowny
         internal static bool Rigidbody2DGetAutoMass(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetAutoMass(EncodeUuid(entity), &result), "Rigidbody2DGetAutoMass");
             return result != 0;
         }
@@ -1823,7 +1823,7 @@ namespace Crowny
         internal static int Rigidbody2DGetLayer(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetLayer(EncodeUuid(entity), &result), "Rigidbody2DGetLayer");
             return result;
         }
@@ -1837,7 +1837,7 @@ namespace Crowny
         internal static float Rigidbody2DGetLinearDrag(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetLinearDrag(EncodeUuid(entity), &result), "Rigidbody2DGetLinearDrag");
             return result;
         }
@@ -1851,7 +1851,7 @@ namespace Crowny
         internal static float Rigidbody2DGetAngularDrag(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetAngularDrag(EncodeUuid(entity), &result), "Rigidbody2DGetAngularDrag");
             return result;
         }
@@ -1865,7 +1865,7 @@ namespace Crowny
         internal static float Rigidbody2DGetGravityScale(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetGravityScale(EncodeUuid(entity), &result), "Rigidbody2DGetGravityScale");
             return result;
         }
@@ -1879,7 +1879,7 @@ namespace Crowny
         internal static Vector2 Rigidbody2DGetCenterOfMass(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default;
+            ManagedNativeVec2 result = default(ManagedNativeVec2);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetCenterOfMass(EncodeUuid(entity), &result), "Rigidbody2DGetCenterOfMass");
             return new Vector2(result.X, result.Y);
         }
@@ -1894,7 +1894,7 @@ namespace Crowny
         internal static float Rigidbody2DGetInertia(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetInertia(EncodeUuid(entity), &result), "Rigidbody2DGetInertia");
             return result;
         }
@@ -1908,7 +1908,7 @@ namespace Crowny
         internal static uint Rigidbody2DGetConstraints(UUID entity)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetConstraints(EncodeUuid(entity), &result), "Rigidbody2DGetConstraints");
             return result;
         }
@@ -1922,7 +1922,7 @@ namespace Crowny
         internal static float Rigidbody2DGetRotation(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetRotation(EncodeUuid(entity), &result), "Rigidbody2DGetRotation");
             return result;
         }
@@ -1930,7 +1930,7 @@ namespace Crowny
         internal static Vector2 Rigidbody2DGetPosition(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default;
+            ManagedNativeVec2 result = default(ManagedNativeVec2);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetPosition(EncodeUuid(entity), &result), "Rigidbody2DGetPosition");
             return new Vector2(result.X, result.Y);
         }
@@ -1938,7 +1938,7 @@ namespace Crowny
         internal static Vector2 Rigidbody2DGetLinearVelocity(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default;
+            ManagedNativeVec2 result = default(ManagedNativeVec2);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetLinearVelocity(EncodeUuid(entity), &result), "Rigidbody2DGetLinearVelocity");
             return new Vector2(result.X, result.Y);
         }
@@ -1953,7 +1953,7 @@ namespace Crowny
         internal static float Rigidbody2DGetAngularVelocity(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetAngularVelocity(EncodeUuid(entity), &result), "Rigidbody2DGetAngularVelocity");
             return result;
         }
@@ -1967,7 +1967,7 @@ namespace Crowny
         internal static bool Rigidbody2DGetAwake(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetAwake(EncodeUuid(entity), &result), "Rigidbody2DGetAwake");
             return result != 0;
         }
@@ -2002,7 +2002,7 @@ namespace Crowny
         internal static float AudioSourceGetVolume(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.AudioSourceGetVolume(EncodeUuid(entity), &result), "AudioSourceGetVolume");
             return result;
         }
@@ -2016,7 +2016,7 @@ namespace Crowny
         internal static float AudioSourceGetPitch(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.AudioSourceGetPitch(EncodeUuid(entity), &result), "AudioSourceGetPitch");
             return result;
         }
@@ -2030,7 +2030,7 @@ namespace Crowny
         internal static float AudioSourceGetMinDistance(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.AudioSourceGetMinDistance(EncodeUuid(entity), &result), "AudioSourceGetMinDistance");
             return result;
         }
@@ -2044,7 +2044,7 @@ namespace Crowny
         internal static float AudioSourceGetMaxDistance(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.AudioSourceGetMaxDistance(EncodeUuid(entity), &result), "AudioSourceGetMaxDistance");
             return result;
         }
@@ -2058,7 +2058,7 @@ namespace Crowny
         internal static bool AudioSourceGetLoop(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.AudioSourceGetLoop(EncodeUuid(entity), &result), "AudioSourceGetLoop");
             return result != 0;
         }
@@ -2072,7 +2072,7 @@ namespace Crowny
         internal static bool AudioSourceGetMuted(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.AudioSourceGetMuted(EncodeUuid(entity), &result), "AudioSourceGetMuted");
             return result != 0;
         }
@@ -2086,7 +2086,7 @@ namespace Crowny
         internal static bool AudioSourceGetPlayOnAwake(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.AudioSourceGetPlayOnAwake(EncodeUuid(entity), &result), "AudioSourceGetPlayOnAwake");
             return result != 0;
         }
@@ -2100,7 +2100,7 @@ namespace Crowny
         internal static float AudioSourceGetTime(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.AudioSourceGetTime(EncodeUuid(entity), &result), "AudioSourceGetTime");
             return result;
         }
@@ -2114,7 +2114,7 @@ namespace Crowny
         internal static UUID AudioSourceGetClip(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default;
+            ManagedNativeUuid result = default(ManagedNativeUuid);
             EnsureStatus(ManagedHostTransport.AudioSourceGetClip(EncodeUuid(entity), &result), "AudioSourceGetClip");
             return DecodeUuid(result);
         }
@@ -2128,7 +2128,7 @@ namespace Crowny
         internal static int AudioSourceGetState(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.AudioSourceGetState(EncodeUuid(entity), &result), "AudioSourceGetState");
             return result;
         }
@@ -2154,7 +2154,7 @@ namespace Crowny
         internal static string TextGetText(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeStringView result = default;
+            ManagedNativeStringView result = default(ManagedNativeStringView);
             EnsureStatus(ManagedHostTransport.TextGetText(EncodeUuid(entity), &result), "TextGetText");
             return DecodeString(result);
         }
@@ -2173,7 +2173,7 @@ namespace Crowny
         internal static UUID TextGetFont(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default;
+            ManagedNativeUuid result = default(ManagedNativeUuid);
             EnsureStatus(ManagedHostTransport.TextGetFont(EncodeUuid(entity), &result), "TextGetFont");
             return DecodeUuid(result);
         }
@@ -2187,7 +2187,7 @@ namespace Crowny
         internal static Color TextGetColor(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 result = default;
+            ManagedNativeVec4 result = default(ManagedNativeVec4);
             EnsureStatus(ManagedHostTransport.TextGetColor(EncodeUuid(entity), &result), "TextGetColor");
             return new Color(result.X, result.Y, result.Z, result.W);
         }
@@ -2202,7 +2202,7 @@ namespace Crowny
         internal static float TextGetSize(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetSize(EncodeUuid(entity), &result), "TextGetSize");
             return result;
         }
@@ -2216,7 +2216,7 @@ namespace Crowny
         internal static bool TextGetAutoSize(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.TextGetAutoSize(EncodeUuid(entity), &result), "TextGetAutoSize");
             return result != 0;
         }
@@ -2230,7 +2230,7 @@ namespace Crowny
         internal static float TextGetAutoSizeMin(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetAutoSizeMin(EncodeUuid(entity), &result), "TextGetAutoSizeMin");
             return result;
         }
@@ -2244,7 +2244,7 @@ namespace Crowny
         internal static float TextGetAutoSizeMax(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetAutoSizeMax(EncodeUuid(entity), &result), "TextGetAutoSizeMax");
             return result;
         }
@@ -2258,7 +2258,7 @@ namespace Crowny
         internal static Vector2 TextGetLayoutSize(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default;
+            ManagedNativeVec2 result = default(ManagedNativeVec2);
             EnsureStatus(ManagedHostTransport.TextGetLayoutSize(EncodeUuid(entity), &result), "TextGetLayoutSize");
             return new Vector2(result.X, result.Y);
         }
@@ -2273,7 +2273,7 @@ namespace Crowny
         internal static bool TextGetWrapping(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.TextGetWrapping(EncodeUuid(entity), &result), "TextGetWrapping");
             return result != 0;
         }
@@ -2287,7 +2287,7 @@ namespace Crowny
         internal static int TextGetWrapMode(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.TextGetWrapMode(EncodeUuid(entity), &result), "TextGetWrapMode");
             return result;
         }
@@ -2301,7 +2301,7 @@ namespace Crowny
         internal static int TextGetOverflow(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.TextGetOverflow(EncodeUuid(entity), &result), "TextGetOverflow");
             return result;
         }
@@ -2315,7 +2315,7 @@ namespace Crowny
         internal static bool TextGetClipToBounds(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.TextGetClipToBounds(EncodeUuid(entity), &result), "TextGetClipToBounds");
             return result != 0;
         }
@@ -2329,7 +2329,7 @@ namespace Crowny
         internal static uint TextGetMaxLines(UUID entity)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.TextGetMaxLines(EncodeUuid(entity), &result), "TextGetMaxLines");
             return result;
         }
@@ -2343,7 +2343,7 @@ namespace Crowny
         internal static int TextGetHorizontalAlignment(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.TextGetHorizontalAlignment(EncodeUuid(entity), &result), "TextGetHorizontalAlignment");
             return result;
         }
@@ -2357,7 +2357,7 @@ namespace Crowny
         internal static int TextGetVerticalAlignment(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.TextGetVerticalAlignment(EncodeUuid(entity), &result), "TextGetVerticalAlignment");
             return result;
         }
@@ -2371,7 +2371,7 @@ namespace Crowny
         internal static uint TextGetFontStyle(UUID entity)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.TextGetFontStyle(EncodeUuid(entity), &result), "TextGetFontStyle");
             return result;
         }
@@ -2385,7 +2385,7 @@ namespace Crowny
         internal static Color TextGetOutlineColor(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 result = default;
+            ManagedNativeVec4 result = default(ManagedNativeVec4);
             EnsureStatus(ManagedHostTransport.TextGetOutlineColor(EncodeUuid(entity), &result), "TextGetOutlineColor");
             return new Color(result.X, result.Y, result.Z, result.W);
         }
@@ -2400,7 +2400,7 @@ namespace Crowny
         internal static float TextGetOutlineWidth(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetOutlineWidth(EncodeUuid(entity), &result), "TextGetOutlineWidth");
             return result;
         }
@@ -2414,7 +2414,7 @@ namespace Crowny
         internal static Color TextGetShadowColor(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 result = default;
+            ManagedNativeVec4 result = default(ManagedNativeVec4);
             EnsureStatus(ManagedHostTransport.TextGetShadowColor(EncodeUuid(entity), &result), "TextGetShadowColor");
             return new Color(result.X, result.Y, result.Z, result.W);
         }
@@ -2429,7 +2429,7 @@ namespace Crowny
         internal static Vector2 TextGetShadowOffset(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default;
+            ManagedNativeVec2 result = default(ManagedNativeVec2);
             EnsureStatus(ManagedHostTransport.TextGetShadowOffset(EncodeUuid(entity), &result), "TextGetShadowOffset");
             return new Vector2(result.X, result.Y);
         }
@@ -2444,7 +2444,7 @@ namespace Crowny
         internal static float TextGetShadowSoftness(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetShadowSoftness(EncodeUuid(entity), &result), "TextGetShadowSoftness");
             return result;
         }
@@ -2458,7 +2458,7 @@ namespace Crowny
         internal static float TextGetCharacterSpacing(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetCharacterSpacing(EncodeUuid(entity), &result), "TextGetCharacterSpacing");
             return result;
         }
@@ -2472,7 +2472,7 @@ namespace Crowny
         internal static float TextGetWordSpacing(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetWordSpacing(EncodeUuid(entity), &result), "TextGetWordSpacing");
             return result;
         }
@@ -2486,7 +2486,7 @@ namespace Crowny
         internal static float TextGetLineSpacing(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetLineSpacing(EncodeUuid(entity), &result), "TextGetLineSpacing");
             return result;
         }
@@ -2500,7 +2500,7 @@ namespace Crowny
         internal static float TextGetParagraphSpacing(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetParagraphSpacing(EncodeUuid(entity), &result), "TextGetParagraphSpacing");
             return result;
         }
@@ -2514,7 +2514,7 @@ namespace Crowny
         internal static uint TextGetTabWidth(UUID entity)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.TextGetTabWidth(EncodeUuid(entity), &result), "TextGetTabWidth");
             return result;
         }
@@ -2528,7 +2528,7 @@ namespace Crowny
         internal static bool TextGetUseCustomDecorationColor(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.TextGetUseCustomDecorationColor(EncodeUuid(entity), &result), "TextGetUseCustomDecorationColor");
             return result != 0;
         }
@@ -2542,7 +2542,7 @@ namespace Crowny
         internal static Color TextGetDecorationColor(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 result = default;
+            ManagedNativeVec4 result = default(ManagedNativeVec4);
             EnsureStatus(ManagedHostTransport.TextGetDecorationColor(EncodeUuid(entity), &result), "TextGetDecorationColor");
             return new Color(result.X, result.Y, result.Z, result.W);
         }
@@ -2557,7 +2557,7 @@ namespace Crowny
         internal static float TextGetDecorationThickness(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetDecorationThickness(EncodeUuid(entity), &result), "TextGetDecorationThickness");
             return result;
         }
@@ -2571,7 +2571,7 @@ namespace Crowny
         internal static float TextGetUnderlineOffset(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetUnderlineOffset(EncodeUuid(entity), &result), "TextGetUnderlineOffset");
             return result;
         }
@@ -2585,7 +2585,7 @@ namespace Crowny
         internal static float TextGetStrikethroughOffset(UUID entity)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.TextGetStrikethroughOffset(EncodeUuid(entity), &result), "TextGetStrikethroughOffset");
             return result;
         }
@@ -2599,7 +2599,7 @@ namespace Crowny
         internal static bool TextGetUseKerning(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.TextGetUseKerning(EncodeUuid(entity), &result), "TextGetUseKerning");
             return result != 0;
         }
@@ -2613,7 +2613,7 @@ namespace Crowny
         internal static int TextGetSortingLayer(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.TextGetSortingLayer(EncodeUuid(entity), &result), "TextGetSortingLayer");
             return result;
         }
@@ -2627,7 +2627,7 @@ namespace Crowny
         internal static int TextGetOrderInLayer(UUID entity)
         {
             EnsureHostBindings();
-            int result = default;
+            int result = default(int);
             EnsureStatus(ManagedHostTransport.TextGetOrderInLayer(EncodeUuid(entity), &result), "TextGetOrderInLayer");
             return result;
         }
@@ -2642,7 +2642,7 @@ namespace Crowny
         {
             EnsureHostBindings();
             ManagedNativeVec2 nativePosition = new ManagedNativeVec2 { X = position.x, Y = position.y };
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.TextHitTest(EncodeUuid(entity), &nativePosition, &result), "TextHitTest");
             return result;
         }
@@ -2650,7 +2650,7 @@ namespace Crowny
         internal static bool FontGetIsValid(UUID font)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.FontGetIsValid(EncodeUuid(font), &result), "FontGetIsValid");
             return result != 0;
         }
@@ -2658,7 +2658,7 @@ namespace Crowny
         internal static uint FontGetGlyphCount(UUID font)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.FontGetGlyphCount(EncodeUuid(font), &result), "FontGetGlyphCount");
             return result;
         }
@@ -2666,7 +2666,7 @@ namespace Crowny
         internal static uint FontGetTabWidth(UUID font)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.FontGetTabWidth(EncodeUuid(font), &result), "FontGetTabWidth");
             return result;
         }
@@ -2674,7 +2674,7 @@ namespace Crowny
         internal static uint FontGetAtlasWidth(UUID font)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.FontGetAtlasWidth(EncodeUuid(font), &result), "FontGetAtlasWidth");
             return result;
         }
@@ -2682,7 +2682,7 @@ namespace Crowny
         internal static uint FontGetAtlasHeight(UUID font)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.FontGetAtlasHeight(EncodeUuid(font), &result), "FontGetAtlasHeight");
             return result;
         }
@@ -2690,7 +2690,7 @@ namespace Crowny
         internal static float FontGetAtlasPixelRange(UUID font)
         {
             EnsureHostBindings();
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.FontGetAtlasPixelRange(EncodeUuid(font), &result), "FontGetAtlasPixelRange");
             return result;
         }
@@ -2698,7 +2698,7 @@ namespace Crowny
         internal static bool FontHasGlyph(UUID font, uint codePoint)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.FontHasGlyph(EncodeUuid(font), codePoint, &result), "FontHasGlyph");
             return result != 0;
         }
@@ -2706,7 +2706,7 @@ namespace Crowny
         internal static CharacterInfo FontGetCharacterInfo(UUID font, uint codePoint, bool useFallbacks)
         {
             EnsureHostBindings();
-            ManagedNativeFontCharacterInfo result = default;
+            ManagedNativeFontCharacterInfo result = default(ManagedNativeFontCharacterInfo);
             EnsureStatus(ManagedHostTransport.FontGetCharacterInfo(EncodeUuid(font), codePoint, useFallbacks ? (byte)1 : (byte)0, &result), "FontGetCharacterInfo");
             return DecodeFontCharacterInfo(result);
         }
@@ -2714,7 +2714,7 @@ namespace Crowny
         internal static uint FontGetFallbackCount(UUID font)
         {
             EnsureHostBindings();
-            uint result = default;
+            uint result = default(uint);
             EnsureStatus(ManagedHostTransport.FontGetFallbackCount(EncodeUuid(font), &result), "FontGetFallbackCount");
             return result;
         }
@@ -2722,7 +2722,7 @@ namespace Crowny
         internal static UUID FontGetFallback(UUID font, uint index)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default;
+            ManagedNativeUuid result = default(ManagedNativeUuid);
             EnsureStatus(ManagedHostTransport.FontGetFallback(EncodeUuid(font), index, &result), "FontGetFallback");
             return DecodeUuid(result);
         }
@@ -2730,7 +2730,7 @@ namespace Crowny
         internal static bool FontAddFallback(UUID font, UUID value)
         {
             EnsureHostBindings();
-            byte result = default;
+            byte result = default(byte);
             EnsureStatus(ManagedHostTransport.FontAddFallback(EncodeUuid(font), EncodeUuid(value), &result), "FontAddFallback");
             return result != 0;
         }
@@ -2745,7 +2745,7 @@ namespace Crowny
         {
             EnsureHostBindings();
             ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
-            float result = default;
+            float result = default(float);
             EnsureStatus(ManagedHostTransport.MathMatrixDeterminant(&nativeMatrix, &result), "MathMatrixDeterminant");
             return result;
         }
@@ -2754,7 +2754,7 @@ namespace Crowny
         {
             EnsureHostBindings();
             ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
-            ManagedNativeMatrix4 result = default;
+            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
             EnsureStatus(ManagedHostTransport.MathMatrixInverse(&nativeMatrix, &result), "MathMatrixInverse");
             return DecodeMatrix(result);
         }
@@ -2763,7 +2763,7 @@ namespace Crowny
         {
             EnsureHostBindings();
             ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
-            ManagedNativeMatrix4 result = default;
+            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
             EnsureStatus(ManagedHostTransport.MathMatrixAffineInverse(&nativeMatrix, &result), "MathMatrixAffineInverse");
             return DecodeMatrix(result);
         }
@@ -2774,7 +2774,7 @@ namespace Crowny
             ManagedNativeVec3 nativeFrom = new ManagedNativeVec3 { X = from.x, Y = from.y, Z = from.z };
             ManagedNativeVec3 nativeTo = new ManagedNativeVec3 { X = to.x, Y = to.y, Z = to.z };
             ManagedNativeVec3 nativeUp = new ManagedNativeVec3 { X = up.x, Y = up.y, Z = up.z };
-            ManagedNativeMatrix4 result = default;
+            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
             EnsureStatus(ManagedHostTransport.MathLookAt(&nativeFrom, &nativeTo, &nativeUp, &result), "MathLookAt");
             return DecodeMatrix(result);
         }
