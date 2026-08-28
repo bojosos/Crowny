@@ -37,6 +37,7 @@
 #include "Crowny/Renderer/Model.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Renderer/TextureManager.h"
 
 #include "Crowny/Scene/Scene.h"

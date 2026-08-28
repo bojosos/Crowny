@@ -10,10 +10,12 @@ layout(location = 2) in vec2 a_TexCoords;
 layout(location = 3) in vec4 a_OutlineColor;
 layout(location = 4) in float a_OutlineThickness;
 layout(location = 5) in float a_Weight;
-layout(location = 6) in vec2 a_LocalPosition;
-layout(location = 7) in vec4 a_ClipRect;
-layout(location = 8) in int a_Flags;
-layout(location = 9) in int a_ObjectId;
+layout(location = 6) in float a_PixelRange;
+layout(location = 7) in float a_Softness;
+layout(location = 8) in vec2 a_LocalPosition;
+layout(location = 9) in vec4 a_ClipRect;
+layout(location = 10) in int a_Flags;
+layout(location = 11) in int a_ObjectId;
 
 layout(std140, binding = 0) uniform cw_Camera
 {
@@ -27,13 +29,15 @@ struct VertexOutput
 	vec2 TexCoord;
 	float OutlineThickness;
 	float Weight;
+	float PixelRange;
+	float Softness;
 	vec2 LocalPosition;
 	vec4 ClipRect;
 };
 
 layout (location = 0) out VertexOutput Output;
-layout (location = 7) out flat int v_Flags;
-layout (location = 8) out flat int v_EntityID;
+layout (location = 9) out flat int v_Flags;
+layout (location = 10) out flat int v_EntityID;
 
 void main()
 {
@@ -42,6 +46,8 @@ void main()
 	Output.OutlineColor = a_OutlineColor;
 	Output.OutlineThickness = a_OutlineThickness;
 	Output.Weight = a_Weight;
+	Output.PixelRange = a_PixelRange;
+	Output.Softness = a_Softness;
 	Output.LocalPosition = a_LocalPosition;
 	Output.ClipRect = a_ClipRect;
 
@@ -64,18 +70,20 @@ struct VertexOutput
 	vec2 TexCoord;
 	float OutlineThickness;
 	float Weight;
+	float PixelRange;
+	float Softness;
 	vec2 LocalPosition;
 	vec4 ClipRect;
 };
 
 layout (location = 0) in VertexOutput Input;
-layout (location = 7) in flat int v_Flags;
-layout (location = 8) in flat int v_EntityID;
+layout (location = 9) in flat int v_Flags;
+layout (location = 10) in flat int v_EntityID;
 
 layout (binding = 1) uniform sampler2D u_FontAtlas;
 
 float screenPxRange() {
-	const float pxRange = 2.0; // set to distance field's pixel range
+	float pxRange = max(Input.PixelRange, 0.5);
     vec2 unitRange = vec2(pxRange)/vec2(textureSize(u_FontAtlas, 0));
     vec2 screenTexSize = vec2(1.0)/fwidth(Input.TexCoord);
     return max(0.5*dot(unitRange, screenTexSize), 1.0);
@@ -104,8 +112,9 @@ void main()
 	vec3 msd = texture(u_FontAtlas, Input.TexCoord).rgb;
     float sd = median(msd.r, msd.g, msd.b);
 	float screenPxDistance = screenPxRange()*(sd - 0.5 + Input.Weight);
-    float fillOpacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
-    float outlineOpacity = clamp(screenPxDistance + max(Input.OutlineThickness, 0.0) + 0.5, 0.0, 1.0);
+	float softenedDistance = screenPxDistance/max(1.0 + Input.Softness, 1.0);
+    float fillOpacity = clamp(softenedDistance + 0.5, 0.0, 1.0);
+    float outlineOpacity = clamp(softenedDistance + max(Input.OutlineThickness, 0.0) + 0.5, 0.0, 1.0);
     o_Color = mix(Input.OutlineColor, Input.Color, fillOpacity);
     o_Color.a *= outlineOpacity;
 	if (o_Color.a <= 0.0)

@@ -64,6 +64,8 @@ namespace Crowny
         glm::vec4 OutlineColor;
         float OutlineThickness;
         float Weight;
+        float PixelRange;
+        float Softness;
         glm::vec2 LocalPosition;
         glm::vec4 ClipRect;
         int32_t Flags;
@@ -191,6 +193,8 @@ namespace Crowny
                                                                                { ShaderDataType::Float4, "a_OutlineColor" },
                                                                                { ShaderDataType::Float, "a_OutlineThickness" },
                                                                                { ShaderDataType::Float, "a_Weight" },
+                                                                               { ShaderDataType::Float, "a_PixelRange" },
+                                                                               { ShaderDataType::Float, "a_Softness" },
                                                                                { ShaderDataType::Float2, "a_LocalPosition" },
                                                                                { ShaderDataType::Float4, "a_ClipRect" },
                                                                                { ShaderDataType::Int, "a_Flags" },
@@ -382,17 +386,27 @@ namespace Crowny
         if (layout.LineCount == 0)
             return;
 
-        const Ref<Texture> fontAtlasTexture = font->GetAtlasTexture();
-        if (s_Data->TextIndexCount > 0 && s_Data->FontAtlasTexture != fontAtlasTexture)
-        {
-            FlushText();
-            ResetTextBatch();
-        }
-        s_Data->FontAtlasTexture = fontAtlasTexture;
+        Ref<Texture> activeAtlasTexture;
+        auto selectFontAtlas = [&](const Font& sourceFont) {
+            const Ref<Texture> atlasTexture = sourceFont.GetAtlasTexture();
+            if (atlasTexture == nullptr)
+                return false;
+
+            if (s_Data->TextIndexCount > 0 && s_Data->FontAtlasTexture != atlasTexture)
+            {
+                FlushText();
+                ResetTextBatch();
+            }
+
+            activeAtlasTexture = atlasTexture;
+            s_Data->FontAtlasTexture = atlasTexture;
+            return true;
+        };
+        if (!selectFontAtlas(*font))
+            return;
 
         const msdfgen::FontMetrics& fontMetrics = *font->GetMetrics();
-        const float texelWidth = 1.0f / static_cast<float>(fontAtlasTexture->GetWidth());
-        const float texelHeight = 1.0f / static_cast<float>(fontAtlasTexture->GetHeight());
+        const float atlasPixelRange = font->GetAtlasPixelRange();
         const float italicSlant = textComponent.FontStyle.IsSet(TextFontStyleBits::Italic) ? 0.2f : 0.0f;
         const float weight = textComponent.FontStyle.IsSet(TextFontStyleBits::Bold) ? 0.075f : 0.0f;
         const float outlineThickness = std::max(0.0f, textComponent.Thickness);
@@ -408,11 +422,11 @@ namespace Crowny
                 return;
             FlushText();
             ResetTextBatch();
-            s_Data->FontAtlasTexture = fontAtlasTexture;
+            s_Data->FontAtlasTexture = activeAtlasTexture;
         };
 
         auto emitQuad = [&](Array<glm::vec2, 4> positions, const Array<glm::vec2, 4>& uvs, const glm::vec4& color, const glm::vec4& outlineColor,
-                            float outline, float glyphWeight, int32_t flags, float baseline) {
+                             float outline, float glyphWeight, float pixelRange, float softness, int32_t flags, float baseline) {
             ensureTextCapacity();
             for (uint32_t vertexIndex = 0; vertexIndex < positions.size(); vertexIndex++)
             {
@@ -424,6 +438,8 @@ namespace Crowny
                 vertex.OutlineColor = outlineColor;
                 vertex.OutlineThickness = outline;
                 vertex.Weight = glyphWeight;
+                vertex.PixelRange = pixelRange;
+                vertex.Softness = std::max(0.0f, softness);
                 vertex.LocalPosition = positions[vertexIndex];
                 vertex.ClipRect = clipRect;
                 vertex.Flags = flags | clipFlag;
@@ -449,7 +465,7 @@ namespace Crowny
                 const glm::vec2 min(line.X, centerY - decorationThickness * 0.5f);
                 const glm::vec2 max(line.X + line.Width, centerY + decorationThickness * 0.5f);
                 const Array<glm::vec2, 4> positions = { min, { min.x, max.y }, max, { max.x, min.y } };
-                emitQuad(positions, solidUvs, decorationColor, decorationColor, 0.0f, 0.0f, 1, line.Baseline);
+                emitQuad(positions, solidUvs, decorationColor, decorationColor, 0.0f, 0.0f, atlasPixelRange, 0.0f, 1, line.Baseline);
             };
 
             if (textComponent.FontStyle.IsSet(TextFontStyleBits::Underline))
@@ -459,11 +475,19 @@ namespace Crowny
                                textComponent.StrikethroughOffset);
         }
 
-        for (size_t glyphIndex = 0; glyphIndex < layout.GlyphCount; glyphIndex++)
-        {
-            const TextLayoutGlyph& layoutGlyph = layout.Glyphs[glyphIndex];
+        auto emitGlyph = [&](const TextLayoutGlyph& layoutGlyph, const glm::vec4& color, const glm::vec4& glyphOutlineColor,
+                             float glyphOutlineThickness, const glm::vec2& offset, float softness) {
             if (layoutGlyph.Glyph == nullptr)
-                continue;
+                return;
+
+            const Font* sourceFont = layoutGlyph.SourceFont != nullptr ? layoutGlyph.SourceFont : font.Get();
+            if (sourceFont == nullptr || !selectFontAtlas(*sourceFont))
+                return;
+
+            const Ref<Texture>& atlasTexture = activeAtlasTexture;
+            const float texelWidth = 1.0f / static_cast<float>(atlasTexture->GetWidth());
+            const float texelHeight = 1.0f / static_cast<float>(atlasTexture->GetHeight());
+            const float pixelRange = sourceFont->GetAtlasPixelRange();
 
             double atlasLeft = 0.0;
             double atlasBottom = 0.0;
@@ -482,10 +506,23 @@ namespace Crowny
                                     layoutGlyph.PenPosition.y + static_cast<float>(planeBottom * layout.GlyphScale));
             const glm::vec2 quadMax(layoutGlyph.PenPosition.x + static_cast<float>(planeRight * layout.GlyphScale),
                                     layoutGlyph.PenPosition.y + static_cast<float>(planeTop * layout.GlyphScale));
-            const Array<glm::vec2, 4> positions = { quadMin, { quadMin.x, quadMax.y }, quadMax, { quadMax.x, quadMin.y } };
+            Array<glm::vec2, 4> positions = { quadMin, { quadMin.x, quadMax.y }, quadMax, { quadMax.x, quadMin.y } };
+            for (glm::vec2& position : positions)
+                position += offset;
             const Array<glm::vec2, 4> uvs = { uvMin, { uvMin.x, uvMax.y }, uvMax, { uvMax.x, uvMin.y } };
-            emitQuad(positions, uvs, textComponent.Color, textComponent.OutlineColor, outlineThickness, weight, 0, layoutGlyph.PenPosition.y);
+            emitQuad(positions, uvs, color, glyphOutlineColor, glyphOutlineThickness, weight, pixelRange, softness, 0,
+                     layoutGlyph.PenPosition.y + offset.y);
+        };
+
+        if (textComponent.ShadowColor.a > 0.0f)
+        {
+            for (size_t glyphIndex = 0; glyphIndex < layout.GlyphCount; glyphIndex++)
+                emitGlyph(layout.Glyphs[glyphIndex], textComponent.ShadowColor, textComponent.ShadowColor, 0.0f, textComponent.ShadowOffset,
+                          textComponent.ShadowSoftness);
         }
+
+        for (size_t glyphIndex = 0; glyphIndex < layout.GlyphCount; glyphIndex++)
+            emitGlyph(layout.Glyphs[glyphIndex], textComponent.Color, textComponent.OutlineColor, outlineThickness, glm::vec2(0.0f), 0.0f);
     }
 
     void Renderer2D::End()
