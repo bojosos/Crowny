@@ -12,7 +12,9 @@
 
 #include <msdf-atlas-gen.h>
 
+#include <cctype>
 #include <charconv>
+#include <cstring>
 #include <limits>
 
 #define DEFAULT_ANGLE_THRESHOLD 3.0
@@ -24,6 +26,7 @@ namespace Crowny
     namespace
     {
         constexpr uint32_t MAX_CUSTOM_CHARACTERS = 65536;
+        constexpr float ATLAS_PIXEL_RANGE = 2.0f;
 
         uint32_t GetFontWorkerCount()
         {
@@ -31,10 +34,7 @@ namespace Crowny
             return hardwareThreads > 2 ? hardwareThreads - 2 : 1;
         }
 
-        bool IsValidCodePoint(uint32_t codePoint)
-        {
-            return codePoint <= 0x10FFFF && !(codePoint >= 0xD800 && codePoint <= 0xDFFF);
-        }
+        bool IsValidCodePoint(uint32_t codePoint) { return codePoint <= 0x10FFFF && !(codePoint >= 0xD800 && codePoint <= 0xDFFF); }
 
         bool ParseCodePoint(StringView token, int base, uint32_t& codePoint)
         {
@@ -216,17 +216,37 @@ namespace Crowny
 
     bool FontImporter::IsExtensionSupported(const String& extension) const
     {
-        return extension == "ttf" || extension == "ttc" || extension == "otf" || extension == "otc" || extension == "fnt";
+        String normalized = extension;
+        if (!normalized.empty() && normalized.front() == '.')
+            normalized.erase(normalized.begin());
+        std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                       [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
+        return normalized == "ttf" || normalized == "ttc" || normalized == "otf" || normalized == "otc" || normalized == "fnt";
     }
 
-    bool FontImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }
+    bool FontImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const
+    {
+        if (num == nullptr || numSize < 4)
+            return false;
+
+        constexpr Array<Array<uint8_t, 4>, 5> signatures = { Array<uint8_t, 4>{ 0x00, 0x01, 0x00, 0x00 }, Array<uint8_t, 4>{ 'O', 'T', 'T', 'O' },
+                                                             Array<uint8_t, 4>{ 't', 't', 'c', 'f' }, Array<uint8_t, 4>{ 't', 'r', 'u', 'e' },
+                                                             Array<uint8_t, 4>{ 't', 'y', 'p', '1' } };
+        return std::any_of(signatures.begin(), signatures.end(),
+                           [num](const Array<uint8_t, 4>& signature) { return std::memcmp(num, signature.data(), signature.size()) == 0; });
+    }
 
     Ref<Asset> FontImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        const Ref<const FontImportOptions> options = StaticRefCast<const FontImportOptions>(importOptions);
-        if (!options)
+        if (!importOptions || importOptions->GetImportOptionsType() != ImportOptionsType::Font)
         {
-            CW_ENGINE_ERROR("Font import options are missing for '{}'.", path);
+            CW_ENGINE_ERROR("Font import options are missing or have the wrong type for '{}'.", path);
+            return nullptr;
+        }
+        const Ref<const FontImportOptions> options = StaticRefCast<const FontImportOptions>(importOptions);
+        if (options->DynamicFontAtlas)
+        {
+            CW_ENGINE_ERROR("Dynamic font atlases are not supported. Disable DynamicFontAtlas before importing '{}'.", path);
             return nullptr;
         }
 
@@ -269,14 +289,10 @@ namespace Crowny
             CW_ENGINE_INFO("Font metrics: em {}, ascender {}, descender {}, line height {}", fontMetrics.emSize, fontMetrics.ascenderY,
                            fontMetrics.descenderY, fontMetrics.lineHeight);
 
-        if (options->DynamicFontAtlas)
-            CW_ENGINE_WARN("Dynamic font atlases are not implemented. Importing '{}' as a static atlas.", path.filename().string());
-
         const msdf_atlas::Charset charset = BuildCharset(*options);
         Scope<MSDFData> fontData = CreateScope<MSDFData>();
         fontData->FontGeometry = msdf_atlas::FontGeometry(&fontData->Glyphs);
-        const int glyphsLoaded =
-          fontData->FontGeometry.loadCharset(fontLibrary.Font, 1.0, charset, true, options->GetKerningData);
+        const int glyphsLoaded = fontData->FontGeometry.loadCharset(fontLibrary.Font, 1.0, charset, true, options->GetKerningData);
         if (glyphsLoaded <= 0)
         {
             CW_ENGINE_ERROR("Font '{}' did not provide any requested glyphs.", path.filename().string());
@@ -289,7 +305,7 @@ namespace Crowny
 
         msdf_atlas::TightAtlasPacker atlasPacker;
         atlasPacker.setMiterLimit(1.0);
-        atlasPacker.setPixelRange(2.0);
+        atlasPacker.setPixelRange(ATLAS_PIXEL_RANGE);
         atlasPacker.setPadding(static_cast<int>(std::min(options->Padding, 256U)));
         const double requestedScale = static_cast<double>(std::clamp(options->SamplingFontSize, 4U, 512U));
         if (options->AutoSizeAtlas)
@@ -337,8 +353,7 @@ namespace Crowny
         CW_ENGINE_INFO("Colored font edges in {}s.", timer.ElapsedSeconds());
 
         timer.Reset();
-        const Ref<Texture> atlasTexture =
-          CreateAtlas<uint8_t, float, 3, msdf_atlas::msdfGenerator>(fontData->Glyphs, width, height, workerCount);
+        const Ref<Texture> atlasTexture = CreateAtlas<uint8_t, float, 3, msdf_atlas::msdfGenerator>(fontData->Glyphs, width, height, workerCount);
         if (!atlasTexture)
         {
             CW_ENGINE_ERROR("Could not create the atlas texture for '{}'.", path.filename().string());
@@ -347,7 +362,7 @@ namespace Crowny
         CW_ENGINE_INFO("Generated font atlas in {}s.", timer.ElapsedSeconds());
 
         const String fontFilename = path.filename().string();
-        const Ref<Font> font = CreateRef<Font>(fontData.release(), atlasTexture, std::max(1U, options->TabMultiple));
+        const Ref<Font> font = CreateRef<Font>(std::move(fontData), atlasTexture, std::clamp(options->TabMultiple, 1U, 64U), ATLAS_PIXEL_RANGE);
         font->SetName(fontFilename);
         return font;
     }

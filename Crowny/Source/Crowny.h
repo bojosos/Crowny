@@ -30,6 +30,7 @@
 
 #include "Crowny/Renderer/Camera.h"
 #include "Crowny/Renderer/Font.h"
+#include "Crowny/Renderer/FontManager.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/MeshFactory.h"
