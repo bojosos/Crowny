@@ -486,6 +486,29 @@ namespace Crowny
                 return material.IsValid();
             }
 
+            GraphicsMaterial* ResolveDepthMaterial(DepthPrepassProgram program)
+            {
+                switch (program)
+                {
+                case DepthPrepassProgram::Static:
+                    return Ensure(m_Depth, m_DepthAttempted, "Resources/Shaders/GpuDepthOnly.asset") ? &m_Depth : nullptr;
+                case DepthPrepassProgram::Animated:
+                    return Ensure(m_AnimatedDepth, m_AnimatedDepthAttempted, "Resources/Shaders/GpuAnimatedDepthOnly.asset")
+                             ? &m_AnimatedDepth
+                             : nullptr;
+                case DepthPrepassProgram::StaticObjectID:
+                    return Ensure(m_DepthObjectID, m_DepthObjectIDAttempted, "Resources/Shaders/GpuDepthObjectID.asset")
+                             ? &m_DepthObjectID
+                             : nullptr;
+                case DepthPrepassProgram::AnimatedObjectID:
+                    return Ensure(m_AnimatedDepthObjectID, m_AnimatedDepthObjectIDAttempted,
+                                  "Resources/Shaders/GpuAnimatedDepthObjectID.asset")
+                             ? &m_AnimatedDepthObjectID
+                             : nullptr;
+                }
+                return nullptr;
+            }
+
             bool EnsureTransparent(GraphicsMaterial& material, bool& attempted, bool additive)
             {
                 if (material.IsValid())
@@ -720,41 +743,29 @@ namespace Crowny
                 if (!instances || !instanceIds || !commands)
                     return;
 
-                DepthPrepassOutputLayout outputLayout =
+                const DepthPrepassOutputLayout outputLayout =
                   ResolveDepthPrepassOutputLayout(Resource("Velocity").IsValid(), Resource("ObjectID").IsValid());
-                const bool objectIdOnly = outputLayout.Mode == DepthPrepassOutputMode::ObjectID;
-                const bool objectIdOnlyShadersReady =
-                  objectIdOnly && Ensure(m_DepthObjectID, m_DepthObjectIDAttempted, "Resources/Shaders/GpuDepthObjectID.asset") &&
-                  Ensure(m_AnimatedDepthObjectID, m_AnimatedDepthObjectIDAttempted, "Resources/Shaders/GpuAnimatedDepthObjectID.asset");
-                GraphicsMaterial* staticDepthMaterial = objectIdOnlyShadersReady ? &m_DepthObjectID : &m_Depth;
-                if (!objectIdOnlyShadersReady && !Ensure(m_Depth, m_DepthAttempted, "Resources/Shaders/GpuDepthOnly.asset"))
-                    return;
-                // Missing object-ID-only assets must not disable depth or bind
-                // the velocity shader to an integer color attachment.
-                if (objectIdOnly && !objectIdOnlyShadersReady)
-                    outputLayout = {};
 
                 RenderGraphRenderTargetDesc attachments;
                 attachments.Depth = Resource("SceneDepth");
                 DepthViewConstants view;
                 view.ViewProjection = m_View.Projection * m_View.View;
                 view.PreviousViewProjection = m_View.PreviousViewProjection;
-                staticDepthMaterial->WriteUniformBlock(0, 0, &view, sizeof(view));
-                staticDepthMaterial->SetBuffer(0, 1, instances);
-                staticDepthMaterial->SetBuffer(0, 2, instanceIds);
                 attachments.ColorCount = outputLayout.ColorAttachmentCount;
                 if (outputLayout.MotionVectorAttachment != DepthPrepassOutputLayout::NoAttachment)
                     attachments.Colors[outputLayout.MotionVectorAttachment] = Resource("Velocity");
                 if (outputLayout.ObjectIDAttachment != DepthPrepassOutputLayout::NoAttachment)
                     attachments.Colors[outputLayout.ObjectIDAttachment] = Resource("ObjectID");
-                const Ref<RenderTarget> target = context.GetRenderTarget(attachments);
-                if (!target)
+                const Ref<RenderTarget> outputTarget = context.GetRenderTarget(attachments);
+                if (!outputTarget)
                     return;
-                RenderAPI::TryGet()->SetRenderTarget(target);
+                RenderAPI::TryGet()->SetRenderTarget(outputTarget);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
                 RenderAPI::TryGet()->ClearViewport(FBT_DEPTH | (attachments.ColorCount != 0 ? FBT_COLOR : 0), glm::vec4(0.0f), 0.0f);
 
                 GraphicsMaterial* boundMaterial = nullptr;
+                RenderTarget* boundTarget = outputTarget.get();
+                Ref<RenderTarget> depthOnlyTarget;
                 for (const GpuDrawRun& run : m_DepthDrawList->Runs)
                 {
                     const bool depthPhase = run.Bin.Phase == RenderDrawPhase::Opaque || run.Bin.Phase == RenderDrawPhase::ForwardOpaque;
@@ -764,23 +775,42 @@ namespace Crowny
                     const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
                     if (!vertexBuffer || !indexBuffer)
                         continue;
-                    GraphicsMaterial* depthMaterial = staticDepthMaterial;
-                    if (vertexBuffer->GetLayout()->HasAttribute(VertexAttribute::PreviousPosition))
+                    const bool animated = vertexBuffer->GetLayout()->HasAttribute(VertexAttribute::PreviousPosition);
+                    const DepthPrepassProgramSelection program = ResolveDepthPrepassProgram(outputLayout.Mode, animated);
+                    GraphicsMaterial* depthMaterial = ResolveDepthMaterial(program.Primary);
+                    bool depthOnlyFallback = false;
+                    if (depthMaterial == nullptr && program.HasFallback)
                     {
-                        if (objectIdOnlyShadersReady)
-                            depthMaterial = &m_AnimatedDepthObjectID;
-                        else
+                        depthMaterial = ResolveDepthMaterial(program.Fallback);
+                        depthOnlyFallback = depthMaterial != nullptr;
+                    }
+                    if (depthMaterial == nullptr)
+                        continue;
+                    Ref<RenderTarget> target = outputTarget;
+                    if (depthOnlyFallback)
+                    {
+                        if (!depthOnlyTarget)
                         {
-                            if (!Ensure(m_AnimatedDepth, m_AnimatedDepthAttempted, "Resources/Shaders/GpuAnimatedDepthOnly.asset"))
-                                continue;
-                            depthMaterial = &m_AnimatedDepth;
+                            RenderGraphRenderTargetDesc depthOnlyAttachments;
+                            depthOnlyAttachments.Depth = Resource("SceneDepth");
+                            depthOnlyTarget = context.GetRenderTarget(depthOnlyAttachments);
                         }
-                        depthMaterial->WriteUniformBlock(0, 0, &view, sizeof(view));
-                        depthMaterial->SetBuffer(0, 1, instances);
-                        depthMaterial->SetBuffer(0, 2, instanceIds);
+                        target = depthOnlyTarget;
+                    }
+                    if (!target)
+                        continue;
+                    if (boundTarget != target.get())
+                    {
+                        RenderAPI::TryGet()->SetRenderTarget(target, 0, depthOnlyFallback ? RT_DEPTH_STENCIL : RT_ALL);
+                        RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+                        boundTarget = target.get();
+                        boundMaterial = nullptr;
                     }
                     if (depthMaterial != boundMaterial)
                     {
+                        depthMaterial->WriteUniformBlock(0, 0, &view, sizeof(view));
+                        depthMaterial->SetBuffer(0, 1, instances);
+                        depthMaterial->SetBuffer(0, 2, instanceIds);
                         if (!depthMaterial->Bind())
                             continue;
                         boundMaterial = depthMaterial;
@@ -1359,6 +1389,14 @@ namespace Crowny
 
         struct SceneRendererThreadResources
         {
+            struct HistoryConfiguration
+            {
+                RenderingPath Path = RenderingPath::Auto;
+                bool MotionVectors = true;
+
+                bool operator==(const HistoryConfiguration&) const = default;
+            };
+
             SceneRendererThreadResources() : GraphResources(2, &GraphAllocator), SpotShadowAtlas(2048, 128), PointShadowLayers(16) {}
 
             RenderGraph Graph;
@@ -1382,7 +1420,7 @@ namespace Crowny
             ShadowAtlasAllocator SpotShadowAtlas;
             PointShadowLayerAllocator PointShadowLayers;
             UnorderedSet<uint32_t> PreviousSpotLights;
-            UnorderedMap<uint64_t, RenderingPath> HistoryPaths;
+            UnorderedMap<uint64_t, HistoryConfiguration> HistoryConfigurations;
         };
 
         thread_local Scope<SceneRendererThreadResources> s_RenderThreadResources;
@@ -2579,7 +2617,7 @@ namespace Crowny
             return;
 
         s_RenderThreadResources->GraphResources.ReleaseHistory(historyNamespace);
-        s_RenderThreadResources->HistoryPaths.erase(historyNamespace);
+        s_RenderThreadResources->HistoryConfigurations.erase(historyNamespace);
     }
 
     void SceneRenderer::RenderFromSnapshot(const RenderSnapshot& snapshot)
@@ -2604,7 +2642,7 @@ namespace Crowny
         const RenderFeatureTier featureTier = capabilities.GetFeatureTier();
         if (featureTier == RenderFeatureTier::Compatibility)
         {
-            if (threadResources.HistoryPaths.erase(snapshot.HistoryNamespace) != 0)
+            if (threadResources.HistoryConfigurations.erase(snapshot.HistoryNamespace) != 0)
                 graphResources.InvalidateHistory(snapshot.HistoryNamespace);
             RenderLegacySnapshot(snapshot);
             return;
@@ -2671,14 +2709,16 @@ namespace Crowny
         view.Projection = snapshot.ProjectionMatrix;
         view.PreviousViewProjection = snapshot.PreviousViewProjection;
         view.ViewportSize = { static_cast<float>(targetDesc.Width), static_cast<float>(targetDesc.Height) };
-        view.EnableObjectID = true;
-        view.EnableMotionVectors = true;
+        view.EnableObjectID = snapshot.EnableObjectID;
+        view.EnableMotionVectors = snapshot.EnableMotionVectors;
         view.CameraCut = snapshot.CameraCut || snapshot.FrameNumber <= 1;
         view.Path = pipeline.ResolvePath(capabilities);
-        const auto [historyPath, newHistoryPath] = threadResources.HistoryPaths.try_emplace(snapshot.HistoryNamespace, view.Path);
-        if (!newHistoryPath && historyPath->second != view.Path)
+        const SceneRendererThreadResources::HistoryConfiguration historyConfiguration{ view.Path, view.EnableMotionVectors };
+        const auto [historyState, newHistoryState] =
+          threadResources.HistoryConfigurations.try_emplace(snapshot.HistoryNamespace, historyConfiguration);
+        if (!newHistoryState && historyState->second != historyConfiguration)
         {
-            historyPath->second = view.Path;
+            historyState->second = historyConfiguration;
             view.CameraCut = true;
         }
 
@@ -2743,8 +2783,6 @@ namespace Crowny
         graphDesc.DrawBinCount = gpuDrawBinsEnabled ? static_cast<uint32_t>(gpuScene.GetGpuDrawBinLayout().GetBins().size()) : 0u;
         graphDesc.DrawBinLookupCapacity = gpuDrawBinsEnabled ? static_cast<uint32_t>(gpuScene.GetGpuDrawBinLayout().GetLookupEntries().size()) : 0u;
         graphDesc.EnableGpuDrawBins = gpuDrawBinsEnabled;
-        graphDesc.EnableMotionVectors = true;
-        graphDesc.EnableObjectID = true;
         graphDesc.EnablePostProcessing = true;
         GpuDrivenPassExecutor& gpuDrivenExecutor = threadResources.GpuDrivenExecutor;
         if (featureTier == RenderFeatureTier::VulkanBaseline || featureTier == RenderFeatureTier::GPUDriven ||

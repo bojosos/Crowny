@@ -2,6 +2,7 @@
 
 #include "Crowny/RenderAPI/RenderCapabilities.h"
 #include "Crowny/Renderer/RenderPipeline.h"
+#include "Crowny/Renderer/RenderSnapshot.h"
 
 #include <array>
 
@@ -18,6 +19,20 @@ namespace
         return graph.ImportTexture("Output", desc, 1, RenderGraphResourceState::ColorAttachment, RenderGraphResourceState::Present);
     }
 } // namespace
+
+TEST_CASE("Render snapshots reset optional outputs to runtime defaults", "[Renderer][Pipeline]")
+{
+    RenderSnapshot snapshot;
+    CHECK(snapshot.EnableMotionVectors);
+    CHECK_FALSE(snapshot.EnableObjectID);
+
+    snapshot.EnableMotionVectors = false;
+    snapshot.EnableObjectID = true;
+    snapshot.Clear();
+
+    CHECK(snapshot.EnableMotionVectors);
+    CHECK_FALSE(snapshot.EnableObjectID);
+}
 
 namespace
 {
@@ -84,7 +99,7 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     desc.DrawBinCount = 3;
     desc.DrawBinLookupCapacity = 8;
     desc.EnableGpuDrawBins = true;
-    desc.EnableObjectID = true;
+    view.EnableObjectID = true;
 
     const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
     const RenderGraphCompileResult& compiled = graph.Compile();
@@ -174,35 +189,79 @@ TEST_CASE("Depth prepass configures motion-vector and object-ID outputs independ
         OutputCase{ true, true, DepthPrepassOutputMode::MotionVectorsAndObjectID, 2, 0, 1 },
     };
 
-    for (const OutputCase& outputCase : cases)
+    constexpr std::array paths = { RenderingPath::ForwardPlus, RenderingPath::DeferredPlus };
+    for (const RenderingPath path : paths)
     {
-        CAPTURE(outputCase.MotionVectors, outputCase.ObjectID);
-        RenderGraph graph;
-        RenderBlackboard blackboard;
-        RenderView view;
-        RenderPipelineAsset pipeline;
-        RenderPipelineGraphDesc desc;
-        desc.Width = 320;
-        desc.Height = 180;
-        desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
-        desc.EnableMotionVectors = outputCase.MotionVectors;
-        desc.EnableObjectID = outputCase.ObjectID;
-        desc.EnablePostProcessing = false;
+        for (const OutputCase& outputCase : cases)
+        {
+            CAPTURE(path, outputCase.MotionVectors, outputCase.ObjectID);
+            RenderGraph graph;
+            RenderBlackboard blackboard;
+            RenderView view;
+            RenderPipelineAsset pipeline;
+            RenderPipelineGraphDesc desc;
+            desc.Width = 320;
+            desc.Height = 180;
+            desc.Path = path;
+            desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+            view.EnableMotionVectors = outputCase.MotionVectors;
+            view.EnableObjectID = outputCase.ObjectID;
+            desc.EnablePostProcessing = false;
 
-        const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
-        const RenderGraphCompileResult& compiled = graph.Compile();
+            const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+            const RenderGraphCompileResult& compiled = graph.Compile();
 
-        INFO(compiled.Error);
-        REQUIRE(compiled.Succeeded);
-        CHECK(output.DepthPrepassLayout.Mode == outputCase.ExpectedMode);
-        CHECK(output.DepthPrepassLayout.ColorAttachmentCount == outputCase.ExpectedColorAttachmentCount);
-        CHECK(output.DepthPrepassLayout.MotionVectorAttachment == outputCase.ExpectedMotionVectorAttachment);
-        CHECK(output.DepthPrepassLayout.ObjectIDAttachment == outputCase.ExpectedObjectIDAttachment);
-        CHECK(blackboard.Contains("Velocity") == outputCase.MotionVectors);
-        CHECK(output.ObjectID.IsValid() == outputCase.ObjectID);
-        CHECK(blackboard.Contains("ObjectID") == outputCase.ObjectID);
-        if (outputCase.ObjectID)
-            CHECK(blackboard.Get("ObjectID") == output.ObjectID);
+            INFO(compiled.Error);
+            REQUIRE(compiled.Succeeded);
+            CHECK(output.DepthPrepassLayout.Mode == outputCase.ExpectedMode);
+            CHECK(output.DepthPrepassLayout.ColorAttachmentCount == outputCase.ExpectedColorAttachmentCount);
+            CHECK(output.DepthPrepassLayout.MotionVectorAttachment == outputCase.ExpectedMotionVectorAttachment);
+            CHECK(output.DepthPrepassLayout.ObjectIDAttachment == outputCase.ExpectedObjectIDAttachment);
+            CHECK(blackboard.Contains("Velocity") == outputCase.MotionVectors);
+            CHECK(output.ObjectID.IsValid() == outputCase.ObjectID);
+            CHECK(blackboard.Contains("ObjectID") == outputCase.ObjectID);
+            if (outputCase.MotionVectors)
+            {
+                const RenderGraphResourceHandle velocity = blackboard.Get("Velocity");
+                REQUIRE(velocity.IsValid());
+                CHECK(compiled.Resources[velocity.Index].Desc.Texture.Format == TextureFormat::RG16F);
+            }
+            if (outputCase.ObjectID)
+            {
+                CHECK(blackboard.Get("ObjectID") == output.ObjectID);
+                CHECK(compiled.Resources[output.ObjectID.Index].Desc.Texture.Format == TextureFormat::R32I);
+            }
+        }
+    }
+}
+
+TEST_CASE("Depth prepass selects static and animated programs independently", "[Renderer][Pipeline]")
+{
+    struct ProgramCase
+    {
+        DepthPrepassOutputMode Mode;
+        bool Animated;
+        DepthPrepassProgram Primary;
+        DepthPrepassProgram Fallback;
+        bool HasFallback;
+    };
+    constexpr std::array cases = {
+        ProgramCase{ DepthPrepassOutputMode::DepthOnly, false, DepthPrepassProgram::Static, DepthPrepassProgram::Static, false },
+        ProgramCase{ DepthPrepassOutputMode::DepthOnly, true, DepthPrepassProgram::Animated, DepthPrepassProgram::Animated, false },
+        ProgramCase{ DepthPrepassOutputMode::MotionVectors, false, DepthPrepassProgram::Static, DepthPrepassProgram::Static, false },
+        ProgramCase{ DepthPrepassOutputMode::MotionVectors, true, DepthPrepassProgram::Animated, DepthPrepassProgram::Animated, false },
+        ProgramCase{ DepthPrepassOutputMode::ObjectID, false, DepthPrepassProgram::StaticObjectID, DepthPrepassProgram::Static, true },
+        ProgramCase{ DepthPrepassOutputMode::ObjectID, true, DepthPrepassProgram::AnimatedObjectID, DepthPrepassProgram::Animated, true },
+        ProgramCase{ DepthPrepassOutputMode::MotionVectorsAndObjectID, false, DepthPrepassProgram::Static, DepthPrepassProgram::Static, false },
+        ProgramCase{ DepthPrepassOutputMode::MotionVectorsAndObjectID, true, DepthPrepassProgram::Animated, DepthPrepassProgram::Animated, false },
+    };
+    for (const ProgramCase& programCase : cases)
+    {
+        CAPTURE(programCase.Mode, programCase.Animated);
+        const DepthPrepassProgramSelection selection = ResolveDepthPrepassProgram(programCase.Mode, programCase.Animated);
+        CHECK(selection.Primary == programCase.Primary);
+        CHECK(selection.Fallback == programCase.Fallback);
+        CHECK(selection.HasFallback == programCase.HasFallback);
     }
 }
 
@@ -217,7 +276,7 @@ TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency"
     desc.Height = 720;
     desc.Path = RenderingPath::DeferredPlus;
     desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
-    desc.EnableObjectID = true;
+    view.EnableObjectID = true;
 
     const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
     const RenderGraphCompileResult& compiled = graph.Compile();

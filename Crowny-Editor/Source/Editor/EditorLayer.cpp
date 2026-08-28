@@ -521,6 +521,9 @@ namespace Crowny
 
     void EditorLayer::SubmitSnapshot(RenderSnapshot& snapshot)
     {
+        // The editor viewport needs IDs for asynchronous picking. Runtime and
+        // preview views keep the optional R32I target disabled by default.
+        snapshot.EnableObjectID = true;
         RenderThread* renderThread = Application::TryGet()->GetRenderThread();
         if (renderThread && renderThread->IsRunning())
             renderThread->SubmitFrame();
