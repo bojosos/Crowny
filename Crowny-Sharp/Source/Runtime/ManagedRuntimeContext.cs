@@ -284,6 +284,37 @@ namespace Crowny
         internal static bool GetInputBoolean(ManagedBindingId binding, uint code) =>
             ReadBoolean(Invoke(binding, UUID.Empty, Encode(code)));
 
+        internal static bool GetInputBoolean(ManagedBindingId binding, uint device, uint code) =>
+            ReadBoolean(Invoke(binding, UUID.Empty, Encode(device, code)));
+
+        internal static bool GetInputBoolean(ManagedBindingId binding, string name) =>
+            ReadBoolean(Invoke(binding, UUID.Empty, Encode(name)));
+
+        internal static float GetInputFloat(ManagedBindingId binding, uint device, uint code)
+        {
+            byte[] value = Invoke(binding, UUID.Empty, Encode(device, code));
+            RequireLength(value, sizeof(float));
+            return ReadSingle(value, 0);
+        }
+
+        internal static float GetInputFloat(ManagedBindingId binding, string name)
+        {
+            byte[] value = Invoke(binding, UUID.Empty, Encode(name));
+            RequireLength(value, sizeof(float));
+            return ReadSingle(value, 0);
+        }
+
+        internal static Vector2 GetInputVector2(ManagedBindingId binding, string name)
+        {
+            byte[] value = Invoke(binding, UUID.Empty, Encode(name));
+            RequireLength(value, 2 * sizeof(float));
+            return new Vector2(ReadSingle(value, 0), ReadSingle(value, sizeof(float)));
+        }
+
+        internal static void InvokeInput(ManagedBindingId binding, string name) => Invoke(binding, UUID.Empty, Encode(name));
+
+        internal static void InvokeInput(ManagedBindingId binding) => Invoke(binding, UUID.Empty, Array.Empty<byte>());
+
         internal static float GetBindingFloat(ManagedBindingId binding)
         {
             return GetBindingFloat(binding, UUID.Empty);
@@ -316,7 +347,22 @@ namespace Crowny
 
         private static byte[] EncodeType(Type type) => Encoding.UTF8.GetBytes(type.FullName ?? type.Name);
 
+        private static byte[] Encode(string value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            return Encoding.UTF8.GetBytes(value);
+        }
+
         private static byte[] Encode(uint value) => BitConverter.GetBytes(value);
+
+        private static byte[] Encode(uint first, uint second)
+        {
+            byte[] result = new byte[2 * sizeof(uint)];
+            Buffer.BlockCopy(BitConverter.GetBytes(first), 0, result, 0, sizeof(uint));
+            Buffer.BlockCopy(BitConverter.GetBytes(second), 0, result, sizeof(uint), sizeof(uint));
+            return result;
+        }
 
         private static byte[] Encode(UUID value)
         {

@@ -70,11 +70,25 @@ namespace Crowny.ManagedHost.Interop
         InputGetMouseScrollX = 36,
         InputGetMouseScrollY = 37,
         InputGetMousePosition = 38,
+        InputGetMouseDelta = 39,
         TimeGetTime = 40,
         TimeGetFixedDeltaTime = 41,
         TimeGetSmoothDeltaTime = 42,
         TimeGetRealtimeSinceStartup = 43,
         TimeGetFrameCount = 44,
+        InputIsGamepadConnected = 45,
+        InputGetGamepadButton = 46,
+        InputGetGamepadButtonDown = 47,
+        InputGetGamepadButtonUp = 48,
+        InputGetGamepadAxis = 49,
+        InputGetAction = 150,
+        InputGetActionDown = 151,
+        InputGetActionUp = 152,
+        InputGetAxis = 153,
+        InputGetActionVector = 154,
+        InputEnableActionMap = 155,
+        InputDisableActionMap = 156,
+        InputClearActionRebinds = 157,
         Rigidbody2DGetMass = 50,
         Rigidbody2DSetMass = 51,
         Rigidbody2DGetBodyType = 52,
@@ -270,11 +284,25 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> InputGetMouseScrollX;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> InputGetMouseScrollY;
         public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> InputGetMousePosition;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> InputGetMouseDelta;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetTime;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetFixedDeltaTime;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetSmoothDeltaTime;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetRealtimeSinceStartup;
         public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> TimeGetFrameCount;
+        public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputIsGamepadConnected;
+        public delegate* unmanaged[Cdecl]<void*, uint, uint, byte*, NativeStatus> InputGetGamepadButton;
+        public delegate* unmanaged[Cdecl]<void*, uint, uint, byte*, NativeStatus> InputGetGamepadButtonDown;
+        public delegate* unmanaged[Cdecl]<void*, uint, uint, byte*, NativeStatus> InputGetGamepadButtonUp;
+        public delegate* unmanaged[Cdecl]<void*, uint, uint, float*, NativeStatus> InputGetGamepadAxis;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputGetAction;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputGetActionDown;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputGetActionUp;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, float*, NativeStatus> InputGetAxis;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, NativeVec2*, NativeStatus> InputGetActionVector;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputEnableActionMap;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputDisableActionMap;
+        public delegate* unmanaged[Cdecl]<void*, NativeStatus> InputClearActionRebinds;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetMass;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody2DSetMass;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody2DGetBodyType;
@@ -370,11 +398,25 @@ namespace Crowny.ManagedHost.Interop
                    InputGetMouseScrollX != null &&
                    InputGetMouseScrollY != null &&
                    InputGetMousePosition != null &&
+                   InputGetMouseDelta != null &&
                    TimeGetTime != null &&
                    TimeGetFixedDeltaTime != null &&
                    TimeGetSmoothDeltaTime != null &&
                    TimeGetRealtimeSinceStartup != null &&
                    TimeGetFrameCount != null &&
+                   InputIsGamepadConnected != null &&
+                   InputGetGamepadButton != null &&
+                   InputGetGamepadButtonDown != null &&
+                   InputGetGamepadButtonUp != null &&
+                   InputGetGamepadAxis != null &&
+                   InputGetAction != null &&
+                   InputGetActionDown != null &&
+                   InputGetActionUp != null &&
+                   InputGetAxis != null &&
+                   InputGetActionVector != null &&
+                   InputEnableActionMap != null &&
+                   InputDisableActionMap != null &&
+                   InputClearActionRebinds != null &&
                    Rigidbody2DGetMass != null &&
                    Rigidbody2DSetMass != null &&
                    Rigidbody2DGetBodyType != null &&
@@ -460,7 +502,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 5;
+        public const uint Version = 6;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

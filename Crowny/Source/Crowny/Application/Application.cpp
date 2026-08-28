@@ -203,8 +203,10 @@ namespace Crowny
             auto& rapi = *RenderAPI::TryGet();
             rapi.BeginFrameStatistics(timestep.GetSeconds());
 
-            Input::OnUpdate();
+            Input::BeginFrame();
             Window::PollEvents();
+            Input::UpdateGamepads();
+            Input::UpdateActions();
             if (!m_Windows.empty() && m_Windows.front()->GetWindow()->ShouldClose())
                 m_Running = false;
             if (!m_Running)
