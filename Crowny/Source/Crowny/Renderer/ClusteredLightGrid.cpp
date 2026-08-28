@@ -4,57 +4,48 @@
 
 namespace Crowny
 {
-    namespace
+    ClusteredLightGrid::BuildBounds ClusteredLightBuilder::ProjectSphere(const ClusteredLightGridDesc& desc, const glm::uvec3& dimensions,
+                                                                         const glm::mat4& view, const glm::mat4& projection,
+                                                                         const glm::vec3& position, float radius)
     {
-        struct ClusterBounds
+        const glm::vec3 viewPosition = glm::vec3(view * glm::vec4(position, 1.0f));
+        const float centerDepth = -viewPosition.z;
+        const float minimumDepth = std::max(desc.NearPlane, centerDepth - radius);
+        const float maximumDepth = std::min(desc.FarPlane, centerDepth + radius);
+        if (maximumDepth < desc.NearPlane || minimumDepth > desc.FarPlane || minimumDepth > maximumDepth)
+            return {};
+
+        ClusteredLightGrid::BuildBounds result;
+        result.Minimum.z = DepthToSlice(minimumDepth, desc.NearPlane, desc.FarPlane, dimensions.z);
+        result.Maximum.z = DepthToSlice(maximumDepth, desc.NearPlane, desc.FarPlane, dimensions.z);
+
+        glm::vec2 minimumNdc(-1.0f);
+        glm::vec2 maximumNdc(1.0f);
+        if (centerDepth > radius + desc.NearPlane)
         {
-            glm::uvec3 Minimum = glm::uvec3(0u);
-            glm::uvec3 Maximum = glm::uvec3(0u);
-            bool Valid = false;
-        };
-
-        ClusterBounds ProjectSphere(const ClusteredLightGridDesc& desc, const glm::uvec3& dimensions, const glm::mat4& view,
-                                    const glm::mat4& projection, const glm::vec3& position, float radius)
-        {
-            const glm::vec3 viewPosition = glm::vec3(view * glm::vec4(position, 1.0f));
-            const float centerDepth = -viewPosition.z;
-            const float minimumDepth = std::max(desc.NearPlane, centerDepth - radius);
-            const float maximumDepth = std::min(desc.FarPlane, centerDepth + radius);
-            if (maximumDepth < desc.NearPlane || minimumDepth > desc.FarPlane || minimumDepth > maximumDepth)
-                return {};
-
-            ClusterBounds result;
-            result.Minimum.z = ClusteredLightBuilder::DepthToSlice(minimumDepth, desc.NearPlane, desc.FarPlane, dimensions.z);
-            result.Maximum.z = ClusteredLightBuilder::DepthToSlice(maximumDepth, desc.NearPlane, desc.FarPlane, dimensions.z);
-
-            glm::vec2 minimumNdc(-1.0f);
-            glm::vec2 maximumNdc(1.0f);
-            if (centerDepth > radius + desc.NearPlane)
+            const glm::vec4 clip = projection * glm::vec4(viewPosition, 1.0f);
+            if (std::abs(clip.w) > 0.000001f)
             {
-                const glm::vec4 clip = projection * glm::vec4(viewPosition, 1.0f);
-                if (std::abs(clip.w) > 0.000001f)
-                {
-                    const glm::vec2 centerNdc = glm::vec2(clip) / clip.w;
-                    const float nearestDepth = std::max(centerDepth - radius, desc.NearPlane);
-                    const glm::vec2 radiusNdc = glm::abs(glm::vec2(projection[0][0], projection[1][1])) * radius / nearestDepth;
-                    const glm::vec2 unclampedMinimum = centerNdc - radiusNdc;
-                    const glm::vec2 unclampedMaximum = centerNdc + radiusNdc;
-                    if (unclampedMinimum.x > 1.0f || unclampedMinimum.y > 1.0f || unclampedMaximum.x < -1.0f || unclampedMaximum.y < -1.0f)
-                        return {};
-                    minimumNdc = glm::max(unclampedMinimum, glm::vec2(-1.0f));
-                    maximumNdc = glm::min(unclampedMaximum, glm::vec2(1.0f));
-                }
+                const glm::vec2 centerNdc = glm::vec2(clip) / clip.w;
+                const float nearestDepth = std::max(centerDepth - radius, desc.NearPlane);
+                const glm::vec2 radiusNdc = glm::abs(glm::vec2(projection[0][0], projection[1][1])) * radius / nearestDepth;
+                const glm::vec2 unclampedMinimum = centerNdc - radiusNdc;
+                const glm::vec2 unclampedMaximum = centerNdc + radiusNdc;
+                if (unclampedMinimum.x > 1.0f || unclampedMinimum.y > 1.0f || unclampedMaximum.x < -1.0f || unclampedMaximum.y < -1.0f)
+                    return {};
+                minimumNdc = glm::max(unclampedMinimum, glm::vec2(-1.0f));
+                maximumNdc = glm::min(unclampedMaximum, glm::vec2(1.0f));
             }
-            const glm::vec2 minimumPixel = (minimumNdc * 0.5f + 0.5f) * glm::vec2(desc.ViewportWidth, desc.ViewportHeight);
-            const glm::vec2 maximumPixel = (maximumNdc * 0.5f + 0.5f) * glm::vec2(desc.ViewportWidth, desc.ViewportHeight);
-            result.Minimum.x = std::min(static_cast<uint32_t>(std::max(minimumPixel.x, 0.0f)) / desc.TileSize, dimensions.x - 1u);
-            result.Minimum.y = std::min(static_cast<uint32_t>(std::max(minimumPixel.y, 0.0f)) / desc.TileSize, dimensions.y - 1u);
-            result.Maximum.x = std::min(static_cast<uint32_t>(std::max(maximumPixel.x, 0.0f)) / desc.TileSize, dimensions.x - 1u);
-            result.Maximum.y = std::min(static_cast<uint32_t>(std::max(maximumPixel.y, 0.0f)) / desc.TileSize, dimensions.y - 1u);
-            result.Valid = result.Minimum.x <= result.Maximum.x && result.Minimum.y <= result.Maximum.y;
-            return result;
         }
-    } // namespace
+        const glm::vec2 minimumPixel = (minimumNdc * 0.5f + 0.5f) * glm::vec2(desc.ViewportWidth, desc.ViewportHeight);
+        const glm::vec2 maximumPixel = (maximumNdc * 0.5f + 0.5f) * glm::vec2(desc.ViewportWidth, desc.ViewportHeight);
+        result.Minimum.x = std::min(static_cast<uint32_t>(std::max(minimumPixel.x, 0.0f)) / desc.TileSize, dimensions.x - 1u);
+        result.Minimum.y = std::min(static_cast<uint32_t>(std::max(minimumPixel.y, 0.0f)) / desc.TileSize, dimensions.y - 1u);
+        result.Maximum.x = std::min(static_cast<uint32_t>(std::max(maximumPixel.x, 0.0f)) / desc.TileSize, dimensions.x - 1u);
+        result.Maximum.y = std::min(static_cast<uint32_t>(std::max(maximumPixel.y, 0.0f)) / desc.TileSize, dimensions.y - 1u);
+        result.Valid = result.Minimum.x <= result.Maximum.x && result.Minimum.y <= result.Maximum.y;
+        return result;
+    }
 
     void ClusteredLightBuilder::Build(const ClusteredLightGridDesc& inputDesc, const glm::mat4& view, const glm::mat4& projection,
                                       const RenderLightData* lights, uint32_t lightCount, ClusteredLightGrid& output)
@@ -73,8 +64,10 @@ namespace Crowny
         output.Dimensions = GetDimensions(desc);
         const uint32_t clusterCount = output.Dimensions.x * output.Dimensions.y * output.Dimensions.z;
         output.Cells.resize(clusterCount);
-        Vector<uint32_t> counts(clusterCount, 0u);
-        Vector<ClusterBounds> lightBounds(lightCount);
+        output.m_BuildCounts.assign(clusterCount, 0u);
+        output.m_BuildLightBounds.assign(lightCount, {});
+        Vector<uint32_t>& counts = output.m_BuildCounts;
+        Vector<ClusteredLightGrid::BuildBounds>& lightBounds = output.m_BuildLightBounds;
 
         for (uint32_t lightIndex = 0; lights != nullptr && lightIndex < lightCount; lightIndex++)
         {
@@ -93,7 +86,7 @@ namespace Crowny
                 continue;
             }
 
-            const ClusterBounds bounds =
+            const ClusteredLightGrid::BuildBounds bounds =
               ProjectSphere(desc, output.Dimensions, view, projection, glm::vec3(light.PositionRange), light.PositionRange.w);
             lightBounds[lightIndex] = bounds;
             if (!bounds.Valid)
@@ -121,7 +114,7 @@ namespace Crowny
 
         for (uint32_t lightIndex = 0; lightIndex < lightBounds.size(); lightIndex++)
         {
-            const ClusterBounds& bounds = lightBounds[lightIndex];
+            const ClusteredLightGrid::BuildBounds& bounds = lightBounds[lightIndex];
             if (!bounds.Valid)
                 continue;
             for (uint32_t z = bounds.Minimum.z; z <= bounds.Maximum.z; z++)

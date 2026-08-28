@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/ClusteredLightGrid.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -109,4 +110,52 @@ TEST_CASE("Clustered light directional lists honor their configured limit", "[Re
     REQUIRE(grid.DirectionalLightIndices.size() == 1);
     CHECK(grid.DirectionalLightIndices[0] == 0);
     CHECK(grid.OverflowCount == 1);
+}
+
+TEST_CASE("Clustered light builds allocate nothing after warm-up", "[Renderer][Lights][Clusters][Memory][Frame]")
+{
+    constexpr std::array<uint32_t, 3> lightCounts{ 1u, 1000u, 10000u };
+    constexpr uint32_t frameCount = 120u;
+
+    ClusteredLightGridDesc desc;
+    desc.ViewportWidth = 1;
+    desc.ViewportHeight = 1;
+    desc.TileSize = 1;
+    desc.DepthSlices = 1;
+    desc.MaxLightsPerCluster = 128;
+    desc.NearPlane = 0.1f;
+    desc.FarPlane = 10.0f;
+    const glm::mat4 projection = glm::perspective(glm::radians(60.0f), 1.0f, desc.NearPlane, desc.FarPlane);
+
+    RenderLightDesc light;
+    light.Position = { 0.0f, 0.0f, -1.0f };
+    light.Range = 0.25f;
+    const RenderLightData packedLight = RenderLightWorld::BuildLightData(light);
+
+    for (uint32_t lightCount : lightCounts)
+    {
+        Vector<RenderLightData> lights(lightCount, packedLight);
+        ClusteredLightGrid grid;
+        ClusteredLightBuilder::Build(desc, glm::mat4(1.0f), projection, lights.data(), lightCount, grid);
+        ClusteredLightBuilder::Build(desc, glm::mat4(1.0f), projection, lights.data(), lightCount, grid);
+
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        uint64_t checksum = 0;
+        for (uint32_t frame = 0; frame < frameCount; frame++)
+        {
+            ClusteredLightBuilder::Build(desc, glm::mat4(1.0f), projection, lights.data(), lightCount, grid);
+            checksum += grid.Cells[0].Count;
+        }
+        const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+        const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+        const uint32_t expectedCount = std::min(lightCount, desc.MaxLightsPerCluster);
+        INFO("Light count: " << lightCount);
+        CHECK(checksum == static_cast<uint64_t>(expectedCount) * frameCount);
+        CHECK(grid.Cells.size() == 1u);
+        CHECK(grid.LightIndices.size() == expectedCount);
+        CHECK(grid.OverflowCount == lightCount - expectedCount);
+        CHECK(delta.AllocationCount == 0u);
+        CHECK(delta.RequestedBytes == 0u);
+    }
 }

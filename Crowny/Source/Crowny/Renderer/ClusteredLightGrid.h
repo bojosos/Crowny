@@ -39,7 +39,23 @@ namespace Crowny
             LightIndices.clear();
             DirectionalLightIndices.clear();
             OverflowCount = 0;
+            m_BuildCounts.clear();
+            m_BuildLightBounds.clear();
         }
+
+    private:
+        friend class ClusteredLightBuilder;
+
+        struct BuildBounds
+        {
+            glm::uvec3 Minimum = glm::uvec3(0u);
+            glm::uvec3 Maximum = glm::uvec3(0u);
+            bool Valid = false;
+        };
+
+        // Build scratch survives Clear so repeated compatibility frames reuse it.
+        Vector<uint32_t> m_BuildCounts;
+        Vector<BuildBounds> m_BuildLightBounds;
     };
 
     // Deterministic CPU reference and compatibility fallback. Vulkan uses the
@@ -59,5 +75,9 @@ namespace Crowny
         {
             return x + dimensions.x * (y + dimensions.y * z);
         }
+
+    private:
+        static ClusteredLightGrid::BuildBounds ProjectSphere(const ClusteredLightGridDesc& desc, const glm::uvec3& dimensions, const glm::mat4& view,
+                                                             const glm::mat4& projection, const glm::vec3& position, float radius);
     };
 } // namespace Crowny

@@ -29,6 +29,7 @@
 #include "Crowny/Serialization/SceneComponentCodec.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 #include "Crowny/Serialization/ScriptSerializer.h"
+#include "ManagedTestPaths.h"
 
 #include <mono/metadata/threads.h>
 
@@ -418,8 +419,8 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     if (!ScriptAssetManager::IsStartedUp())
         ScriptAssetManager::StartUp();
 
-    const Path engineAssemblyPath = fs::absolute("Crowny-Sharp/CrownySharp.dll");
-    const Path gameAssemblyPath = fs::absolute("Crowny-Sandbox/GameAssembly.dll");
+    const Path engineAssemblyPath = Crowny::Test::ResolveManagedAssembly("CrownySharp.dll", "Crowny-Sharp/CrownySharp.dll");
+    const Path gameAssemblyPath = Crowny::Test::ResolveManagedAssembly("GameAssembly.dll", "Crowny-Sandbox/GameAssembly.dll");
     REQUIRE(fs::is_regular_file(engineAssemblyPath));
     REQUIRE(fs::is_regular_file(gameAssemblyPath));
 

@@ -1,7 +1,7 @@
 #include "cwepch.h"
 
-#include "EditorLayer.h"
 #include "Editor/EditorBuiltInAssetCompiler.h"
+#include "EditorLayer.h"
 
 #include <Crowny/Application/CmdArgs.h>
 #include <Crowny/Application/EntryPoint.h>
@@ -10,12 +10,24 @@
 
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <optional>
 
 namespace Crowny
 {
     namespace
     {
+        Path FindRepositoryRoot(Path candidate)
+        {
+            for (uint32_t depth = 0; depth < 8 && !candidate.empty(); depth++)
+            {
+                if (fs::is_directory(candidate / "Crowny-Editor/Resources") && fs::is_directory(candidate / "Crowny/Source"))
+                    return candidate;
+                candidate = candidate.parent_path();
+            }
+            return {};
+        }
+
         std::optional<RenderAPI::API> ParseRenderAPI(const Vector<String>& args)
         {
             for (size_t index = 1; index < args.size(); ++index)
@@ -32,9 +44,8 @@ namespace Crowny
                 else
                     continue;
 
-                std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
-                    return static_cast<char>(std::tolower(character));
-                });
+                std::transform(value.begin(), value.end(), value.begin(),
+                               [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
                 if (value == "opengl" || value == "gl")
                     return RenderAPI::API::OpenGL;
                 if (value == "vulkan" || value == "vk")
@@ -82,17 +93,9 @@ namespace Crowny
     {
         const Vector<String>& args = CommandLineArgs::Get();
         const Path executableDirectory = args.empty() ? fs::current_path() : fs::absolute(args.front()).parent_path();
-        Path workingDirectory;
-        Path candidate = fs::current_path();
-        for (uint32_t depth = 0; depth < 8 && !candidate.empty(); depth++)
-        {
-            if (fs::is_directory(candidate / "Crowny-Editor/Resources") && fs::is_directory(candidate / "Crowny/Source"))
-            {
-                workingDirectory = candidate;
-                break;
-            }
-            candidate = candidate.parent_path();
-        }
+        Path workingDirectory = FindRepositoryRoot(fs::current_path());
+        if (workingDirectory.empty())
+            workingDirectory = FindRepositoryRoot(executableDirectory);
         if (workingDirectory.empty())
             workingDirectory = executableDirectory;
 
@@ -116,8 +119,27 @@ namespace Crowny
         applicationDesc.InternalDirectory = workingDirectory / "Crowny-Editor/Internal";
         applicationDesc.BuiltInResourcePackPath = builtInPackPath;
         applicationDesc.DeferRuntimeServices = true;
-        applicationDesc.EngineAssemblyPath = "Crowny-Sharp/CrownySharp.dll";
-        applicationDesc.GameAssemblyPath = "Crowny-Sandbox/GameAssembly.dll";
+        Path managedAssemblyRoot;
+        if (const char* configuredRoot = std::getenv("CROWNY_MANAGED_ASSEMBLY_ROOT"); configuredRoot != nullptr && configuredRoot[0] != '\0')
+            managedAssemblyRoot = configuredRoot;
+        else
+        {
+#ifdef CW_DEBUG
+            constexpr const char* configuration = "Debug";
+#elif defined(CW_DIST)
+            constexpr const char* configuration = "Dist";
+#else
+            constexpr const char* configuration = "Release";
+#endif
+            managedAssemblyRoot = workingDirectory / ".deps/generated/managed" / configuration;
+        }
+
+        const Path generatedEngineAssembly = managedAssemblyRoot / "CrownySharp.dll";
+        const Path generatedGameAssembly = managedAssemblyRoot / "GameAssembly.dll";
+        applicationDesc.EngineAssemblyPath =
+          fs::is_regular_file(generatedEngineAssembly) ? generatedEngineAssembly : workingDirectory / "Crowny-Sharp/CrownySharp.dll";
+        applicationDesc.GameAssemblyPath =
+          fs::is_regular_file(generatedGameAssembly) ? generatedGameAssembly : workingDirectory / "Crowny-Sandbox/GameAssembly.dll";
 
         Application::StartUp<CrownyEditor>(applicationDesc);
     }

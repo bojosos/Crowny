@@ -20,7 +20,10 @@ namespace Crowny
             return;
         }
         if (restart || clip != m_Clip)
+        {
             m_Time = 0.0f;
+            SynchronizeSkeletalLayerTimes(m_Time);
+        }
         m_PreviousTime = m_Time;
         m_Clip = clip;
         m_FadeFromClip = nullptr;
@@ -53,6 +56,7 @@ namespace Crowny
         m_PreviousTime = 0.0f;
         m_FadeFromClip = nullptr;
         m_RootMotionDelta = IdentityTransform();
+        SynchronizeSkeletalLayerTimes(0.0f);
     }
 
     void AnimationPlayer::Pause()
@@ -71,6 +75,27 @@ namespace Crowny
     {
         m_Time = std::isfinite(time) ? time : 0.0f;
         m_PreviousTime = m_Time;
+        SynchronizeSkeletalLayerTimes(m_Time);
+    }
+
+    void AnimationPlayer::SetSkeletalLayers(Vector<SkeletalAnimationLayer> layers)
+    {
+        for (SkeletalAnimationLayer& layer : layers)
+        {
+            layer.Weight = std::isfinite(layer.Weight) ? glm::clamp(layer.Weight, 0.0f, 1.0f) : 0.0f;
+            layer.Speed = std::isfinite(layer.Speed) ? layer.Speed : 1.0f;
+            if (layer.WrapMode < AnimationWrapMode::Clamp || layer.WrapMode > AnimationWrapMode::PingPong)
+                layer.WrapMode = AnimationWrapMode::Loop;
+        }
+        m_SkeletalLayers = std::move(layers);
+        m_SkeletalLayerStates.resize(m_SkeletalLayers.size());
+        SynchronizeSkeletalLayerTimes(m_Time);
+    }
+
+    void AnimationPlayer::SynchronizeSkeletalLayerTimes(float baseTime)
+    {
+        for (uint32_t index = 0; index < m_SkeletalLayerStates.size(); ++index)
+            m_SkeletalLayerStates[index].Time = baseTime * m_SkeletalLayers[index].Speed;
     }
 
     float AnimationPlayer::NormalizeTime(const AnimationClip& clip, float time, AnimationWrapMode wrapMode)
@@ -120,21 +145,19 @@ namespace Crowny
         {
             if (m_WrapMode != AnimationWrapMode::PingPong || length <= 0.0f)
             {
-                dispatchRange(NormalizeTime(clip, previousTime, m_WrapMode), NormalizeTime(clip, currentTime, m_WrapMode), playbackForward,
-                              false);
+                dispatchRange(NormalizeTime(clip, previousTime, m_WrapMode), NormalizeTime(clip, currentTime, m_WrapMode), playbackForward, false);
                 return;
             }
 
             float cursor = previousTime;
             uint32_t segmentCount = 0;
-            while ((playbackForward ? cursor < currentTime : cursor > currentTime) &&
-                   segmentCount < MAX_PING_PONG_EVENT_PREFIX_SEGMENTS)
+            while ((playbackForward ? cursor < currentTime : cursor > currentTime) && segmentCount < MAX_PING_PONG_EVENT_PREFIX_SEGMENTS)
             {
-                const double cycle = playbackForward ? std::floor(static_cast<double>(cursor) / length)
-                                                     : std::ceil(static_cast<double>(cursor) / length) - 1.0;
+                const double cycle =
+                  playbackForward ? std::floor(static_cast<double>(cursor) / length) : std::ceil(static_cast<double>(cursor) / length) - 1.0;
                 const double boundary = (playbackForward ? cycle + 1.0 : cycle) * length;
-                const float segmentEnd = playbackForward ? std::min(currentTime, static_cast<float>(boundary))
-                                                         : std::max(currentTime, static_cast<float>(boundary));
+                const float segmentEnd =
+                  playbackForward ? std::min(currentTime, static_cast<float>(boundary)) : std::max(currentTime, static_cast<float>(boundary));
                 const float localStart = NormalizeTime(clip, cursor, AnimationWrapMode::PingPong);
                 const float localEnd = NormalizeTime(clip, segmentEnd, AnimationWrapMode::PingPong);
                 dispatchRange(localStart, localEnd, localEnd > localStart, false);
@@ -288,6 +311,7 @@ namespace Crowny
             {
                 SkeletonPose::Blend(m_CurrentPose, m_CurrentPose, 0.0f, m_OutputPose);
             }
+            EvaluateSkeletalLayers(skeleton);
         }
 
         if (morph)
@@ -312,6 +336,25 @@ namespace Crowny
         }
     }
 
+    void AnimationPlayer::EvaluateSkeletalLayers(const Ref<Skeleton>& skeleton)
+    {
+        for (uint32_t index = 0; index < m_SkeletalLayers.size(); ++index)
+        {
+            const SkeletalAnimationLayer& layer = m_SkeletalLayers[index];
+            if (!layer.Clip || layer.Weight <= 0.0f)
+                continue;
+
+            SkeletalLayerState& state = m_SkeletalLayerStates[index];
+            if (state.Pose.GetSkeleton() != skeleton)
+                state.Pose.SetSkeleton(skeleton);
+            state.Pose.Evaluate(*layer.Clip, state.Time, layer.WrapMode);
+            if (layer.Clip->IsAdditive())
+                SkeletonPose::ApplyAdditive(m_OutputPose, state.Pose, layer.Weight, m_OutputPose, &layer.Mask);
+            else
+                SkeletonPose::Blend(m_OutputPose, state.Pose, layer.Weight, m_OutputPose, &layer.Mask);
+        }
+    }
+
     void AnimationPlayer::Update(float deltaTime, const Ref<Skeleton>& skeleton, const Ref<MeshMorph>& morph)
     {
         m_RootMotionDelta = IdentityTransform();
@@ -328,6 +371,8 @@ namespace Crowny
                 m_FadeFromTime += step;
                 m_FadeElapsed += glm::abs(deltaTime);
             }
+            for (uint32_t index = 0; index < m_SkeletalLayerStates.size(); ++index)
+                m_SkeletalLayerStates[index].Time += step * m_SkeletalLayers[index].Speed;
             DispatchEvents(*m_Clip, m_PreviousTime, m_Time);
             CalculateRootMotion(*m_Clip, m_PreviousTime, m_Time);
 

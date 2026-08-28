@@ -4,7 +4,7 @@ project "Crowny-Sandbox"
 	targetname "GameAssembly"
 	dotnetframework "4.7.2"
 
-	targetdir ("%{wks.location}/Crowny-Sandbox")
+	targetdir ("%{wks.location}/.deps/generated/managed/%{cfg.buildcfg}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
 	links
