@@ -7,6 +7,7 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/Physics/Physics2D.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Scene/SceneManager.h"
 
 #include <cstring>
@@ -82,6 +83,55 @@ namespace Crowny
         String Decode(cw_managed_string_view value)
         {
             return value.data == nullptr ? String() : String(reinterpret_cast<const char*>(value.data), value.length);
+        }
+
+        cw_managed_status ResolveFontHandle(const cw_managed_uuid& fontId, AssetHandle<Font>& font)
+        {
+            AssetManager* assetManager = AssetManager::TryGet();
+            if (assetManager == nullptr)
+                return CW_MANAGED_STATUS_NOT_INITIALIZED;
+            const UUID uuid = FromAbiUuid(fontId);
+            if (uuid.Empty())
+                return CW_MANAGED_STATUS_STALE_HANDLE;
+            font = assetManager->LoadFromUUID<Font>(uuid);
+            return font ? CW_MANAGED_STATUS_OK : CW_MANAGED_STATUS_STALE_HANDLE;
+        }
+
+        UUID GetSourceFontUuid(const AssetHandle<Font>& font, const Font* source)
+        {
+            if (source == nullptr)
+                return {};
+            if (font.Get() == source)
+                return font.GetUUID();
+            if (!font)
+                return {};
+            for (const AssetHandle<Font>& fallback : font->GetFallbackFonts())
+            {
+                if (fallback.Get() == source)
+                    return fallback.GetUUID();
+            }
+            return {};
+        }
+
+        cw_managed_font_character_info ToAbiCharacterInfo(const AssetHandle<Font>& font, const CharacterInfo& source)
+        {
+            cw_managed_font_character_info result{};
+            result.source_font = ToAbiUuid(GetSourceFontUuid(font, source.SourceFont));
+            result.requested_code_point = static_cast<uint32_t>(source.RequestedCodePoint);
+            result.resolved_code_point = static_cast<uint32_t>(source.ResolvedCodePoint);
+            result.glyph_index = source.GlyphIndex;
+            result.advance = source.Advance;
+            result.plane_left = source.PlaneLeft;
+            result.plane_bottom = source.PlaneBottom;
+            result.plane_right = source.PlaneRight;
+            result.plane_top = source.PlaneTop;
+            result.atlas_left = source.AtlasLeft;
+            result.atlas_bottom = source.AtlasBottom;
+            result.atlas_right = source.AtlasRight;
+            result.atlas_top = source.AtlasTop;
+            result.whitespace = source.Whitespace ? 1 : 0;
+            result.valid = source.Valid ? 1 : 0;
+            return result;
         }
 
         bool HasComponent(Entity entity, StringView name)
@@ -469,8 +519,17 @@ namespace Crowny
         CW_GLOBAL_FLOAT(TimeGetFixedDeltaTime, Time::GetFixedDeltaTime())
         CW_GLOBAL_FLOAT(TimeGetSmoothDeltaTime, Time::GetSmoothDeltaTime())
         CW_GLOBAL_FLOAT(TimeGetRealtimeSinceStartup, Time::GetRealtimeSinceStartup())
-        CW_GLOBAL_FLOAT(TimeGetFrameCount, Time::GetFrameCount())
 #undef CW_GLOBAL_FLOAT
+
+        cw_managed_status CW_MANAGED_CALL TimeGetFrameCount(void* context, uint32_t* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = Time::GetFrameCount();
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
 
         cw_managed_status CW_MANAGED_CALL InputGetMousePosition(void* context, cw_managed_vec2* result)
         {
@@ -781,6 +840,306 @@ namespace Crowny
         CW_AUDIO_ACTION(AudioSourcePause, source.Pause())
         CW_AUDIO_ACTION(AudioSourceStop, source.Stop())
 #undef CW_AUDIO_ACTION
+
+        cw_managed_status CW_MANAGED_CALL TextGetText(void* context, cw_managed_uuid entityId,
+                                                       cw_managed_string_view* result)
+        {
+            return Execute(context, [&]() {
+                const Entity entity = ResolveEntity(entityId);
+                if (!entity || !entity.HasComponent<TextComponent>())
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                thread_local String storage;
+                storage = entity.GetComponent<TextComponent>().Text;
+                if (storage.size() > std::numeric_limits<uint32_t>::max())
+                    return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
+                result->data = reinterpret_cast<const uint8_t*>(storage.data());
+                result->length = static_cast<uint32_t>(storage.size());
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL TextSetText(void* context, cw_managed_uuid entityId, cw_managed_string_view value)
+        {
+            return Execute(context, [&]() {
+                if (value.data == nullptr && value.length != 0)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                Entity entity = ResolveEntity(entityId);
+                if (!entity || !entity.HasComponent<TextComponent>())
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                entity.GetComponent<TextComponent>().Text = Decode(value);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+#define CW_TEXT_GET(functionName, resultType, expression)                                                                            \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, resultType* result)                     \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            const Entity entity = ResolveEntity(entityId);                                                                          \
+            if (!entity || !entity.HasComponent<TextComponent>())                                                                  \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                               \
+            if (result == nullptr)                                                                                                   \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            const TextComponent& text = entity.GetComponent<TextComponent>();                                                       \
+            *result = expression;                                                                                                    \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+#define CW_TEXT_SET(functionName, valueType, statement)                                                                              \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, valueType value)                        \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            Entity entity = ResolveEntity(entityId);                                                                                 \
+            if (!entity || !entity.HasComponent<TextComponent>())                                                                  \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                               \
+            TextComponent& text = entity.GetComponent<TextComponent>();                                                             \
+            statement;                                                                                                               \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+
+        CW_TEXT_GET(TextGetFont, cw_managed_uuid, ToAbiUuid(text.Font.GetUUID()))
+        CW_TEXT_SET(TextSetFont, cw_managed_uuid,
+                    if (const UUID uuid = FromAbiUuid(value); uuid.Empty()) text.Font = {};
+                    else if (AssetManager::IsStartedUp()) text.Font = AssetManager::TryGet()->LoadFromUUID<Font>(uuid);
+                    else return CW_MANAGED_STATUS_NOT_INITIALIZED)
+        CW_TEXT_GET(TextGetSize, float, text.Size)
+        CW_TEXT_SET(TextSetSize, float, text.Size = value)
+        CW_TEXT_GET(TextGetAutoSize, uint8_t, text.AutoSize ? 1 : 0)
+        CW_TEXT_SET(TextSetAutoSize, uint8_t, text.AutoSize = value != 0)
+        CW_TEXT_GET(TextGetAutoSizeMin, float, text.AutoSizeMin)
+        CW_TEXT_SET(TextSetAutoSizeMin, float,
+                    text.AutoSizeMin = std::max(0.0f, value); text.AutoSizeMax = std::max(text.AutoSizeMin, text.AutoSizeMax))
+        CW_TEXT_GET(TextGetAutoSizeMax, float, text.AutoSizeMax)
+        CW_TEXT_SET(TextSetAutoSizeMax, float,
+                    text.AutoSizeMax = std::max(0.0f, value); text.AutoSizeMin = std::min(text.AutoSizeMin, text.AutoSizeMax))
+        CW_TEXT_GET(TextGetWrapping, uint8_t, text.Wrapping ? 1 : 0)
+        CW_TEXT_SET(TextSetWrapping, uint8_t, text.Wrapping = value != 0)
+        CW_TEXT_GET(TextGetWrapMode, int32_t, static_cast<int32_t>(text.WrapMode))
+        CW_TEXT_SET(TextSetWrapMode, int32_t, text.WrapMode = static_cast<TextWrapMode>(value))
+        CW_TEXT_GET(TextGetOverflow, int32_t, static_cast<int32_t>(text.Overflow))
+        CW_TEXT_SET(TextSetOverflow, int32_t, text.Overflow = static_cast<TextOverflow>(value))
+        CW_TEXT_GET(TextGetClipToBounds, uint8_t, text.ClipToBounds ? 1 : 0)
+        CW_TEXT_SET(TextSetClipToBounds, uint8_t, text.ClipToBounds = value != 0)
+        CW_TEXT_GET(TextGetMaxLines, uint32_t, text.MaxLines)
+        CW_TEXT_SET(TextSetMaxLines, uint32_t, text.MaxLines = value)
+        CW_TEXT_GET(TextGetHorizontalAlignment, int32_t, static_cast<int32_t>(text.HorizontalAlignment))
+        CW_TEXT_SET(TextSetHorizontalAlignment, int32_t,
+                    text.HorizontalAlignment = static_cast<TextHorizontalAlignment>(value))
+        CW_TEXT_GET(TextGetVerticalAlignment, int32_t, static_cast<int32_t>(text.VerticalAlignment))
+        CW_TEXT_SET(TextSetVerticalAlignment, int32_t, text.VerticalAlignment = static_cast<TextVerticalAlignment>(value))
+        CW_TEXT_GET(TextGetFontStyle, uint32_t, static_cast<uint32_t>(text.FontStyle))
+        CW_TEXT_SET(TextSetFontStyle, uint32_t, text.FontStyle = static_cast<TextFontStyleBits>(value))
+        CW_TEXT_GET(TextGetOutlineWidth, float, text.Thickness)
+        CW_TEXT_SET(TextSetOutlineWidth, float, text.Thickness = value)
+        CW_TEXT_GET(TextGetShadowSoftness, float, text.ShadowSoftness)
+        CW_TEXT_SET(TextSetShadowSoftness, float, text.ShadowSoftness = std::max(0.0f, value))
+        CW_TEXT_GET(TextGetCharacterSpacing, float, text.CharacterSpacing)
+        CW_TEXT_SET(TextSetCharacterSpacing, float, text.CharacterSpacing = value)
+        CW_TEXT_GET(TextGetWordSpacing, float, text.WordSpacing)
+        CW_TEXT_SET(TextSetWordSpacing, float, text.WordSpacing = value)
+        CW_TEXT_GET(TextGetLineSpacing, float, text.LineSpacing)
+        CW_TEXT_SET(TextSetLineSpacing, float, text.LineSpacing = value)
+        CW_TEXT_GET(TextGetParagraphSpacing, float, text.ParagraphSpacing)
+        CW_TEXT_SET(TextSetParagraphSpacing, float, text.ParagraphSpacing = value)
+        CW_TEXT_GET(TextGetTabWidth, uint32_t, text.TabWidth)
+        CW_TEXT_SET(TextSetTabWidth, uint32_t, text.TabWidth = std::max(1u, value))
+        CW_TEXT_GET(TextGetUseCustomDecorationColor, uint8_t, text.UseCustomDecorationColor ? 1 : 0)
+        CW_TEXT_SET(TextSetUseCustomDecorationColor, uint8_t, text.UseCustomDecorationColor = value != 0)
+        CW_TEXT_GET(TextGetDecorationThickness, float, text.DecorationThickness)
+        CW_TEXT_SET(TextSetDecorationThickness, float, text.DecorationThickness = std::max(0.0f, value))
+        CW_TEXT_GET(TextGetUnderlineOffset, float, text.UnderlineOffset)
+        CW_TEXT_SET(TextSetUnderlineOffset, float, text.UnderlineOffset = value)
+        CW_TEXT_GET(TextGetStrikethroughOffset, float, text.StrikethroughOffset)
+        CW_TEXT_SET(TextSetStrikethroughOffset, float, text.StrikethroughOffset = value)
+        CW_TEXT_GET(TextGetUseKerning, uint8_t, text.UseKerning ? 1 : 0)
+        CW_TEXT_SET(TextSetUseKerning, uint8_t, text.UseKerning = value != 0)
+        CW_TEXT_GET(TextGetSortingLayer, int32_t, text.SortingLayer)
+        CW_TEXT_SET(TextSetSortingLayer, int32_t, text.SortingLayer = value)
+        CW_TEXT_GET(TextGetOrderInLayer, int32_t, text.OrderInLayer)
+        CW_TEXT_SET(TextSetOrderInLayer, int32_t, text.OrderInLayer = value)
+#undef CW_TEXT_SET
+#undef CW_TEXT_GET
+
+#define CW_TEXT_GET_VECTOR(functionName, abiType, expression)                                                                        \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, abiType* result)                       \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            const Entity entity = ResolveEntity(entityId);                                                                          \
+            if (!entity || !entity.HasComponent<TextComponent>())                                                                  \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                               \
+            if (result == nullptr)                                                                                                   \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            const auto& value = expression;                                                                                          \
+            *result = abiType{ value.x, value.y, value.z, value.w };                                                                 \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+#define CW_TEXT_SET_VEC4(functionName, field)                                                                                        \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, const cw_managed_vec4* value)          \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            Entity entity = ResolveEntity(entityId);                                                                                 \
+            if (!entity || !entity.HasComponent<TextComponent>())                                                                  \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                               \
+            if (value == nullptr)                                                                                                    \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            entity.GetComponent<TextComponent>().field = { value->x, value->y, value->z, value->w };                                \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+        CW_TEXT_GET_VECTOR(TextGetColor, cw_managed_vec4, entity.GetComponent<TextComponent>().Color)
+        CW_TEXT_SET_VEC4(TextSetColor, Color)
+        CW_TEXT_GET_VECTOR(TextGetOutlineColor, cw_managed_vec4, entity.GetComponent<TextComponent>().OutlineColor)
+        CW_TEXT_SET_VEC4(TextSetOutlineColor, OutlineColor)
+        CW_TEXT_GET_VECTOR(TextGetShadowColor, cw_managed_vec4, entity.GetComponent<TextComponent>().ShadowColor)
+        CW_TEXT_SET_VEC4(TextSetShadowColor, ShadowColor)
+        CW_TEXT_GET_VECTOR(TextGetDecorationColor, cw_managed_vec4, entity.GetComponent<TextComponent>().DecorationColor)
+        CW_TEXT_SET_VEC4(TextSetDecorationColor, DecorationColor)
+#undef CW_TEXT_SET_VEC4
+#undef CW_TEXT_GET_VECTOR
+
+#define CW_TEXT_GET_VEC2(functionName, expression)                                                                                   \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, cw_managed_vec2* result)                \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            const Entity entity = ResolveEntity(entityId);                                                                          \
+            if (!entity || !entity.HasComponent<TextComponent>())                                                                  \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                               \
+            if (result == nullptr)                                                                                                   \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            const glm::vec2 value = expression;                                                                                      \
+            *result = { value.x, value.y };                                                                                          \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+#define CW_TEXT_SET_VEC2(functionName, statement)                                                                                    \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, const cw_managed_vec2* value)          \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            Entity entity = ResolveEntity(entityId);                                                                                 \
+            if (!entity || !entity.HasComponent<TextComponent>())                                                                  \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                               \
+            if (value == nullptr)                                                                                                    \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            TextComponent& text = entity.GetComponent<TextComponent>();                                                             \
+            const glm::vec2 vector(value->x, value->y);                                                                              \
+            statement;                                                                                                               \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+        CW_TEXT_GET_VEC2(TextGetLayoutSize, entity.GetComponent<TextComponent>().LayoutSize)
+        CW_TEXT_SET_VEC2(TextSetLayoutSize, text.LayoutSize = glm::max(vector, glm::vec2(0.0f)))
+        CW_TEXT_GET_VEC2(TextGetShadowOffset, entity.GetComponent<TextComponent>().ShadowOffset)
+        CW_TEXT_SET_VEC2(TextSetShadowOffset, text.ShadowOffset = vector)
+#undef CW_TEXT_SET_VEC2
+#undef CW_TEXT_GET_VEC2
+
+#define CW_FONT_GET(functionName, resultType, expression)                                                                            \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid fontId, resultType* result)                       \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            AssetHandle<Font> font;                                                                                                  \
+            const cw_managed_status status = ResolveFontHandle(fontId, font);                                                       \
+            if (status != CW_MANAGED_STATUS_OK)                                                                                      \
+                return status;                                                                                                       \
+            if (result == nullptr)                                                                                                   \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            *result = expression;                                                                                                    \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+        CW_FONT_GET(FontGetIsValid, uint8_t, font->IsValid() ? 1 : 0)
+        CW_FONT_GET(FontGetGlyphCount, uint32_t,
+                    static_cast<uint32_t>(std::min(font->GetGlyphCount(),
+                                                   static_cast<size_t>(std::numeric_limits<uint32_t>::max()))))
+        CW_FONT_GET(FontGetTabWidth, uint32_t, font->GetTabWidth())
+        CW_FONT_GET(FontGetAtlasWidth, uint32_t, font->GetAtlasWidth())
+        CW_FONT_GET(FontGetAtlasHeight, uint32_t, font->GetAtlasHeight())
+        CW_FONT_GET(FontGetAtlasPixelRange, float, font->GetAtlasPixelRange())
+        CW_FONT_GET(FontGetFallbackCount, uint32_t, static_cast<uint32_t>(font->GetFallbackFonts().size()))
+#undef CW_FONT_GET
+
+        cw_managed_status CW_MANAGED_CALL FontHasGlyph(void* context, cw_managed_uuid fontId, uint32_t codePoint,
+                                                        uint8_t* result)
+        {
+            return Execute(context, [&]() {
+                AssetHandle<Font> font;
+                const cw_managed_status status = ResolveFontHandle(fontId, font);
+                if (status != CW_MANAGED_STATUS_OK)
+                    return status;
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = font->HasGlyph(static_cast<char32_t>(codePoint)) ? 1 : 0;
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL FontGetCharacterInfo(void* context, cw_managed_uuid fontId,
+                                                                uint32_t codePoint, uint8_t useFallbacks,
+                                                                cw_managed_font_character_info* result)
+        {
+            return Execute(context, [&]() {
+                AssetHandle<Font> font;
+                const cw_managed_status status = ResolveFontHandle(fontId, font);
+                if (status != CW_MANAGED_STATUS_OK)
+                    return status;
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = ToAbiCharacterInfo(font, font->GetCharacterInfo(static_cast<char32_t>(codePoint), useFallbacks != 0));
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL FontGetFallback(void* context, cw_managed_uuid fontId, uint32_t index,
+                                                           cw_managed_uuid* result)
+        {
+            return Execute(context, [&]() {
+                AssetHandle<Font> font;
+                const cw_managed_status status = ResolveFontHandle(fontId, font);
+                if (status != CW_MANAGED_STATUS_OK)
+                    return status;
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const auto& fallbacks = font->GetFallbackFonts();
+                const UUID fallbackId = index < fallbacks.size() ? fallbacks[index].GetUUID() : UUID{};
+                *result = ToAbiUuid(fallbackId);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL FontAddFallback(void* context, cw_managed_uuid fontId,
+                                                           cw_managed_uuid fallbackId, uint8_t* result)
+        {
+            return Execute(context, [&]() {
+                AssetHandle<Font> font;
+                cw_managed_status status = ResolveFontHandle(fontId, font);
+                if (status != CW_MANAGED_STATUS_OK)
+                    return status;
+                AssetHandle<Font> fallback;
+                status = ResolveFontHandle(fallbackId, fallback);
+                if (status != CW_MANAGED_STATUS_OK)
+                    return status;
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = font->AddFallbackFont(fallback) ? 1 : 0;
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL FontClearFallbacks(void* context, cw_managed_uuid fontId)
+        {
+            return Execute(context, [&]() {
+                AssetHandle<Font> font;
+                const cw_managed_status status = ResolveFontHandle(fontId, font);
+                if (status != CW_MANAGED_STATUS_OK)
+                    return status;
+                font->ClearFallbackFonts();
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
 
         glm::mat4 ToMatrix(const cw_managed_mat4& value)
         {
