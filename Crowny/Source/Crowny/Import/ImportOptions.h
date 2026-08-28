@@ -159,6 +159,7 @@ namespace Crowny
         float BoldSpacing = 7.0f;
         uint32_t TabMultiple = 4;
         uint32_t ItalicStyle = 35;
+        Vector<UUID> FallbackFonts;
 
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Font; }
 

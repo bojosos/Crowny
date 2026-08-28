@@ -363,6 +363,7 @@ namespace Crowny
 
         const String fontFilename = path.filename().string();
         const Ref<Font> font = CreateRef<Font>(std::move(fontData), atlasTexture, std::clamp(options->TabMultiple, 1U, 64U), ATLAS_PIXEL_RANGE);
+        font->SetFallbackFontIds(options->FallbackFonts);
         font->SetName(fontFilename);
         return font;
     }

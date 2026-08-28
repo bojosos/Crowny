@@ -7,6 +7,7 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Physics/PhysicsMaterial.h"
 #include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
 #include <tracy/Tracy.hpp>
@@ -125,6 +126,8 @@ namespace Crowny
             output.AddInternalRef();
         output.NotifyLoadComplete();
         m_Handles[uuid] = output.GetWeak();
+        if (asset->GetAssetType() == AssetType::Font)
+            StaticRefCast<Font>(asset)->LoadFallbackFonts();
         if (AssetListenerManager::IsStartedUp())
             AssetListenerManager::Get().NotifyListeners(uuid);
         if (asset->GetAssetType() == AssetType::PhysicsMaterial2D)
