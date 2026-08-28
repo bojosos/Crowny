@@ -116,14 +116,6 @@ namespace Crowny
         for (size_t slotIndex = transientSlotCount; slotIndex < transientSlots.size(); slotIndex++)
             ReleasePhysicalResource(transientSlots[slotIndex].PhysicalId);
         transientSlots.resize(transientSlotCount);
-        m_FramePhysicalIds.clear();
-        if (transientSlotCount > m_FramePhysicalScratchCapacity)
-        {
-            m_FramePhysicalIds.reserve(transientSlotCount);
-            m_FramePhysicalScratchCapacity = transientSlotCount;
-            m_Stats.FramePhysicalScratchGrowths++;
-            m_Stats.FramePhysicalScratchCapacity = m_FramePhysicalScratchCapacity;
-        }
 
         for (const RenderGraphResourceInfo& resource : graph.Resources)
         {
@@ -140,14 +132,6 @@ namespace Crowny
 
             if (resource.Desc.Lifetime == RenderGraphResourceLifetime::Transient)
             {
-                const uint64_t frameKey = (static_cast<uint64_t>(resource.Desc.Type) << 32u) | resource.PhysicalIndex;
-                const auto existing = m_FramePhysicalIds.find(frameKey);
-                if (existing != m_FramePhysicalIds.end())
-                {
-                    binding.PhysicalId = existing->second;
-                    continue;
-                }
-
                 const size_t slotIndex = resource.Desc.Type == RenderGraphResourceType::Texture
                                            ? resource.PhysicalIndex
                                            : static_cast<size_t>(graph.PhysicalTextureCount) + resource.PhysicalIndex;
@@ -163,7 +147,6 @@ namespace Crowny
                 }
                 binding.PhysicalId = slot.PhysicalId;
                 RegisterPhysicalResource(binding.PhysicalId, resource);
-                m_FramePhysicalIds.emplace(frameKey, binding.PhysicalId);
                 continue;
             }
 
@@ -263,13 +246,11 @@ namespace Crowny
         m_History.clear();
         m_PhysicalResources.clear();
         m_RenderTargets.clear();
-        m_FramePhysicalIds = {};
         m_Bindings.clear();
         m_CurrentGraph = nullptr;
         m_CurrentFrame = 0;
         m_CurrentHistoryNamespace = 0;
         m_NextPhysicalId = 1;
-        m_FramePhysicalScratchCapacity = 0;
         m_FrameAllocationFailed = false;
         m_AllocationError.clear();
         m_Stats = {};

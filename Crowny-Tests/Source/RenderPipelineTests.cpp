@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/RenderAPI/RenderCapabilities.h"
 #include "Crowny/Renderer/RenderPipeline.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
@@ -18,6 +19,20 @@ namespace
         desc.Format = TextureFormat::RGBA8;
         return graph.ImportTexture("Output", desc, 1, RenderGraphResourceState::ColorAttachment, RenderGraphResourceState::Present);
     }
+
+    class RecordingPipelineExecutor final : public IRenderPipelinePassExecutor
+    {
+    public:
+        void Execute(RenderPipelinePass pass, RenderGraphContext&) override { Executed.push_back(pass); }
+
+        Vector<RenderPipelinePass> Executed;
+    };
+
+    class NoOpPipelineExecutor final : public IRenderPipelinePassExecutor
+    {
+    public:
+        void Execute(RenderPipelinePass, RenderGraphContext&) override {}
+    };
 } // namespace
 
 TEST_CASE("Render snapshots reset optional outputs to runtime defaults", "[Renderer][Pipeline]")
@@ -341,6 +356,75 @@ TEST_CASE("Render pipeline cluster buffers follow non-default runtime settings",
     CHECK(compiled.Resources[cells.Index].Desc.Buffer.Size == clusterCount * 8ull);
     CHECK(compiled.Resources[indices.Index].Desc.Buffer.Size == clusterCount * 2ull * sizeof(uint32_t));
     CHECK(compiled.Resources[directionals.Index].Desc.Buffer.Size == 3ull * sizeof(uint32_t));
+}
+
+TEST_CASE("Render pipeline dispatches typed cluster passes in dependency order", "[Renderer][Pipeline][Lights][Clusters]")
+{
+    RenderGraph graph;
+    RenderBlackboard blackboard;
+    RenderView view;
+    RenderPipelineAsset pipeline;
+    RecordingPipelineExecutor executor;
+    RenderPipelineGraphDesc desc;
+    desc.Width = 320;
+    desc.Height = 180;
+    desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+    desc.EnablePostProcessing = false;
+    desc.PassExecutor = &executor;
+
+    pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+    const RenderGraphCompileResult& compiled = graph.Compile();
+    INFO(compiled.Error);
+    REQUIRE(compiled.Succeeded);
+    REQUIRE(graph.Execute());
+
+    const auto clear = std::find(executor.Executed.begin(), executor.Executed.end(), RenderPipelinePass::ClearClusterLightCounters);
+    const auto build = std::find(executor.Executed.begin(), executor.Executed.end(), RenderPipelinePass::BuildClusteredLightLists);
+    REQUIRE(clear != executor.Executed.end());
+    REQUIRE(build != executor.Executed.end());
+    CHECK(clear < build);
+}
+
+TEST_CASE("Render pipeline rebuilds allocate nothing after warm-up", "[Memory][Frame][Renderer][Pipeline][Lights][Clusters]")
+{
+#if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL > 0
+    SKIP("MSVC debug iterators allocate bookkeeping storage during container reuse.");
+#endif
+
+    RenderGraph graph;
+    RenderBlackboard blackboard;
+    RenderView view;
+    RenderPipelineAsset pipeline;
+    NoOpPipelineExecutor executor;
+    RenderPipelineGraphDesc desc;
+    desc.Width = 1920;
+    desc.Height = 1080;
+    desc.EnablePostProcessing = true;
+    desc.PassExecutor = &executor;
+
+    auto rebuild = [&](RenderingPath path) {
+        graph.Reset();
+        desc.Path = path;
+        view.Path = path;
+        desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+        pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+        return graph.Compile().Succeeded;
+    };
+
+    REQUIRE(rebuild(RenderingPath::DeferredPlus));
+    REQUIRE(rebuild(RenderingPath::ForwardPlus));
+    REQUIRE(rebuild(RenderingPath::DeferredPlus));
+
+    bool compiledSuccessfully = true;
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120u; frame++)
+        compiledSuccessfully &= rebuild((frame & 1u) == 0u ? RenderingPath::ForwardPlus : RenderingPath::DeferredPlus);
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+    CHECK(compiledSuccessfully);
+    CHECK(delta.AllocationCount == 0u);
+    CHECK(delta.RequestedBytes == 0u);
 }
 
 TEST_CASE("Render pipeline compatibility bridge executes after its prerequisite", "[Renderer][Pipeline]")

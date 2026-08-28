@@ -184,7 +184,7 @@ namespace Crowny
             GpuDrawBuffers DrawBuffers;
         };
 
-        class GpuDrivenPassExecutor
+        class GpuDrivenPassExecutor final : public IRenderPipelinePassExecutor
         {
         public:
             void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
@@ -205,54 +205,81 @@ namespace Crowny
                 m_GpuDrawCompactionReady = false;
             }
 
-            void Execute(StringView name, RenderGraphContext& context)
+            void Execute(RenderPipelinePass pass, RenderGraphContext& context) override
             {
                 if (m_Blackboard == nullptr || m_Scene == nullptr || RenderAPI::TryGet() == nullptr)
                     return;
-                if (name == "ClearVisibilityCounters")
+                switch (pass)
+                {
+                case RenderPipelinePass::ClearVisibilityCounters:
                     Clear(context, "VisibilityCounters", 8);
-                else if (name == "ClearMeshletCandidateCounters")
-                    Clear(context, "MeshletCandidateCounters", 4);
-                else if (name == "ClearDrawCounters")
-                    Clear(context, "DrawCounters", 8);
-                else if (name == "ClearIndirectDrawCounts")
-                    ClearDrawBinCounts(context);
-                else if (name == "ClearClusterLightCounters")
-                    Clear(context, "ClusterLightCounters", 4);
-                else if (name == "CullInstancesAndSelectLod")
+                    return;
+                case RenderPipelinePass::CullInstancesAndSelectLod:
                     CullInstances(context);
-                else if (name == "ExpandVisibleMeshlets")
-                    ExpandMeshlets(context);
-                else if (name == "LateOcclusionAndMeshletCulling")
-                    CullMeshlets(context);
-                else if (name == "BinAndCompactIndirectDraws")
-                    BinAndCompactDraws(context);
-                else if (name == "BuildClusteredLightLists")
-                    BuildClusters(context);
-                else if (name == "GTAO")
-                    RenderGtao(context);
-                else if (name == "ReverseZDepthVelocity")
+                    return;
+                case RenderPipelinePass::CullShadowViews:
+                    return;
+                case RenderPipelinePass::ReverseZDepthVelocity:
                     RenderDepth(context);
-                else if (name == "BuildCurrentHiZ")
+                    return;
+                case RenderPipelinePass::BuildCurrentHiZ:
                     BuildHiZ(context);
-                else if (name == "ForwardPlusOpaque")
-                    RenderForwardPlus(context);
-                else if (name == "DeferredGBuffer")
+                    return;
+                case RenderPipelinePass::ClearMeshletCandidateCounters:
+                    Clear(context, "MeshletCandidateCounters", 4);
+                    return;
+                case RenderPipelinePass::ExpandVisibleMeshlets:
+                    ExpandMeshlets(context);
+                    return;
+                case RenderPipelinePass::ClearDrawCounters:
+                    Clear(context, "DrawCounters", 8);
+                    return;
+                case RenderPipelinePass::ClearIndirectDrawCounts:
+                    ClearDrawBinCounts(context);
+                    return;
+                case RenderPipelinePass::LateOcclusionAndMeshletCulling:
+                    CullMeshlets(context);
+                    return;
+                case RenderPipelinePass::BinAndCompactIndirectDraws:
+                    BinAndCompactDraws(context);
+                    return;
+                case RenderPipelinePass::ClearClusterLightCounters:
+                    Clear(context, "ClusterLightCounters", 4);
+                    return;
+                case RenderPipelinePass::BuildClusteredLightLists:
+                    BuildClusters(context);
+                    return;
+                case RenderPipelinePass::Gtao:
+                    RenderGtao(context);
+                    return;
+                case RenderPipelinePass::DeferredGBuffer:
                     RenderDeferredGBuffer(context);
-                else if (name == "DeferredPlusLighting8x8")
+                    return;
+                case RenderPipelinePass::DeferredPlusLighting:
                     RenderDeferredLighting(context);
-                else if (name == "ToonOutlines")
-                    RenderToonOutlines(context);
-                else if (name == "SkyAndForwardOnlyOpaque")
+                    return;
+                case RenderPipelinePass::ForwardPlusOpaque:
+                    RenderForwardPlus(context);
+                    return;
+                case RenderPipelinePass::SkyAndForwardOnlyOpaque:
                     RenderSkyAndForwardOnlyOpaque(context);
-                else if (name == "ForwardPlusTransparencyAndWorld2D")
+                    return;
+                case RenderPipelinePass::ToonOutlines:
+                    RenderToonOutlines(context);
+                    return;
+                case RenderPipelinePass::ForwardPlusTransparencyAndWorld2D:
                     RenderTransparency(context);
-                else if (name == "TemporalResolve")
+                    return;
+                case RenderPipelinePass::TemporalResolve:
                     RenderTemporalResolve(context);
-                else if (name == "Bloom")
+                    return;
+                case RenderPipelinePass::Bloom:
                     RenderBloom(context);
-                else if (name == "ExposureToneMapAndColorGrade")
+                    return;
+                case RenderPipelinePass::ExposureToneMapAndColorGrade:
                     RenderToneMap(context);
+                    return;
+                }
             }
 
             void RenderShadows(RenderGraphContext& context, const Vector<ShadowRenderView>& views, uint32_t viewCount)
@@ -2823,7 +2850,7 @@ namespace Crowny
         if (featureTier == RenderFeatureTier::VulkanBaseline || featureTier == RenderFeatureTier::GPUDriven ||
             featureTier == RenderFeatureTier::Future)
         {
-            graphDesc.PassExecutor = [&](StringView name, RenderGraphContext& context) { gpuDrivenExecutor.Execute(name, context); };
+            graphDesc.PassExecutor = &gpuDrivenExecutor;
         }
         Vector<RenderLightHandle>& scheduledShadows = threadResources.ScheduledShadows;
         uint64_t scheduledShadowPixels = 0;
