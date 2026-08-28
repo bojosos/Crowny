@@ -501,7 +501,7 @@ namespace Crowny
             }
 
             static constexpr size_t DepthProgramIndex(DepthPrepassProgram program) { return static_cast<size_t>(program); }
-            static constexpr size_t DEPTH_PROGRAM_COUNT = DepthProgramIndex(DepthPrepassProgram::AnimatedObjectID) + 1u;
+            static constexpr size_t DEPTH_PROGRAM_COUNT = static_cast<size_t>(DepthPrepassProgram::AnimatedObjectID) + 1u;
 
             GraphicsMaterial* ResolveDepthMaterial(DepthPrepassProgram program, bool masked)
             {
