@@ -84,6 +84,7 @@ namespace Crowny
         RenderInstanceFlags Flags = RenderInstanceFlags::Visible | RenderInstanceFlags::CastShadows |
                                     RenderInstanceFlags::ReceiveShadows | RenderInstanceFlags::MotionVectors;
         float LodBias = 0.0f;
+        int32_t RenderLayerOrder = 0;
     };
 
     enum class RenderWorldDirtyFlags : uint8_t
@@ -114,6 +115,7 @@ namespace Crowny
         RenderWorldChangeType Type = RenderWorldChangeType::Update;
         RenderWorldDirtyFlags DirtyFlags = RenderWorldDirtyFlags::None;
         RenderInstanceData Data;
+        int32_t RenderLayerOrder = 0;
     };
 
     class RenderWorld
@@ -127,7 +129,7 @@ namespace Crowny
         bool DestroyInstance(RenderInstanceHandle handle);
 
         bool IsAlive(RenderInstanceHandle handle) const;
-        bool TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output) const;
+        bool TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output, int32_t* renderLayerOrder = nullptr) const;
         uint32_t GetActiveInstanceCount() const;
         uint32_t GetCapacity() const;
 
@@ -150,6 +152,7 @@ namespace Crowny
         struct Slot
         {
             RenderInstanceData Data;
+            int32_t RenderLayerOrder = 0;
             uint32_t Generation = 1;
             uint32_t PendingChange = InvalidChangeIndex;
             bool TransformSettleQueued = false;

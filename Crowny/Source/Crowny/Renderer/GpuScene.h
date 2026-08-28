@@ -109,7 +109,7 @@ namespace Crowny
         const GpuSceneUploadStats& GetStats() const { return m_Stats; }
         bool HasGpuBuffers() const { return m_InstanceBuffer != nullptr && m_LightBuffer != nullptr; }
 
-        bool TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output) const;
+        bool TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output, int32_t* renderLayerOrder = nullptr) const;
         bool TryGetLight(RenderLightHandle handle, RenderLightData& output) const;
         uint32_t GetShadowLightCount() const { return static_cast<uint32_t>(m_ShadowLights.size()); }
         uint32_t GetShadowViewCount() const { return static_cast<uint32_t>(m_ShadowViews.size()); }
@@ -118,6 +118,7 @@ namespace Crowny
         struct SlotState
         {
             uint32_t Generation = 0;
+            int32_t RenderLayerOrder = 0;
             bool Alive = false;
         };
 

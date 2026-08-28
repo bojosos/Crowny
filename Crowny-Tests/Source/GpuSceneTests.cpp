@@ -11,6 +11,7 @@ TEST_CASE("GPU scene mirrors sparse instance and light changes", "[Renderer][Gpu
     RenderLightWorld lights;
     RenderInstanceDesc instanceDesc;
     instanceDesc.MeshHandle = 7;
+    instanceDesc.RenderLayerOrder = 11;
     const RenderInstanceHandle instance = instances.CreateInstance(instanceDesc);
     RenderLightDesc lightDesc;
     const RenderLightHandle light = lights.CreateLight(lightDesc);
@@ -24,8 +25,10 @@ TEST_CASE("GPU scene mirrors sparse instance and light changes", "[Renderer][Gpu
 
     RenderInstanceData instanceData;
     RenderLightData lightData;
-    CHECK(scene.TryGetInstance(instance, instanceData));
+    int32_t renderLayerOrder = 0;
+    CHECK(scene.TryGetInstance(instance, instanceData, &renderLayerOrder));
     CHECK(RenderWorld::GetMeshHandle(instanceData.Draw) == 7);
+    CHECK(renderLayerOrder == 11);
     CHECK(scene.TryGetLight(light, lightData));
     CHECK(scene.GetStats().ActiveInstances == 1);
     CHECK(scene.GetStats().ActiveLights == 1);

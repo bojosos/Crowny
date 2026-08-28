@@ -84,6 +84,7 @@ namespace Crowny
             RenderInstanceFlags Flags = RenderInstanceFlags::None;
             RenderLayerMask VisibilityLayers = RenderLayerMask::All();
             float LodBias = 0.0f;
+            int32_t RenderLayerOrder = 0;
             uint64_t LastSeenEpoch = 0;
         };
 

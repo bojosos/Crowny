@@ -135,6 +135,7 @@ namespace Crowny
                 {
                     m_DrawBinsDirty = true;
                     state.Alive = false;
+                    state.RenderLayerOrder = 0;
                     m_Instances[slotIndex] = {};
                     m_Stats.ActiveInstances--;
                     m_DirtyInstanceIndices.push_back(slotIndex);
@@ -150,6 +151,7 @@ namespace Crowny
                 m_DrawBinsDirty = true;
             state.Alive = true;
             state.Generation = change.Handle.GetGeneration();
+            state.RenderLayerOrder = change.RenderLayerOrder;
             m_Instances[slotIndex] = change.Data;
             m_DirtyInstanceIndices.push_back(slotIndex);
         }
@@ -367,7 +369,7 @@ namespace Crowny
         m_Stats.ShadowViewCapacity = m_ShadowViewBuffer ? m_ShadowViewBuffer->GetSize() / sizeof(GpuShadowViewData) : 0;
     }
 
-    bool GpuScene::TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output) const
+    bool GpuScene::TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output, int32_t* renderLayerOrder) const
     {
         if (!handle.IsValid() || handle.GetIndex() >= m_InstanceStates.size())
             return false;
@@ -375,6 +377,8 @@ namespace Crowny
         if (!state.Alive || state.Generation != handle.GetGeneration())
             return false;
         output = m_Instances[handle.GetIndex()];
+        if (renderLayerOrder != nullptr)
+            *renderLayerOrder = state.RenderLayerOrder;
         return true;
     }
 
@@ -591,6 +595,7 @@ namespace Crowny
                 candidate.IndexCount = meshlet.Draw.y;
                 candidate.FirstIndex = meshlet.Draw.x;
                 candidate.VertexOffset = static_cast<int32_t>(meshlet.Geometry.x);
+                candidate.RenderLayer = m_InstanceStates[instanceIndex].RenderLayerOrder;
                 candidate.ViewDepth = viewDepth;
                 m_DrawCandidates.push_back(candidate);
             }

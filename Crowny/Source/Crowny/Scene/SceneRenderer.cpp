@@ -2325,7 +2325,7 @@ namespace Crowny
 
         auto syncInstance = [&](uint64_t sourceID, entt::entity entity, const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials,
                                 const glm::mat4& transform, RenderInstanceFlags flags, RenderLayerMask visibilityLayers, float lodBias,
-                                const SphereBounds* overrideBounds = nullptr) {
+                                int32_t renderLayerOrder, const SphereBounds* overrideBounds = nullptr) {
             if (!mesh)
                 return;
 
@@ -2348,6 +2348,7 @@ namespace Crowny
             desc.Flags = flags;
             desc.VisibilityLayers = visibilityLayers;
             desc.LodBias = lodBias;
+            desc.RenderLayerOrder = renderLayerOrder;
 
             const auto tracked = m_TrackedRenderInstances.find(sourceID);
             if (tracked == m_TrackedRenderInstances.end())
@@ -2362,6 +2363,7 @@ namespace Crowny
                 instance.Flags = flags;
                 instance.VisibilityLayers = visibilityLayers;
                 instance.LodBias = lodBias;
+                instance.RenderLayerOrder = renderLayerOrder;
                 instance.LastSeenEpoch = m_RenderSyncEpoch;
                 m_TrackedRenderInstances.emplace(sourceID, std::move(instance));
                 shadowCastersChanged = shadowCastersChanged || HasFlag(flags, RenderInstanceFlags::CastShadows);
@@ -2373,7 +2375,7 @@ namespace Crowny
             const bool transformChanged = instance.Transform != transform || instance.BoundingSphere != worldBounds;
             const bool drawChanged = instance.MeshResourceIndex != desc.MeshHandle || instance.MaterialResourceIndex != desc.MaterialHandle ||
                                      instance.ObjectID != objectID || instance.Flags != flags || instance.VisibilityLayers != visibilityLayers ||
-                                     instance.LodBias != lodBias;
+                                     instance.LodBias != lodBias || instance.RenderLayerOrder != renderLayerOrder;
             if (!transformChanged && !drawChanged)
                 return;
 
@@ -2389,6 +2391,7 @@ namespace Crowny
             instance.Flags = flags;
             instance.VisibilityLayers = visibilityLayers;
             instance.LodBias = lodBias;
+            instance.RenderLayerOrder = renderLayerOrder;
         };
 
         const auto meshView = m_Scene->m_Registry.view<MeshRendererComponent, TransformComponent, RelationshipComponent>();
@@ -2411,7 +2414,7 @@ namespace Crowny
             if (meshRenderer.MotionVectors)
                 flags = flags | RenderInstanceFlags::MotionVectors;
             syncInstance(meshRenderer.InstanceId, entity, mesh, meshRenderer.Materials, transform.GetWorldMatrix(relationship.Parent), flags,
-                         meshRenderer.VisibilityLayers, meshRenderer.LodBias, animatedBounds);
+                         meshRenderer.VisibilityLayers, meshRenderer.LodBias, meshRenderer.RenderLayerOrder, animatedBounds);
         }
 
         const auto proceduralView = m_Scene->m_Registry.view<ProceduralMeshComponent, TransformComponent, RelationshipComponent>();
@@ -2423,7 +2426,7 @@ namespace Crowny
                          transform.GetWorldMatrix(relationship.Parent),
                          RenderInstanceFlags::Visible | RenderInstanceFlags::CastShadows | RenderInstanceFlags::ReceiveShadows |
                            RenderInstanceFlags::MotionVectors,
-                         RenderLayerMask::All(), 0.0f);
+                         RenderLayerMask::All(), 0.0f, 0);
         }
 
         for (auto tracked = m_TrackedRenderInstances.begin(); tracked != m_TrackedRenderInstances.end();)
