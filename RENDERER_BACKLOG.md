@@ -123,6 +123,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Apply visibility, layer, and frustum culling to custom forward-only and compatibility draws; pin mixed custom-material instances to LOD zero until their forward pass consumes geometry-heap LOD ranges.
 - [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
+- [x] Alpha-test standard GPU-record masked materials in the static and animated main depth variants, including motion-vector and object-ID output layouts; retain the material-aware shadow alpha test.
 - [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
 - [x] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
 

@@ -8,6 +8,7 @@
 namespace Crowny
 {
     class Shader;
+    class ShaderVariation;
 
     // Reflected resource set for an engine compute shader. Unlike Material,
     // this owns a ComputePipeline and never assumes a graphics render pass.
@@ -57,6 +58,9 @@ namespace Crowny
     {
     public:
         bool Initialize(const AssetHandle<Shader>& shader,
+                        const Ref<BlendStateDesc>& blendStateOverride = nullptr,
+                        const Ref<DepthStencilStateDesc>& depthStateOverride = nullptr);
+        bool Initialize(const AssetHandle<Shader>& shader, const ShaderVariation& variation,
                         const Ref<BlendStateDesc>& blendStateOverride = nullptr,
                         const Ref<DepthStencilStateDesc>& depthStateOverride = nullptr);
         void Reset();

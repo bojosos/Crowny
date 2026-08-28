@@ -4,6 +4,7 @@
 
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/Renderer/ShaderVariation.h"
 
 namespace Crowny
 {
@@ -204,13 +205,20 @@ namespace Crowny
                                       const Ref<BlendStateDesc>& blendStateOverride,
                                       const Ref<DepthStencilStateDesc>& depthStateOverride)
     {
+        return Initialize(shader, ShaderVariation::EMPTY, blendStateOverride, depthStateOverride);
+    }
+
+    bool GraphicsMaterial::Initialize(const AssetHandle<Shader>& shader, const ShaderVariation& variation,
+                                      const Ref<BlendStateDesc>& blendStateOverride,
+                                      const Ref<DepthStencilStateDesc>& depthStateOverride)
+    {
         Reset();
         if (!shader)
         {
             m_Error = "Graphics shader asset is not loaded";
             return false;
         }
-        const Ref<ShaderTechnique>& technique = shader->GetTechnique(ShaderVariation::EMPTY);
+        const Ref<ShaderTechnique>& technique = shader->GetTechnique(variation);
         if (!technique)
         {
             m_Error = "Graphics shader has no technique";
