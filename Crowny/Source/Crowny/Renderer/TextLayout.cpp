@@ -28,6 +28,53 @@ namespace Crowny
                    (codePoint >= 0xFE20 && codePoint <= 0xFE2F);
         }
 
+        bool IsSpacingMark(char32_t codePoint)
+        {
+            return codePoint == 0x0903 || (codePoint >= 0x093B && codePoint <= 0x0940) || (codePoint >= 0x0949 && codePoint <= 0x094C) ||
+                   (codePoint >= 0x0982 && codePoint <= 0x0983) || (codePoint >= 0x09BE && codePoint <= 0x09C0) ||
+                   (codePoint >= 0x09C7 && codePoint <= 0x09C8) || (codePoint >= 0x09CB && codePoint <= 0x09CC) ||
+                   (codePoint >= 0x0A3E && codePoint <= 0x0A40) || codePoint == 0x0A83 || (codePoint >= 0x0ABE && codePoint <= 0x0AC0) ||
+                   codePoint == 0x0AC9 || (codePoint >= 0x0ACB && codePoint <= 0x0ACC) || (codePoint >= 0x0B02 && codePoint <= 0x0B03) ||
+                   codePoint == 0x0B3E || codePoint == 0x0B40 || (codePoint >= 0x0B47 && codePoint <= 0x0B48) ||
+                   (codePoint >= 0x0B4B && codePoint <= 0x0B4C) || (codePoint >= 0x0BBE && codePoint <= 0x0BBF) ||
+                   (codePoint >= 0x0BC1 && codePoint <= 0x0BC2) || (codePoint >= 0x0BC6 && codePoint <= 0x0BC8) ||
+                   (codePoint >= 0x0BCA && codePoint <= 0x0BCC) || (codePoint >= 0x0C01 && codePoint <= 0x0C03) ||
+                   (codePoint >= 0x0C41 && codePoint <= 0x0C44) || (codePoint >= 0x0C82 && codePoint <= 0x0C83) || codePoint == 0x0CBE ||
+                   (codePoint >= 0x0CC0 && codePoint <= 0x0CC4) || (codePoint >= 0x0CC7 && codePoint <= 0x0CC8) ||
+                   (codePoint >= 0x0CCA && codePoint <= 0x0CCB) || (codePoint >= 0x0D02 && codePoint <= 0x0D03) ||
+                   (codePoint >= 0x0D3E && codePoint <= 0x0D40) || (codePoint >= 0x0D46 && codePoint <= 0x0D48) ||
+                   (codePoint >= 0x0D4A && codePoint <= 0x0D4C) || (codePoint >= 0x0D82 && codePoint <= 0x0D83);
+        }
+
+        bool IsPrependMark(char32_t codePoint)
+        {
+            return (codePoint >= 0x0600 && codePoint <= 0x0605) || codePoint == 0x06DD || codePoint == 0x070F ||
+                   (codePoint >= 0x0890 && codePoint <= 0x0891) || codePoint == 0x08E2 || codePoint == 0x110BD || codePoint == 0x110CD;
+        }
+
+        enum class HangulSyllableType
+        {
+            None,
+            L,
+            V,
+            T,
+            LV,
+            LVT
+        };
+
+        HangulSyllableType GetHangulSyllableType(char32_t codePoint)
+        {
+            if ((codePoint >= 0x1100 && codePoint <= 0x115F) || (codePoint >= 0xA960 && codePoint <= 0xA97C))
+                return HangulSyllableType::L;
+            if ((codePoint >= 0x1160 && codePoint <= 0x11A7) || (codePoint >= 0xD7B0 && codePoint <= 0xD7C6))
+                return HangulSyllableType::V;
+            if ((codePoint >= 0x11A8 && codePoint <= 0x11FF) || (codePoint >= 0xD7CB && codePoint <= 0xD7FB))
+                return HangulSyllableType::T;
+            if (codePoint >= 0xAC00 && codePoint <= 0xD7A3)
+                return (codePoint - 0xAC00) % 28 == 0 ? HangulSyllableType::LV : HangulSyllableType::LVT;
+            return HangulSyllableType::None;
+        }
+
         bool IsBreakableWhitespace(char32_t codePoint) { return IsTextWhitespace(codePoint) && codePoint != 0x00A0 && codePoint != 0x202F; }
 
         bool IsCJKCharacter(char32_t codePoint)
@@ -85,8 +132,19 @@ namespace Crowny
 
             const char32_t codePoint = tokens[index].CodePoint;
             const char32_t previous = tokens[index - 1].CodePoint;
+            const HangulSyllableType currentHangul = GetHangulSyllableType(codePoint);
+            const HangulSyllableType previousHangul = GetHangulSyllableType(previous);
+            if (previousHangul == HangulSyllableType::L && (currentHangul == HangulSyllableType::L || currentHangul == HangulSyllableType::V ||
+                                                            currentHangul == HangulSyllableType::LV || currentHangul == HangulSyllableType::LVT))
+                return true;
+            if ((previousHangul == HangulSyllableType::LV || previousHangul == HangulSyllableType::V) &&
+                (currentHangul == HangulSyllableType::V || currentHangul == HangulSyllableType::T))
+                return true;
+            if ((previousHangul == HangulSyllableType::LVT || previousHangul == HangulSyllableType::T) && currentHangul == HangulSyllableType::T)
+                return true;
+
             if (IsCombiningMark(codePoint) || IsVariationSelector(codePoint) || IsEmojiModifier(codePoint) || codePoint == 0x200D ||
-                previous == 0x200D)
+                IsSpacingMark(codePoint) || IsPrependMark(previous) || previous == 0x200D)
                 return true;
 
             return IsRegionalIndicator(previous) && IsRegionalIndicator(codePoint) && regionalIndicatorCount % 2 == 1;
@@ -133,28 +191,15 @@ namespace Crowny
             char32_t CodePoint = 0;
         };
 
-        template <typename FontType> ResolvedGlyph ResolveGlyph(const FontType& font, char32_t codePoint)
+        ResolvedGlyph ResolveGlyph(const Font& font, char32_t codePoint)
         {
-            if constexpr (requires { font.ResolveGlyph(codePoint); })
-            {
-                const auto lookup = font.ResolveGlyph(codePoint);
-                return { lookup.SourceFont, lookup.Glyph, lookup.ResolvedCodePoint };
-            }
-            else
-            {
-                char32_t resolvedCodePoint = 0;
-                const msdf_atlas::GlyphGeometry* glyph = font.GetGlyph(codePoint, &resolvedCodePoint);
-                return { glyph != nullptr ? &font : nullptr, glyph, resolvedCodePoint };
-            }
+            const Font::GlyphLookup lookup = font.ResolveGlyph(codePoint);
+            return { lookup.SourceFont, lookup.Glyph, lookup.ResolvedCodePoint };
         }
 
-        template <typename ComponentType> uint32_t ResolveTabWidth(const ComponentType& component, const Font& font)
-        {
-            if constexpr (requires { component.TabWidth; })
-                return std::max(1U, static_cast<uint32_t>(component.TabWidth));
-            else
-                return font.GetTabWidth();
-        }
+        uint32_t ResolveTabWidth(const TextComponent& component) { return std::max(1U, component.TabWidth); }
+
+        bool TokensShareCluster(const TextLayoutToken& left, const TextLayoutToken& right);
 
         void ResolveTokenFonts(const TextComponent& component, const Font& font, TextLayoutScratch& scratch)
         {
@@ -177,10 +222,13 @@ namespace Crowny
                 if (token.NewLine || token.Invisible || token.CodePoint == U'\t' || token.SourceFont == nullptr)
                     continue;
 
+                size_t nextIndex = index + 1;
+                while (nextIndex < scratch.Tokens.Size() && TokensShareCluster(token, scratch.Tokens[nextIndex]))
+                    nextIndex++;
                 char32_t nextCodePoint = 0;
-                if (index + 1 < scratch.Tokens.Size() && token.SourceFont == scratch.Tokens[index + 1].SourceFont &&
-                    !scratch.Tokens[index + 1].NewLine)
-                    nextCodePoint = scratch.Tokens[index + 1].ResolvedCodePoint;
+                if (nextIndex < scratch.Tokens.Size() && token.SourceFont == scratch.Tokens[nextIndex].SourceFont &&
+                    !scratch.Tokens[nextIndex].NewLine)
+                    nextCodePoint = scratch.Tokens[nextIndex].ResolvedCodePoint;
                 token.Advance = token.SourceFont->GetAdvance(token.ResolvedCodePoint, nextCodePoint, component.UseKerning);
             }
         }
@@ -195,7 +243,7 @@ namespace Crowny
                             const TextLayoutFontData& fontData)
         {
             if (token.NewLine || token.CodePoint == 0x200B || token.CodePoint == 0x00AD || token.CodePoint == 0x200D ||
-                IsVariationSelector(token.CodePoint))
+                IsVariationSelector(token.CodePoint) || IsCombiningMark(token.CodePoint) || IsEmojiModifier(token.CodePoint))
                 return 0.0;
 
             if (token.CodePoint == U'\t')
@@ -483,7 +531,8 @@ namespace Crowny
             token.NewLine = codePoint == U'\n';
             token.WhiteSpace = IsTextWhitespace(codePoint);
             token.Invisible = codePoint == 0x200B || codePoint == 0x00AD || codePoint == 0x200D || IsVariationSelector(codePoint);
-            token.CombiningMark = IsCombiningMark(codePoint) || IsVariationSelector(codePoint) || IsEmojiModifier(codePoint) || codePoint == 0x200D;
+            token.CombiningMark = IsCombiningMark(codePoint) || IsSpacingMark(codePoint) || IsVariationSelector(codePoint) ||
+                                  IsEmojiModifier(codePoint) || codePoint == 0x200D;
         }
 
         AssignClusterRanges(scratch);
@@ -515,7 +564,7 @@ namespace Crowny
                                            fontMetrics->lineHeight,
                                            space.SourceFont != nullptr ? space.SourceFont->GetAdvance(space.CodePoint, 0, false) : 0.0,
                                            ellipsis.SourceFont != nullptr ? ellipsis.SourceFont->GetAdvance(ellipsis.CodePoint) : 0.0,
-                                           ResolveTabWidth(component, font),
+                                           ResolveTabWidth(component),
                                            ellipsis.Glyph,
                                            ellipsis.SourceFont };
         return BuildPrepared(component, fontData, scratch);
@@ -676,6 +725,7 @@ namespace Crowny
             const double gapExpansion = line.ExpandableGaps > 0 ? (relativeWidth - naturalOutputWidth) / line.ExpandableGaps : 0.0;
             const bool whitespaceGaps = CountWhitespaceGaps(scratch, line.TokenStart, line.RenderTokenEnd) > 0;
             uint32_t expandedCharacterGaps = 0;
+            double clusterPen = pen;
 
             const size_t initialSourceByteOffset =
               line.TokenStart < scratch.Tokens.Size() ? scratch.Tokens[line.TokenStart].SourceByteStart : scratch.SourceByteLength;
@@ -687,6 +737,8 @@ namespace Crowny
             for (size_t index = line.TokenStart; index < line.RenderTokenEnd; index++)
             {
                 const TextLayoutToken& token = scratch.Tokens[index];
+                if (index == line.TokenStart || !TokensShareCluster(scratch.Tokens[index - 1], token))
+                    clusterPen = pen;
                 const double advance = TokenAdvance(token, pen - line.X, natural.GlyphScale, component, fontData);
                 if (token.Renderable && !token.WhiteSpace && !token.Invisible)
                 {
@@ -694,7 +746,8 @@ namespace Crowny
                     glyph.CodePoint = token.ResolvedCodePoint != 0 ? token.ResolvedCodePoint : token.CodePoint;
                     glyph.Glyph = token.Glyph;
                     glyph.SourceFont = token.SourceFont;
-                    glyph.PenPosition = { static_cast<float>(pen), line.Baseline };
+                    const double glyphPen = token.CombiningMark && !IsSpacingMark(token.CodePoint) ? clusterPen : pen;
+                    glyph.PenPosition = { static_cast<float>(glyphPen), line.Baseline };
                     glyph.Advance = static_cast<float>(advance);
                     glyph.LineIndex = static_cast<uint32_t>(lineIndex);
                     AddGlyphToFontRun(scratch, glyph);

@@ -152,6 +152,7 @@ namespace Crowny
         Font::AtlasDimensionsConstraint AtlasDimensionsConstraint = Font::AtlasDimensionsConstraint::POWER_OF_TWO_SQUARE;
         uint32_t AtlasWidth = 1024;
         uint32_t AtlasHeight = 1024;
+        float AtlasPixelRange = 2.0f;
         CharsetRange Range = CharsetRange::ASCII;
         String CustomCharset;
         uint32_t Padding = 0;

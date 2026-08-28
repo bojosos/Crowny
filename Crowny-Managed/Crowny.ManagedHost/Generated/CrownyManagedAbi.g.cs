@@ -351,6 +351,7 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetSortingLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetOrderInLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetOrderInLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, uint*, NativeStatus> TextHitTest;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> FontGetIsValid;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetGlyphCount;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetTabWidth;
@@ -547,6 +548,7 @@ namespace Crowny.ManagedHost.Interop
                    TextSetSortingLayer != null &&
                    TextGetOrderInLayer != null &&
                    TextSetOrderInLayer != null &&
+                   TextHitTest != null &&
                    FontGetIsValid != null &&
                    FontGetGlyphCount != null &&
                    FontGetTabWidth != null &&

@@ -81,5 +81,6 @@ namespace Crowny
         static void Internal_SetSortingLayer(ScriptText* thisPtr, int32_t value);
         static int32_t Internal_GetOrderInLayer(ScriptText* thisPtr);
         static void Internal_SetOrderInLayer(ScriptText* thisPtr, int32_t value);
+        static uint32_t Internal_HitTest(ScriptText* thisPtr, glm::vec2* localPosition);
     };
 } // namespace Crowny

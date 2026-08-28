@@ -277,6 +277,7 @@ namespace Crowny
         internal IntPtr TextSetSortingLayer;
         internal IntPtr TextGetOrderInLayer;
         internal IntPtr TextSetOrderInLayer;
+        internal IntPtr TextHitTest;
         internal IntPtr FontGetIsValid;
         internal IntPtr FontGetGlyphCount;
         internal IntPtr FontGetTabWidth;
@@ -498,6 +499,7 @@ namespace Crowny
                    value.TextSetSortingLayer != IntPtr.Zero &&
                    value.TextGetOrderInLayer != IntPtr.Zero &&
                    value.TextSetOrderInLayer != IntPtr.Zero &&
+                   value.TextHitTest != IntPtr.Zero &&
                    value.FontGetIsValid != IntPtr.Zero &&
                    value.FontGetGlyphCount != IntPtr.Zero &&
                    value.FontGetTabWidth != IntPtr.Zero &&
@@ -700,6 +702,7 @@ namespace Crowny
             TextSetSortingLayerCallback = (TextSetSortingLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetSortingLayer, typeof(TextSetSortingLayerDelegate));
             TextGetOrderInLayerCallback = (TextGetOrderInLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetOrderInLayer, typeof(TextGetOrderInLayerDelegate));
             TextSetOrderInLayerCallback = (TextSetOrderInLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetOrderInLayer, typeof(TextSetOrderInLayerDelegate));
+            TextHitTestCallback = (TextHitTestDelegate)Marshal.GetDelegateForFunctionPointer(value.TextHitTest, typeof(TextHitTestDelegate));
             FontGetIsValidCallback = (FontGetIsValidDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetIsValid, typeof(FontGetIsValidDelegate));
             FontGetGlyphCountCallback = (FontGetGlyphCountDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetGlyphCount, typeof(FontGetGlyphCountDelegate));
             FontGetTabWidthCallback = (FontGetTabWidthDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetTabWidth, typeof(FontGetTabWidthDelegate));
@@ -1272,6 +1275,9 @@ namespace Crowny
         private delegate int TextSetOrderInLayerDelegate(void* context, ManagedNativeUuid entity, int value);
         private static TextSetOrderInLayerDelegate TextSetOrderInLayerCallback;
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int TextHitTestDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result);
+        private static TextHitTestDelegate TextHitTestCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int FontGetIsValidDelegate(void* context, ManagedNativeUuid font, byte* result);
         private static FontGetIsValidDelegate FontGetIsValidCallback;
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -1504,6 +1510,7 @@ namespace Crowny
         internal static int TextSetSortingLayer(ManagedNativeUuid entity, int value) => TextSetSortingLayerCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetOrderInLayer(ManagedNativeUuid entity, int* result) => TextGetOrderInLayerCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetOrderInLayer(ManagedNativeUuid entity, int value) => TextSetOrderInLayerCallback(api.Context.ToPointer(), entity, value);
+        internal static int TextHitTest(ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result) => TextHitTestCallback(api.Context.ToPointer(), entity, position, result);
         internal static int FontGetIsValid(ManagedNativeUuid font, byte* result) => FontGetIsValidCallback(api.Context.ToPointer(), font, result);
         internal static int FontGetGlyphCount(ManagedNativeUuid font, uint* result) => FontGetGlyphCountCallback(api.Context.ToPointer(), font, result);
         internal static int FontGetTabWidth(ManagedNativeUuid font, uint* result) => FontGetTabWidthCallback(api.Context.ToPointer(), font, result);
@@ -2920,6 +2927,15 @@ namespace Crowny
         {
             EnsureHostBindings();
             EnsureStatus(ManagedHostTransport.TextSetOrderInLayer(EncodeUuid(entity), value), "TextSetOrderInLayer");
+        }
+
+        internal static uint TextHitTest(UUID entity, Vector2 position)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 nativePosition = new ManagedNativeVec2 { X = position.x, Y = position.y };
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.TextHitTest(EncodeUuid(entity), &nativePosition, &result), "TextHitTest");
+            return result;
         }
 
         internal static bool FontGetIsValid(UUID font)

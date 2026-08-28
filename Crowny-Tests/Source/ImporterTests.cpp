@@ -502,6 +502,7 @@ TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer]
     source->SamplingFontSize = 48;
     source->AutoSizeAtlas = true;
     source->AtlasDimensionsConstraint = Font::AtlasDimensionsConstraint::POWER_OF_TWO_RECTANGLE;
+    source->AtlasPixelRange = 4.5f;
     source->Range = CharsetRange::SymbolRange;
     source->CustomCharset = "\xE4\xB8\x96\xF0\x9F\x8C\x8D";
     source->Padding = 3;
@@ -521,6 +522,7 @@ TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer]
     CHECK(restored->SamplingFontSize == 48);
     CHECK(restored->AutoSizeAtlas);
     CHECK(restored->AtlasDimensionsConstraint == Font::AtlasDimensionsConstraint::POWER_OF_TWO_RECTANGLE);
+    CHECK(restored->AtlasPixelRange == Catch::Approx(4.5f));
     CHECK(restored->Range == CharsetRange::SymbolRange);
     CHECK(restored->CustomCharset == source->CustomCharset);
     CHECK(restored->Padding == 3);

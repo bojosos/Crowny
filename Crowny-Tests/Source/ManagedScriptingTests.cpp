@@ -1,13 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "Crowny/Scripting/Managed/ManagedBackendSelection.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedAbiValidation.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedJson.h"
+#include "Crowny/Scripting/Managed/ManagedBackendSelection.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
 
-#include <cstdlib>
 #include <cstddef>
+#include <cstdlib>
 
 using namespace Crowny;
 
@@ -145,16 +145,13 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
     CHECK(browser.ClosedWorld);
     CHECK(browser.RequiresGeneratedMetadata);
 
-    CHECK(GetManagedBackendAvailability(ManagedBackendPreset::CoreCLR, BuildPlatform::WindowsX64,
-                                        BuildConfiguration::Development, false)
-            .Available);
-    const ManagedBackendAvailability invalidEditor = GetManagedBackendAvailability(
-      ManagedBackendPreset::DotNetWasmInterpreter, BuildPlatform::WindowsX64, BuildConfiguration::Development, true);
+    CHECK(GetManagedBackendAvailability(ManagedBackendPreset::CoreCLR, BuildPlatform::WindowsX64, BuildConfiguration::Development, false).Available);
+    const ManagedBackendAvailability invalidEditor =
+      GetManagedBackendAvailability(ManagedBackendPreset::DotNetWasmInterpreter, BuildPlatform::WindowsX64, BuildConfiguration::Development, true);
     CHECK_FALSE(invalidEditor.Available);
     CHECK_FALSE(invalidEditor.Reason.empty());
-    CHECK_FALSE(GetManagedBackendAvailability(ManagedBackendPreset::NativeAOT, BuildPlatform::LinuxX64,
-                                              BuildConfiguration::Development, false)
-                  .Available);
+    CHECK_FALSE(
+      GetManagedBackendAvailability(ManagedBackendPreset::NativeAOT, BuildPlatform::LinuxX64, BuildConfiguration::Development, false).Available);
 }
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
@@ -169,6 +166,7 @@ TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scri
 
 TEST_CASE("Managed font ABI exposes stable glyph and fallback data", "[Scripting][Managed][Contract][Font]")
 {
+    CHECK(CW_MANAGED_BINDING_TEXT_HIT_TEST == 268);
     CHECK(CW_MANAGED_BINDING_FONT_GET_IS_VALID == 300);
     CHECK(CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO == 307);
     CHECK(CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS == 311);
@@ -262,23 +260,20 @@ TEST_CASE("Managed JSON uses catalog kinds to preserve ambiguous values", "[Scri
     ScriptValue direction;
     direction.Kind = ScriptValueKind::Vector3;
     direction.VectorValue = glm::vec4(1.0f, 2.0f, 3.0f, 0.0f);
-    source.Root = ScriptValue::Object({ { "Id", id }, { "Direction", direction }, { "Unsigned", ScriptValue::Unsigned(42) } },
-                                      source.Identity);
+    source.Root = ScriptValue::Object({ { "Id", id }, { "Direction", direction }, { "Unsigned", ScriptValue::Unsigned(42) } }, source.Identity);
 
     ScriptState parsed;
     const String json = WriteManagedStateJson(source);
-    const ManagedOperationResult result =
-      ParseManagedStateJson(json, parsed, ManagedBackendId::CoreCLR, &schema);
+    const ManagedOperationResult result = ParseManagedStateJson(json, parsed, ManagedBackendId::CoreCLR, &schema);
     REQUIRE(result.Succeeded);
     CHECK(parsed == source);
 }
 
 TEST_CASE("Managed catalog preserves unambiguous nested script identities", "[Scripting][Managed][Contract]")
 {
-    const String json =
-      R"({"ManifestVersion":1,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
-      R"("TypeName":"Outer+Mover","FormerIdentities":[{"Assembly":"GameAssembly","Namespace":"Game",)"
-      R"("TypeName":"Mover"}],"BaseType":null,"RunInEditor":true,"Events":["Start"],"Fields":[]}]})";
+    const String json = R"({"ManifestVersion":1,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"Outer+Mover","FormerIdentities":[{"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"Mover"}],"BaseType":null,"RunInEditor":true,"Events":["Start"],"Fields":[]}]})";
     ScriptCatalog catalog;
     const ManagedOperationResult result = ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR);
     REQUIRE(result.Succeeded);
@@ -307,19 +302,17 @@ TEST_CASE("CoreCLR package manifest resolves only package-local artifacts", "[Sc
     fs::create_directories(packageRoot / "host");
     fs::create_directories(packageRoot / "game");
     for (const Path& path : { packageRoot / "host" / "nethost.dll", packageRoot / "host" / "Crowny.ManagedHost.dll",
-                              packageRoot / "host" / "Crowny.ManagedHost.deps.json",
-                              packageRoot / "host" / "Crowny.ManagedHost.runtimeconfig.json", packageRoot / "game" / "GameAssembly.dll",
-                              packageRoot / "game" / "GameAssembly.deps.json" })
+                              packageRoot / "host" / "Crowny.ManagedHost.deps.json", packageRoot / "host" / "Crowny.ManagedHost.runtimeconfig.json",
+                              packageRoot / "game" / "GameAssembly.dll", packageRoot / "game" / "GameAssembly.deps.json" })
         std::ofstream(path).put('\n');
 
     const Path manifest = packageRoot / "managed-program.json";
-    std::ofstream(manifest)
-      << R"({"schemaVersion":1,"abiVersion":)" << CW_MANAGED_ABI_VERSION
-      << R"(,"backend":"CoreCLR","runtimeRoot":"runtime","artifacts":{)"
-      << R"("nethost":"host/nethost.dll","hostAssembly":"host/Crowny.ManagedHost.dll",)"
-      << R"("hostDependencies":"host/Crowny.ManagedHost.deps.json",)"
-      << R"("runtimeConfig":"host/Crowny.ManagedHost.runtimeconfig.json","gameAssembly":"game/GameAssembly.dll",)"
-      << R"("gameDependencies":"game/GameAssembly.deps.json"}})";
+    std::ofstream(manifest) << R"({"schemaVersion":1,"abiVersion":)" << CW_MANAGED_ABI_VERSION
+                            << R"(,"backend":"CoreCLR","runtimeRoot":"runtime","artifacts":{)"
+                            << R"("nethost":"host/nethost.dll","hostAssembly":"host/Crowny.ManagedHost.dll",)"
+                            << R"("hostDependencies":"host/Crowny.ManagedHost.deps.json",)"
+                            << R"("runtimeConfig":"host/Crowny.ManagedHost.runtimeconfig.json","gameAssembly":"game/GameAssembly.dll",)"
+                            << R"("gameDependencies":"game/GameAssembly.deps.json"}})";
 
     const ManagedProgramPackageResult loaded = LoadManagedProgramPackage(manifest, 7);
     REQUIRE(loaded.Result.Succeeded);
@@ -328,9 +321,8 @@ TEST_CASE("CoreCLR package manifest resolves only package-local artifacts", "[Sc
     CHECK(loaded.Package.Program.Generation == 7);
     CHECK(loaded.Package.Program.Artifacts.size() == 6);
 
-    std::ofstream(manifest, std::ios::trunc)
-      << R"({"schemaVersion":1,"abiVersion":)" << CW_MANAGED_ABI_VERSION
-      << R"(,"backend":"CoreCLR","runtimeRoot":"..","artifacts":{}})";
+    std::ofstream(manifest, std::ios::trunc) << R"({"schemaVersion":1,"abiVersion":)" << CW_MANAGED_ABI_VERSION
+                                             << R"(,"backend":"CoreCLR","runtimeRoot":"..","artifacts":{}})";
     const ManagedProgramPackageResult escaped = LoadManagedProgramPackage(manifest);
     CHECK_FALSE(escaped.Result.Succeeded);
     CHECK(escaped.Result.HasDiagnosticCode("managed.package.runtime_path_invalid"));

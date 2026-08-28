@@ -125,6 +125,7 @@ namespace Crowny
             SerializeValueYAML(out, "AutoSizeAtlas", fontImportOptions->AutoSizeAtlas);
             SerializeValueYAML(out, "AtlasWidth", fontImportOptions->AtlasWidth);
             SerializeValueYAML(out, "AtlasHeight", fontImportOptions->AtlasHeight);
+            SerializeValueYAML(out, "AtlasPixelRange", fontImportOptions->AtlasPixelRange);
             SerializeEnumYAML(out, "Range", fontImportOptions->Range);
             SerializeValueYAML(out, "CustomCharset", fontImportOptions->CustomCharset);
             SerializeValueYAML(out, "Padding", fontImportOptions->Padding);
@@ -180,19 +181,16 @@ namespace Crowny
             DeserializeEnumYAML(textureImportOptionsNode, "Shape", textureImportOptions->Shape, TextureShape::TEXTURE_2D,
                                 "Texture shape \'{}\' in metadata file is invalid.", 0, 4);
             DeserializeEnumYAML(textureImportOptionsNode, "DiskFormat", textureImportOptions->DiskFormat, TextureDiskFormat::UASTC,
-                                "Texture disk format \'{}\' in metadata file is invalid.", 0,
-                                static_cast<int32_t>(TextureDiskFormat::Count));
+                                "Texture disk format \'{}\' in metadata file is invalid.", 0, static_cast<int32_t>(TextureDiskFormat::Count));
             DeserializeValueYAML(textureImportOptionsNode, "AutoFormat", textureImportOptions->AutomaticFormat, true);
             DeserializeValueYAML(textureImportOptionsNode, "GenerateMips", textureImportOptions->GenerateMips, true);
             DeserializeValueYAML(textureImportOptionsNode, "CpuCached", textureImportOptions->CpuCached, false);
             DeserializeValueYAML(textureImportOptionsNode, "sRGB", textureImportOptions->SRGB, true);
             DeserializeValueYAML(textureImportOptionsNode, "MaxMip", textureImportOptions->MaxMip, 0U);
             DeserializeEnumYAML(textureImportOptionsNode, "MipFilter", textureImportOptions->MipFilter, TextureMipFilter::Kaiser,
-                                "Texture mip filter '{}' in metadata file is invalid.", 0,
-                                static_cast<int32_t>(TextureMipFilter::Count));
+                                "Texture mip filter '{}' in metadata file is invalid.", 0, static_cast<int32_t>(TextureMipFilter::Count));
             DeserializeEnumYAML(textureImportOptionsNode, "MipMode", textureImportOptions->MipMode, TextureMipMode::Color,
-                                "Texture mip mode '{}' in metadata file is invalid.", 0,
-                                static_cast<int32_t>(TextureMipMode::Count));
+                                "Texture mip mode '{}' in metadata file is invalid.", 0, static_cast<int32_t>(TextureMipMode::Count));
             DeserializeValueYAML(textureImportOptionsNode, "MipWrap", textureImportOptions->MipWrap, false);
             DeserializeValueYAML(textureImportOptionsNode, "PreserveAlphaCoverage", textureImportOptions->PreserveAlphaCoverage, false);
             DeserializeValueYAML(textureImportOptionsNode, "AlphaCutoff", textureImportOptions->AlphaCutoff, 0.5f);
@@ -251,6 +249,7 @@ namespace Crowny
             DeserializeValueYAML(fontImportOptionsNode, "AutoSizeAtlas", fontImportOptions->AutoSizeAtlas, false);
             DeserializeValueYAML(fontImportOptionsNode, "AtlasWidth", fontImportOptions->AtlasWidth, 1024U);
             DeserializeValueYAML(fontImportOptionsNode, "AtlasHeight", fontImportOptions->AtlasHeight, 1024U);
+            DeserializeValueYAML(fontImportOptionsNode, "AtlasPixelRange", fontImportOptions->AtlasPixelRange, 2.0f);
             DeserializeEnumYAML(fontImportOptionsNode, "Range", fontImportOptions->Range, CharsetRange::ASCII,
                                 "Charset range \'{}\' in metadata file is invalid.", 0, CharsetRange::Count);
             DeserializeValueYAML(fontImportOptionsNode, "CustomCharset", fontImportOptions->CustomCharset, String());

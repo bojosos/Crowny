@@ -13,6 +13,7 @@
 #include "Crowny/RenderAPI/VertexArray.h"
 #include "Crowny/Renderer/Camera.h"
 #include "Crowny/Renderer/Font.h"
+#include "Crowny/Renderer/FontManager.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Utils/ShaderCompiler.h"
@@ -29,12 +30,9 @@ namespace Crowny
 {
     using namespace Literals;
 
-    const std::array<glm::vec2, 4> QuadUv = { { glm::vec2(0.0f, 0.0f), glm::vec2(1.0f, 0.0f),
-                                                glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 1.0f) } };
-    const std::array<glm::vec4, 4> QuadVertices = { {
-        glm::vec4(-0.5f, -0.5f, 0.0f, 1.0f), glm::vec4(0.5f, -0.5f, 0.0f, 1.0f),
-        glm::vec4(0.5f, 0.5f, 0.0f, 1.0f), glm::vec4(-0.5f, 0.5f, 0.0f, 1.0f)
-    } };
+    const std::array<glm::vec2, 4> QuadUv = { { glm::vec2(0.0f, 0.0f), glm::vec2(1.0f, 0.0f), glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 1.0f) } };
+    const std::array<glm::vec4, 4> QuadVertices = { { glm::vec4(-0.5f, -0.5f, 0.0f, 1.0f), glm::vec4(0.5f, -0.5f, 0.0f, 1.0f),
+                                                      glm::vec4(0.5f, 0.5f, 0.0f, 1.0f), glm::vec4(-0.5f, 0.5f, 0.0f, 1.0f) } };
 
     struct VertexData
     {
@@ -164,8 +162,8 @@ namespace Crowny
     static void SetupCircleBuffers()
     {
         s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
-        s_Data->CircleVertexBuffer = VertexBuffer::Create(
-            { static_cast<uint32_t>(s_Data->MaxLineVertices * sizeof(CircleVertex)), BufferUsage::BU_DYNAMIC_DRAW });
+        s_Data->CircleVertexBuffer =
+          VertexBuffer::Create({ static_cast<uint32_t>(s_Data->MaxLineVertices * sizeof(CircleVertex)), BufferUsage::BU_DYNAMIC_DRAW });
         const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_WorldPosition" },
                                                                                { ShaderDataType::Float3, "a_LocalPosition" },
                                                                                { ShaderDataType::Float4, "a_Color" },
@@ -184,8 +182,8 @@ namespace Crowny
     static void SetupTextBuffers()
     {
         s_Data->TextBuffer = s_Data->TextTmpBuffer = new TextVertex[s_Data->MaxTextVertices];
-        s_Data->TextVertexBuffer = VertexBuffer::Create(
-            { static_cast<uint32_t>(s_Data->MaxTextVertices * sizeof(TextVertex)), BufferUsage::BU_DYNAMIC_DRAW });
+        s_Data->TextVertexBuffer =
+          VertexBuffer::Create({ static_cast<uint32_t>(s_Data->MaxTextVertices * sizeof(TextVertex)), BufferUsage::BU_DYNAMIC_DRAW });
 
         const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_Position" },
                                                                                { ShaderDataType::Float4, "a_Color" },
@@ -236,10 +234,7 @@ namespace Crowny
 
     void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix) { SetView(camera.GetProjection(), viewMatrix); }
 
-    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view)
-    {
-        SetView(projection, view);
-    }
+    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view) { SetView(projection, view); }
 
     float Renderer2D::FindTexture(const Ref<Texture>& texture)
     {
@@ -378,7 +373,7 @@ namespace Crowny
     {
         AssetHandle<Font> font = textComponent.Font;
         if (!font)
-            font = Font::GetDefaultFont();
+            font = FontManager::GetDefaultFont();
         if (!font || !font->IsValid() || textComponent.Text.empty())
             return;
 
@@ -426,7 +421,7 @@ namespace Crowny
         };
 
         auto emitQuad = [&](Array<glm::vec2, 4> positions, const Array<glm::vec2, 4>& uvs, const glm::vec4& color, const glm::vec4& outlineColor,
-                             float outline, float glyphWeight, float pixelRange, float softness, int32_t flags, float baseline) {
+                            float outline, float glyphWeight, float pixelRange, float softness, int32_t flags, float baseline) {
             ensureTextCapacity();
             for (uint32_t vertexIndex = 0; vertexIndex < positions.size(); vertexIndex++)
             {

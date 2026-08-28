@@ -115,6 +115,7 @@ namespace Crowny
         void SetFallbackFontIds(const Vector<UUID>& fontIds);
         bool LoadFallbackFonts();
         void ClearFallbackFonts();
+        UUID FindFallbackFontUUID(const Font* font) const;
         const Vector<AssetHandle<Font>>& GetFallbackFonts() const { return m_FallbackFonts; }
         const Vector<UUID>& GetFallbackFontIds() const { return m_FallbackFontIds; }
 

@@ -123,6 +123,48 @@ TEST_CASE("Text layout groups regional indicators and emoji joiner sequences", "
     CHECK(scratch.Tokens[4].ClusterByteEnd == 19);
 }
 
+TEST_CASE("Text layout groups Hangul Jamo and spacing-mark graphemes", "[Text][Layout][Unicode]")
+{
+    TextLayoutScratch scratch;
+    const String text = "\xe1\x84\x80\xe1\x85\xa1\xe1\x86\xa8"
+                        "\xe0\xa4\x95\xe0\xa4\xbe";
+
+    TextLayout::DecodeUTF8(text, scratch);
+
+    REQUIRE(scratch.Tokens.Size() == 5);
+    for (size_t index = 0; index < 3; index++)
+    {
+        CHECK(scratch.Tokens[index].ClusterByteStart == 0);
+        CHECK(scratch.Tokens[index].ClusterByteEnd == 9);
+    }
+    for (size_t index = 3; index < 5; index++)
+    {
+        CHECK(scratch.Tokens[index].ClusterByteStart == 9);
+        CHECK(scratch.Tokens[index].ClusterByteEnd == 15);
+    }
+}
+
+TEST_CASE("Text layout overlays combining marks without adding advance", "[Text][Layout][Unicode]")
+{
+    TextComponent component = MakeUnitTextComponent();
+    component.Wrapping = false;
+    TextLayoutScratch scratch;
+    TextLayout::DecodeUTF8("e\xcc\x81x", scratch);
+    for (size_t index = 0; index < scratch.Tokens.Size(); index++)
+    {
+        scratch.Tokens[index].Advance = 1.0;
+        scratch.Tokens[index].Renderable = true;
+    }
+
+    const TextLayoutResult layout = TextLayout::BuildPrepared(component, UNIT_LAYOUT_FONT, scratch);
+
+    REQUIRE(layout.GlyphCount == 3);
+    CHECK(layout.Glyphs[0].PenPosition.x == 0.0f);
+    CHECK(layout.Glyphs[1].PenPosition.x == 0.0f);
+    CHECK(layout.Glyphs[2].PenPosition.x == 1.0f);
+    CHECK(layout.Size.x == 2.0f);
+}
+
 TEST_CASE("Text layout normalizes newline sequences without losing byte offsets", "[Text][Layout][Unicode]")
 {
     TextLayoutScratch scratch;

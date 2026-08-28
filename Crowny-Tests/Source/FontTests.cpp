@@ -79,6 +79,21 @@ TEST_CASE("Font fallback references discard empty and duplicate asset IDs", "[Re
     CHECK(font.GetFallbackFontIds().size() == Font::MAX_FALLBACK_FONTS);
 }
 
+TEST_CASE("Font fallback chains resolve nested source font identities", "[Renderer][Font][Fallback]")
+{
+    AssetManager assetManager;
+    const AssetHandle<Font> primary = CreateFontHandle(assetManager);
+    const AssetHandle<Font> first = CreateFontHandle(assetManager);
+    const AssetHandle<Font> second = CreateFontHandle(assetManager);
+
+    REQUIRE(primary->AddFallbackFont(first));
+    REQUIRE(first->AddFallbackFont(second));
+    CHECK(primary->FindFallbackFontUUID(first.Get()) == first.GetUUID());
+    CHECK(primary->FindFallbackFontUUID(second.Get()) == second.GetUUID());
+    CHECK(primary->FindFallbackFontUUID(primary.Get()).Empty());
+    CHECK_FALSE(second->AddFallbackFont(primary));
+}
+
 TEST_CASE("Font manager provides exact lookup and an optional default fallback", "[Renderer][Font][Manager]")
 {
     AssetManager assetManager;
