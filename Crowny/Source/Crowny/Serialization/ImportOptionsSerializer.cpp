@@ -7,6 +7,8 @@
 
 #include "Crowny/Common/Yaml.h"
 
+#include <cmath>
+
 namespace Crowny
 {
 
@@ -249,7 +251,13 @@ namespace Crowny
             DeserializeValueYAML(fontImportOptionsNode, "AutoSizeAtlas", fontImportOptions->AutoSizeAtlas, false);
             DeserializeValueYAML(fontImportOptionsNode, "AtlasWidth", fontImportOptions->AtlasWidth, 1024U);
             DeserializeValueYAML(fontImportOptionsNode, "AtlasHeight", fontImportOptions->AtlasHeight, 1024U);
-            DeserializeValueYAML(fontImportOptionsNode, "AtlasPixelRange", fontImportOptions->AtlasPixelRange, 2.0f);
+            DeserializeValueYAML(fontImportOptionsNode, "AtlasPixelRange", fontImportOptions->AtlasPixelRange,
+                                 FontImportOptions::DEFAULT_ATLAS_PIXEL_RANGE);
+            if (!std::isfinite(fontImportOptions->AtlasPixelRange))
+                fontImportOptions->AtlasPixelRange = FontImportOptions::DEFAULT_ATLAS_PIXEL_RANGE;
+            else
+                fontImportOptions->AtlasPixelRange =
+                  std::clamp(fontImportOptions->AtlasPixelRange, FontImportOptions::MIN_ATLAS_PIXEL_RANGE, FontImportOptions::MAX_ATLAS_PIXEL_RANGE);
             DeserializeEnumYAML(fontImportOptionsNode, "Range", fontImportOptions->Range, CharsetRange::ASCII,
                                 "Charset range \'{}\' in metadata file is invalid.", 0, CharsetRange::Count);
             DeserializeValueYAML(fontImportOptionsNode, "CustomCharset", fontImportOptions->CustomCharset, String());

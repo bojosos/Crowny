@@ -123,6 +123,53 @@ TEST_CASE("Text layout groups regional indicators and emoji joiner sequences", "
     CHECK(scratch.Tokens[4].ClusterByteEnd == 19);
 }
 
+TEST_CASE("Text layout applies Unicode extended grapheme rules beyond Latin marks", "[Text][Layout][Unicode]")
+{
+    TextLayoutScratch scratch;
+
+    SECTION("Hebrew combining marks extend their base")
+    {
+        TextLayout::DecodeUTF8("\xd7\x90\xd6\xb0x", scratch);
+
+        REQUIRE(scratch.Tokens.Size() == 3);
+        CHECK(scratch.Tokens[0].CodePoint == U'\u05d0');
+        CHECK(scratch.Tokens[1].CodePoint == U'\u05b0');
+        CHECK(scratch.Tokens[0].ClusterByteStart == 0);
+        CHECK(scratch.Tokens[0].ClusterByteEnd == 4);
+        CHECK(scratch.Tokens[1].ClusterByteStart == 0);
+        CHECK(scratch.Tokens[1].ClusterByteEnd == 4);
+        CHECK(scratch.Tokens[2].ClusterByteStart == 4);
+        CHECK(scratch.Tokens[2].ClusterByteEnd == 5);
+    }
+
+    SECTION("ZWJ only joins a following extended pictograph")
+    {
+        TextLayout::DecodeUTF8("A\xe2\x80\x8d"
+                               "B",
+                               scratch);
+
+        REQUIRE(scratch.Tokens.Size() == 3);
+        CHECK(scratch.Tokens[0].ClusterByteStart == 0);
+        CHECK(scratch.Tokens[0].ClusterByteEnd == 4);
+        CHECK(scratch.Tokens[1].ClusterByteStart == 0);
+        CHECK(scratch.Tokens[1].ClusterByteEnd == 4);
+        CHECK(scratch.Tokens[2].ClusterByteStart == 4);
+        CHECK(scratch.Tokens[2].ClusterByteEnd == 5);
+    }
+
+    SECTION("Indic virama conjuncts remain indivisible")
+    {
+        TextLayout::DecodeUTF8("\xe0\xa4\x95\xe0\xa5\x8d\xe0\xa4\x95", scratch);
+
+        REQUIRE(scratch.Tokens.Size() == 3);
+        for (const TextLayoutToken& token : scratch.Tokens)
+        {
+            CHECK(token.ClusterByteStart == 0);
+            CHECK(token.ClusterByteEnd == 9);
+        }
+    }
+}
+
 TEST_CASE("Text layout groups Hangul Jamo and spacing-mark graphemes", "[Text][Layout][Unicode]")
 {
     TextLayoutScratch scratch;
@@ -163,6 +210,30 @@ TEST_CASE("Text layout overlays combining marks without adding advance", "[Text]
     CHECK(layout.Glyphs[1].PenPosition.x == 0.0f);
     CHECK(layout.Glyphs[2].PenPosition.x == 1.0f);
     CHECK(layout.Size.x == 2.0f);
+}
+
+TEST_CASE("Text layout preserves advance for spacing marks classified as grapheme extenders", "[Text][Layout][Unicode]")
+{
+    TextComponent component = MakeUnitTextComponent();
+    component.Wrapping = false;
+    TextLayoutScratch scratch;
+    TextLayout::DecodeUTF8("\xe0\xa6\x95\xe0\xa6\xbe"
+                           "x",
+                           scratch);
+    for (size_t index = 0; index < scratch.Tokens.Size(); index++)
+    {
+        scratch.Tokens[index].Advance = 1.0;
+        scratch.Tokens[index].Renderable = true;
+    }
+
+    const TextLayoutResult layout = TextLayout::BuildPrepared(component, UNIT_LAYOUT_FONT, scratch);
+
+    REQUIRE(layout.GlyphCount == 3);
+    CHECK(layout.Glyphs[0].CodePoint == U'\u0995');
+    CHECK(layout.Glyphs[1].CodePoint == U'\u09be');
+    CHECK(layout.Glyphs[1].PenPosition.x == 1.0f);
+    CHECK(layout.Glyphs[2].PenPosition.x == 2.0f);
+    CHECK(layout.Size.x == 3.0f);
 }
 
 TEST_CASE("Text layout normalizes newline sequences without losing byte offsets", "[Text][Layout][Unicode]")

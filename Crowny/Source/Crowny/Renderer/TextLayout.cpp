@@ -3,6 +3,7 @@
 #include "Crowny/Renderer/TextLayout.h"
 
 #include "Crowny/Common/UTF8.h"
+#include "Crowny/Common/UnicodeGrapheme.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/MSDFdata.h"
@@ -19,60 +20,6 @@ namespace Crowny
         {
             return codePoint == U'\t' || codePoint == U' ' || codePoint == 0x00A0 || codePoint == 0x1680 ||
                    (codePoint >= 0x2000 && codePoint <= 0x200A) || codePoint == 0x202F || codePoint == 0x205F || codePoint == 0x3000;
-        }
-
-        bool IsCombiningMark(char32_t codePoint)
-        {
-            return (codePoint >= 0x0300 && codePoint <= 0x036F) || (codePoint >= 0x1AB0 && codePoint <= 0x1AFF) ||
-                   (codePoint >= 0x1DC0 && codePoint <= 0x1DFF) || (codePoint >= 0x20D0 && codePoint <= 0x20FF) ||
-                   (codePoint >= 0xFE20 && codePoint <= 0xFE2F);
-        }
-
-        bool IsSpacingMark(char32_t codePoint)
-        {
-            return codePoint == 0x0903 || (codePoint >= 0x093B && codePoint <= 0x0940) || (codePoint >= 0x0949 && codePoint <= 0x094C) ||
-                   (codePoint >= 0x0982 && codePoint <= 0x0983) || (codePoint >= 0x09BE && codePoint <= 0x09C0) ||
-                   (codePoint >= 0x09C7 && codePoint <= 0x09C8) || (codePoint >= 0x09CB && codePoint <= 0x09CC) ||
-                   (codePoint >= 0x0A3E && codePoint <= 0x0A40) || codePoint == 0x0A83 || (codePoint >= 0x0ABE && codePoint <= 0x0AC0) ||
-                   codePoint == 0x0AC9 || (codePoint >= 0x0ACB && codePoint <= 0x0ACC) || (codePoint >= 0x0B02 && codePoint <= 0x0B03) ||
-                   codePoint == 0x0B3E || codePoint == 0x0B40 || (codePoint >= 0x0B47 && codePoint <= 0x0B48) ||
-                   (codePoint >= 0x0B4B && codePoint <= 0x0B4C) || (codePoint >= 0x0BBE && codePoint <= 0x0BBF) ||
-                   (codePoint >= 0x0BC1 && codePoint <= 0x0BC2) || (codePoint >= 0x0BC6 && codePoint <= 0x0BC8) ||
-                   (codePoint >= 0x0BCA && codePoint <= 0x0BCC) || (codePoint >= 0x0C01 && codePoint <= 0x0C03) ||
-                   (codePoint >= 0x0C41 && codePoint <= 0x0C44) || (codePoint >= 0x0C82 && codePoint <= 0x0C83) || codePoint == 0x0CBE ||
-                   (codePoint >= 0x0CC0 && codePoint <= 0x0CC4) || (codePoint >= 0x0CC7 && codePoint <= 0x0CC8) ||
-                   (codePoint >= 0x0CCA && codePoint <= 0x0CCB) || (codePoint >= 0x0D02 && codePoint <= 0x0D03) ||
-                   (codePoint >= 0x0D3E && codePoint <= 0x0D40) || (codePoint >= 0x0D46 && codePoint <= 0x0D48) ||
-                   (codePoint >= 0x0D4A && codePoint <= 0x0D4C) || (codePoint >= 0x0D82 && codePoint <= 0x0D83);
-        }
-
-        bool IsPrependMark(char32_t codePoint)
-        {
-            return (codePoint >= 0x0600 && codePoint <= 0x0605) || codePoint == 0x06DD || codePoint == 0x070F ||
-                   (codePoint >= 0x0890 && codePoint <= 0x0891) || codePoint == 0x08E2 || codePoint == 0x110BD || codePoint == 0x110CD;
-        }
-
-        enum class HangulSyllableType
-        {
-            None,
-            L,
-            V,
-            T,
-            LV,
-            LVT
-        };
-
-        HangulSyllableType GetHangulSyllableType(char32_t codePoint)
-        {
-            if ((codePoint >= 0x1100 && codePoint <= 0x115F) || (codePoint >= 0xA960 && codePoint <= 0xA97C))
-                return HangulSyllableType::L;
-            if ((codePoint >= 0x1160 && codePoint <= 0x11A7) || (codePoint >= 0xD7B0 && codePoint <= 0xD7C6))
-                return HangulSyllableType::V;
-            if ((codePoint >= 0x11A8 && codePoint <= 0x11FF) || (codePoint >= 0xD7CB && codePoint <= 0xD7FB))
-                return HangulSyllableType::T;
-            if (codePoint >= 0xAC00 && codePoint <= 0xD7A3)
-                return (codePoint - 0xAC00) % 28 == 0 ? HangulSyllableType::LV : HangulSyllableType::LVT;
-            return HangulSyllableType::None;
         }
 
         bool IsBreakableWhitespace(char32_t codePoint) { return IsTextWhitespace(codePoint) && codePoint != 0x00A0 && codePoint != 0x202F; }
@@ -121,33 +68,83 @@ namespace Crowny
             return (codePoint >= 0xFE00 && codePoint <= 0xFE0F) || (codePoint >= 0xE0100 && codePoint <= 0xE01EF);
         }
 
-        bool IsEmojiModifier(char32_t codePoint) { return codePoint >= 0x1F3FB && codePoint <= 0x1F3FF; }
+        bool IsRegionalIndicator(char32_t codePoint)
+        {
+            return UnicodeGrapheme::GetBreakProperty(codePoint) == GraphemeBreakProperty::RegionalIndicator;
+        }
 
-        bool IsRegionalIndicator(char32_t codePoint) { return codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF; }
+        bool IsNonspacingGrapheme(char32_t codePoint)
+        {
+            const GraphemeBreakProperty property = UnicodeGrapheme::GetBreakProperty(codePoint);
+            return property == GraphemeBreakProperty::ZWJ ||
+                   (property == GraphemeBreakProperty::Extend && !UnicodeGrapheme::IsSpacingMark(codePoint));
+        }
+
+        bool IsIndicConjunct(const FrameVector<TextLayoutToken>& tokens, size_t index)
+        {
+            if (UnicodeGrapheme::GetIndicConjunctBreakProperty(tokens[index].CodePoint) != IndicConjunctBreakProperty::Consonant)
+                return false;
+
+            bool hasLinker = false;
+            size_t cursor = index;
+            while (cursor > 0)
+            {
+                const IndicConjunctBreakProperty property = UnicodeGrapheme::GetIndicConjunctBreakProperty(tokens[--cursor].CodePoint);
+                if (property == IndicConjunctBreakProperty::Linker)
+                {
+                    hasLinker = true;
+                    continue;
+                }
+                if (property == IndicConjunctBreakProperty::Extend)
+                    continue;
+                return hasLinker && property == IndicConjunctBreakProperty::Consonant;
+            }
+            return false;
+        }
+
+        bool IsEmojiJoin(const FrameVector<TextLayoutToken>& tokens, size_t index)
+        {
+            if (!UnicodeGrapheme::IsExtendedPictographic(tokens[index].CodePoint) || index == 0 ||
+                UnicodeGrapheme::GetBreakProperty(tokens[index - 1].CodePoint) != GraphemeBreakProperty::ZWJ)
+                return false;
+
+            size_t cursor = index - 1;
+            while (cursor > 0 && UnicodeGrapheme::GetBreakProperty(tokens[cursor - 1].CodePoint) == GraphemeBreakProperty::Extend)
+                cursor--;
+            return cursor > 0 && UnicodeGrapheme::IsExtendedPictographic(tokens[cursor - 1].CodePoint);
+        }
 
         bool ContinuesCluster(const FrameVector<TextLayoutToken>& tokens, size_t index, uint32_t regionalIndicatorCount)
         {
             if (index == 0 || tokens[index].NewLine || tokens[index - 1].NewLine)
                 return false;
 
-            const char32_t codePoint = tokens[index].CodePoint;
-            const char32_t previous = tokens[index - 1].CodePoint;
-            const HangulSyllableType currentHangul = GetHangulSyllableType(codePoint);
-            const HangulSyllableType previousHangul = GetHangulSyllableType(previous);
-            if (previousHangul == HangulSyllableType::L && (currentHangul == HangulSyllableType::L || currentHangul == HangulSyllableType::V ||
-                                                            currentHangul == HangulSyllableType::LV || currentHangul == HangulSyllableType::LVT))
+            const GraphemeBreakProperty current = UnicodeGrapheme::GetBreakProperty(tokens[index].CodePoint);
+            const GraphemeBreakProperty previous = UnicodeGrapheme::GetBreakProperty(tokens[index - 1].CodePoint);
+
+            if (previous == GraphemeBreakProperty::CR && current == GraphemeBreakProperty::LF)
                 return true;
-            if ((previousHangul == HangulSyllableType::LV || previousHangul == HangulSyllableType::V) &&
-                (currentHangul == HangulSyllableType::V || currentHangul == HangulSyllableType::T))
+            if (previous == GraphemeBreakProperty::CR || previous == GraphemeBreakProperty::LF || previous == GraphemeBreakProperty::Control ||
+                current == GraphemeBreakProperty::CR || current == GraphemeBreakProperty::LF || current == GraphemeBreakProperty::Control)
+                return false;
+
+            if (previous == GraphemeBreakProperty::L && (current == GraphemeBreakProperty::L || current == GraphemeBreakProperty::V ||
+                                                         current == GraphemeBreakProperty::LV || current == GraphemeBreakProperty::LVT))
                 return true;
-            if ((previousHangul == HangulSyllableType::LVT || previousHangul == HangulSyllableType::T) && currentHangul == HangulSyllableType::T)
+            if ((previous == GraphemeBreakProperty::LV || previous == GraphemeBreakProperty::V) &&
+                (current == GraphemeBreakProperty::V || current == GraphemeBreakProperty::T))
+                return true;
+            if ((previous == GraphemeBreakProperty::LVT || previous == GraphemeBreakProperty::T) && current == GraphemeBreakProperty::T)
                 return true;
 
-            if (IsCombiningMark(codePoint) || IsVariationSelector(codePoint) || IsEmojiModifier(codePoint) || codePoint == 0x200D ||
-                IsSpacingMark(codePoint) || IsPrependMark(previous) || previous == 0x200D)
+            if (current == GraphemeBreakProperty::Extend || current == GraphemeBreakProperty::ZWJ || current == GraphemeBreakProperty::SpacingMark ||
+                previous == GraphemeBreakProperty::Prepend)
+                return true;
+            if (IsIndicConjunct(tokens, index) || IsEmojiJoin(tokens, index))
                 return true;
 
-            return IsRegionalIndicator(previous) && IsRegionalIndicator(codePoint) && regionalIndicatorCount % 2 == 1;
+            return previous == GraphemeBreakProperty::RegionalIndicator && current == GraphemeBreakProperty::RegionalIndicator &&
+                   regionalIndicatorCount % 2 == 1;
         }
 
         void AssignClusterRanges(TextLayoutScratch& scratch)
@@ -242,8 +239,7 @@ namespace Crowny
         double TokenAdvance(const TextLayoutToken& token, double penX, double glyphScale, const TextComponent& component,
                             const TextLayoutFontData& fontData)
         {
-            if (token.NewLine || token.CodePoint == 0x200B || token.CodePoint == 0x00AD || token.CodePoint == 0x200D ||
-                IsVariationSelector(token.CodePoint) || IsCombiningMark(token.CodePoint) || IsEmojiModifier(token.CodePoint))
+            if (token.NewLine || token.CodePoint == 0x200B || token.CodePoint == 0x00AD || IsNonspacingGrapheme(token.CodePoint))
                 return 0.0;
 
             if (token.CodePoint == U'\t')
@@ -531,8 +527,9 @@ namespace Crowny
             token.NewLine = codePoint == U'\n';
             token.WhiteSpace = IsTextWhitespace(codePoint);
             token.Invisible = codePoint == 0x200B || codePoint == 0x00AD || codePoint == 0x200D || IsVariationSelector(codePoint);
-            token.CombiningMark = IsCombiningMark(codePoint) || IsSpacingMark(codePoint) || IsVariationSelector(codePoint) ||
-                                  IsEmojiModifier(codePoint) || codePoint == 0x200D;
+            const GraphemeBreakProperty graphemeProperty = UnicodeGrapheme::GetBreakProperty(codePoint);
+            token.CombiningMark = graphemeProperty == GraphemeBreakProperty::Extend || graphemeProperty == GraphemeBreakProperty::SpacingMark ||
+                                  graphemeProperty == GraphemeBreakProperty::ZWJ;
         }
 
         AssignClusterRanges(scratch);
@@ -746,7 +743,7 @@ namespace Crowny
                     glyph.CodePoint = token.ResolvedCodePoint != 0 ? token.ResolvedCodePoint : token.CodePoint;
                     glyph.Glyph = token.Glyph;
                     glyph.SourceFont = token.SourceFont;
-                    const double glyphPen = token.CombiningMark && !IsSpacingMark(token.CodePoint) ? clusterPen : pen;
+                    const double glyphPen = token.CombiningMark && IsNonspacingGrapheme(token.CodePoint) ? clusterPen : pen;
                     glyph.PenPosition = { static_cast<float>(glyphPen), line.Baseline };
                     glyph.Advance = static_cast<float>(advance);
                     glyph.LineIndex = static_cast<uint32_t>(lineIndex);

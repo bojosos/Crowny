@@ -312,7 +312,7 @@ namespace Crowny
                 api = value;
                 return;
             }
-            if (value.AbiVersion != 8 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
+            if (value.AbiVersion != 9 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
                 throw new InvalidOperationException("The native host uses an incompatible managed scripting ABI.");
             bool complete =
                 value.GetEntityName != IntPtr.Zero &&

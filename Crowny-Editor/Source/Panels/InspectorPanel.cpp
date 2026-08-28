@@ -652,7 +652,8 @@ namespace Crowny
                 m_HasPropertyChanged = true;
             }
         }
-        m_HasPropertyChanged |= UI::Property("MSDF Pixel Range", opts->AtlasPixelRange, 0.1f, 0.5f, 16.0f);
+        m_HasPropertyChanged |= UI::Property("MSDF Pixel Range", opts->AtlasPixelRange, 0.1f, FontImportOptions::MIN_ATLAS_PIXEL_RANGE,
+                                             FontImportOptions::MAX_ATLAS_PIXEL_RANGE);
         m_HasPropertyChanged |= UI::PropertyDropdown(
           "Charset Range",
           { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols", "Symbol Range", "Decimal Range", "Hex Range" },

@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 8u
+#define CW_MANAGED_ABI_VERSION 9u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 

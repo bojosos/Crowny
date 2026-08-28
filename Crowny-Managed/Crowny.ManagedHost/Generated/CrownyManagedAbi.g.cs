@@ -587,7 +587,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 8;
+        public const uint Version = 9;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

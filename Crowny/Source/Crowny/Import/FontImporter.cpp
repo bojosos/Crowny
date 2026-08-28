@@ -26,9 +26,6 @@ namespace Crowny
     namespace
     {
         constexpr uint32_t MAX_CUSTOM_CHARACTERS = 65536;
-        constexpr float MIN_ATLAS_PIXEL_RANGE = 0.5f;
-        constexpr float MAX_ATLAS_PIXEL_RANGE = 16.0f;
-
         uint32_t GetFontWorkerCount()
         {
             const uint32_t hardwareThreads = std::thread::hardware_concurrency();
@@ -306,7 +303,10 @@ namespace Crowny
 
         msdf_atlas::TightAtlasPacker atlasPacker;
         atlasPacker.setMiterLimit(1.0);
-        const float atlasPixelRange = std::clamp(options->AtlasPixelRange, MIN_ATLAS_PIXEL_RANGE, MAX_ATLAS_PIXEL_RANGE);
+        const float requestedPixelRange =
+          std::isfinite(options->AtlasPixelRange) ? options->AtlasPixelRange : FontImportOptions::DEFAULT_ATLAS_PIXEL_RANGE;
+        const float atlasPixelRange =
+          std::clamp(requestedPixelRange, FontImportOptions::MIN_ATLAS_PIXEL_RANGE, FontImportOptions::MAX_ATLAS_PIXEL_RANGE);
         atlasPacker.setPixelRange(atlasPixelRange);
         atlasPacker.setPadding(static_cast<int>(std::min(options->Padding, 256U)));
         const double requestedScale = static_cast<double>(std::clamp(options->SamplingFontSize, 4U, 512U));

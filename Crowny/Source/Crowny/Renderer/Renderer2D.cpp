@@ -450,25 +450,27 @@ namespace Crowny
                                             ? textComponent.DecorationThickness
                                             : std::max(fontDecorationThickness, layout.FontSize / 36.0f * 0.035f);
         const Array<glm::vec2, 4> solidUvs = { glm::vec2(0.0f), glm::vec2(0.0f), glm::vec2(0.0f), glm::vec2(0.0f) };
-        for (size_t lineIndex = 0; lineIndex < layout.LineCount; lineIndex++)
-        {
-            const TextLayoutLine& line = layout.Lines[lineIndex];
-            if (line.Width <= 0.0f)
-                continue;
+        auto emitDecorations = [&]() {
+            for (size_t lineIndex = 0; lineIndex < layout.LineCount; lineIndex++)
+            {
+                const TextLayoutLine& line = layout.Lines[lineIndex];
+                if (line.Width <= 0.0f)
+                    continue;
 
-            auto emitDecoration = [&](float centerY) {
-                const glm::vec2 min(line.X, centerY - decorationThickness * 0.5f);
-                const glm::vec2 max(line.X + line.Width, centerY + decorationThickness * 0.5f);
-                const Array<glm::vec2, 4> positions = { min, { min.x, max.y }, max, { max.x, min.y } };
-                emitQuad(positions, solidUvs, decorationColor, decorationColor, 0.0f, 0.0f, atlasPixelRange, 0.0f, 1, line.Baseline);
-            };
+                auto emitDecoration = [&](float centerY) {
+                    const glm::vec2 min(line.X, centerY - decorationThickness * 0.5f);
+                    const glm::vec2 max(line.X + line.Width, centerY + decorationThickness * 0.5f);
+                    const Array<glm::vec2, 4> positions = { min, { min.x, max.y }, max, { max.x, min.y } };
+                    emitQuad(positions, solidUvs, decorationColor, decorationColor, 0.0f, 0.0f, atlasPixelRange, 0.0f, 1, line.Baseline);
+                };
 
-            if (textComponent.FontStyle.IsSet(TextFontStyleBits::Underline))
-                emitDecoration(line.Baseline + static_cast<float>(fontMetrics.underlineY * layout.GlyphScale) + textComponent.UnderlineOffset);
-            if (textComponent.FontStyle.IsSet(TextFontStyleBits::Strikethrough))
-                emitDecoration(line.Baseline + static_cast<float>(fontMetrics.ascenderY * layout.GlyphScale * 0.32) +
-                               textComponent.StrikethroughOffset);
-        }
+                if (textComponent.FontStyle.IsSet(TextFontStyleBits::Underline))
+                    emitDecoration(line.Baseline + static_cast<float>(fontMetrics.underlineY * layout.GlyphScale) + textComponent.UnderlineOffset);
+                if (textComponent.FontStyle.IsSet(TextFontStyleBits::Strikethrough))
+                    emitDecoration(line.Baseline + static_cast<float>(fontMetrics.ascenderY * layout.GlyphScale * 0.32) +
+                                   textComponent.StrikethroughOffset);
+            }
+        };
 
         auto emitGlyph = [&](const TextLayoutGlyph& layoutGlyph, const glm::vec4& color, const glm::vec4& glyphOutlineColor,
                              float glyphOutlineThickness, const glm::vec2& offset, float softness) {
@@ -515,6 +517,8 @@ namespace Crowny
                 emitGlyph(layout.Glyphs[glyphIndex], textComponent.ShadowColor, textComponent.ShadowColor, 0.0f, textComponent.ShadowOffset,
                           textComponent.ShadowSoftness);
         }
+
+        emitDecorations();
 
         for (size_t glyphIndex = 0; glyphIndex < layout.GlyphCount; glyphIndex++)
             emitGlyph(layout.Glyphs[glyphIndex], textComponent.Color, textComponent.OutlineColor, outlineThickness, glm::vec2(0.0f), 0.0f);

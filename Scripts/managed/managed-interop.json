@@ -1,5 +1,5 @@
 {
-  "abiVersion": 8,
+  "abiVersion": 9,
   "managedEntryPoint": "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi",
   "statusCodes": {
     "Ok": 0,
