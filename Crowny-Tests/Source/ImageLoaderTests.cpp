@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <fstream>
+#include <future>
 
 using namespace Crowny;
 
@@ -89,6 +90,32 @@ TEST_CASE("Image loader applies orientation without global stb state", "[Assets]
     CHECK(bottomLeft.Info.Orientation == ImageOrientation::BottomLeft);
     CHECK(bottomLeft.Pixels->GetColorAt(0, 0).r < 0.01f);
     CHECK(bottomLeft.Pixels->GetColorAt(0, 0).b > 0.99f);
+}
+
+TEST_CASE("Image loader decodes raster sources concurrently", "[Assets][Importer][Image]")
+{
+    const std::array<uint8_t, 17> ppm = { 'P', '6', '\n', '1', ' ', '2', '\n', '2', '5', '5', '\n', 255, 0, 0, 0, 0, 255 };
+    std::array<std::future<ImageLoadResult>, 8> decodes;
+    for (size_t index = 0; index < decodes.size(); index++)
+    {
+        decodes[index] = std::async(std::launch::async, [&, index]() {
+            ImageLoadOptions options;
+            options.FlipVertically = index % 2u != 0;
+            return ImageLoader::DecodeMemory(ppm.data(), ppm.size(), options);
+        });
+    }
+
+    for (size_t index = 0; index < decodes.size(); index++)
+    {
+        const ImageLoadResult result = decodes[index].get();
+        REQUIRE(result);
+        REQUIRE(result.Pixels != nullptr);
+        const glm::vec4 firstPixel = result.Pixels->GetColorAt(0, 0);
+        if (index % 2u == 0)
+            CHECK(firstPixel.r > 0.99f);
+        else
+            CHECK(firstPixel.b > 0.99f);
+    }
 }
 
 TEST_CASE("Image loader preserves 16-bit grayscale precision", "[Assets][Importer][Image]")

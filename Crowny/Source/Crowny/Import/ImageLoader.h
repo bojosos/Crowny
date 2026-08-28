@@ -58,9 +58,13 @@ namespace Crowny
         uint32_t Layers = 1;
         uint32_t Faces = 1;
         uint32_t MipLevels = 1;
+        // Semantic channels in the source. PixelFormat may use an extra storage
+        // channel when the native layout is not portable across render backends.
         uint32_t Channels = 0;
         uint32_t BitDepth = 0;
         ImageChannelLayout ChannelLayout = ImageChannelLayout::Unknown;
+        // Format used by decoded PixelData, or the source format for a container
+        // that remains encoded.
         TextureFormat PixelFormat = TextureFormat::NONE;
         TextureDiskFormat DiskFormat = TextureDiskFormat::None;
         bool HasAlpha = false;
