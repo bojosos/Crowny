@@ -124,6 +124,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
 - [x] Alpha-test standard GPU-record masked materials in the static and animated main depth variants, including motion-vector and object-ID output layouts; retain the material-aware shadow alpha test.
+- [x] Match masked main-depth coverage to Forward+/Deferred+ by including interpolated vertex alpha, and guard the compiled masked shader in the built-in pack.
 - [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
 - [x] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
 
@@ -140,4 +141,5 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Isolated transient-texture validation: focused ASan `[Renderer][Resources]` coverage passed 94 assertions in 8 cases, including descriptor separation, frame-delayed reuse, budget rejection, trimming, and render-graph retirement.
 - [x] Run the focused renderer/shader regression batch for the temporal-history, custom-material, and motion-settling repairs. The final isolated ASan suite passed 29,142 assertions in 558 cases, and the Vulkan/OpenGL render harness passed 4/4 captures per backend with all 4 cross-backend comparisons matching.
 - [x] Depth-output matrix validation: focused Release `[Renderer][Pipeline]` passed 180 assertions in 9 cases; full no-build Release Catch2 passed 29,351 assertions in 570 cases with one optional CoreCLR case skipped; Vulkan and OpenGL each passed 5/5 captures on Intel Iris Xe, and all 5 cross-backend captures matched.
+- [x] Standard masked-depth validation: the focused Release renderer/shader batch passed 256 assertions in 12 cases; full no-build Release Catch2 passed 29,389 assertions in 572 cases with one optional CoreCLR case skipped; the 59-resource pack loaded on Vulkan and OpenGL, which each passed 5/5 captures with all 5 cross-backend comparisons matching.
 - [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.
