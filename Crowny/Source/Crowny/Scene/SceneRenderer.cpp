@@ -21,6 +21,7 @@
 #include "Crowny/Renderer/RenderGraphResources.h"
 #include "Crowny/Renderer/RenderPipeline.h"
 #include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Renderer/ShaderVariation.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
@@ -486,8 +487,35 @@ namespace Crowny
                 return material.IsValid();
             }
 
-            GraphicsMaterial* ResolveDepthMaterial(DepthPrepassProgram program)
+            bool Ensure(GraphicsMaterial& material, bool& attempted, StringView assetPath, const ShaderVariation& variation)
             {
+                if (material.IsValid())
+                    return true;
+                if (attempted || AssetManager::TryGet() == nullptr)
+                    return false;
+                attempted = true;
+                const AssetHandle<Shader> shader = AssetManager::TryGet()->Load<Shader>(Path(assetPath));
+                if (!material.Initialize(shader, variation))
+                    CW_ENGINE_ERROR("Failed to initialize {} variation {}: {}", assetPath, variation.GetCanonicalKey(), material.GetError());
+                return material.IsValid();
+            }
+
+            static constexpr size_t DepthProgramIndex(DepthPrepassProgram program) { return static_cast<size_t>(program); }
+            static constexpr size_t DEPTH_PROGRAM_COUNT = static_cast<size_t>(DepthPrepassProgram::AnimatedObjectID) + 1u;
+
+            GraphicsMaterial* ResolveDepthMaterial(DepthPrepassProgram program, bool masked)
+            {
+                if (masked)
+                {
+                    const size_t index = DepthProgramIndex(program);
+                    ShaderVariation variation;
+                    variation.Set("CW_DEPTH_ANIMATED", program == DepthPrepassProgram::Animated || program == DepthPrepassProgram::AnimatedObjectID);
+                    variation.Set("CW_DEPTH_OBJECT_ID_ONLY",
+                                  program == DepthPrepassProgram::StaticObjectID || program == DepthPrepassProgram::AnimatedObjectID);
+                    return Ensure(m_MaskedDepth[index], m_MaskedDepthAttempted[index], "Resources/Shaders/GpuMaskedDepth.asset", variation)
+                             ? &m_MaskedDepth[index]
+                             : nullptr;
+                }
                 switch (program)
                 {
                 case DepthPrepassProgram::Static:
@@ -769,19 +797,22 @@ namespace Crowny
                 for (const GpuDrawRun& run : m_DepthDrawList->Runs)
                 {
                     const bool depthPhase = run.Bin.Phase == RenderDrawPhase::Opaque || run.Bin.Phase == RenderDrawPhase::ForwardOpaque;
-                    if (!depthPhase || run.Bin.Alpha != AlphaMode::Opaque || run.CommandCount == 0)
+                    if (!depthPhase || !ParticipatesInDepthPrepass(run.Bin.Alpha) || run.CommandCount == 0)
                         continue;
                     const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
                     const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
                     if (!vertexBuffer || !indexBuffer)
                         continue;
                     const bool animated = vertexBuffer->GetLayout()->HasAttribute(VertexAttribute::PreviousPosition);
+                    const bool masked = run.Bin.Alpha == AlphaMode::Mask;
                     const DepthPrepassProgramSelection program = ResolveDepthPrepassProgram(outputLayout.Mode, animated);
-                    GraphicsMaterial* depthMaterial = ResolveDepthMaterial(program.Primary);
+                    DepthPrepassProgram selectedProgram = program.Primary;
+                    GraphicsMaterial* depthMaterial = ResolveDepthMaterial(selectedProgram, masked);
                     bool depthOnlyFallback = false;
                     if (depthMaterial == nullptr && program.HasFallback)
                     {
-                        depthMaterial = ResolveDepthMaterial(program.Fallback);
+                        selectedProgram = program.Fallback;
+                        depthMaterial = ResolveDepthMaterial(selectedProgram, masked);
                         depthOnlyFallback = depthMaterial != nullptr;
                     }
                     if (depthMaterial == nullptr)
@@ -811,6 +842,8 @@ namespace Crowny
                         depthMaterial->WriteUniformBlock(0, 0, &view, sizeof(view));
                         depthMaterial->SetBuffer(0, 1, instances);
                         depthMaterial->SetBuffer(0, 2, instanceIds);
+                        if (masked)
+                            BindMaterialTable(*depthMaterial, m_MaskedDepthTextureVersions[DepthProgramIndex(selectedProgram)], context);
                         if (!depthMaterial->Bind())
                             continue;
                         boundMaterial = depthMaterial;
@@ -1342,6 +1375,7 @@ namespace Crowny
             GraphicsMaterial m_AnimatedDepth;
             GraphicsMaterial m_DepthObjectID;
             GraphicsMaterial m_AnimatedDepthObjectID;
+            Array<GraphicsMaterial, DEPTH_PROGRAM_COUNT> m_MaskedDepth;
             GraphicsMaterial m_ShadowDepth;
             GraphicsMaterial m_ForwardPlus;
             GraphicsMaterial m_ForwardPremultiplied;
@@ -1358,6 +1392,7 @@ namespace Crowny
             uint64_t m_DeferredTextureVersion = 0;
             uint64_t m_DeferredLightingTextureVersion = 0;
             uint64_t m_ShadowTextureVersion = 0;
+            Array<uint64_t, DEPTH_PROGRAM_COUNT> m_MaskedDepthTextureVersions{};
             bool m_CullInstancesAttempted = false;
             bool m_ExpandMeshletsAttempted = false;
             bool m_CullMeshletsAttempted = false;
@@ -1373,6 +1408,7 @@ namespace Crowny
             bool m_AnimatedDepthAttempted = false;
             bool m_DepthObjectIDAttempted = false;
             bool m_AnimatedDepthObjectIDAttempted = false;
+            Array<bool, DEPTH_PROGRAM_COUNT> m_MaskedDepthAttempted{};
             bool m_ShadowDepthAttempted = false;
             bool m_ForwardPlusAttempted = false;
             bool m_ForwardPremultipliedAttempted = false;

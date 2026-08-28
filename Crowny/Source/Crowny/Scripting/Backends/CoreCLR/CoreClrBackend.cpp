@@ -771,7 +771,6 @@ namespace Crowny
                 hostApi.get_entity_parent = &GetEntityParent;
                 hostApi.set_entity_parent = &SetEntityParent;
                 hostApi.destroy_entity = &DestroyEntity;
-                hostApi.invoke_host_binding = &InvokeHostBinding;
 #define CW_ASSIGN_HOST_FUNCTION(functionName, fieldName) hostApi.fieldName = &functionName;
                 CW_MANAGED_HOST_FUNCTION_LIST(CW_ASSIGN_HOST_FUNCTION)
 #undef CW_ASSIGN_HOST_FUNCTION
@@ -1090,6 +1089,20 @@ namespace Crowny
             CW_TYPED_ENTITY_GET(TransformGetLocalEulerAngles, CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_EULER_ANGLES, cw_managed_vec3)
             CW_TYPED_ENTITY_SET_STRUCT(TransformSetLocalEulerAngles, CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_EULER_ANGLES, cw_managed_vec3)
 
+            static cw_managed_status CW_MANAGED_CALL TransformIsDirty(void* context, cw_managed_uuid entityId, int32_t flag,
+                                                                       uint8_t* result)
+            {
+                if (context == nullptr || result == nullptr || flag < 0 || flag > 1)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const Ref<Scene> scene = ActiveScene();
+                const Entity entity = scene != nullptr ? scene->TryGetEntityFromUuid(FromAbiUuid(entityId)) : Entity();
+                if (!entity)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                const TransformComponent& transform = entity.GetComponent<TransformComponent>();
+                *result = flag == 0 ? !transform.IsCachedLocalTransformValid() : !transform.IsCachedWorldTransformValid();
+                return CW_MANAGED_STATUS_OK;
+            }
+
 #define CW_TYPED_INPUT_BUTTON(functionName, bindingName)                                                                                             \
     static cw_managed_status CW_MANAGED_CALL functionName(void* context, uint32_t code, uint8_t* result)                                             \
     {                                                                                                                                                \
@@ -1127,6 +1140,14 @@ namespace Crowny
             static cw_managed_status CW_MANAGED_CALL InputClearActionRebinds(void* context)
             {
                 return ForwardTypedBinding(context, CW_MANAGED_BINDING_INPUT_CLEAR_ACTION_REBINDS, {}, nullptr, 0, nullptr, 0);
+            }
+
+            static cw_managed_status CW_MANAGED_CALL TimeGetDeltaTime(void* context, float* result)
+            {
+                if (context == nullptr || result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = Time::GetDeltaTime();
+                return CW_MANAGED_STATUS_OK;
             }
 
             CW_TYPED_GLOBAL_GET(TimeGetTime, CW_MANAGED_BINDING_TIME_GET_TIME, float)
@@ -1638,7 +1659,7 @@ namespace Crowny
                     case CW_MANAGED_BINDING_TIME_GET_REALTIME_SINCE_STARTUP:
                         return WriteBindingResult(output, Time::GetRealtimeSinceStartup());
                     case CW_MANAGED_BINDING_TIME_GET_FRAME_COUNT:
-                        return WriteBindingResult(output, Time::GetFrameCount());
+                        return WriteBindingResult(output, static_cast<uint32_t>(Time::GetFrameCount()));
                     case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_MASS:
                     case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_BODY_TYPE:
                     case CW_MANAGED_BINDING_RIGIDBODY_2_DGET_SLEEP_MODE:

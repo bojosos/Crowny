@@ -649,12 +649,13 @@ void main() { color = texture(textures[nonuniformEXT(0)], vec2(0.5)); }
 
 TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
 {
-    const std::array<Path, 19> shaders = {
+    const std::array<Path, 20> shaders = {
         "Crowny-Editor/Resources/Shaders/BinAndCompactIndirectDraws.glsl",
         "Crowny-Editor/Resources/Shaders/GpuDepthOnly.glsl",
         "Crowny-Editor/Resources/Shaders/GpuAnimatedDepthOnly.glsl",
         "Crowny-Editor/Resources/Shaders/GpuDepthObjectID.glsl",
         "Crowny-Editor/Resources/Shaders/GpuAnimatedDepthObjectID.glsl",
+        "Crowny-Editor/Resources/Shaders/GpuMaskedDepth.glsl",
         "Crowny-Editor/Resources/Shaders/GpuShadowDepth.glsl",
         "Crowny-Editor/Resources/Shaders/BuildHiZ.glsl",
         "Crowny-Editor/Resources/Shaders/ForwardPlusStandard.glsl",
@@ -681,6 +682,44 @@ TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
         for (const ShaderDiagnostic& diagnostic : result.Diagnostics)
             INFO(diagnostic.Message);
         CHECK(result.Succeeded());
+    }
+}
+
+TEST_CASE("Masked depth shader compiles all animation and output-layout variants", "[Shader][Renderer][Materials]")
+{
+    const Path path = "Crowny-Editor/Resources/Shaders/GpuMaskedDepth.glsl";
+    std::ifstream stream(path, std::ios::binary);
+    REQUIRE(stream.good());
+    const String source((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    const ShaderCompileResult result = ShaderCompiler::CompileWithDiagnostics(path, source);
+    for (const ShaderDiagnostic& diagnostic : result.Diagnostics)
+        INFO(diagnostic.Message);
+    REQUIRE(result.Succeeded());
+    REQUIRE(result.Description.Techniques.size() == 4);
+
+    for (const bool animated : { false, true })
+    {
+        for (const bool objectIDOnly : { false, true })
+        {
+            CAPTURE(animated, objectIDOnly);
+            ShaderVariation expected;
+            expected.Set("CW_DEPTH_ANIMATED", animated);
+            expected.Set("CW_DEPTH_OBJECT_ID_ONLY", objectIDOnly);
+            const auto technique =
+              std::find_if(result.Description.Techniques.begin(), result.Description.Techniques.end(),
+                           [&](const Ref<ShaderTechnique>& candidate) { return candidate && candidate->GetVariation().Matches(expected); });
+            REQUIRE(technique != result.Description.Techniques.end());
+            REQUIRE((*technique)->GetRenderPasses().size() == 1);
+            const ShaderRenderPassDesc& pass = (*technique)->GetRenderPasses().front()->GetPassDesc();
+            REQUIRE(pass.FragmentShader);
+            REQUIRE(pass.FragmentShader->Description);
+            const auto materialTable =
+              std::find_if(pass.FragmentShader->Description->Buffers.begin(), pass.FragmentShader->Description->Buffers.end(),
+                           [](const auto& entry) { return entry.second.Set == 1 && entry.second.Slot == 0; });
+            REQUIRE(materialTable != pass.FragmentShader->Description->Buffers.end());
+            REQUIRE(pass.FragmentShader->Description->Textures.contains("cwTextures"));
+            CHECK(pass.FragmentShader->Description->Textures.at("cwTextures").RuntimeArray);
+        }
     }
 }
 

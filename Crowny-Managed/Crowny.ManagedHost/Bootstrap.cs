@@ -50,13 +50,24 @@ public static unsafe class Bootstrap
             return NativeStatus.AbiMismatch;
         if (_initialized)
             return NativeStatus.InvalidArgument;
-        _host = *host;
-        _initialized = true;
-        ManagedRuntimeContext.SetLogHandler(ForwardLog);
-        ManagedRuntimeContext.SetNativeHostApi(*(ManagedNativeHostApi*)host);
-        ManagedRuntimeContext.SetScriptResolver(Program.ResolveScriptComponent);
-        ManagedAotRoots.Preserve();
-        return NativeStatus.Ok;
+        try
+        {
+            _host = *host;
+            ManagedRuntimeContext.SetLogHandler(ForwardLog);
+            ManagedRuntimeContext.SetNativeHostApi(*(ManagedNativeHostApi*)host);
+            ManagedRuntimeContext.SetScriptResolver(Program.ResolveScriptComponent);
+            ManagedAotRoots.Preserve();
+            _initialized = true;
+            return NativeStatus.Ok;
+        }
+        catch (Exception error)
+        {
+            ManagedRuntimeContext.SetLogHandler(null);
+            ManagedRuntimeContext.SetNativeHostApi(default);
+            ManagedRuntimeContext.SetScriptResolver(null);
+            _host = default;
+            return Record(error);
+        }
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]

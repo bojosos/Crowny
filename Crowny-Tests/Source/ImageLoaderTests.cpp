@@ -7,16 +7,19 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <fstream>
 #include <future>
+#include <latch>
 
 using namespace Crowny;
 
 namespace
 {
-    Ref<PixelData> MakeSolidTexture(uint32_t width, uint32_t height, const glm::vec4& color)
+    Ref<PixelData> MakeSolidTexture(uint32_t width, uint32_t height, const glm::vec4& color,
+                                    TextureFormat format = TextureFormat::RGBA8)
     {
-        Ref<PixelData> pixels = PixelData::Create(width, height, 1, TextureFormat::RGBA8);
+        Ref<PixelData> pixels = PixelData::Create(width, height, 1, format);
         for (uint32_t y = 0; y < height; y++)
         {
             for (uint32_t x = 0; x < width; x++)
@@ -95,23 +98,42 @@ TEST_CASE("Image loader applies orientation without global stb state", "[Assets]
 TEST_CASE("Image loader decodes raster sources concurrently", "[Assets][Importer][Image]")
 {
     const std::array<uint8_t, 17> ppm = { 'P', '6', '\n', '1', ' ', '2', '\n', '2', '5', '5', '\n', 255, 0, 0, 0, 0, 255 };
+    const std::array<uint8_t, 4> corrupt = { 1, 2, 3, 4 };
     std::array<std::future<ImageLoadResult>, 8> decodes;
+    std::latch ready(static_cast<std::ptrdiff_t>(decodes.size()));
+    std::latch start(1);
     for (size_t index = 0; index < decodes.size(); index++)
     {
         decodes[index] = std::async(std::launch::async, [&, index]() {
+            ready.count_down();
+            start.wait();
+            if (index % 2u != 0)
+                return ImageLoader::DecodeMemory(corrupt.data(), corrupt.size());
+
             ImageLoadOptions options;
-            options.FlipVertically = index % 2u != 0;
+            options.FlipVertically = (index / 2u) % 2u != 0;
             return ImageLoader::DecodeMemory(ppm.data(), ppm.size(), options);
         });
     }
+    ready.wait();
+    start.count_down();
 
     for (size_t index = 0; index < decodes.size(); index++)
     {
         const ImageLoadResult result = decodes[index].get();
+        if (index % 2u != 0)
+        {
+            CHECK_FALSE(result);
+            CHECK(result.Status == ImageLoadStatus::Failed);
+            REQUIRE(result.Diagnostics.size() == 1);
+            CHECK(result.Diagnostics[0].Code == ImageDiagnosticCode::UnsupportedFormat);
+            continue;
+        }
+
         REQUIRE(result);
         REQUIRE(result.Pixels != nullptr);
         const glm::vec4 firstPixel = result.Pixels->GetColorAt(0, 0);
-        if (index % 2u == 0)
+        if ((index / 2u) % 2u == 0)
             CHECK(firstPixel.r > 0.99f);
         else
             CHECK(firstPixel.b > 0.99f);
@@ -278,10 +300,10 @@ TEST_CASE("Image loader reports KTX2 array topology without decoding", "[Assets]
     source.Faces = 1;
     source.Levels = 2;
     source.Subresources = {
-        MakeSolidTexture(4, 4, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)),
-        MakeSolidTexture(4, 4, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)),
-        MakeSolidTexture(2, 2, glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)),
-        MakeSolidTexture(2, 2, glm::vec4(1.0f, 1.0f, 0.0f, 1.0f))
+        MakeSolidTexture(4, 4, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), TextureFormat::RGB8),
+        MakeSolidTexture(4, 4, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), TextureFormat::RGB8),
+        MakeSolidTexture(2, 2, glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), TextureFormat::RGB8),
+        MakeSolidTexture(2, 2, glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), TextureFormat::RGB8)
     };
 
     Vector<uint8_t> encoded;
@@ -297,6 +319,9 @@ TEST_CASE("Image loader reports KTX2 array topology without decoding", "[Assets]
     CHECK(result.Info.Layers == 2);
     CHECK(result.Info.Faces == 1);
     CHECK(result.Info.MipLevels == 2);
+    CHECK(result.Info.Channels == 3);
+    CHECK(result.Info.ChannelLayout == ImageChannelLayout::RGB);
+    CHECK_FALSE(result.Info.HasAlpha);
     CHECK(result.Info.GetRuntimeShape() == TextureShape::TEXTURE_2D);
     CHECK(result.Pixels == nullptr);
 
@@ -306,6 +331,10 @@ TEST_CASE("Image loader reports KTX2 array topology without decoding", "[Assets]
     REQUIRE(decoded);
     REQUIRE(decoded.Pixels != nullptr);
     CHECK(decoded.Info.MipLevels == 2);
+    CHECK(decoded.Info.Channels == result.Info.Channels);
+    CHECK(decoded.Info.ChannelLayout == result.Info.ChannelLayout);
+    CHECK(decoded.Info.HasAlpha == result.Info.HasAlpha);
+    CHECK(decoded.Info.PixelFormat == TextureFormat::RGBA8);
     CHECK_FALSE(decoded.Info.IsCompressed);
     REQUIRE(decoded.Subresources.size() == 4);
     CHECK(decoded.Subresources[0].MipLevel == 0);

@@ -518,813 +518,522 @@ namespace Crowny
                    value.MathLookAt != IntPtr.Zero;
             if (!complete)
                 throw new InvalidOperationException("The native host did not provide every managed binding.");
-            GetEntityNameCallback = (GetEntityNameDelegate)Marshal.GetDelegateForFunctionPointer(value.GetEntityName, typeof(GetEntityNameDelegate));
-            SetEntityNameCallback = (SetEntityNameDelegate)Marshal.GetDelegateForFunctionPointer(value.SetEntityName, typeof(SetEntityNameDelegate));
-            FindEntityByNameCallback = (FindEntityByNameDelegate)Marshal.GetDelegateForFunctionPointer(value.FindEntityByName, typeof(FindEntityByNameDelegate));
-            GetEntityParentCallback = (GetEntityParentDelegate)Marshal.GetDelegateForFunctionPointer(value.GetEntityParent, typeof(GetEntityParentDelegate));
-            SetEntityParentCallback = (SetEntityParentDelegate)Marshal.GetDelegateForFunctionPointer(value.SetEntityParent, typeof(SetEntityParentDelegate));
-            DestroyEntityCallback = (DestroyEntityDelegate)Marshal.GetDelegateForFunctionPointer(value.DestroyEntity, typeof(DestroyEntityDelegate));
-            EntityHasComponentCallback = (EntityHasComponentDelegate)Marshal.GetDelegateForFunctionPointer(value.EntityHasComponent, typeof(EntityHasComponentDelegate));
-            EntityAddComponentCallback = (EntityAddComponentDelegate)Marshal.GetDelegateForFunctionPointer(value.EntityAddComponent, typeof(EntityAddComponentDelegate));
-            EntityRemoveComponentCallback = (EntityRemoveComponentDelegate)Marshal.GetDelegateForFunctionPointer(value.EntityRemoveComponent, typeof(EntityRemoveComponentDelegate));
-            TransformGetPositionCallback = (TransformGetPositionDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetPosition, typeof(TransformGetPositionDelegate));
-            TransformSetPositionCallback = (TransformSetPositionDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformSetPosition, typeof(TransformSetPositionDelegate));
-            TransformGetLocalPositionCallback = (TransformGetLocalPositionDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetLocalPosition, typeof(TransformGetLocalPositionDelegate));
-            TransformSetLocalPositionCallback = (TransformSetLocalPositionDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformSetLocalPosition, typeof(TransformSetLocalPositionDelegate));
-            TransformGetScaleCallback = (TransformGetScaleDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetScale, typeof(TransformGetScaleDelegate));
-            TransformSetScaleCallback = (TransformSetScaleDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformSetScale, typeof(TransformSetScaleDelegate));
-            TransformGetLocalScaleCallback = (TransformGetLocalScaleDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetLocalScale, typeof(TransformGetLocalScaleDelegate));
-            TransformSetLocalScaleCallback = (TransformSetLocalScaleDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformSetLocalScale, typeof(TransformSetLocalScaleDelegate));
-            TransformGetRotationCallback = (TransformGetRotationDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetRotation, typeof(TransformGetRotationDelegate));
-            TransformSetRotationCallback = (TransformSetRotationDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformSetRotation, typeof(TransformSetRotationDelegate));
-            TransformGetLocalRotationCallback = (TransformGetLocalRotationDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetLocalRotation, typeof(TransformGetLocalRotationDelegate));
-            TransformSetLocalRotationCallback = (TransformSetLocalRotationDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformSetLocalRotation, typeof(TransformSetLocalRotationDelegate));
-            TransformGetLocalToWorldMatrixCallback = (TransformGetLocalToWorldMatrixDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetLocalToWorldMatrix, typeof(TransformGetLocalToWorldMatrixDelegate));
-            TransformGetWorldToLocalMatrixCallback = (TransformGetWorldToLocalMatrixDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetWorldToLocalMatrix, typeof(TransformGetWorldToLocalMatrixDelegate));
-            TransformGetEulerAnglesCallback = (TransformGetEulerAnglesDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetEulerAngles, typeof(TransformGetEulerAnglesDelegate));
-            TransformSetEulerAnglesCallback = (TransformSetEulerAnglesDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformSetEulerAngles, typeof(TransformSetEulerAnglesDelegate));
-            TransformGetLocalEulerAnglesCallback = (TransformGetLocalEulerAnglesDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformGetLocalEulerAngles, typeof(TransformGetLocalEulerAnglesDelegate));
-            TransformSetLocalEulerAnglesCallback = (TransformSetLocalEulerAnglesDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformSetLocalEulerAngles, typeof(TransformSetLocalEulerAnglesDelegate));
-            TransformIsDirtyCallback = (TransformIsDirtyDelegate)Marshal.GetDelegateForFunctionPointer(value.TransformIsDirty, typeof(TransformIsDirtyDelegate));
-            InputGetKeyCallback = (InputGetKeyDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetKey, typeof(InputGetKeyDelegate));
-            InputGetKeyDownCallback = (InputGetKeyDownDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetKeyDown, typeof(InputGetKeyDownDelegate));
-            InputGetKeyUpCallback = (InputGetKeyUpDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetKeyUp, typeof(InputGetKeyUpDelegate));
-            InputGetMouseButtonCallback = (InputGetMouseButtonDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseButton, typeof(InputGetMouseButtonDelegate));
-            InputGetMouseButtonDownCallback = (InputGetMouseButtonDownDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseButtonDown, typeof(InputGetMouseButtonDownDelegate));
-            InputGetMouseButtonUpCallback = (InputGetMouseButtonUpDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseButtonUp, typeof(InputGetMouseButtonUpDelegate));
-            InputGetMouseScrollXCallback = (InputGetMouseScrollXDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseScrollX, typeof(InputGetMouseScrollXDelegate));
-            InputGetMouseScrollYCallback = (InputGetMouseScrollYDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseScrollY, typeof(InputGetMouseScrollYDelegate));
-            InputGetMousePositionCallback = (InputGetMousePositionDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMousePosition, typeof(InputGetMousePositionDelegate));
-            InputGetMouseDeltaCallback = (InputGetMouseDeltaDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseDelta, typeof(InputGetMouseDeltaDelegate));
-            InputIsGamepadConnectedCallback = (InputIsGamepadConnectedDelegate)Marshal.GetDelegateForFunctionPointer(value.InputIsGamepadConnected, typeof(InputIsGamepadConnectedDelegate));
-            InputGetGamepadButtonCallback = (InputGetGamepadButtonDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetGamepadButton, typeof(InputGetGamepadButtonDelegate));
-            InputGetGamepadButtonDownCallback = (InputGetGamepadButtonDownDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetGamepadButtonDown, typeof(InputGetGamepadButtonDownDelegate));
-            InputGetGamepadButtonUpCallback = (InputGetGamepadButtonUpDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetGamepadButtonUp, typeof(InputGetGamepadButtonUpDelegate));
-            InputGetGamepadAxisCallback = (InputGetGamepadAxisDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetGamepadAxis, typeof(InputGetGamepadAxisDelegate));
-            InputGetActionCallback = (InputGetActionDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetAction, typeof(InputGetActionDelegate));
-            InputGetActionDownCallback = (InputGetActionDownDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetActionDown, typeof(InputGetActionDownDelegate));
-            InputGetActionUpCallback = (InputGetActionUpDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetActionUp, typeof(InputGetActionUpDelegate));
-            InputGetAxisCallback = (InputGetAxisDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetAxis, typeof(InputGetAxisDelegate));
-            InputGetActionVectorCallback = (InputGetActionVectorDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetActionVector, typeof(InputGetActionVectorDelegate));
-            InputEnableActionMapCallback = (InputEnableActionMapDelegate)Marshal.GetDelegateForFunctionPointer(value.InputEnableActionMap, typeof(InputEnableActionMapDelegate));
-            InputDisableActionMapCallback = (InputDisableActionMapDelegate)Marshal.GetDelegateForFunctionPointer(value.InputDisableActionMap, typeof(InputDisableActionMapDelegate));
-            InputClearActionRebindsCallback = (InputClearActionRebindsDelegate)Marshal.GetDelegateForFunctionPointer(value.InputClearActionRebinds, typeof(InputClearActionRebindsDelegate));
-            TimeGetDeltaTimeCallback = (TimeGetDeltaTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetDeltaTime, typeof(TimeGetDeltaTimeDelegate));
-            TimeGetTimeCallback = (TimeGetTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetTime, typeof(TimeGetTimeDelegate));
-            TimeGetFixedDeltaTimeCallback = (TimeGetFixedDeltaTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetFixedDeltaTime, typeof(TimeGetFixedDeltaTimeDelegate));
-            TimeGetSmoothDeltaTimeCallback = (TimeGetSmoothDeltaTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetSmoothDeltaTime, typeof(TimeGetSmoothDeltaTimeDelegate));
-            TimeGetRealtimeSinceStartupCallback = (TimeGetRealtimeSinceStartupDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetRealtimeSinceStartup, typeof(TimeGetRealtimeSinceStartupDelegate));
-            TimeGetFrameCountCallback = (TimeGetFrameCountDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetFrameCount, typeof(TimeGetFrameCountDelegate));
-            Rigidbody2DGetMassCallback = (Rigidbody2DGetMassDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetMass, typeof(Rigidbody2DGetMassDelegate));
-            Rigidbody2DSetMassCallback = (Rigidbody2DSetMassDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetMass, typeof(Rigidbody2DSetMassDelegate));
-            Rigidbody2DGetBodyTypeCallback = (Rigidbody2DGetBodyTypeDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetBodyType, typeof(Rigidbody2DGetBodyTypeDelegate));
-            Rigidbody2DSetBodyTypeCallback = (Rigidbody2DSetBodyTypeDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetBodyType, typeof(Rigidbody2DSetBodyTypeDelegate));
-            Rigidbody2DGetSleepModeCallback = (Rigidbody2DGetSleepModeDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetSleepMode, typeof(Rigidbody2DGetSleepModeDelegate));
-            Rigidbody2DSetSleepModeCallback = (Rigidbody2DSetSleepModeDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetSleepMode, typeof(Rigidbody2DSetSleepModeDelegate));
-            Rigidbody2DGetCollisionDetectionModeCallback = (Rigidbody2DGetCollisionDetectionModeDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetCollisionDetectionMode, typeof(Rigidbody2DGetCollisionDetectionModeDelegate));
-            Rigidbody2DSetCollisionDetectionModeCallback = (Rigidbody2DSetCollisionDetectionModeDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetCollisionDetectionMode, typeof(Rigidbody2DSetCollisionDetectionModeDelegate));
-            Rigidbody2DGetInterpolationCallback = (Rigidbody2DGetInterpolationDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetInterpolation, typeof(Rigidbody2DGetInterpolationDelegate));
-            Rigidbody2DSetInterpolationCallback = (Rigidbody2DSetInterpolationDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetInterpolation, typeof(Rigidbody2DSetInterpolationDelegate));
-            Rigidbody2DGetAutoMassCallback = (Rigidbody2DGetAutoMassDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetAutoMass, typeof(Rigidbody2DGetAutoMassDelegate));
-            Rigidbody2DSetAutoMassCallback = (Rigidbody2DSetAutoMassDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetAutoMass, typeof(Rigidbody2DSetAutoMassDelegate));
-            Rigidbody2DGetLayerCallback = (Rigidbody2DGetLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetLayer, typeof(Rigidbody2DGetLayerDelegate));
-            Rigidbody2DSetLayerCallback = (Rigidbody2DSetLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetLayer, typeof(Rigidbody2DSetLayerDelegate));
-            Rigidbody2DGetLinearDragCallback = (Rigidbody2DGetLinearDragDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetLinearDrag, typeof(Rigidbody2DGetLinearDragDelegate));
-            Rigidbody2DSetLinearDragCallback = (Rigidbody2DSetLinearDragDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetLinearDrag, typeof(Rigidbody2DSetLinearDragDelegate));
-            Rigidbody2DGetAngularDragCallback = (Rigidbody2DGetAngularDragDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetAngularDrag, typeof(Rigidbody2DGetAngularDragDelegate));
-            Rigidbody2DSetAngularDragCallback = (Rigidbody2DSetAngularDragDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetAngularDrag, typeof(Rigidbody2DSetAngularDragDelegate));
-            Rigidbody2DGetGravityScaleCallback = (Rigidbody2DGetGravityScaleDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetGravityScale, typeof(Rigidbody2DGetGravityScaleDelegate));
-            Rigidbody2DSetGravityScaleCallback = (Rigidbody2DSetGravityScaleDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetGravityScale, typeof(Rigidbody2DSetGravityScaleDelegate));
-            Rigidbody2DGetCenterOfMassCallback = (Rigidbody2DGetCenterOfMassDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetCenterOfMass, typeof(Rigidbody2DGetCenterOfMassDelegate));
-            Rigidbody2DSetCenterOfMassCallback = (Rigidbody2DSetCenterOfMassDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetCenterOfMass, typeof(Rigidbody2DSetCenterOfMassDelegate));
-            Rigidbody2DGetInertiaCallback = (Rigidbody2DGetInertiaDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetInertia, typeof(Rigidbody2DGetInertiaDelegate));
-            Rigidbody2DSetInertiaCallback = (Rigidbody2DSetInertiaDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetInertia, typeof(Rigidbody2DSetInertiaDelegate));
-            Rigidbody2DGetConstraintsCallback = (Rigidbody2DGetConstraintsDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetConstraints, typeof(Rigidbody2DGetConstraintsDelegate));
-            Rigidbody2DSetConstraintsCallback = (Rigidbody2DSetConstraintsDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetConstraints, typeof(Rigidbody2DSetConstraintsDelegate));
-            Rigidbody2DGetRotationCallback = (Rigidbody2DGetRotationDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetRotation, typeof(Rigidbody2DGetRotationDelegate));
-            Rigidbody2DGetPositionCallback = (Rigidbody2DGetPositionDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetPosition, typeof(Rigidbody2DGetPositionDelegate));
-            Rigidbody2DGetLinearVelocityCallback = (Rigidbody2DGetLinearVelocityDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetLinearVelocity, typeof(Rigidbody2DGetLinearVelocityDelegate));
-            Rigidbody2DSetLinearVelocityCallback = (Rigidbody2DSetLinearVelocityDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetLinearVelocity, typeof(Rigidbody2DSetLinearVelocityDelegate));
-            Rigidbody2DGetAngularVelocityCallback = (Rigidbody2DGetAngularVelocityDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetAngularVelocity, typeof(Rigidbody2DGetAngularVelocityDelegate));
-            Rigidbody2DSetAngularVelocityCallback = (Rigidbody2DSetAngularVelocityDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetAngularVelocity, typeof(Rigidbody2DSetAngularVelocityDelegate));
-            Rigidbody2DGetAwakeCallback = (Rigidbody2DGetAwakeDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DGetAwake, typeof(Rigidbody2DGetAwakeDelegate));
-            Rigidbody2DSetAwakeCallback = (Rigidbody2DSetAwakeDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DSetAwake, typeof(Rigidbody2DSetAwakeDelegate));
-            Rigidbody2DAddForceCallback = (Rigidbody2DAddForceDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DAddForce, typeof(Rigidbody2DAddForceDelegate));
-            Rigidbody2DAddForceAtPositionCallback = (Rigidbody2DAddForceAtPositionDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DAddForceAtPosition, typeof(Rigidbody2DAddForceAtPositionDelegate));
-            Rigidbody2DAddTorqueCallback = (Rigidbody2DAddTorqueDelegate)Marshal.GetDelegateForFunctionPointer(value.Rigidbody2DAddTorque, typeof(Rigidbody2DAddTorqueDelegate));
-            AudioSourceGetVolumeCallback = (AudioSourceGetVolumeDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetVolume, typeof(AudioSourceGetVolumeDelegate));
-            AudioSourceSetVolumeCallback = (AudioSourceSetVolumeDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetVolume, typeof(AudioSourceSetVolumeDelegate));
-            AudioSourceGetPitchCallback = (AudioSourceGetPitchDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetPitch, typeof(AudioSourceGetPitchDelegate));
-            AudioSourceSetPitchCallback = (AudioSourceSetPitchDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetPitch, typeof(AudioSourceSetPitchDelegate));
-            AudioSourceGetMinDistanceCallback = (AudioSourceGetMinDistanceDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetMinDistance, typeof(AudioSourceGetMinDistanceDelegate));
-            AudioSourceSetMinDistanceCallback = (AudioSourceSetMinDistanceDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetMinDistance, typeof(AudioSourceSetMinDistanceDelegate));
-            AudioSourceGetMaxDistanceCallback = (AudioSourceGetMaxDistanceDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetMaxDistance, typeof(AudioSourceGetMaxDistanceDelegate));
-            AudioSourceSetMaxDistanceCallback = (AudioSourceSetMaxDistanceDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetMaxDistance, typeof(AudioSourceSetMaxDistanceDelegate));
-            AudioSourceGetLoopCallback = (AudioSourceGetLoopDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetLoop, typeof(AudioSourceGetLoopDelegate));
-            AudioSourceSetLoopCallback = (AudioSourceSetLoopDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetLoop, typeof(AudioSourceSetLoopDelegate));
-            AudioSourceGetMutedCallback = (AudioSourceGetMutedDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetMuted, typeof(AudioSourceGetMutedDelegate));
-            AudioSourceSetMutedCallback = (AudioSourceSetMutedDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetMuted, typeof(AudioSourceSetMutedDelegate));
-            AudioSourceGetPlayOnAwakeCallback = (AudioSourceGetPlayOnAwakeDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetPlayOnAwake, typeof(AudioSourceGetPlayOnAwakeDelegate));
-            AudioSourceSetPlayOnAwakeCallback = (AudioSourceSetPlayOnAwakeDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetPlayOnAwake, typeof(AudioSourceSetPlayOnAwakeDelegate));
-            AudioSourceGetTimeCallback = (AudioSourceGetTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetTime, typeof(AudioSourceGetTimeDelegate));
-            AudioSourceSetTimeCallback = (AudioSourceSetTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetTime, typeof(AudioSourceSetTimeDelegate));
-            AudioSourceGetClipCallback = (AudioSourceGetClipDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetClip, typeof(AudioSourceGetClipDelegate));
-            AudioSourceSetClipCallback = (AudioSourceSetClipDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceSetClip, typeof(AudioSourceSetClipDelegate));
-            AudioSourceGetStateCallback = (AudioSourceGetStateDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceGetState, typeof(AudioSourceGetStateDelegate));
-            AudioSourcePlayCallback = (AudioSourcePlayDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourcePlay, typeof(AudioSourcePlayDelegate));
-            AudioSourcePauseCallback = (AudioSourcePauseDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourcePause, typeof(AudioSourcePauseDelegate));
-            AudioSourceStopCallback = (AudioSourceStopDelegate)Marshal.GetDelegateForFunctionPointer(value.AudioSourceStop, typeof(AudioSourceStopDelegate));
-            TextGetTextCallback = (TextGetTextDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetText, typeof(TextGetTextDelegate));
-            TextSetTextCallback = (TextSetTextDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetText, typeof(TextSetTextDelegate));
-            TextGetFontCallback = (TextGetFontDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetFont, typeof(TextGetFontDelegate));
-            TextSetFontCallback = (TextSetFontDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetFont, typeof(TextSetFontDelegate));
-            TextGetColorCallback = (TextGetColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetColor, typeof(TextGetColorDelegate));
-            TextSetColorCallback = (TextSetColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetColor, typeof(TextSetColorDelegate));
-            TextGetSizeCallback = (TextGetSizeDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetSize, typeof(TextGetSizeDelegate));
-            TextSetSizeCallback = (TextSetSizeDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetSize, typeof(TextSetSizeDelegate));
-            TextGetAutoSizeCallback = (TextGetAutoSizeDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetAutoSize, typeof(TextGetAutoSizeDelegate));
-            TextSetAutoSizeCallback = (TextSetAutoSizeDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetAutoSize, typeof(TextSetAutoSizeDelegate));
-            TextGetAutoSizeMinCallback = (TextGetAutoSizeMinDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetAutoSizeMin, typeof(TextGetAutoSizeMinDelegate));
-            TextSetAutoSizeMinCallback = (TextSetAutoSizeMinDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetAutoSizeMin, typeof(TextSetAutoSizeMinDelegate));
-            TextGetAutoSizeMaxCallback = (TextGetAutoSizeMaxDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetAutoSizeMax, typeof(TextGetAutoSizeMaxDelegate));
-            TextSetAutoSizeMaxCallback = (TextSetAutoSizeMaxDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetAutoSizeMax, typeof(TextSetAutoSizeMaxDelegate));
-            TextGetLayoutSizeCallback = (TextGetLayoutSizeDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetLayoutSize, typeof(TextGetLayoutSizeDelegate));
-            TextSetLayoutSizeCallback = (TextSetLayoutSizeDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetLayoutSize, typeof(TextSetLayoutSizeDelegate));
-            TextGetWrappingCallback = (TextGetWrappingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetWrapping, typeof(TextGetWrappingDelegate));
-            TextSetWrappingCallback = (TextSetWrappingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetWrapping, typeof(TextSetWrappingDelegate));
-            TextGetWrapModeCallback = (TextGetWrapModeDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetWrapMode, typeof(TextGetWrapModeDelegate));
-            TextSetWrapModeCallback = (TextSetWrapModeDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetWrapMode, typeof(TextSetWrapModeDelegate));
-            TextGetOverflowCallback = (TextGetOverflowDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetOverflow, typeof(TextGetOverflowDelegate));
-            TextSetOverflowCallback = (TextSetOverflowDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetOverflow, typeof(TextSetOverflowDelegate));
-            TextGetClipToBoundsCallback = (TextGetClipToBoundsDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetClipToBounds, typeof(TextGetClipToBoundsDelegate));
-            TextSetClipToBoundsCallback = (TextSetClipToBoundsDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetClipToBounds, typeof(TextSetClipToBoundsDelegate));
-            TextGetMaxLinesCallback = (TextGetMaxLinesDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetMaxLines, typeof(TextGetMaxLinesDelegate));
-            TextSetMaxLinesCallback = (TextSetMaxLinesDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetMaxLines, typeof(TextSetMaxLinesDelegate));
-            TextGetHorizontalAlignmentCallback = (TextGetHorizontalAlignmentDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetHorizontalAlignment, typeof(TextGetHorizontalAlignmentDelegate));
-            TextSetHorizontalAlignmentCallback = (TextSetHorizontalAlignmentDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetHorizontalAlignment, typeof(TextSetHorizontalAlignmentDelegate));
-            TextGetVerticalAlignmentCallback = (TextGetVerticalAlignmentDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetVerticalAlignment, typeof(TextGetVerticalAlignmentDelegate));
-            TextSetVerticalAlignmentCallback = (TextSetVerticalAlignmentDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetVerticalAlignment, typeof(TextSetVerticalAlignmentDelegate));
-            TextGetFontStyleCallback = (TextGetFontStyleDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetFontStyle, typeof(TextGetFontStyleDelegate));
-            TextSetFontStyleCallback = (TextSetFontStyleDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetFontStyle, typeof(TextSetFontStyleDelegate));
-            TextGetOutlineColorCallback = (TextGetOutlineColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetOutlineColor, typeof(TextGetOutlineColorDelegate));
-            TextSetOutlineColorCallback = (TextSetOutlineColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetOutlineColor, typeof(TextSetOutlineColorDelegate));
-            TextGetOutlineWidthCallback = (TextGetOutlineWidthDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetOutlineWidth, typeof(TextGetOutlineWidthDelegate));
-            TextSetOutlineWidthCallback = (TextSetOutlineWidthDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetOutlineWidth, typeof(TextSetOutlineWidthDelegate));
-            TextGetShadowColorCallback = (TextGetShadowColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetShadowColor, typeof(TextGetShadowColorDelegate));
-            TextSetShadowColorCallback = (TextSetShadowColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetShadowColor, typeof(TextSetShadowColorDelegate));
-            TextGetShadowOffsetCallback = (TextGetShadowOffsetDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetShadowOffset, typeof(TextGetShadowOffsetDelegate));
-            TextSetShadowOffsetCallback = (TextSetShadowOffsetDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetShadowOffset, typeof(TextSetShadowOffsetDelegate));
-            TextGetShadowSoftnessCallback = (TextGetShadowSoftnessDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetShadowSoftness, typeof(TextGetShadowSoftnessDelegate));
-            TextSetShadowSoftnessCallback = (TextSetShadowSoftnessDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetShadowSoftness, typeof(TextSetShadowSoftnessDelegate));
-            TextGetCharacterSpacingCallback = (TextGetCharacterSpacingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetCharacterSpacing, typeof(TextGetCharacterSpacingDelegate));
-            TextSetCharacterSpacingCallback = (TextSetCharacterSpacingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetCharacterSpacing, typeof(TextSetCharacterSpacingDelegate));
-            TextGetWordSpacingCallback = (TextGetWordSpacingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetWordSpacing, typeof(TextGetWordSpacingDelegate));
-            TextSetWordSpacingCallback = (TextSetWordSpacingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetWordSpacing, typeof(TextSetWordSpacingDelegate));
-            TextGetLineSpacingCallback = (TextGetLineSpacingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetLineSpacing, typeof(TextGetLineSpacingDelegate));
-            TextSetLineSpacingCallback = (TextSetLineSpacingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetLineSpacing, typeof(TextSetLineSpacingDelegate));
-            TextGetParagraphSpacingCallback = (TextGetParagraphSpacingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetParagraphSpacing, typeof(TextGetParagraphSpacingDelegate));
-            TextSetParagraphSpacingCallback = (TextSetParagraphSpacingDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetParagraphSpacing, typeof(TextSetParagraphSpacingDelegate));
-            TextGetTabWidthCallback = (TextGetTabWidthDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetTabWidth, typeof(TextGetTabWidthDelegate));
-            TextSetTabWidthCallback = (TextSetTabWidthDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetTabWidth, typeof(TextSetTabWidthDelegate));
-            TextGetUseCustomDecorationColorCallback = (TextGetUseCustomDecorationColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetUseCustomDecorationColor, typeof(TextGetUseCustomDecorationColorDelegate));
-            TextSetUseCustomDecorationColorCallback = (TextSetUseCustomDecorationColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetUseCustomDecorationColor, typeof(TextSetUseCustomDecorationColorDelegate));
-            TextGetDecorationColorCallback = (TextGetDecorationColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetDecorationColor, typeof(TextGetDecorationColorDelegate));
-            TextSetDecorationColorCallback = (TextSetDecorationColorDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetDecorationColor, typeof(TextSetDecorationColorDelegate));
-            TextGetDecorationThicknessCallback = (TextGetDecorationThicknessDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetDecorationThickness, typeof(TextGetDecorationThicknessDelegate));
-            TextSetDecorationThicknessCallback = (TextSetDecorationThicknessDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetDecorationThickness, typeof(TextSetDecorationThicknessDelegate));
-            TextGetUnderlineOffsetCallback = (TextGetUnderlineOffsetDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetUnderlineOffset, typeof(TextGetUnderlineOffsetDelegate));
-            TextSetUnderlineOffsetCallback = (TextSetUnderlineOffsetDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetUnderlineOffset, typeof(TextSetUnderlineOffsetDelegate));
-            TextGetStrikethroughOffsetCallback = (TextGetStrikethroughOffsetDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetStrikethroughOffset, typeof(TextGetStrikethroughOffsetDelegate));
-            TextSetStrikethroughOffsetCallback = (TextSetStrikethroughOffsetDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetStrikethroughOffset, typeof(TextSetStrikethroughOffsetDelegate));
-            TextGetUseKerningCallback = (TextGetUseKerningDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetUseKerning, typeof(TextGetUseKerningDelegate));
-            TextSetUseKerningCallback = (TextSetUseKerningDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetUseKerning, typeof(TextSetUseKerningDelegate));
-            TextGetSortingLayerCallback = (TextGetSortingLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetSortingLayer, typeof(TextGetSortingLayerDelegate));
-            TextSetSortingLayerCallback = (TextSetSortingLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetSortingLayer, typeof(TextSetSortingLayerDelegate));
-            TextGetOrderInLayerCallback = (TextGetOrderInLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.TextGetOrderInLayer, typeof(TextGetOrderInLayerDelegate));
-            TextSetOrderInLayerCallback = (TextSetOrderInLayerDelegate)Marshal.GetDelegateForFunctionPointer(value.TextSetOrderInLayer, typeof(TextSetOrderInLayerDelegate));
-            TextHitTestCallback = (TextHitTestDelegate)Marshal.GetDelegateForFunctionPointer(value.TextHitTest, typeof(TextHitTestDelegate));
-            FontGetIsValidCallback = (FontGetIsValidDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetIsValid, typeof(FontGetIsValidDelegate));
-            FontGetGlyphCountCallback = (FontGetGlyphCountDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetGlyphCount, typeof(FontGetGlyphCountDelegate));
-            FontGetTabWidthCallback = (FontGetTabWidthDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetTabWidth, typeof(FontGetTabWidthDelegate));
-            FontGetAtlasWidthCallback = (FontGetAtlasWidthDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetAtlasWidth, typeof(FontGetAtlasWidthDelegate));
-            FontGetAtlasHeightCallback = (FontGetAtlasHeightDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetAtlasHeight, typeof(FontGetAtlasHeightDelegate));
-            FontGetAtlasPixelRangeCallback = (FontGetAtlasPixelRangeDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetAtlasPixelRange, typeof(FontGetAtlasPixelRangeDelegate));
-            FontHasGlyphCallback = (FontHasGlyphDelegate)Marshal.GetDelegateForFunctionPointer(value.FontHasGlyph, typeof(FontHasGlyphDelegate));
-            FontGetCharacterInfoCallback = (FontGetCharacterInfoDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetCharacterInfo, typeof(FontGetCharacterInfoDelegate));
-            FontGetFallbackCountCallback = (FontGetFallbackCountDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetFallbackCount, typeof(FontGetFallbackCountDelegate));
-            FontGetFallbackCallback = (FontGetFallbackDelegate)Marshal.GetDelegateForFunctionPointer(value.FontGetFallback, typeof(FontGetFallbackDelegate));
-            FontAddFallbackCallback = (FontAddFallbackDelegate)Marshal.GetDelegateForFunctionPointer(value.FontAddFallback, typeof(FontAddFallbackDelegate));
-            FontClearFallbacksCallback = (FontClearFallbacksDelegate)Marshal.GetDelegateForFunctionPointer(value.FontClearFallbacks, typeof(FontClearFallbacksDelegate));
-            MathMatrixDeterminantCallback = (MathMatrixDeterminantDelegate)Marshal.GetDelegateForFunctionPointer(value.MathMatrixDeterminant, typeof(MathMatrixDeterminantDelegate));
-            MathMatrixInverseCallback = (MathMatrixInverseDelegate)Marshal.GetDelegateForFunctionPointer(value.MathMatrixInverse, typeof(MathMatrixInverseDelegate));
-            MathMatrixAffineInverseCallback = (MathMatrixAffineInverseDelegate)Marshal.GetDelegateForFunctionPointer(value.MathMatrixAffineInverse, typeof(MathMatrixAffineInverseDelegate));
-            MathLookAtCallback = (MathLookAtDelegate)Marshal.GetDelegateForFunctionPointer(value.MathLookAt, typeof(MathLookAtDelegate));
+            GetEntityNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall0>(value.GetEntityName);
+            SetEntityNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall1>(value.SetEntityName);
+            FindEntityByNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall2>(value.FindEntityByName);
+            GetEntityParentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.GetEntityParent);
+            SetEntityParentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall4>(value.SetEntityParent);
+            DestroyEntityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.DestroyEntity);
+            EntityHasComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall6>(value.EntityHasComponent);
+            EntityAddComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall7>(value.EntityAddComponent);
+            EntityRemoveComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall7>(value.EntityRemoveComponent);
+            TransformGetPositionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.TransformGetPosition);
+            TransformSetPositionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.TransformSetPosition);
+            TransformGetLocalPositionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.TransformGetLocalPosition);
+            TransformSetLocalPositionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.TransformSetLocalPosition);
+            TransformGetScaleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.TransformGetScale);
+            TransformSetScaleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.TransformSetScale);
+            TransformGetLocalScaleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.TransformGetLocalScale);
+            TransformSetLocalScaleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.TransformSetLocalScale);
+            TransformGetRotationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall10>(value.TransformGetRotation);
+            TransformSetRotationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall11>(value.TransformSetRotation);
+            TransformGetLocalRotationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall10>(value.TransformGetLocalRotation);
+            TransformSetLocalRotationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall11>(value.TransformSetLocalRotation);
+            TransformGetLocalToWorldMatrixCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall12>(value.TransformGetLocalToWorldMatrix);
+            TransformGetWorldToLocalMatrixCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall12>(value.TransformGetWorldToLocalMatrix);
+            TransformGetEulerAnglesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.TransformGetEulerAngles);
+            TransformSetEulerAnglesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.TransformSetEulerAngles);
+            TransformGetLocalEulerAnglesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.TransformGetLocalEulerAngles);
+            TransformSetLocalEulerAnglesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.TransformSetLocalEulerAngles);
+            TransformIsDirtyCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall13>(value.TransformIsDirty);
+            InputGetKeyCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall14>(value.InputGetKey);
+            InputGetKeyDownCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall14>(value.InputGetKeyDown);
+            InputGetKeyUpCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall14>(value.InputGetKeyUp);
+            InputGetMouseButtonCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall14>(value.InputGetMouseButton);
+            InputGetMouseButtonDownCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall14>(value.InputGetMouseButtonDown);
+            InputGetMouseButtonUpCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall14>(value.InputGetMouseButtonUp);
+            InputGetMouseScrollXCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.InputGetMouseScrollX);
+            InputGetMouseScrollYCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.InputGetMouseScrollY);
+            InputGetMousePositionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall16>(value.InputGetMousePosition);
+            InputGetMouseDeltaCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall16>(value.InputGetMouseDelta);
+            InputIsGamepadConnectedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall17>(value.InputIsGamepadConnected);
+            InputGetGamepadButtonCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall18>(value.InputGetGamepadButton);
+            InputGetGamepadButtonDownCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall18>(value.InputGetGamepadButtonDown);
+            InputGetGamepadButtonUpCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall18>(value.InputGetGamepadButtonUp);
+            InputGetGamepadAxisCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall19>(value.InputGetGamepadAxis);
+            InputGetActionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall20>(value.InputGetAction);
+            InputGetActionDownCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall20>(value.InputGetActionDown);
+            InputGetActionUpCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall20>(value.InputGetActionUp);
+            InputGetAxisCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall21>(value.InputGetAxis);
+            InputGetActionVectorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall22>(value.InputGetActionVector);
+            InputEnableActionMapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall23>(value.InputEnableActionMap);
+            InputDisableActionMapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall23>(value.InputDisableActionMap);
+            InputClearActionRebindsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall24>(value.InputClearActionRebinds);
+            TimeGetDeltaTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.TimeGetDeltaTime);
+            TimeGetTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.TimeGetTime);
+            TimeGetFixedDeltaTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.TimeGetFixedDeltaTime);
+            TimeGetSmoothDeltaTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.TimeGetSmoothDeltaTime);
+            TimeGetRealtimeSinceStartupCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.TimeGetRealtimeSinceStartup);
+            TimeGetFrameCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.TimeGetFrameCount);
+            Rigidbody2DGetMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody2DGetMass);
+            Rigidbody2DSetMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody2DSetMass);
+            Rigidbody2DGetBodyTypeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.Rigidbody2DGetBodyType);
+            Rigidbody2DSetBodyTypeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.Rigidbody2DSetBodyType);
+            Rigidbody2DGetSleepModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.Rigidbody2DGetSleepMode);
+            Rigidbody2DSetSleepModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.Rigidbody2DSetSleepMode);
+            Rigidbody2DGetCollisionDetectionModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.Rigidbody2DGetCollisionDetectionMode);
+            Rigidbody2DSetCollisionDetectionModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.Rigidbody2DSetCollisionDetectionMode);
+            Rigidbody2DGetInterpolationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.Rigidbody2DGetInterpolation);
+            Rigidbody2DSetInterpolationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.Rigidbody2DSetInterpolation);
+            Rigidbody2DGetAutoMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Rigidbody2DGetAutoMass);
+            Rigidbody2DSetAutoMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody2DSetAutoMass);
+            Rigidbody2DGetLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.Rigidbody2DGetLayer);
+            Rigidbody2DSetLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.Rigidbody2DSetLayer);
+            Rigidbody2DGetLinearDragCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody2DGetLinearDrag);
+            Rigidbody2DSetLinearDragCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody2DSetLinearDrag);
+            Rigidbody2DGetAngularDragCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody2DGetAngularDrag);
+            Rigidbody2DSetAngularDragCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody2DSetAngularDrag);
+            Rigidbody2DGetGravityScaleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody2DGetGravityScale);
+            Rigidbody2DSetGravityScaleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody2DSetGravityScale);
+            Rigidbody2DGetCenterOfMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.Rigidbody2DGetCenterOfMass);
+            Rigidbody2DSetCenterOfMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall33>(value.Rigidbody2DSetCenterOfMass);
+            Rigidbody2DGetInertiaCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody2DGetInertia);
+            Rigidbody2DSetInertiaCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody2DSetInertia);
+            Rigidbody2DGetConstraintsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.Rigidbody2DGetConstraints);
+            Rigidbody2DSetConstraintsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.Rigidbody2DSetConstraints);
+            Rigidbody2DGetRotationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody2DGetRotation);
+            Rigidbody2DGetPositionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.Rigidbody2DGetPosition);
+            Rigidbody2DGetLinearVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.Rigidbody2DGetLinearVelocity);
+            Rigidbody2DSetLinearVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall33>(value.Rigidbody2DSetLinearVelocity);
+            Rigidbody2DGetAngularVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody2DGetAngularVelocity);
+            Rigidbody2DSetAngularVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody2DSetAngularVelocity);
+            Rigidbody2DGetAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Rigidbody2DGetAwake);
+            Rigidbody2DSetAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody2DSetAwake);
+            Rigidbody2DAddForceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall36>(value.Rigidbody2DAddForce);
+            Rigidbody2DAddForceAtPositionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall37>(value.Rigidbody2DAddForceAtPosition);
+            Rigidbody2DAddTorqueCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall38>(value.Rigidbody2DAddTorque);
+            AudioSourceGetVolumeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AudioSourceGetVolume);
+            AudioSourceSetVolumeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AudioSourceSetVolume);
+            AudioSourceGetPitchCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AudioSourceGetPitch);
+            AudioSourceSetPitchCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AudioSourceSetPitch);
+            AudioSourceGetMinDistanceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AudioSourceGetMinDistance);
+            AudioSourceSetMinDistanceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AudioSourceSetMinDistance);
+            AudioSourceGetMaxDistanceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AudioSourceGetMaxDistance);
+            AudioSourceSetMaxDistanceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AudioSourceSetMaxDistance);
+            AudioSourceGetLoopCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.AudioSourceGetLoop);
+            AudioSourceSetLoopCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.AudioSourceSetLoop);
+            AudioSourceGetMutedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.AudioSourceGetMuted);
+            AudioSourceSetMutedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.AudioSourceSetMuted);
+            AudioSourceGetPlayOnAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.AudioSourceGetPlayOnAwake);
+            AudioSourceSetPlayOnAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.AudioSourceSetPlayOnAwake);
+            AudioSourceGetTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AudioSourceGetTime);
+            AudioSourceSetTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AudioSourceSetTime);
+            AudioSourceGetClipCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.AudioSourceGetClip);
+            AudioSourceSetClipCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.AudioSourceSetClip);
+            AudioSourceGetStateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.AudioSourceGetState);
+            AudioSourcePlayCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AudioSourcePlay);
+            AudioSourcePauseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AudioSourcePause);
+            AudioSourceStopCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AudioSourceStop);
+            TextGetTextCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall0>(value.TextGetText);
+            TextSetTextCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall40>(value.TextSetText);
+            TextGetFontCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.TextGetFont);
+            TextSetFontCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.TextSetFont);
+            TextGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.TextGetColor);
+            TextSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.TextSetColor);
+            TextGetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetSize);
+            TextSetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetSize);
+            TextGetAutoSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetAutoSize);
+            TextSetAutoSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.TextSetAutoSize);
+            TextGetAutoSizeMinCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetAutoSizeMin);
+            TextSetAutoSizeMinCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetAutoSizeMin);
+            TextGetAutoSizeMaxCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetAutoSizeMax);
+            TextSetAutoSizeMaxCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetAutoSizeMax);
+            TextGetLayoutSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.TextGetLayoutSize);
+            TextSetLayoutSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall33>(value.TextSetLayoutSize);
+            TextGetWrappingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetWrapping);
+            TextSetWrappingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.TextSetWrapping);
+            TextGetWrapModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetWrapMode);
+            TextSetWrapModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetWrapMode);
+            TextGetOverflowCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetOverflow);
+            TextSetOverflowCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetOverflow);
+            TextGetClipToBoundsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetClipToBounds);
+            TextSetClipToBoundsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.TextSetClipToBounds);
+            TextGetMaxLinesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.TextGetMaxLines);
+            TextSetMaxLinesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.TextSetMaxLines);
+            TextGetHorizontalAlignmentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetHorizontalAlignment);
+            TextSetHorizontalAlignmentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetHorizontalAlignment);
+            TextGetVerticalAlignmentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetVerticalAlignment);
+            TextSetVerticalAlignmentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetVerticalAlignment);
+            TextGetFontStyleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.TextGetFontStyle);
+            TextSetFontStyleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.TextSetFontStyle);
+            TextGetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.TextGetOutlineColor);
+            TextSetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.TextSetOutlineColor);
+            TextGetOutlineWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetOutlineWidth);
+            TextSetOutlineWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetOutlineWidth);
+            TextGetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.TextGetShadowColor);
+            TextSetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.TextSetShadowColor);
+            TextGetShadowOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.TextGetShadowOffset);
+            TextSetShadowOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall33>(value.TextSetShadowOffset);
+            TextGetShadowSoftnessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetShadowSoftness);
+            TextSetShadowSoftnessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetShadowSoftness);
+            TextGetCharacterSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetCharacterSpacing);
+            TextSetCharacterSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetCharacterSpacing);
+            TextGetWordSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetWordSpacing);
+            TextSetWordSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetWordSpacing);
+            TextGetLineSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetLineSpacing);
+            TextSetLineSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetLineSpacing);
+            TextGetParagraphSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetParagraphSpacing);
+            TextSetParagraphSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetParagraphSpacing);
+            TextGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.TextGetTabWidth);
+            TextSetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.TextSetTabWidth);
+            TextGetUseCustomDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetUseCustomDecorationColor);
+            TextSetUseCustomDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.TextSetUseCustomDecorationColor);
+            TextGetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.TextGetDecorationColor);
+            TextSetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.TextSetDecorationColor);
+            TextGetDecorationThicknessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetDecorationThickness);
+            TextSetDecorationThicknessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetDecorationThickness);
+            TextGetUnderlineOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetUnderlineOffset);
+            TextSetUnderlineOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetUnderlineOffset);
+            TextGetStrikethroughOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetStrikethroughOffset);
+            TextSetStrikethroughOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetStrikethroughOffset);
+            TextGetUseKerningCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetUseKerning);
+            TextSetUseKerningCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.TextSetUseKerning);
+            TextGetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetSortingLayer);
+            TextSetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetSortingLayer);
+            TextGetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetOrderInLayer);
+            TextSetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetOrderInLayer);
+            TextHitTestCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall43>(value.TextHitTest);
+            FontGetIsValidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.FontGetIsValid);
+            FontGetGlyphCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetGlyphCount);
+            FontGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetTabWidth);
+            FontGetAtlasWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetAtlasWidth);
+            FontGetAtlasHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetAtlasHeight);
+            FontGetAtlasPixelRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.FontGetAtlasPixelRange);
+            FontHasGlyphCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.FontHasGlyph);
+            FontGetCharacterInfoCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall48>(value.FontGetCharacterInfo);
+            FontGetFallbackCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetFallbackCount);
+            FontGetFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall49>(value.FontGetFallback);
+            FontAddFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall50>(value.FontAddFallback);
+            FontClearFallbacksCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall51>(value.FontClearFallbacks);
+            MathMatrixDeterminantCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall52>(value.MathMatrixDeterminant);
+            MathMatrixInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall53>(value.MathMatrixInverse);
+            MathMatrixAffineInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall53>(value.MathMatrixAffineInverse);
+            MathLookAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall54>(value.MathLookAt);
             api = value;
         }
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int GetEntityNameDelegate(void* context, ManagedNativeUuid entity, ManagedNativeStringView* result);
-        private static GetEntityNameDelegate GetEntityNameCallback;
+        private delegate int ManagedHostCall0(void* context, ManagedNativeUuid entity, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int SetEntityNameDelegate(void* context, ManagedNativeUuid entity, ManagedNativeStringView name);
-        private static SetEntityNameDelegate SetEntityNameCallback;
+        private delegate int ManagedHostCall1(void* context, ManagedNativeUuid entity, ManagedNativeStringView name);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FindEntityByNameDelegate(void* context, ManagedNativeStringView name, ManagedNativeUuid* result);
-        private static FindEntityByNameDelegate FindEntityByNameCallback;
+        private delegate int ManagedHostCall2(void* context, ManagedNativeStringView name, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int GetEntityParentDelegate(void* context, ManagedNativeUuid entity, ManagedNativeUuid* result);
-        private static GetEntityParentDelegate GetEntityParentCallback;
+        private delegate int ManagedHostCall3(void* context, ManagedNativeUuid entity, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int SetEntityParentDelegate(void* context, ManagedNativeUuid entity, ManagedNativeUuid parent);
-        private static SetEntityParentDelegate SetEntityParentCallback;
+        private delegate int ManagedHostCall4(void* context, ManagedNativeUuid entity, ManagedNativeUuid parent);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int DestroyEntityDelegate(void* context, ManagedNativeUuid entity);
-        private static DestroyEntityDelegate DestroyEntityCallback;
+        private delegate int ManagedHostCall5(void* context, ManagedNativeUuid entity);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int EntityHasComponentDelegate(void* context, ManagedNativeUuid entity, ManagedNativeStringView typeName, byte* result);
-        private static EntityHasComponentDelegate EntityHasComponentCallback;
+        private delegate int ManagedHostCall6(void* context, ManagedNativeUuid entity, ManagedNativeStringView typeName, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int EntityAddComponentDelegate(void* context, ManagedNativeUuid entity, ManagedNativeStringView typeName);
-        private static EntityAddComponentDelegate EntityAddComponentCallback;
+        private delegate int ManagedHostCall7(void* context, ManagedNativeUuid entity, ManagedNativeStringView typeName);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int EntityRemoveComponentDelegate(void* context, ManagedNativeUuid entity, ManagedNativeStringView typeName);
-        private static EntityRemoveComponentDelegate EntityRemoveComponentCallback;
+        private delegate int ManagedHostCall8(void* context, ManagedNativeUuid entity, ManagedNativeVec3* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetPositionDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* result);
-        private static TransformGetPositionDelegate TransformGetPositionCallback;
+        private delegate int ManagedHostCall9(void* context, ManagedNativeUuid entity, ManagedNativeVec3* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformSetPositionDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* value);
-        private static TransformSetPositionDelegate TransformSetPositionCallback;
+        private delegate int ManagedHostCall10(void* context, ManagedNativeUuid entity, ManagedNativeQuaternion* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetLocalPositionDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* result);
-        private static TransformGetLocalPositionDelegate TransformGetLocalPositionCallback;
+        private delegate int ManagedHostCall11(void* context, ManagedNativeUuid entity, ManagedNativeQuaternion* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformSetLocalPositionDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* value);
-        private static TransformSetLocalPositionDelegate TransformSetLocalPositionCallback;
+        private delegate int ManagedHostCall12(void* context, ManagedNativeUuid entity, ManagedNativeMatrix4* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetScaleDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* result);
-        private static TransformGetScaleDelegate TransformGetScaleCallback;
+        private delegate int ManagedHostCall13(void* context, ManagedNativeUuid entity, int flag, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformSetScaleDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* value);
-        private static TransformSetScaleDelegate TransformSetScaleCallback;
+        private delegate int ManagedHostCall14(void* context, uint code, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetLocalScaleDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* result);
-        private static TransformGetLocalScaleDelegate TransformGetLocalScaleCallback;
+        private delegate int ManagedHostCall15(void* context, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformSetLocalScaleDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* value);
-        private static TransformSetLocalScaleDelegate TransformSetLocalScaleCallback;
+        private delegate int ManagedHostCall16(void* context, ManagedNativeVec2* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetRotationDelegate(void* context, ManagedNativeUuid entity, ManagedNativeQuaternion* result);
-        private static TransformGetRotationDelegate TransformGetRotationCallback;
+        private delegate int ManagedHostCall17(void* context, uint gamepad, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformSetRotationDelegate(void* context, ManagedNativeUuid entity, ManagedNativeQuaternion* value);
-        private static TransformSetRotationDelegate TransformSetRotationCallback;
+        private delegate int ManagedHostCall18(void* context, uint gamepad, uint code, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetLocalRotationDelegate(void* context, ManagedNativeUuid entity, ManagedNativeQuaternion* result);
-        private static TransformGetLocalRotationDelegate TransformGetLocalRotationCallback;
+        private delegate int ManagedHostCall19(void* context, uint gamepad, uint code, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformSetLocalRotationDelegate(void* context, ManagedNativeUuid entity, ManagedNativeQuaternion* value);
-        private static TransformSetLocalRotationDelegate TransformSetLocalRotationCallback;
+        private delegate int ManagedHostCall20(void* context, ManagedNativeStringView actionName, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetLocalToWorldMatrixDelegate(void* context, ManagedNativeUuid entity, ManagedNativeMatrix4* result);
-        private static TransformGetLocalToWorldMatrixDelegate TransformGetLocalToWorldMatrixCallback;
+        private delegate int ManagedHostCall21(void* context, ManagedNativeStringView actionName, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetWorldToLocalMatrixDelegate(void* context, ManagedNativeUuid entity, ManagedNativeMatrix4* result);
-        private static TransformGetWorldToLocalMatrixDelegate TransformGetWorldToLocalMatrixCallback;
+        private delegate int ManagedHostCall22(void* context, ManagedNativeStringView actionName, ManagedNativeVec2* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetEulerAnglesDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* result);
-        private static TransformGetEulerAnglesDelegate TransformGetEulerAnglesCallback;
+        private delegate int ManagedHostCall23(void* context, ManagedNativeStringView mapName, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformSetEulerAnglesDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* value);
-        private static TransformSetEulerAnglesDelegate TransformSetEulerAnglesCallback;
+        private delegate int ManagedHostCall24(void* context);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformGetLocalEulerAnglesDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* result);
-        private static TransformGetLocalEulerAnglesDelegate TransformGetLocalEulerAnglesCallback;
+        private delegate int ManagedHostCall25(void* context, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformSetLocalEulerAnglesDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec3* value);
-        private static TransformSetLocalEulerAnglesDelegate TransformSetLocalEulerAnglesCallback;
+        private delegate int ManagedHostCall26(void* context, ManagedNativeUuid entity, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TransformIsDirtyDelegate(void* context, ManagedNativeUuid entity, int flag, byte* result);
-        private static TransformIsDirtyDelegate TransformIsDirtyCallback;
+        private delegate int ManagedHostCall27(void* context, ManagedNativeUuid entity, float value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetKeyDelegate(void* context, uint code, byte* result);
-        private static InputGetKeyDelegate InputGetKeyCallback;
+        private delegate int ManagedHostCall28(void* context, ManagedNativeUuid entity, int* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetKeyDownDelegate(void* context, uint code, byte* result);
-        private static InputGetKeyDownDelegate InputGetKeyDownCallback;
+        private delegate int ManagedHostCall29(void* context, ManagedNativeUuid entity, int value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetKeyUpDelegate(void* context, uint code, byte* result);
-        private static InputGetKeyUpDelegate InputGetKeyUpCallback;
+        private delegate int ManagedHostCall30(void* context, ManagedNativeUuid entity, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetMouseButtonDelegate(void* context, uint code, byte* result);
-        private static InputGetMouseButtonDelegate InputGetMouseButtonCallback;
+        private delegate int ManagedHostCall31(void* context, ManagedNativeUuid entity, byte value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetMouseButtonDownDelegate(void* context, uint code, byte* result);
-        private static InputGetMouseButtonDownDelegate InputGetMouseButtonDownCallback;
+        private delegate int ManagedHostCall32(void* context, ManagedNativeUuid entity, ManagedNativeVec2* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetMouseButtonUpDelegate(void* context, uint code, byte* result);
-        private static InputGetMouseButtonUpDelegate InputGetMouseButtonUpCallback;
+        private delegate int ManagedHostCall33(void* context, ManagedNativeUuid entity, ManagedNativeVec2* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetMouseScrollXDelegate(void* context, float* result);
-        private static InputGetMouseScrollXDelegate InputGetMouseScrollXCallback;
+        private delegate int ManagedHostCall34(void* context, ManagedNativeUuid entity, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetMouseScrollYDelegate(void* context, float* result);
-        private static InputGetMouseScrollYDelegate InputGetMouseScrollYCallback;
+        private delegate int ManagedHostCall35(void* context, ManagedNativeUuid entity, uint value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetMousePositionDelegate(void* context, ManagedNativeVec2* result);
-        private static InputGetMousePositionDelegate InputGetMousePositionCallback;
+        private delegate int ManagedHostCall36(void* context, ManagedNativeUuid entity, ManagedNativeVec2* force, int mode);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetMouseDeltaDelegate(void* context, ManagedNativeVec2* result);
-        private static InputGetMouseDeltaDelegate InputGetMouseDeltaCallback;
+        private delegate int ManagedHostCall37(void* context, ManagedNativeUuid entity, ManagedNativeVec2* force, ManagedNativeVec2* position, int mode);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputIsGamepadConnectedDelegate(void* context, uint gamepad, byte* result);
-        private static InputIsGamepadConnectedDelegate InputIsGamepadConnectedCallback;
+        private delegate int ManagedHostCall38(void* context, ManagedNativeUuid entity, float torque, int mode);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetGamepadButtonDelegate(void* context, uint gamepad, uint code, byte* result);
-        private static InputGetGamepadButtonDelegate InputGetGamepadButtonCallback;
+        private delegate int ManagedHostCall39(void* context, ManagedNativeUuid entity, ManagedNativeUuid value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetGamepadButtonDownDelegate(void* context, uint gamepad, uint code, byte* result);
-        private static InputGetGamepadButtonDownDelegate InputGetGamepadButtonDownCallback;
+        private delegate int ManagedHostCall40(void* context, ManagedNativeUuid entity, ManagedNativeStringView value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetGamepadButtonUpDelegate(void* context, uint gamepad, uint code, byte* result);
-        private static InputGetGamepadButtonUpDelegate InputGetGamepadButtonUpCallback;
+        private delegate int ManagedHostCall41(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetGamepadAxisDelegate(void* context, uint gamepad, uint code, float* result);
-        private static InputGetGamepadAxisDelegate InputGetGamepadAxisCallback;
+        private delegate int ManagedHostCall42(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetActionDelegate(void* context, ManagedNativeStringView actionName, byte* result);
-        private static InputGetActionDelegate InputGetActionCallback;
+        private delegate int ManagedHostCall43(void* context, ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetActionDownDelegate(void* context, ManagedNativeStringView actionName, byte* result);
-        private static InputGetActionDownDelegate InputGetActionDownCallback;
+        private delegate int ManagedHostCall44(void* context, ManagedNativeUuid font, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetActionUpDelegate(void* context, ManagedNativeStringView actionName, byte* result);
-        private static InputGetActionUpDelegate InputGetActionUpCallback;
+        private delegate int ManagedHostCall45(void* context, ManagedNativeUuid font, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetAxisDelegate(void* context, ManagedNativeStringView actionName, float* result);
-        private static InputGetAxisDelegate InputGetAxisCallback;
+        private delegate int ManagedHostCall46(void* context, ManagedNativeUuid font, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputGetActionVectorDelegate(void* context, ManagedNativeStringView actionName, ManagedNativeVec2* result);
-        private static InputGetActionVectorDelegate InputGetActionVectorCallback;
+        private delegate int ManagedHostCall47(void* context, ManagedNativeUuid font, uint codePoint, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputEnableActionMapDelegate(void* context, ManagedNativeStringView mapName, byte* result);
-        private static InputEnableActionMapDelegate InputEnableActionMapCallback;
+        private delegate int ManagedHostCall48(void* context, ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputDisableActionMapDelegate(void* context, ManagedNativeStringView mapName, byte* result);
-        private static InputDisableActionMapDelegate InputDisableActionMapCallback;
+        private delegate int ManagedHostCall49(void* context, ManagedNativeUuid font, uint index, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int InputClearActionRebindsDelegate(void* context);
-        private static InputClearActionRebindsDelegate InputClearActionRebindsCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TimeGetDeltaTimeDelegate(void* context, float* result);
-        private static TimeGetDeltaTimeDelegate TimeGetDeltaTimeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TimeGetTimeDelegate(void* context, float* result);
-        private static TimeGetTimeDelegate TimeGetTimeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TimeGetFixedDeltaTimeDelegate(void* context, float* result);
-        private static TimeGetFixedDeltaTimeDelegate TimeGetFixedDeltaTimeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TimeGetSmoothDeltaTimeDelegate(void* context, float* result);
-        private static TimeGetSmoothDeltaTimeDelegate TimeGetSmoothDeltaTimeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TimeGetRealtimeSinceStartupDelegate(void* context, float* result);
-        private static TimeGetRealtimeSinceStartupDelegate TimeGetRealtimeSinceStartupCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TimeGetFrameCountDelegate(void* context, uint* result);
-        private static TimeGetFrameCountDelegate TimeGetFrameCountCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetMassDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static Rigidbody2DGetMassDelegate Rigidbody2DGetMassCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetMassDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static Rigidbody2DSetMassDelegate Rigidbody2DSetMassCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetBodyTypeDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static Rigidbody2DGetBodyTypeDelegate Rigidbody2DGetBodyTypeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetBodyTypeDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static Rigidbody2DSetBodyTypeDelegate Rigidbody2DSetBodyTypeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetSleepModeDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static Rigidbody2DGetSleepModeDelegate Rigidbody2DGetSleepModeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetSleepModeDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static Rigidbody2DSetSleepModeDelegate Rigidbody2DSetSleepModeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetCollisionDetectionModeDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static Rigidbody2DGetCollisionDetectionModeDelegate Rigidbody2DGetCollisionDetectionModeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetCollisionDetectionModeDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static Rigidbody2DSetCollisionDetectionModeDelegate Rigidbody2DSetCollisionDetectionModeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetInterpolationDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static Rigidbody2DGetInterpolationDelegate Rigidbody2DGetInterpolationCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetInterpolationDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static Rigidbody2DSetInterpolationDelegate Rigidbody2DSetInterpolationCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetAutoMassDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static Rigidbody2DGetAutoMassDelegate Rigidbody2DGetAutoMassCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetAutoMassDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static Rigidbody2DSetAutoMassDelegate Rigidbody2DSetAutoMassCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetLayerDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static Rigidbody2DGetLayerDelegate Rigidbody2DGetLayerCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetLayerDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static Rigidbody2DSetLayerDelegate Rigidbody2DSetLayerCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetLinearDragDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static Rigidbody2DGetLinearDragDelegate Rigidbody2DGetLinearDragCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetLinearDragDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static Rigidbody2DSetLinearDragDelegate Rigidbody2DSetLinearDragCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetAngularDragDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static Rigidbody2DGetAngularDragDelegate Rigidbody2DGetAngularDragCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetAngularDragDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static Rigidbody2DSetAngularDragDelegate Rigidbody2DSetAngularDragCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetGravityScaleDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static Rigidbody2DGetGravityScaleDelegate Rigidbody2DGetGravityScaleCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetGravityScaleDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static Rigidbody2DSetGravityScaleDelegate Rigidbody2DSetGravityScaleCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetCenterOfMassDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* result);
-        private static Rigidbody2DGetCenterOfMassDelegate Rigidbody2DGetCenterOfMassCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetCenterOfMassDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* value);
-        private static Rigidbody2DSetCenterOfMassDelegate Rigidbody2DSetCenterOfMassCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetInertiaDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static Rigidbody2DGetInertiaDelegate Rigidbody2DGetInertiaCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetInertiaDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static Rigidbody2DSetInertiaDelegate Rigidbody2DSetInertiaCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetConstraintsDelegate(void* context, ManagedNativeUuid entity, uint* result);
-        private static Rigidbody2DGetConstraintsDelegate Rigidbody2DGetConstraintsCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetConstraintsDelegate(void* context, ManagedNativeUuid entity, uint value);
-        private static Rigidbody2DSetConstraintsDelegate Rigidbody2DSetConstraintsCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetRotationDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static Rigidbody2DGetRotationDelegate Rigidbody2DGetRotationCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetPositionDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* result);
-        private static Rigidbody2DGetPositionDelegate Rigidbody2DGetPositionCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetLinearVelocityDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* result);
-        private static Rigidbody2DGetLinearVelocityDelegate Rigidbody2DGetLinearVelocityCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetLinearVelocityDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* value);
-        private static Rigidbody2DSetLinearVelocityDelegate Rigidbody2DSetLinearVelocityCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetAngularVelocityDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static Rigidbody2DGetAngularVelocityDelegate Rigidbody2DGetAngularVelocityCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetAngularVelocityDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static Rigidbody2DSetAngularVelocityDelegate Rigidbody2DSetAngularVelocityCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DGetAwakeDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static Rigidbody2DGetAwakeDelegate Rigidbody2DGetAwakeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DSetAwakeDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static Rigidbody2DSetAwakeDelegate Rigidbody2DSetAwakeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DAddForceDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* force, int mode);
-        private static Rigidbody2DAddForceDelegate Rigidbody2DAddForceCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DAddForceAtPositionDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* force, ManagedNativeVec2* position, int mode);
-        private static Rigidbody2DAddForceAtPositionDelegate Rigidbody2DAddForceAtPositionCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int Rigidbody2DAddTorqueDelegate(void* context, ManagedNativeUuid entity, float torque, int mode);
-        private static Rigidbody2DAddTorqueDelegate Rigidbody2DAddTorqueCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetVolumeDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static AudioSourceGetVolumeDelegate AudioSourceGetVolumeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetVolumeDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static AudioSourceSetVolumeDelegate AudioSourceSetVolumeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetPitchDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static AudioSourceGetPitchDelegate AudioSourceGetPitchCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetPitchDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static AudioSourceSetPitchDelegate AudioSourceSetPitchCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetMinDistanceDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static AudioSourceGetMinDistanceDelegate AudioSourceGetMinDistanceCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetMinDistanceDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static AudioSourceSetMinDistanceDelegate AudioSourceSetMinDistanceCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetMaxDistanceDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static AudioSourceGetMaxDistanceDelegate AudioSourceGetMaxDistanceCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetMaxDistanceDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static AudioSourceSetMaxDistanceDelegate AudioSourceSetMaxDistanceCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetLoopDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static AudioSourceGetLoopDelegate AudioSourceGetLoopCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetLoopDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static AudioSourceSetLoopDelegate AudioSourceSetLoopCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetMutedDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static AudioSourceGetMutedDelegate AudioSourceGetMutedCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetMutedDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static AudioSourceSetMutedDelegate AudioSourceSetMutedCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetPlayOnAwakeDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static AudioSourceGetPlayOnAwakeDelegate AudioSourceGetPlayOnAwakeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetPlayOnAwakeDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static AudioSourceSetPlayOnAwakeDelegate AudioSourceSetPlayOnAwakeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetTimeDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static AudioSourceGetTimeDelegate AudioSourceGetTimeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetTimeDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static AudioSourceSetTimeDelegate AudioSourceSetTimeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetClipDelegate(void* context, ManagedNativeUuid entity, ManagedNativeUuid* result);
-        private static AudioSourceGetClipDelegate AudioSourceGetClipCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceSetClipDelegate(void* context, ManagedNativeUuid entity, ManagedNativeUuid value);
-        private static AudioSourceSetClipDelegate AudioSourceSetClipCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceGetStateDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static AudioSourceGetStateDelegate AudioSourceGetStateCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourcePlayDelegate(void* context, ManagedNativeUuid entity);
-        private static AudioSourcePlayDelegate AudioSourcePlayCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourcePauseDelegate(void* context, ManagedNativeUuid entity);
-        private static AudioSourcePauseDelegate AudioSourcePauseCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int AudioSourceStopDelegate(void* context, ManagedNativeUuid entity);
-        private static AudioSourceStopDelegate AudioSourceStopCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetTextDelegate(void* context, ManagedNativeUuid entity, ManagedNativeStringView* result);
-        private static TextGetTextDelegate TextGetTextCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetTextDelegate(void* context, ManagedNativeUuid entity, ManagedNativeStringView value);
-        private static TextSetTextDelegate TextSetTextCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetFontDelegate(void* context, ManagedNativeUuid entity, ManagedNativeUuid* result);
-        private static TextGetFontDelegate TextGetFontCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetFontDelegate(void* context, ManagedNativeUuid entity, ManagedNativeUuid value);
-        private static TextSetFontDelegate TextSetFontCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetColorDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
-        private static TextGetColorDelegate TextGetColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetColorDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
-        private static TextSetColorDelegate TextSetColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetSizeDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetSizeDelegate TextGetSizeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetSizeDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetSizeDelegate TextSetSizeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetAutoSizeDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static TextGetAutoSizeDelegate TextGetAutoSizeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetAutoSizeDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static TextSetAutoSizeDelegate TextSetAutoSizeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetAutoSizeMinDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetAutoSizeMinDelegate TextGetAutoSizeMinCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetAutoSizeMinDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetAutoSizeMinDelegate TextSetAutoSizeMinCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetAutoSizeMaxDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetAutoSizeMaxDelegate TextGetAutoSizeMaxCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetAutoSizeMaxDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetAutoSizeMaxDelegate TextSetAutoSizeMaxCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetLayoutSizeDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* result);
-        private static TextGetLayoutSizeDelegate TextGetLayoutSizeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetLayoutSizeDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* value);
-        private static TextSetLayoutSizeDelegate TextSetLayoutSizeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetWrappingDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static TextGetWrappingDelegate TextGetWrappingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetWrappingDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static TextSetWrappingDelegate TextSetWrappingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetWrapModeDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static TextGetWrapModeDelegate TextGetWrapModeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetWrapModeDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static TextSetWrapModeDelegate TextSetWrapModeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetOverflowDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static TextGetOverflowDelegate TextGetOverflowCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetOverflowDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static TextSetOverflowDelegate TextSetOverflowCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetClipToBoundsDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static TextGetClipToBoundsDelegate TextGetClipToBoundsCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetClipToBoundsDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static TextSetClipToBoundsDelegate TextSetClipToBoundsCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetMaxLinesDelegate(void* context, ManagedNativeUuid entity, uint* result);
-        private static TextGetMaxLinesDelegate TextGetMaxLinesCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetMaxLinesDelegate(void* context, ManagedNativeUuid entity, uint value);
-        private static TextSetMaxLinesDelegate TextSetMaxLinesCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetHorizontalAlignmentDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static TextGetHorizontalAlignmentDelegate TextGetHorizontalAlignmentCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetHorizontalAlignmentDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static TextSetHorizontalAlignmentDelegate TextSetHorizontalAlignmentCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetVerticalAlignmentDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static TextGetVerticalAlignmentDelegate TextGetVerticalAlignmentCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetVerticalAlignmentDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static TextSetVerticalAlignmentDelegate TextSetVerticalAlignmentCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetFontStyleDelegate(void* context, ManagedNativeUuid entity, uint* result);
-        private static TextGetFontStyleDelegate TextGetFontStyleCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetFontStyleDelegate(void* context, ManagedNativeUuid entity, uint value);
-        private static TextSetFontStyleDelegate TextSetFontStyleCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetOutlineColorDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
-        private static TextGetOutlineColorDelegate TextGetOutlineColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetOutlineColorDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
-        private static TextSetOutlineColorDelegate TextSetOutlineColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetOutlineWidthDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetOutlineWidthDelegate TextGetOutlineWidthCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetOutlineWidthDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetOutlineWidthDelegate TextSetOutlineWidthCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetShadowColorDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
-        private static TextGetShadowColorDelegate TextGetShadowColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetShadowColorDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
-        private static TextSetShadowColorDelegate TextSetShadowColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetShadowOffsetDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* result);
-        private static TextGetShadowOffsetDelegate TextGetShadowOffsetCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetShadowOffsetDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* value);
-        private static TextSetShadowOffsetDelegate TextSetShadowOffsetCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetShadowSoftnessDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetShadowSoftnessDelegate TextGetShadowSoftnessCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetShadowSoftnessDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetShadowSoftnessDelegate TextSetShadowSoftnessCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetCharacterSpacingDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetCharacterSpacingDelegate TextGetCharacterSpacingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetCharacterSpacingDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetCharacterSpacingDelegate TextSetCharacterSpacingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetWordSpacingDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetWordSpacingDelegate TextGetWordSpacingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetWordSpacingDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetWordSpacingDelegate TextSetWordSpacingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetLineSpacingDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetLineSpacingDelegate TextGetLineSpacingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetLineSpacingDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetLineSpacingDelegate TextSetLineSpacingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetParagraphSpacingDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetParagraphSpacingDelegate TextGetParagraphSpacingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetParagraphSpacingDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetParagraphSpacingDelegate TextSetParagraphSpacingCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetTabWidthDelegate(void* context, ManagedNativeUuid entity, uint* result);
-        private static TextGetTabWidthDelegate TextGetTabWidthCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetTabWidthDelegate(void* context, ManagedNativeUuid entity, uint value);
-        private static TextSetTabWidthDelegate TextSetTabWidthCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetUseCustomDecorationColorDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static TextGetUseCustomDecorationColorDelegate TextGetUseCustomDecorationColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetUseCustomDecorationColorDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static TextSetUseCustomDecorationColorDelegate TextSetUseCustomDecorationColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetDecorationColorDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
-        private static TextGetDecorationColorDelegate TextGetDecorationColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetDecorationColorDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
-        private static TextSetDecorationColorDelegate TextSetDecorationColorCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetDecorationThicknessDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetDecorationThicknessDelegate TextGetDecorationThicknessCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetDecorationThicknessDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetDecorationThicknessDelegate TextSetDecorationThicknessCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetUnderlineOffsetDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetUnderlineOffsetDelegate TextGetUnderlineOffsetCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetUnderlineOffsetDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetUnderlineOffsetDelegate TextSetUnderlineOffsetCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetStrikethroughOffsetDelegate(void* context, ManagedNativeUuid entity, float* result);
-        private static TextGetStrikethroughOffsetDelegate TextGetStrikethroughOffsetCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetStrikethroughOffsetDelegate(void* context, ManagedNativeUuid entity, float value);
-        private static TextSetStrikethroughOffsetDelegate TextSetStrikethroughOffsetCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetUseKerningDelegate(void* context, ManagedNativeUuid entity, byte* result);
-        private static TextGetUseKerningDelegate TextGetUseKerningCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetUseKerningDelegate(void* context, ManagedNativeUuid entity, byte value);
-        private static TextSetUseKerningDelegate TextSetUseKerningCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetSortingLayerDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static TextGetSortingLayerDelegate TextGetSortingLayerCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetSortingLayerDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static TextSetSortingLayerDelegate TextSetSortingLayerCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextGetOrderInLayerDelegate(void* context, ManagedNativeUuid entity, int* result);
-        private static TextGetOrderInLayerDelegate TextGetOrderInLayerCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextSetOrderInLayerDelegate(void* context, ManagedNativeUuid entity, int value);
-        private static TextSetOrderInLayerDelegate TextSetOrderInLayerCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int TextHitTestDelegate(void* context, ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result);
-        private static TextHitTestDelegate TextHitTestCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetIsValidDelegate(void* context, ManagedNativeUuid font, byte* result);
-        private static FontGetIsValidDelegate FontGetIsValidCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetGlyphCountDelegate(void* context, ManagedNativeUuid font, uint* result);
-        private static FontGetGlyphCountDelegate FontGetGlyphCountCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetTabWidthDelegate(void* context, ManagedNativeUuid font, uint* result);
-        private static FontGetTabWidthDelegate FontGetTabWidthCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetAtlasWidthDelegate(void* context, ManagedNativeUuid font, uint* result);
-        private static FontGetAtlasWidthDelegate FontGetAtlasWidthCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetAtlasHeightDelegate(void* context, ManagedNativeUuid font, uint* result);
-        private static FontGetAtlasHeightDelegate FontGetAtlasHeightCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetAtlasPixelRangeDelegate(void* context, ManagedNativeUuid font, float* result);
-        private static FontGetAtlasPixelRangeDelegate FontGetAtlasPixelRangeCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontHasGlyphDelegate(void* context, ManagedNativeUuid font, uint codePoint, byte* result);
-        private static FontHasGlyphDelegate FontHasGlyphCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetCharacterInfoDelegate(void* context, ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result);
-        private static FontGetCharacterInfoDelegate FontGetCharacterInfoCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetFallbackCountDelegate(void* context, ManagedNativeUuid font, uint* result);
-        private static FontGetFallbackCountDelegate FontGetFallbackCountCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontGetFallbackDelegate(void* context, ManagedNativeUuid font, uint index, ManagedNativeUuid* result);
-        private static FontGetFallbackDelegate FontGetFallbackCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontAddFallbackDelegate(void* context, ManagedNativeUuid font, ManagedNativeUuid value, byte* result);
-        private static FontAddFallbackDelegate FontAddFallbackCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int FontClearFallbacksDelegate(void* context, ManagedNativeUuid font);
-        private static FontClearFallbacksDelegate FontClearFallbacksCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int MathMatrixDeterminantDelegate(void* context, ManagedNativeMatrix4* matrix, float* result);
-        private static MathMatrixDeterminantDelegate MathMatrixDeterminantCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int MathMatrixInverseDelegate(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
-        private static MathMatrixInverseDelegate MathMatrixInverseCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int MathMatrixAffineInverseDelegate(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
-        private static MathMatrixAffineInverseDelegate MathMatrixAffineInverseCallback;
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int MathLookAtDelegate(void* context, ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result);
-        private static MathLookAtDelegate MathLookAtCallback;
+        private delegate int ManagedHostCall50(void* context, ManagedNativeUuid font, ManagedNativeUuid value, byte* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall51(void* context, ManagedNativeUuid font);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall52(void* context, ManagedNativeMatrix4* matrix, float* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall53(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall54(void* context, ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result);
+
+        private static ManagedHostCall0 GetEntityNameCallback;
+        private static ManagedHostCall1 SetEntityNameCallback;
+        private static ManagedHostCall2 FindEntityByNameCallback;
+        private static ManagedHostCall3 GetEntityParentCallback;
+        private static ManagedHostCall4 SetEntityParentCallback;
+        private static ManagedHostCall5 DestroyEntityCallback;
+        private static ManagedHostCall6 EntityHasComponentCallback;
+        private static ManagedHostCall7 EntityAddComponentCallback;
+        private static ManagedHostCall7 EntityRemoveComponentCallback;
+        private static ManagedHostCall8 TransformGetPositionCallback;
+        private static ManagedHostCall9 TransformSetPositionCallback;
+        private static ManagedHostCall8 TransformGetLocalPositionCallback;
+        private static ManagedHostCall9 TransformSetLocalPositionCallback;
+        private static ManagedHostCall8 TransformGetScaleCallback;
+        private static ManagedHostCall9 TransformSetScaleCallback;
+        private static ManagedHostCall8 TransformGetLocalScaleCallback;
+        private static ManagedHostCall9 TransformSetLocalScaleCallback;
+        private static ManagedHostCall10 TransformGetRotationCallback;
+        private static ManagedHostCall11 TransformSetRotationCallback;
+        private static ManagedHostCall10 TransformGetLocalRotationCallback;
+        private static ManagedHostCall11 TransformSetLocalRotationCallback;
+        private static ManagedHostCall12 TransformGetLocalToWorldMatrixCallback;
+        private static ManagedHostCall12 TransformGetWorldToLocalMatrixCallback;
+        private static ManagedHostCall8 TransformGetEulerAnglesCallback;
+        private static ManagedHostCall9 TransformSetEulerAnglesCallback;
+        private static ManagedHostCall8 TransformGetLocalEulerAnglesCallback;
+        private static ManagedHostCall9 TransformSetLocalEulerAnglesCallback;
+        private static ManagedHostCall13 TransformIsDirtyCallback;
+        private static ManagedHostCall14 InputGetKeyCallback;
+        private static ManagedHostCall14 InputGetKeyDownCallback;
+        private static ManagedHostCall14 InputGetKeyUpCallback;
+        private static ManagedHostCall14 InputGetMouseButtonCallback;
+        private static ManagedHostCall14 InputGetMouseButtonDownCallback;
+        private static ManagedHostCall14 InputGetMouseButtonUpCallback;
+        private static ManagedHostCall15 InputGetMouseScrollXCallback;
+        private static ManagedHostCall15 InputGetMouseScrollYCallback;
+        private static ManagedHostCall16 InputGetMousePositionCallback;
+        private static ManagedHostCall16 InputGetMouseDeltaCallback;
+        private static ManagedHostCall17 InputIsGamepadConnectedCallback;
+        private static ManagedHostCall18 InputGetGamepadButtonCallback;
+        private static ManagedHostCall18 InputGetGamepadButtonDownCallback;
+        private static ManagedHostCall18 InputGetGamepadButtonUpCallback;
+        private static ManagedHostCall19 InputGetGamepadAxisCallback;
+        private static ManagedHostCall20 InputGetActionCallback;
+        private static ManagedHostCall20 InputGetActionDownCallback;
+        private static ManagedHostCall20 InputGetActionUpCallback;
+        private static ManagedHostCall21 InputGetAxisCallback;
+        private static ManagedHostCall22 InputGetActionVectorCallback;
+        private static ManagedHostCall23 InputEnableActionMapCallback;
+        private static ManagedHostCall23 InputDisableActionMapCallback;
+        private static ManagedHostCall24 InputClearActionRebindsCallback;
+        private static ManagedHostCall15 TimeGetDeltaTimeCallback;
+        private static ManagedHostCall15 TimeGetTimeCallback;
+        private static ManagedHostCall15 TimeGetFixedDeltaTimeCallback;
+        private static ManagedHostCall15 TimeGetSmoothDeltaTimeCallback;
+        private static ManagedHostCall15 TimeGetRealtimeSinceStartupCallback;
+        private static ManagedHostCall25 TimeGetFrameCountCallback;
+        private static ManagedHostCall26 Rigidbody2DGetMassCallback;
+        private static ManagedHostCall27 Rigidbody2DSetMassCallback;
+        private static ManagedHostCall28 Rigidbody2DGetBodyTypeCallback;
+        private static ManagedHostCall29 Rigidbody2DSetBodyTypeCallback;
+        private static ManagedHostCall28 Rigidbody2DGetSleepModeCallback;
+        private static ManagedHostCall29 Rigidbody2DSetSleepModeCallback;
+        private static ManagedHostCall28 Rigidbody2DGetCollisionDetectionModeCallback;
+        private static ManagedHostCall29 Rigidbody2DSetCollisionDetectionModeCallback;
+        private static ManagedHostCall28 Rigidbody2DGetInterpolationCallback;
+        private static ManagedHostCall29 Rigidbody2DSetInterpolationCallback;
+        private static ManagedHostCall30 Rigidbody2DGetAutoMassCallback;
+        private static ManagedHostCall31 Rigidbody2DSetAutoMassCallback;
+        private static ManagedHostCall28 Rigidbody2DGetLayerCallback;
+        private static ManagedHostCall29 Rigidbody2DSetLayerCallback;
+        private static ManagedHostCall26 Rigidbody2DGetLinearDragCallback;
+        private static ManagedHostCall27 Rigidbody2DSetLinearDragCallback;
+        private static ManagedHostCall26 Rigidbody2DGetAngularDragCallback;
+        private static ManagedHostCall27 Rigidbody2DSetAngularDragCallback;
+        private static ManagedHostCall26 Rigidbody2DGetGravityScaleCallback;
+        private static ManagedHostCall27 Rigidbody2DSetGravityScaleCallback;
+        private static ManagedHostCall32 Rigidbody2DGetCenterOfMassCallback;
+        private static ManagedHostCall33 Rigidbody2DSetCenterOfMassCallback;
+        private static ManagedHostCall26 Rigidbody2DGetInertiaCallback;
+        private static ManagedHostCall27 Rigidbody2DSetInertiaCallback;
+        private static ManagedHostCall34 Rigidbody2DGetConstraintsCallback;
+        private static ManagedHostCall35 Rigidbody2DSetConstraintsCallback;
+        private static ManagedHostCall26 Rigidbody2DGetRotationCallback;
+        private static ManagedHostCall32 Rigidbody2DGetPositionCallback;
+        private static ManagedHostCall32 Rigidbody2DGetLinearVelocityCallback;
+        private static ManagedHostCall33 Rigidbody2DSetLinearVelocityCallback;
+        private static ManagedHostCall26 Rigidbody2DGetAngularVelocityCallback;
+        private static ManagedHostCall27 Rigidbody2DSetAngularVelocityCallback;
+        private static ManagedHostCall30 Rigidbody2DGetAwakeCallback;
+        private static ManagedHostCall31 Rigidbody2DSetAwakeCallback;
+        private static ManagedHostCall36 Rigidbody2DAddForceCallback;
+        private static ManagedHostCall37 Rigidbody2DAddForceAtPositionCallback;
+        private static ManagedHostCall38 Rigidbody2DAddTorqueCallback;
+        private static ManagedHostCall26 AudioSourceGetVolumeCallback;
+        private static ManagedHostCall27 AudioSourceSetVolumeCallback;
+        private static ManagedHostCall26 AudioSourceGetPitchCallback;
+        private static ManagedHostCall27 AudioSourceSetPitchCallback;
+        private static ManagedHostCall26 AudioSourceGetMinDistanceCallback;
+        private static ManagedHostCall27 AudioSourceSetMinDistanceCallback;
+        private static ManagedHostCall26 AudioSourceGetMaxDistanceCallback;
+        private static ManagedHostCall27 AudioSourceSetMaxDistanceCallback;
+        private static ManagedHostCall30 AudioSourceGetLoopCallback;
+        private static ManagedHostCall31 AudioSourceSetLoopCallback;
+        private static ManagedHostCall30 AudioSourceGetMutedCallback;
+        private static ManagedHostCall31 AudioSourceSetMutedCallback;
+        private static ManagedHostCall30 AudioSourceGetPlayOnAwakeCallback;
+        private static ManagedHostCall31 AudioSourceSetPlayOnAwakeCallback;
+        private static ManagedHostCall26 AudioSourceGetTimeCallback;
+        private static ManagedHostCall27 AudioSourceSetTimeCallback;
+        private static ManagedHostCall3 AudioSourceGetClipCallback;
+        private static ManagedHostCall39 AudioSourceSetClipCallback;
+        private static ManagedHostCall28 AudioSourceGetStateCallback;
+        private static ManagedHostCall5 AudioSourcePlayCallback;
+        private static ManagedHostCall5 AudioSourcePauseCallback;
+        private static ManagedHostCall5 AudioSourceStopCallback;
+        private static ManagedHostCall0 TextGetTextCallback;
+        private static ManagedHostCall40 TextSetTextCallback;
+        private static ManagedHostCall3 TextGetFontCallback;
+        private static ManagedHostCall39 TextSetFontCallback;
+        private static ManagedHostCall41 TextGetColorCallback;
+        private static ManagedHostCall42 TextSetColorCallback;
+        private static ManagedHostCall26 TextGetSizeCallback;
+        private static ManagedHostCall27 TextSetSizeCallback;
+        private static ManagedHostCall30 TextGetAutoSizeCallback;
+        private static ManagedHostCall31 TextSetAutoSizeCallback;
+        private static ManagedHostCall26 TextGetAutoSizeMinCallback;
+        private static ManagedHostCall27 TextSetAutoSizeMinCallback;
+        private static ManagedHostCall26 TextGetAutoSizeMaxCallback;
+        private static ManagedHostCall27 TextSetAutoSizeMaxCallback;
+        private static ManagedHostCall32 TextGetLayoutSizeCallback;
+        private static ManagedHostCall33 TextSetLayoutSizeCallback;
+        private static ManagedHostCall30 TextGetWrappingCallback;
+        private static ManagedHostCall31 TextSetWrappingCallback;
+        private static ManagedHostCall28 TextGetWrapModeCallback;
+        private static ManagedHostCall29 TextSetWrapModeCallback;
+        private static ManagedHostCall28 TextGetOverflowCallback;
+        private static ManagedHostCall29 TextSetOverflowCallback;
+        private static ManagedHostCall30 TextGetClipToBoundsCallback;
+        private static ManagedHostCall31 TextSetClipToBoundsCallback;
+        private static ManagedHostCall34 TextGetMaxLinesCallback;
+        private static ManagedHostCall35 TextSetMaxLinesCallback;
+        private static ManagedHostCall28 TextGetHorizontalAlignmentCallback;
+        private static ManagedHostCall29 TextSetHorizontalAlignmentCallback;
+        private static ManagedHostCall28 TextGetVerticalAlignmentCallback;
+        private static ManagedHostCall29 TextSetVerticalAlignmentCallback;
+        private static ManagedHostCall34 TextGetFontStyleCallback;
+        private static ManagedHostCall35 TextSetFontStyleCallback;
+        private static ManagedHostCall41 TextGetOutlineColorCallback;
+        private static ManagedHostCall42 TextSetOutlineColorCallback;
+        private static ManagedHostCall26 TextGetOutlineWidthCallback;
+        private static ManagedHostCall27 TextSetOutlineWidthCallback;
+        private static ManagedHostCall41 TextGetShadowColorCallback;
+        private static ManagedHostCall42 TextSetShadowColorCallback;
+        private static ManagedHostCall32 TextGetShadowOffsetCallback;
+        private static ManagedHostCall33 TextSetShadowOffsetCallback;
+        private static ManagedHostCall26 TextGetShadowSoftnessCallback;
+        private static ManagedHostCall27 TextSetShadowSoftnessCallback;
+        private static ManagedHostCall26 TextGetCharacterSpacingCallback;
+        private static ManagedHostCall27 TextSetCharacterSpacingCallback;
+        private static ManagedHostCall26 TextGetWordSpacingCallback;
+        private static ManagedHostCall27 TextSetWordSpacingCallback;
+        private static ManagedHostCall26 TextGetLineSpacingCallback;
+        private static ManagedHostCall27 TextSetLineSpacingCallback;
+        private static ManagedHostCall26 TextGetParagraphSpacingCallback;
+        private static ManagedHostCall27 TextSetParagraphSpacingCallback;
+        private static ManagedHostCall34 TextGetTabWidthCallback;
+        private static ManagedHostCall35 TextSetTabWidthCallback;
+        private static ManagedHostCall30 TextGetUseCustomDecorationColorCallback;
+        private static ManagedHostCall31 TextSetUseCustomDecorationColorCallback;
+        private static ManagedHostCall41 TextGetDecorationColorCallback;
+        private static ManagedHostCall42 TextSetDecorationColorCallback;
+        private static ManagedHostCall26 TextGetDecorationThicknessCallback;
+        private static ManagedHostCall27 TextSetDecorationThicknessCallback;
+        private static ManagedHostCall26 TextGetUnderlineOffsetCallback;
+        private static ManagedHostCall27 TextSetUnderlineOffsetCallback;
+        private static ManagedHostCall26 TextGetStrikethroughOffsetCallback;
+        private static ManagedHostCall27 TextSetStrikethroughOffsetCallback;
+        private static ManagedHostCall30 TextGetUseKerningCallback;
+        private static ManagedHostCall31 TextSetUseKerningCallback;
+        private static ManagedHostCall28 TextGetSortingLayerCallback;
+        private static ManagedHostCall29 TextSetSortingLayerCallback;
+        private static ManagedHostCall28 TextGetOrderInLayerCallback;
+        private static ManagedHostCall29 TextSetOrderInLayerCallback;
+        private static ManagedHostCall43 TextHitTestCallback;
+        private static ManagedHostCall44 FontGetIsValidCallback;
+        private static ManagedHostCall45 FontGetGlyphCountCallback;
+        private static ManagedHostCall45 FontGetTabWidthCallback;
+        private static ManagedHostCall45 FontGetAtlasWidthCallback;
+        private static ManagedHostCall45 FontGetAtlasHeightCallback;
+        private static ManagedHostCall46 FontGetAtlasPixelRangeCallback;
+        private static ManagedHostCall47 FontHasGlyphCallback;
+        private static ManagedHostCall48 FontGetCharacterInfoCallback;
+        private static ManagedHostCall45 FontGetFallbackCountCallback;
+        private static ManagedHostCall49 FontGetFallbackCallback;
+        private static ManagedHostCall50 FontAddFallbackCallback;
+        private static ManagedHostCall51 FontClearFallbacksCallback;
+        private static ManagedHostCall52 MathMatrixDeterminantCallback;
+        private static ManagedHostCall53 MathMatrixInverseCallback;
+        private static ManagedHostCall53 MathMatrixAffineInverseCallback;
+        private static ManagedHostCall54 MathLookAtCallback;
 
         internal static int GetEntityName(ManagedNativeUuid entity, ManagedNativeStringView* result) => GetEntityNameCallback(api.Context.ToPointer(), entity, result);
         internal static int SetEntityName(ManagedNativeUuid entity, ManagedNativeStringView name) => SetEntityNameCallback(api.Context.ToPointer(), entity, name);

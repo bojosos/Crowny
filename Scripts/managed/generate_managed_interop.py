@@ -167,14 +167,7 @@ def host_cs_function_validation(functions: dict) -> str:
     return f"        public readonly bool HasCompleteBindings() =>\n            {conditions};"
 
 
-def sharp_cs_function_fields(functions: dict) -> str:
-    return "\n".join(
-        f"        internal {cs_function_pointer(function, SHARP_CS_TYPES, 'int')} {name};"
-        for name, function in functions.items()
-    )
-
-
-def sharp_mono_function_fields(functions: dict) -> str:
+def sharp_transport_function_fields(functions: dict) -> str:
     return "\n".join(f"        internal IntPtr {name};" for name in functions)
 
 
@@ -193,44 +186,51 @@ def sharp_transport_signature(function: dict, include_context: bool = False) -> 
     return ", ".join(declarations), ", ".join(arguments)
 
 
-def sharp_core_transport_methods(functions: dict) -> str:
-    methods = []
-    for name, function in functions.items():
-        signature, arguments = sharp_transport_signature(function)
-        call_arguments = f", {arguments}" if arguments else ""
-        methods.append(
-            f"        internal static int {name}({signature}) => api.{name}(api.Context{call_arguments});"
-        )
-    return "\n".join(methods)
-
-
-def sharp_mono_transport_delegates(functions: dict) -> str:
-    declarations = []
+def sharp_transport_delegate_types(functions: dict) -> dict[str, str]:
+    types_by_signature: dict[str, str] = {}
+    result: dict[str, str] = {}
     for name, function in functions.items():
         signature, _ = sharp_transport_signature(function, include_context=True)
+        delegate_type = types_by_signature.setdefault(signature, f"ManagedHostCall{len(types_by_signature)}")
+        result[name] = delegate_type
+    return result
+
+
+def sharp_transport_delegates(functions: dict) -> str:
+    delegate_types = sharp_transport_delegate_types(functions)
+    signatures: dict[str, str] = {}
+    for name, function in functions.items():
+        signature, _ = sharp_transport_signature(function, include_context=True)
+        signatures.setdefault(delegate_types[name], signature)
+    declarations = []
+    for delegate_type, signature in signatures.items():
         declarations.extend(
             [
                 "        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]",
-                f"        private delegate int {name}Delegate({signature});",
-                f"        private static {name}Delegate {name}Callback;",
+                f"        private delegate int {delegate_type}({signature});",
             ]
         )
+    declarations.append("")
+    declarations.extend(
+        f"        private static {delegate_types[name]} {name}Callback;" for name in functions
+    )
     return "\n".join(declarations)
 
 
-def sharp_mono_transport_bindings(functions: dict) -> str:
+def sharp_transport_bindings(functions: dict) -> str:
+    delegate_types = sharp_transport_delegate_types(functions)
     return "\n".join(
-        f"            {name}Callback = ({name}Delegate)Marshal.GetDelegateForFunctionPointer(value.{name}, typeof({name}Delegate));"
+        f"            {name}Callback = Marshal.GetDelegateForFunctionPointer<{delegate_types[name]}>(value.{name});"
         for name in functions
     )
 
 
-def sharp_mono_transport_validation(functions: dict) -> str:
+def sharp_transport_validation(functions: dict) -> str:
     conditions = " &&\n                   ".join(f"value.{name} != IntPtr.Zero" for name in functions)
     return f"            bool complete =\n                {conditions};"
 
 
-def sharp_mono_transport_methods(functions: dict) -> str:
+def sharp_transport_methods(functions: dict) -> str:
     methods = []
     for name, function in functions.items():
         signature, arguments = sharp_transport_signature(function)
@@ -378,6 +378,13 @@ enum cw_managed_status_code
 enum cw_managed_event_kind
 {{
 {native_enum_members(manifest['eventKinds'], 'CW_MANAGED_EVENT_')}
+}};
+
+/* Compatibility IDs for the CoreCLR adapter while it forwards typed calls
+ * through its existing dispatcher. New managed code uses the typed host API. */
+enum cw_managed_host_binding
+{{
+{native_enum_members(manifest['hostBindings'], 'CW_MANAGED_BINDING_')}
 }};
 
 typedef struct cw_managed_string_view
@@ -864,7 +871,7 @@ namespace Crowny
         internal uint AbiVersion;
         internal IntPtr Context;
         internal IntPtr Log;
-{sharp_mono_function_fields(functions)}
+{sharp_transport_function_fields(functions)}
     }}
 
     internal static unsafe class ManagedHostTransport
@@ -885,16 +892,16 @@ namespace Crowny
             }}
             if (value.AbiVersion != {manifest['abiVersion']} || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
                 throw new InvalidOperationException("The native host uses an incompatible managed scripting ABI.");
-{sharp_mono_transport_validation(functions)}
+{sharp_transport_validation(functions)}
             if (!complete)
                 throw new InvalidOperationException("The native host did not provide every managed binding.");
-{sharp_mono_transport_bindings(functions)}
+{sharp_transport_bindings(functions)}
             api = value;
         }}
 
-{sharp_mono_transport_delegates(functions)}
+{sharp_transport_delegates(functions)}
 
-{sharp_mono_transport_methods(functions)}
+{sharp_transport_methods(functions)}
     }}
 
     internal static unsafe partial class ManagedRuntimeContext
