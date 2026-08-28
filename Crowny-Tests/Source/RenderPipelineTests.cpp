@@ -265,6 +265,15 @@ TEST_CASE("Depth prepass selects static and animated programs independently", "[
     }
 }
 
+TEST_CASE("Depth prepass includes alpha-tested materials without accepting transparent modes", "[Renderer][Pipeline][Materials]")
+{
+    CHECK(ParticipatesInDepthPrepass(AlphaMode::Opaque));
+    CHECK(ParticipatesInDepthPrepass(AlphaMode::Mask));
+    CHECK_FALSE(ParticipatesInDepthPrepass(AlphaMode::Premultiplied));
+    CHECK_FALSE(ParticipatesInDepthPrepass(AlphaMode::Additive));
+    CHECK_FALSE(ParticipatesInDepthPrepass(AlphaMode::WeightedOIT));
+}
+
 TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency", "[Renderer][Pipeline]")
 {
     RenderGraph graph;

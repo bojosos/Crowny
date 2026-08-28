@@ -44,6 +44,7 @@ namespace Crowny
 
     DepthPrepassOutputLayout ResolveDepthPrepassOutputLayout(bool enableMotionVectors, bool enableObjectID);
     DepthPrepassProgramSelection ResolveDepthPrepassProgram(DepthPrepassOutputMode outputMode, bool animated);
+    constexpr bool ParticipatesInDepthPrepass(AlphaMode alphaMode) { return alphaMode == AlphaMode::Opaque || alphaMode == AlphaMode::Mask; }
 
     struct RenderPipelineGraphDesc
     {
