@@ -12,12 +12,13 @@
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics3D.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Scene/Scene.h"
-#include "Crowny/Scripting/ManagedReload.h"
-#include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/Bindings/ScriptBindings.h"
+#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
@@ -235,6 +236,45 @@ namespace
             ScriptTypeMetadataSerializationScope legacyMetadata(false);
             Save(archive, *fields);
         }
+
+        TimeSettings timeSettings;
+        archive(timeSettings.TimeScale, timeSettings.MaxTimestep, timeSettings.FixedTimestep);
+        Physics2DSettings physics2D;
+        archive(physics2D.Gravity.x, physics2D.Gravity.y, physics2D.VelocityIterations, physics2D.PositionIterations);
+        for (const String& layerName : physics2D.LayerNames)
+            archive(layerName);
+        for (uint32_t mask : physics2D.MaskBits)
+            archive(mask);
+        archive(UUID::EMPTY);
+        Physics3DSettings physics3D;
+        archive(static_cast<uint32_t>(physics3D.Backend));
+        archive(physics3D.Gravity.x, physics3D.Gravity.y, physics3D.Gravity.z);
+        archive(physics3D.Substeps, physics3D.EnableSleeping, physics3D.EnableContinuousCollision, physics3D.Deterministic);
+        archive(UUID::EMPTY);
+        stream->Close();
+    }
+
+    void WriteVersion9BinaryTextScene(const Path& path)
+    {
+        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(path);
+        BinaryDataStreamOutputArchive archive(stream);
+        archive(uint32_t{ 9 }, String("Legacy text style"), String());
+        archive(uint32_t{ 1 });
+        archive(UuidGenerator::Generate(), String("LegacyText"), uint32_t{ 1 });
+        archive(static_cast<uint32_t>(SceneComponentId::Text));
+
+        archive(String("Old binary scene"), UUID::EMPTY);
+        archive(1.0f, 1.0f, 1.0f, 1.0f);
+        archive(36.0f, false, true);
+        archive(0.0f, 0.0f, 0.0f, 0.0f);
+        archive(0.8f, 0.0f, 0.0f, 0.0f, true);
+        archive(uint32_t{ 0 }, static_cast<uint32_t>(TextOverflow::Overflow), static_cast<uint32_t>(TextHorizontalAlignment::Left),
+                static_cast<uint32_t>(TextVerticalAlignment::Top));
+        archive(8.0f, 72.0f, 0.0f, 0.0f);
+        archive(static_cast<uint32_t>(TextWrapMode::WordThenCharacter), false, uint32_t{ 0 }, 0.0f);
+        archive(false, 1.0f, 1.0f, 1.0f, 1.0f);
+        archive(0.0f, 0.0f, 0.0f);
+        archive(int32_t{ 0 }, int32_t{ 0 });
 
         TimeSettings timeSettings;
         archive(timeSettings.TimeScale, timeSettings.MaxTimestep, timeSettings.FixedTimestep);
@@ -1014,6 +1054,8 @@ TEST_CASE("Text layout binary serialization", "[Serialization][Text]")
     scene->SetName("TextLayoutScene");
     Entity entity = scene->CreateEntity("Text");
     auto& text = entity.AddComponent<TextComponent>();
+    const UUID fontId = UuidGenerator::Generate();
+    text.Font = static_asset_cast<Font>(AssetManager::TryGet()->CreateAssetHandle(CreateRef<Font>(), fontId));
     text.Text = "First paragraph\nSecond paragraph";
     text.AutoSize = true;
     text.AutoSizeMin = 10.0f;
@@ -1023,7 +1065,11 @@ TEST_CASE("Text layout binary serialization", "[Serialization][Text]")
     text.Overflow = TextOverflow::Truncate;
     text.ClipToBounds = true;
     text.MaxLines = 3;
+    text.TabWidth = 7;
     text.ParagraphSpacing = 0.75f;
+    text.ShadowColor = { 0.1f, 0.2f, 0.3f, 0.65f };
+    text.ShadowOffset = { 0.3f, -0.45f };
+    text.ShadowSoftness = 0.2f;
     text.UseCustomDecorationColor = true;
     text.DecorationColor = { 0.8f, 0.6f, 0.4f, 0.2f };
     text.DecorationThickness = 0.08f;
@@ -1043,6 +1089,7 @@ TEST_CASE("Text layout binary serialization", "[Serialization][Text]")
 
     const auto& loaded = loadedEntity.GetComponent<TextComponent>();
     CHECK(loaded.Text == text.Text);
+    CHECK(loaded.Font.GetUUID() == fontId);
     CHECK(loaded.AutoSize);
     CHECK_THAT(loaded.AutoSizeMin, Catch::Matchers::WithinAbs(10.0f, 0.0001f));
     CHECK_THAT(loaded.AutoSizeMax, Catch::Matchers::WithinAbs(54.0f, 0.0001f));
@@ -1051,7 +1098,11 @@ TEST_CASE("Text layout binary serialization", "[Serialization][Text]")
     CHECK(loaded.Overflow == TextOverflow::Truncate);
     CHECK(loaded.ClipToBounds);
     CHECK(loaded.MaxLines == 3);
+    CHECK(loaded.TabWidth == 7);
     CHECK_THAT(loaded.ParagraphSpacing, Catch::Matchers::WithinAbs(0.75f, 0.0001f));
+    CHECK(loaded.ShadowColor == glm::vec4(0.1f, 0.2f, 0.3f, 0.65f));
+    CHECK(loaded.ShadowOffset == glm::vec2(0.3f, -0.45f));
+    CHECK_THAT(loaded.ShadowSoftness, Catch::Matchers::WithinAbs(0.2f, 0.0001f));
     CHECK(loaded.UseCustomDecorationColor);
     CHECK(loaded.DecorationColor == glm::vec4(0.8f, 0.6f, 0.4f, 0.2f));
     CHECK_THAT(loaded.DecorationThickness, Catch::Matchers::WithinAbs(0.08f, 0.0001f));
@@ -1059,6 +1110,66 @@ TEST_CASE("Text layout binary serialization", "[Serialization][Text]")
     CHECK_THAT(loaded.StrikethroughOffset, Catch::Matchers::WithinAbs(0.15f, 0.0001f));
     CHECK(loaded.SortingLayer == 12);
     CHECK(loaded.OrderInLayer == -7);
+}
+
+TEST_CASE("Legacy text scenes use stable tab and shadow defaults", "[Serialization][Text][Legacy]")
+{
+    SerializationTestFixture fixture;
+    const Path path = fs::temp_directory_path() / "crowny-legacy-text-style.yaml";
+    const UUID entityId;
+
+    YAML::Emitter out;
+    out << YAML::BeginMap;
+    SerializeValueYAML(out, "Version", uint32_t{ 9 });
+    SerializeValueYAML(out, "Scene", "LegacyTextStyle");
+    SerializeValueYAML(out, "Entities", YAML::BeginSeq);
+    out << YAML::BeginMap;
+    SerializeValueYAML(out, "Entity", entityId);
+    BeginYAMLMap(out, "TagComponent");
+    SerializeValueYAML(out, "Tag", "LegacyText");
+    EndYAMLMap(out, "TagComponent");
+    BeginYAMLMap(out, "TextComponent");
+    SerializeValueYAML(out, "Text", "Old scene");
+    EndYAMLMap(out, "TextComponent");
+    out << YAML::EndMap << YAML::EndSeq << YAML::EndMap;
+
+    Ref<DataStream> stream = FileSystem::CreateAndOpenFile(path);
+    stream->Write(out.c_str(), std::strlen(out.c_str()));
+    stream->Close();
+
+    Ref<Scene> loadedScene = CreateRef<Scene>(false);
+    REQUIRE(SceneSerializer(loadedScene).Deserialize(path));
+    Entity loadedEntity = loadedScene->FindEntityByName("LegacyText");
+    REQUIRE(loadedEntity);
+    REQUIRE(loadedEntity.HasComponent<TextComponent>());
+
+    const TextComponent& loaded = loadedEntity.GetComponent<TextComponent>();
+    CHECK(loaded.TabWidth == 4);
+    CHECK(loaded.ShadowColor == glm::vec4(0.0f));
+    CHECK(loaded.ShadowOffset == glm::vec2(1.0f, -1.0f));
+    CHECK_THAT(loaded.ShadowSoftness, Catch::Matchers::WithinAbs(0.0f, 0.0001f));
+    fs::remove(path);
+}
+
+TEST_CASE("Version 9 binary text scenes use stable tab and shadow defaults", "[Serialization][Text][Legacy]")
+{
+    SerializationTestFixture fixture;
+    const Path path = fs::temp_directory_path() / "crowny-version-9-text-style.cwb";
+    WriteVersion9BinaryTextScene(path);
+
+    Ref<Scene> loadedScene = CreateRef<Scene>(false);
+    REQUIRE(SceneSerializer(loadedScene).DeserializeBinary(path));
+    Entity loadedEntity = loadedScene->FindEntityByName("LegacyText");
+    REQUIRE(loadedEntity);
+    REQUIRE(loadedEntity.HasComponent<TextComponent>());
+
+    const TextComponent& loaded = loadedEntity.GetComponent<TextComponent>();
+    CHECK(loaded.Text == "Old binary scene");
+    CHECK(loaded.TabWidth == 4);
+    CHECK(loaded.ShadowColor == glm::vec4(0.0f));
+    CHECK(loaded.ShadowOffset == glm::vec2(1.0f, -1.0f));
+    CHECK_THAT(loaded.ShadowSoftness, Catch::Matchers::WithinAbs(0.0f, 0.0001f));
+    fs::remove(path);
 }
 
 TEST_CASE("Text layout wrapping modes handle oversized words", "[Text][Layout]")

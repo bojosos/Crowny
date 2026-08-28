@@ -212,6 +212,29 @@ namespace Crowny
             Invoke(binding, entity, Encode(value.x, value.y));
         }
 
+        internal static Color GetBindingColor(ManagedBindingId binding, UUID entity)
+        {
+            byte[] value = Invoke(binding, entity, Array.Empty<byte>());
+            RequireLength(value, 4 * sizeof(float));
+            return new Color(ReadSingle(value, 0), ReadSingle(value, sizeof(float)), ReadSingle(value, 2 * sizeof(float)),
+                             ReadSingle(value, 3 * sizeof(float)));
+        }
+
+        internal static void SetBindingColor(ManagedBindingId binding, UUID entity, Color value)
+        {
+            Invoke(binding, entity, Encode(value.r, value.g, value.b, value.a));
+        }
+
+        internal static string GetBindingString(ManagedBindingId binding, UUID entity)
+        {
+            return Encoding.UTF8.GetString(Invoke(binding, entity, Array.Empty<byte>()));
+        }
+
+        internal static void SetBindingString(ManagedBindingId binding, UUID entity, string value)
+        {
+            Invoke(binding, entity, Encoding.UTF8.GetBytes(value ?? string.Empty));
+        }
+
         internal static void InvokeBinding(ManagedBindingId binding, UUID entity)
         {
             Invoke(binding, entity, Array.Empty<byte>());

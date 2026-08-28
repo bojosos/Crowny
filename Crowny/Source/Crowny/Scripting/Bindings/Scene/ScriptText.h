@@ -20,6 +20,12 @@ namespace Crowny
         static void Internal_SetColor(ScriptText* thisPtr, glm::vec4* color);
         static void Internal_GetOutlineColor(ScriptText* thisPtr, glm::vec4* color);
         static void Internal_SetOutlineColor(ScriptText* thisPtr, glm::vec4* color);
+        static void Internal_GetShadowColor(ScriptText* thisPtr, glm::vec4* color);
+        static void Internal_SetShadowColor(ScriptText* thisPtr, glm::vec4* color);
+        static void Internal_GetShadowOffset(ScriptText* thisPtr, glm::vec2* offset);
+        static void Internal_SetShadowOffset(ScriptText* thisPtr, glm::vec2* offset);
+        static float Internal_GetShadowSoftness(ScriptText* thisPtr);
+        static void Internal_SetShadowSoftness(ScriptText* thisPtr, float softness);
 
         static float Internal_GetSize(ScriptText* thisPtr);
         static void Internal_SetSize(ScriptText* thisPtr, float size);
@@ -57,6 +63,8 @@ namespace Crowny
         static void Internal_SetLineSpacing(ScriptText* thisPtr, float spacing);
         static float Internal_GetParagraphSpacing(ScriptText* thisPtr);
         static void Internal_SetParagraphSpacing(ScriptText* thisPtr, float spacing);
+        static uint32_t Internal_GetTabWidth(ScriptText* thisPtr);
+        static void Internal_SetTabWidth(ScriptText* thisPtr, uint32_t width);
         static bool Internal_GetUseCustomDecorationColor(ScriptText* thisPtr);
         static void Internal_SetUseCustomDecorationColor(ScriptText* thisPtr, bool useCustomColor);
         static void Internal_GetDecorationColor(ScriptText* thisPtr, glm::vec4* color);

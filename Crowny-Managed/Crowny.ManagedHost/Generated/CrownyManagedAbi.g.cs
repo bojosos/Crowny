@@ -134,6 +134,74 @@ namespace Crowny.ManagedHost.Interop
         AudioSourcePlay = 119,
         AudioSourcePause = 120,
         AudioSourceStop = 121,
+        TextGetText = 200,
+        TextSetText = 201,
+        TextGetFont = 202,
+        TextSetFont = 203,
+        TextGetColor = 204,
+        TextSetColor = 205,
+        TextGetSize = 206,
+        TextSetSize = 207,
+        TextGetAutoSize = 208,
+        TextSetAutoSize = 209,
+        TextGetAutoSizeMin = 210,
+        TextSetAutoSizeMin = 211,
+        TextGetAutoSizeMax = 212,
+        TextSetAutoSizeMax = 213,
+        TextGetLayoutSize = 214,
+        TextSetLayoutSize = 215,
+        TextGetWrapping = 216,
+        TextSetWrapping = 217,
+        TextGetWrapMode = 218,
+        TextSetWrapMode = 219,
+        TextGetOverflow = 220,
+        TextSetOverflow = 221,
+        TextGetClipToBounds = 222,
+        TextSetClipToBounds = 223,
+        TextGetMaxLines = 224,
+        TextSetMaxLines = 225,
+        TextGetHorizontalAlignment = 226,
+        TextSetHorizontalAlignment = 227,
+        TextGetVerticalAlignment = 228,
+        TextSetVerticalAlignment = 229,
+        TextGetFontStyle = 230,
+        TextSetFontStyle = 231,
+        TextGetOutlineColor = 232,
+        TextSetOutlineColor = 233,
+        TextGetOutlineWidth = 234,
+        TextSetOutlineWidth = 235,
+        TextGetShadowColor = 236,
+        TextSetShadowColor = 237,
+        TextGetShadowOffset = 238,
+        TextSetShadowOffset = 239,
+        TextGetShadowSoftness = 240,
+        TextSetShadowSoftness = 241,
+        TextGetCharacterSpacing = 242,
+        TextSetCharacterSpacing = 243,
+        TextGetWordSpacing = 244,
+        TextSetWordSpacing = 245,
+        TextGetLineSpacing = 246,
+        TextSetLineSpacing = 247,
+        TextGetParagraphSpacing = 248,
+        TextSetParagraphSpacing = 249,
+        TextGetTabWidth = 250,
+        TextSetTabWidth = 251,
+        TextGetUseCustomDecorationColor = 252,
+        TextSetUseCustomDecorationColor = 253,
+        TextGetDecorationColor = 254,
+        TextSetDecorationColor = 255,
+        TextGetDecorationThickness = 256,
+        TextSetDecorationThickness = 257,
+        TextGetUnderlineOffset = 258,
+        TextSetUnderlineOffset = 259,
+        TextGetStrikethroughOffset = 260,
+        TextSetStrikethroughOffset = 261,
+        TextGetUseKerning = 262,
+        TextSetUseKerning = 263,
+        TextGetSortingLayer = 264,
+        TextSetSortingLayer = 265,
+        TextGetOrderInLayer = 266,
+        TextSetOrderInLayer = 267,
         MathMatrixDeterminant = 130,
         MathMatrixInverse = 131,
         MathMatrixAffineInverse = 132,
@@ -177,6 +245,15 @@ namespace Crowny.ManagedHost.Interop
         public float X;
         public float Y;
         public float Z;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeVec4
+    {
+        public float X;
+        public float Y;
+        public float Z;
+        public float W;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -334,6 +411,74 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourcePlay;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourcePause;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourceStop;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView*, NativeStatus> TextGetText;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStatus> TextSetText;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> TextGetFont;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> TextSetFont;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextGetColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextSetColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> TextGetAutoSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> TextSetAutoSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetAutoSizeMin;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetAutoSizeMin;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetAutoSizeMax;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetAutoSizeMax;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> TextGetLayoutSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> TextSetLayoutSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> TextGetWrapping;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> TextSetWrapping;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetWrapMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetWrapMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetOverflow;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetOverflow;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> TextGetClipToBounds;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> TextSetClipToBounds;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextGetMaxLines;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> TextSetMaxLines;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetHorizontalAlignment;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetHorizontalAlignment;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetVerticalAlignment;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetVerticalAlignment;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextGetFontStyle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> TextSetFontStyle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextGetOutlineColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextSetOutlineColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetOutlineWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetOutlineWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextGetShadowColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextSetShadowColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> TextGetShadowOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> TextSetShadowOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetShadowSoftness;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetShadowSoftness;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetCharacterSpacing;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetCharacterSpacing;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetWordSpacing;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetWordSpacing;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetLineSpacing;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetLineSpacing;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetParagraphSpacing;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetParagraphSpacing;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextGetTabWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> TextSetTabWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> TextGetUseCustomDecorationColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> TextSetUseCustomDecorationColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextGetDecorationColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextSetDecorationColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetDecorationThickness;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetDecorationThickness;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetUnderlineOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetUnderlineOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetStrikethroughOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetStrikethroughOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> TextGetUseKerning;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> TextSetUseKerning;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetSortingLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetSortingLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetOrderInLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetOrderInLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, float*, NativeStatus> MathMatrixDeterminant;
         public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixInverse;
         public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixAffineInverse;
@@ -434,6 +579,74 @@ namespace Crowny.ManagedHost.Interop
                    AudioSourcePlay != null &&
                    AudioSourcePause != null &&
                    AudioSourceStop != null &&
+                   TextGetText != null &&
+                   TextSetText != null &&
+                   TextGetFont != null &&
+                   TextSetFont != null &&
+                   TextGetColor != null &&
+                   TextSetColor != null &&
+                   TextGetSize != null &&
+                   TextSetSize != null &&
+                   TextGetAutoSize != null &&
+                   TextSetAutoSize != null &&
+                   TextGetAutoSizeMin != null &&
+                   TextSetAutoSizeMin != null &&
+                   TextGetAutoSizeMax != null &&
+                   TextSetAutoSizeMax != null &&
+                   TextGetLayoutSize != null &&
+                   TextSetLayoutSize != null &&
+                   TextGetWrapping != null &&
+                   TextSetWrapping != null &&
+                   TextGetWrapMode != null &&
+                   TextSetWrapMode != null &&
+                   TextGetOverflow != null &&
+                   TextSetOverflow != null &&
+                   TextGetClipToBounds != null &&
+                   TextSetClipToBounds != null &&
+                   TextGetMaxLines != null &&
+                   TextSetMaxLines != null &&
+                   TextGetHorizontalAlignment != null &&
+                   TextSetHorizontalAlignment != null &&
+                   TextGetVerticalAlignment != null &&
+                   TextSetVerticalAlignment != null &&
+                   TextGetFontStyle != null &&
+                   TextSetFontStyle != null &&
+                   TextGetOutlineColor != null &&
+                   TextSetOutlineColor != null &&
+                   TextGetOutlineWidth != null &&
+                   TextSetOutlineWidth != null &&
+                   TextGetShadowColor != null &&
+                   TextSetShadowColor != null &&
+                   TextGetShadowOffset != null &&
+                   TextSetShadowOffset != null &&
+                   TextGetShadowSoftness != null &&
+                   TextSetShadowSoftness != null &&
+                   TextGetCharacterSpacing != null &&
+                   TextSetCharacterSpacing != null &&
+                   TextGetWordSpacing != null &&
+                   TextSetWordSpacing != null &&
+                   TextGetLineSpacing != null &&
+                   TextSetLineSpacing != null &&
+                   TextGetParagraphSpacing != null &&
+                   TextSetParagraphSpacing != null &&
+                   TextGetTabWidth != null &&
+                   TextSetTabWidth != null &&
+                   TextGetUseCustomDecorationColor != null &&
+                   TextSetUseCustomDecorationColor != null &&
+                   TextGetDecorationColor != null &&
+                   TextSetDecorationColor != null &&
+                   TextGetDecorationThickness != null &&
+                   TextSetDecorationThickness != null &&
+                   TextGetUnderlineOffset != null &&
+                   TextSetUnderlineOffset != null &&
+                   TextGetStrikethroughOffset != null &&
+                   TextSetStrikethroughOffset != null &&
+                   TextGetUseKerning != null &&
+                   TextSetUseKerning != null &&
+                   TextGetSortingLayer != null &&
+                   TextSetSortingLayer != null &&
+                   TextGetOrderInLayer != null &&
+                   TextSetOrderInLayer != null &&
                    MathMatrixDeterminant != null &&
                    MathMatrixInverse != null &&
                    MathMatrixAffineInverse != null &&
@@ -460,7 +673,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 5;
+        public const uint Version = 6;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

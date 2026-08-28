@@ -440,10 +440,14 @@ namespace Crowny
                 SerializeValueYAML(out, "MaxLines", text.MaxLines);
                 SerializeValueYAML(out, "OutlineColor", text.OutlineColor);
                 SerializeValueYAML(out, "Thickness", text.Thickness);
+                SerializeValueYAML(out, "ShadowColor", text.ShadowColor);
+                SerializeValueYAML(out, "ShadowOffset", text.ShadowOffset);
+                SerializeValueYAML(out, "ShadowSoftness", text.ShadowSoftness);
                 SerializeValueYAML(out, "CharacterSpacing", text.CharacterSpacing);
                 SerializeValueYAML(out, "WordSpacing", text.WordSpacing);
                 SerializeValueYAML(out, "LineSpacing", text.LineSpacing);
                 SerializeValueYAML(out, "ParagraphSpacing", text.ParagraphSpacing);
+                SerializeValueYAML(out, "TabWidth", text.TabWidth);
                 SerializeValueYAML(out, "UseCustomDecorationColor", text.UseCustomDecorationColor);
                 SerializeValueYAML(out, "DecorationColor", text.DecorationColor);
                 SerializeValueYAML(out, "DecorationThickness", text.DecorationThickness);
@@ -479,10 +483,14 @@ namespace Crowny
                 text.FontStyle = static_cast<TextFontStyleBits>(node["FontStyle"].as<uint32_t>(0));
                 text.OutlineColor = node["OutlineColor"].as<glm::vec4>(glm::vec4(0.0f));
                 text.Thickness = node["Thickness"].as<float>(0.8f);
+                text.ShadowColor = node["ShadowColor"].as<glm::vec4>(glm::vec4(0.0f));
+                text.ShadowOffset = node["ShadowOffset"].as<glm::vec2>(glm::vec2(1.0f, -1.0f));
+                text.ShadowSoftness = std::max(0.0f, node["ShadowSoftness"].as<float>(0.0f));
                 text.CharacterSpacing = node["CharacterSpacing"].as<float>(0.0f);
                 text.WordSpacing = node["WordSpacing"].as<float>(0.0f);
                 text.LineSpacing = node["LineSpacing"].as<float>(0.0f);
                 text.ParagraphSpacing = node["ParagraphSpacing"].as<float>(0.0f);
+                text.TabWidth = std::max(1u, node["TabWidth"].as<uint32_t>(4));
                 text.UseCustomDecorationColor = node["UseCustomDecorationColor"].as<bool>(false);
                 text.DecorationColor = node["DecorationColor"].as<glm::vec4>(glm::vec4(1.0f));
                 text.DecorationThickness = std::max(0.0f, node["DecorationThickness"].as<float>(0.0f));
@@ -512,6 +520,8 @@ namespace Crowny
                         text.DecorationColor.w);
                 archive(text.DecorationThickness, text.UnderlineOffset, text.StrikethroughOffset);
                 archive(text.SortingLayer, text.OrderInLayer);
+                archive(text.TabWidth, text.ShadowColor.x, text.ShadowColor.y, text.ShadowColor.z, text.ShadowColor.w);
+                archive(text.ShadowOffset.x, text.ShadowOffset.y, text.ShadowSoftness);
             }
 
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
@@ -547,6 +557,11 @@ namespace Crowny
                 }
                 if (context.SceneVersion >= 5)
                     archive(text.SortingLayer, text.OrderInLayer);
+                if (context.SceneVersion >= 10)
+                {
+                    archive(text.TabWidth, text.ShadowColor.x, text.ShadowColor.y, text.ShadowColor.z, text.ShadowColor.w);
+                    archive(text.ShadowOffset.x, text.ShadowOffset.y, text.ShadowSoftness);
+                }
             }
         };
 
@@ -557,6 +572,8 @@ namespace Crowny
             text.AutoSizeMax = std::max(text.AutoSizeMin, text.AutoSizeMax);
             text.LayoutSize = glm::max(text.LayoutSize, glm::vec2(0.0f));
             text.DecorationThickness = std::max(0.0f, text.DecorationThickness);
+            text.TabWidth = std::max(1u, text.TabWidth);
+            text.ShadowSoftness = std::max(0.0f, text.ShadowSoftness);
         }
 
         template <> struct ComponentIO<AudioListenerComponent>
@@ -1656,7 +1673,7 @@ namespace Crowny
             MakeCodec<SpriteRendererComponent>(SceneComponentId::SpriteRenderer, 5, "SpriteRendererComponent", {}, "Sprite Renderer",
                                                "Sprite Renderer"),
             MakeCodec<MeshRendererComponent>(SceneComponentId::MeshRenderer, 4, "MeshRendererComponent", {}, "Mesh Filter", "Mesh Renderer"),
-            MakeCodec<TextComponent>(SceneComponentId::Text, 5, "TextComponent", {}, "Text", "Text", SceneComponentYamlType::Map,
+            MakeCodec<TextComponent>(SceneComponentId::Text, 10, "TextComponent", {}, "Text", "Text", SceneComponentYamlType::Map,
                                      &AlwaysSerialize<TextComponent>, &MigrateText),
             MakeCodec<AudioListenerComponent>(SceneComponentId::AudioListener, 1, "AudioListenerComponent", {}, nullptr, "Audio Listener",
                                               SceneComponentYamlType::Null),
