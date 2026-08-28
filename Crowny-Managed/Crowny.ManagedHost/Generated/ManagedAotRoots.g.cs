@@ -7,6 +7,8 @@ namespace Crowny.ManagedHost
     {
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Crowny.UUID))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Crowny.Asset))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Crowny.Font))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Crowny.CharacterInfo))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Crowny.Entity))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Crowny.Component))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Crowny.EntityBehaviour))]

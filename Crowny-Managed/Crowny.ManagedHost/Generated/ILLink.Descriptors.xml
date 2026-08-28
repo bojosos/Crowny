@@ -3,6 +3,8 @@
   <assembly fullname="CrownySharp">
     <type fullname="Crowny.UUID" preserve="all" />
     <type fullname="Crowny.Asset" preserve="all" />
+    <type fullname="Crowny.Font" preserve="all" />
+    <type fullname="Crowny.CharacterInfo" preserve="all" />
     <type fullname="Crowny.Entity" preserve="all" />
     <type fullname="Crowny.Component" preserve="all" />
     <type fullname="Crowny.EntityBehaviour" preserve="all" />
