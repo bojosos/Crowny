@@ -124,7 +124,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
 - [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
-- [ ] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
+- [x] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
 
 ## Validation
 
@@ -138,4 +138,5 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Updated 54-resource built-in pack loaded successfully; Release render harness passed Vulkan 4/4 and OpenGL 4/4 on Intel Iris Xe, with all 4 cross-backend captures matching.
 - [x] Isolated transient-texture validation: focused ASan `[Renderer][Resources]` coverage passed 94 assertions in 8 cases, including descriptor separation, frame-delayed reuse, budget rejection, trimming, and render-graph retirement.
 - [x] Run the focused renderer/shader regression batch for the temporal-history, custom-material, and motion-settling repairs. The final isolated ASan suite passed 29,142 assertions in 558 cases, and the Vulkan/OpenGL render harness passed 4/4 captures per backend with all 4 cross-backend comparisons matching.
+- [x] Depth-output matrix validation: focused Release `[Renderer][Pipeline]` passed 180 assertions in 9 cases; full no-build Release Catch2 passed 29,351 assertions in 570 cases with one optional CoreCLR case skipped; Vulkan and OpenGL each passed 5/5 captures on Intel Iris Xe, and all 5 cross-backend captures matched.
 - [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.
