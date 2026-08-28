@@ -17,10 +17,15 @@ namespace Crowny
     struct TextLayoutToken
     {
         char32_t CodePoint = 0;
+        char32_t ResolvedCodePoint = 0;
         const msdf_atlas::GlyphGeometry* Glyph = nullptr;
+        const Font* SourceFont = nullptr;
         // Half-open byte range in the original UTF-8 string.
         size_t SourceByteStart = 0;
         size_t SourceByteEnd = 0;
+        // Half-open byte range of the containing grapheme cluster.
+        size_t ClusterByteStart = 0;
+        size_t ClusterByteEnd = 0;
         double Advance = 0.0;
         bool NewLine = false;
         bool WhiteSpace = false;
@@ -34,9 +39,17 @@ namespace Crowny
     {
         char32_t CodePoint = 0;
         const msdf_atlas::GlyphGeometry* Glyph = nullptr;
+        const Font* SourceFont = nullptr;
         glm::vec2 PenPosition{ 0.0f };
         float Advance = 0.0f;
         uint32_t LineIndex = 0;
+    };
+
+    struct TextLayoutFontRun
+    {
+        const Font* SourceFont = nullptr;
+        size_t FirstGlyph = 0;
+        size_t GlyphCount = 0;
     };
 
     struct TextLayoutCaret
@@ -69,9 +82,11 @@ namespace Crowny
         const TextLayoutGlyph* Glyphs = nullptr;
         const TextLayoutLine* Lines = nullptr;
         const TextLayoutCaret* Carets = nullptr;
+        const TextLayoutFontRun* FontRuns = nullptr;
         size_t GlyphCount = 0;
         size_t LineCount = 0;
         size_t CaretCount = 0;
+        size_t FontRunCount = 0;
         glm::vec2 Size{ 0.0f };
         float FontSize = 0.0f;
         float GlyphScale = 0.0f;
@@ -98,6 +113,7 @@ namespace Crowny
         double EllipsisAdvance = 0.0;
         uint32_t TabWidth = 4;
         const msdf_atlas::GlyphGeometry* EllipsisGlyph = nullptr;
+        const Font* EllipsisSourceFont = nullptr;
     };
 
     class TextLayoutScratch
@@ -109,6 +125,7 @@ namespace Crowny
             Lines.Reset();
             Glyphs.Reset();
             Carets.Reset();
+            FontRuns.Reset();
             SourceByteLength = 0;
         }
 
@@ -117,6 +134,7 @@ namespace Crowny
             Tokens.Reserve(characterCount);
             Glyphs.Reserve(characterCount);
             Carets.Reserve(characterCount + 1);
+            FontRuns.Reserve(std::min(characterCount, size_t(16)));
             Lines.Reserve(std::min(characterCount + 1, size_t(64)));
         }
 
@@ -124,12 +142,15 @@ namespace Crowny
         FrameVector<TextLayoutLine> Lines;
         FrameVector<TextLayoutGlyph> Glyphs;
         FrameVector<TextLayoutCaret> Carets;
+        FrameVector<TextLayoutFontRun> FontRuns;
         size_t SourceByteLength = 0;
     };
 
     class TextLayout final
     {
     public:
+        // Replaces each malformed UTF-8 byte with U+FFFD and records source and grapheme-cluster byte ranges.
+        static void DecodeUTF8(StringView text, TextLayoutScratch& scratch);
         // Result pointers remain valid until scratch is reused.
         static TextLayoutResult Build(const TextComponent& component, const Font& font, TextLayoutScratch& scratch);
         // Prepared tokens must provide source byte ranges for meaningful hit-test offsets.
