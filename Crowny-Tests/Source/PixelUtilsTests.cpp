@@ -208,6 +208,19 @@ TEST_CASE("PixelUtils::PackUnpack::RG16F", "[PixelUtils]")
     CHECK(a == 1.0f);
 }
 
+TEST_CASE("PixelUtils::PackUnpack::RGBA16", "[PixelUtils]")
+{
+    uint8_t pixel[8];
+    PixelUtils::PackPixel(1.0f, 0.5f, 0.25f, 0.125f, TextureFormat::RGBA16, pixel);
+
+    float r, g, b, a;
+    PixelUtils::UnpackPixel(&r, &g, &b, &a, TextureFormat::RGBA16, pixel);
+    CHECK_THAT(r, Catch::Matchers::WithinAbs(1.0f, 1.0f / 65535.0f));
+    CHECK_THAT(g, Catch::Matchers::WithinAbs(0.5f, 1.0f / 65535.0f));
+    CHECK_THAT(b, Catch::Matchers::WithinAbs(0.25f, 1.0f / 65535.0f));
+    CHECK_THAT(a, Catch::Matchers::WithinAbs(0.125f, 1.0f / 65535.0f));
+}
+
 TEST_CASE("PixelUtils::GetNumBytes", "[PixelUtils]")
 {
     CHECK(PixelUtils::GetNumBytes(TextureFormat::R8) == 1);
@@ -222,6 +235,10 @@ TEST_CASE("PixelUtils::GetNumBytes", "[PixelUtils]")
     CHECK(PixelUtils::GetNumBytes(TextureFormat::RG32F) == 8);
     CHECK(PixelUtils::GetNumBytes(TextureFormat::R32I) == 4);
     CHECK(PixelUtils::GetNumBytes(TextureFormat::R32F) == 4);
+    CHECK(PixelUtils::GetNumBytes(TextureFormat::R16) == 2);
+    CHECK(PixelUtils::GetNumBytes(TextureFormat::RG16) == 4);
+    CHECK(PixelUtils::GetNumBytes(TextureFormat::RGB16) == 6);
+    CHECK(PixelUtils::GetNumBytes(TextureFormat::RGBA16) == 8);
     CHECK(PixelUtils::GetNumBytes(TextureFormat::DEPTH32F) == 4);
     CHECK(PixelUtils::GetNumBytes(TextureFormat::DEPTH24STENCIL8) == 4);
     // Compressed formats have no per-pixel byte count

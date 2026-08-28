@@ -228,7 +228,13 @@ namespace Crowny
         ASTC4x4 = 26,
         R32F = 27,
 
-        FormatCount = 28
+        // Keep new formats appended. TextureFormat values are persisted in assets.
+        R16 = 28,
+        RG16 = 29,
+        RGB16 = 30,
+        RGBA16 = 31,
+
+        FormatCount = 32
     };
 
     enum class TextureChannel

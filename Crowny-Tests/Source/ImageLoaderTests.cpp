@@ -66,6 +66,7 @@ TEST_CASE("Image loader probes raster metadata without decoding pixels", "[Asset
     CHECK(result.Info.BitDepth == 8);
     CHECK(result.Info.PixelFormat == TextureFormat::RGB8);
     CHECK(result.Pixels == nullptr);
+    CHECK(result.Subresources.empty());
     CHECK(result.SourceData.empty());
 }
 
@@ -98,8 +99,8 @@ TEST_CASE("Image loader preserves 16-bit grayscale precision", "[Assets][Importe
     REQUIRE(result);
     REQUIRE(result.Pixels != nullptr);
     CHECK(result.Info.BitDepth == 16);
-    CHECK(result.Info.IsFloat);
-    CHECK(result.Info.PixelFormat == TextureFormat::R32F);
+    CHECK_FALSE(result.Info.IsFloat);
+    CHECK(result.Info.PixelFormat == TextureFormat::R16);
     CHECK_THAT(result.Pixels->GetColorAt(0, 0).r, Catch::Matchers::WithinAbs(32768.0f / 65535.0f, 0.0001f));
 }
 
@@ -112,8 +113,8 @@ TEST_CASE("Image loader preserves 16-bit PNM channel semantics", "[Assets][Impor
     REQUIRE(precise.Pixels != nullptr);
     CHECK(precise.Info.Channels == 3);
     CHECK(precise.Info.BitDepth == 16);
-    CHECK(precise.Info.IsFloat);
-    CHECK(precise.Info.PixelFormat == TextureFormat::RGB32F);
+    CHECK_FALSE(precise.Info.IsFloat);
+    CHECK(precise.Info.PixelFormat == TextureFormat::RGB16);
     const glm::vec4 preciseColor = precise.Pixels->GetColorAt(0, 0);
     CHECK_THAT(preciseColor.r, Catch::Matchers::WithinAbs(1.0f, 0.0001f));
     CHECK_THAT(preciseColor.g, Catch::Matchers::WithinAbs(32768.0f / 65535.0f, 0.0001f));
@@ -131,6 +132,56 @@ TEST_CASE("Image loader preserves 16-bit PNM channel semantics", "[Assets][Impor
     CHECK_THAT(byteColor.r, Catch::Matchers::WithinAbs(1.0f, 1.0f / 255.0f));
     CHECK_THAT(byteColor.g, Catch::Matchers::WithinAbs(32768.0f / 65535.0f, 1.0f / 255.0f));
     CHECK_THAT(byteColor.b, Catch::Matchers::WithinAbs(0.0f, 1.0f / 255.0f));
+}
+
+TEST_CASE("Image loader preserves grayscale alpha semantics", "[Assets][Importer][Image]")
+{
+    const std::array<uint8_t, 68> png = {
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+        0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x04, 0x00, 0x00, 0x00, 0xB5, 0x1C, 0x0C, 0x02, 0x00, 0x00,
+        0x00, 0x0B, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x68, 0x70, 0x00, 0x00, 0x01, 0x43, 0x00, 0xC1, 0x5F,
+        0xD4, 0x95, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+    };
+
+    const ImageLoadResult result = ImageLoader::DecodeMemory(png.data(), png.size());
+    REQUIRE(result);
+    REQUIRE(result.Pixels != nullptr);
+    CHECK(result.Info.FileFormat == ImageFileFormat::PNG);
+    CHECK(result.Info.Channels == 2);
+    CHECK(result.Info.ChannelLayout == ImageChannelLayout::GrayAlpha);
+    CHECK(result.Info.HasAlpha);
+    CHECK(result.Info.PixelFormat == TextureFormat::RG8);
+    REQUIRE(result.Subresources.size() == 1);
+    const glm::vec4 stored = result.Pixels->GetColorAt(0, 0);
+    CHECK_THAT(stored.r, Catch::Matchers::WithinAbs(128.0f / 255.0f, 1.0f / 255.0f));
+    CHECK_THAT(stored.g, Catch::Matchers::WithinAbs(64.0f / 255.0f, 1.0f / 255.0f));
+}
+
+TEST_CASE("Image loader enforces source dimension and decoded memory limits", "[Assets][Importer][Image]")
+{
+    const std::array<uint8_t, 17> ppm = { 'P', '6', '\n', '1', ' ', '2', '\n', '2', '5', '5', '\n', 255, 0, 0, 0, 0, 255 };
+
+    ImageLoadOptions sourceOptions;
+    sourceOptions.MaximumSourceBytes = ppm.size() - 1u;
+    const ImageLoadResult sourceLimited = ImageLoader::DecodeMemory(ppm.data(), ppm.size(), sourceOptions);
+    REQUIRE_FALSE(sourceLimited);
+    REQUIRE(sourceLimited.Diagnostics.size() == 1);
+    CHECK(sourceLimited.Diagnostics[0].Code == ImageDiagnosticCode::SourceTooLarge);
+
+    ImageLoadOptions memoryOptions;
+    memoryOptions.MaximumDecodedBytes = 5;
+    const ImageLoadResult memoryLimited = ImageLoader::DecodeMemory(ppm.data(), ppm.size(), memoryOptions);
+    REQUIRE_FALSE(memoryLimited);
+    REQUIRE(memoryLimited.Diagnostics.size() == 1);
+    CHECK(memoryLimited.Diagnostics[0].Code == ImageDiagnosticCode::DecodedImageTooLarge);
+
+    const std::array<uint8_t, 14> largeHeader = { 'P', '6', '\n', '2', '0', '4', '8', ' ', '1', '\n', '2', '5', '5', '\n' };
+    ImageLoadOptions dimensionOptions;
+    dimensionOptions.MaximumDimension = 1024;
+    const ImageLoadResult dimensionLimited = ImageLoader::ProbeMemory(largeHeader.data(), largeHeader.size(), dimensionOptions);
+    REQUIRE_FALSE(dimensionLimited);
+    REQUIRE(dimensionLimited.Diagnostics.size() == 1);
+    CHECK(dimensionLimited.Diagnostics[0].Code == ImageDiagnosticCode::DimensionsTooLarge);
 }
 
 TEST_CASE("Image loader honors cancellation and reports corrupt data", "[Assets][Importer][Image]")
@@ -219,6 +270,15 @@ TEST_CASE("Image loader reports KTX2 array topology without decoding", "[Assets]
     CHECK(result.Info.MipLevels == 2);
     CHECK(result.Info.GetRuntimeShape() == TextureShape::TEXTURE_2D);
     CHECK(result.Pixels == nullptr);
+
+    const ImageLoadResult decoded = ImageLoader::DecodeMemory(encoded.data(), encoded.size());
+    REQUIRE(decoded);
+    REQUIRE(decoded.Pixels != nullptr);
+    REQUIRE(decoded.Subresources.size() == 2);
+    CHECK(decoded.Subresources[0].MipLevel == 0);
+    CHECK(decoded.Subresources[0].Layer == 0);
+    CHECK(decoded.Subresources[1].MipLevel == 0);
+    CHECK(decoded.Subresources[1].Layer == 1);
 }
 
 TEST_CASE("Image loader recognizes common image signatures", "[Assets][Importer][Image]")

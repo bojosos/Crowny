@@ -728,9 +728,53 @@ namespace Crowny
         ImGui::TextDisabled("Import");
         auto* opts = BeginImportInspector<TextureImportOptions>();
 
+        ImGui::TextDisabled("Presets");
+        const auto applyPreset = [&](TextureMipMode mode, bool sRGB, TextureDiskFormat diskFormat, bool generateMips) {
+            opts->AutomaticFormat = true;
+            opts->Shape = TextureShape::TEXTURE_2D;
+            opts->MipMode = mode;
+            opts->SRGB = sRGB;
+            opts->DiskFormat = diskFormat;
+            opts->GenerateMips = generateMips;
+            m_HasPropertyChanged = true;
+        };
+        if (ImGui::SmallButton("Color"))
+            applyPreset(TextureMipMode::Color, true, TextureDiskFormat::ETC1S, true);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Normal map"))
+            applyPreset(TextureMipMode::NormalMap, false, TextureDiskFormat::UASTC, true);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Data"))
+            applyPreset(TextureMipMode::Data, false, TextureDiskFormat::UASTC, true);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("HDR"))
+            applyPreset(TextureMipMode::Color, false, TextureDiskFormat::None, true);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("UI"))
+            applyPreset(TextureMipMode::Color, true, TextureDiskFormat::UASTC, false);
+
         m_HasPropertyChanged |= UI::Property("Detect format", opts->AutomaticFormat);
-        m_HasPropertyChanged |= UI::PropertyDropdown("Texture shape", { "1D", "2D", "3D", "Cubemap" }, opts->Shape);
-        // m_HasPropertyChanged |= UI::PropertyDropdown("Texture Format", { "R" }, opts->Format);
+        {
+            static constexpr std::array<TextureFormat, 15> formats = {
+                TextureFormat::R8,      TextureFormat::RG8,      TextureFormat::RGB8,    TextureFormat::RGBA8,
+                TextureFormat::BGRA8,   TextureFormat::R16,      TextureFormat::RG16,    TextureFormat::RGB16,
+                TextureFormat::RGBA16,  TextureFormat::RG16F,    TextureFormat::RGBA16F, TextureFormat::R32F,
+                TextureFormat::RG32F,   TextureFormat::RGB32F,   TextureFormat::RGBA32F,
+            };
+            static const Vector<String> formatNames = { "R8",      "RG8",      "RGB8",    "RGBA8",  "BGRA8",
+                                                        "R16",     "RG16",     "RGB16",   "RGBA16", "RG16F",
+                                                        "RGBA16F", "R32F",     "RG32F",   "RGB32F", "RGBA32F" };
+            uint32_t formatIndex = 0;
+            const auto selected = std::find(formats.begin(), formats.end(), opts->Format);
+            if (selected != formats.end())
+                formatIndex = static_cast<uint32_t>(std::distance(formats.begin(), selected));
+            UI::ScopedDisable disabled(opts->AutomaticFormat);
+            if (UI::PropertyDropdown("Texture format", formatNames, formatIndex))
+            {
+                opts->Format = formats[formatIndex];
+                m_HasPropertyChanged = true;
+            }
+        }
         m_HasPropertyChanged |= UI::Property("Generate mipmaps", opts->GenerateMips);
         {
             UI::ScopedDisable disabled(!opts->GenerateMips);

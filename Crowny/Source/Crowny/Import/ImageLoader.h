@@ -37,6 +37,16 @@ namespace Crowny
         BottomLeft
     };
 
+    enum class ImageChannelLayout
+    {
+        Unknown,
+        Gray,
+        GrayAlpha,
+        RG,
+        RGB,
+        RGBA
+    };
+
     struct ImageInfo
     {
         ImageContainerFormat Container = ImageContainerFormat::Unknown;
@@ -50,6 +60,7 @@ namespace Crowny
         uint32_t MipLevels = 1;
         uint32_t Channels = 0;
         uint32_t BitDepth = 0;
+        ImageChannelLayout ChannelLayout = ImageChannelLayout::Unknown;
         TextureFormat PixelFormat = TextureFormat::NONE;
         TextureDiskFormat DiskFormat = TextureDiskFormat::None;
         bool HasAlpha = false;
@@ -65,8 +76,13 @@ namespace Crowny
     {
         bool MetadataOnly = false;
         bool DecodePixels = true;
+        // Texture containers can remain encoded for deferred GPU transcoding.
+        bool DecodeTextureContainers = true;
         bool FlipVertically = false;
         bool Preserve16Bit = true;
+        uint32_t MaximumDimension = 32768;
+        uint64_t MaximumSourceBytes = 512ull * 1024ull * 1024ull;
+        uint64_t MaximumDecodedBytes = 1024ull * 1024ull * 1024ull;
         const std::atomic<bool>* Cancellation = nullptr;
 
         bool IsCancellationRequested() const { return Cancellation != nullptr && Cancellation->load(std::memory_order_acquire); }
@@ -129,6 +145,8 @@ namespace Crowny
         ReadFailed,
         EmptySource,
         SourceTooLarge,
+        DimensionsTooLarge,
+        DecodedImageTooLarge,
         UnsupportedFormat,
         InvalidData,
         DecodeFailed,
@@ -142,9 +160,19 @@ namespace Crowny
         String Message;
     };
 
+    struct ImageSubresource
+    {
+        uint32_t MipLevel = 0;
+        uint32_t Layer = 0;
+        uint32_t Face = 0;
+        Ref<PixelData> Pixels;
+    };
+
     struct ImageLoadResult
     {
         ImageInfo Info;
+        Vector<ImageSubresource> Subresources;
+        // Compatibility alias for the first decoded subresource.
         Ref<PixelData> Pixels;
         Vector<uint8_t> SourceData;
         ImageLoadStatus Status = ImageLoadStatus::Failed;

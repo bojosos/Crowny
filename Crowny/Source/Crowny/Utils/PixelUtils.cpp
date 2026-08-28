@@ -113,6 +113,11 @@ namespace Crowny
       { "ETC2_RG11", 0, PFF_COMPRESSED, PCT_BYTE, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
       { "ASTC4x4", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
       { "R32F", 4, PFF_FLOAT, PCT_FLOAT32, 1, 32, 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 },
+      { "R16", 2, PFF_INTEGER | PFF_NORMALIZED, PCT_SHORT, 1, 16, 0, 0, 0, 0x0000FFFF, 0, 0, 0, 0, 0, 0, 0 },
+      { "RG16", 4, PFF_INTEGER | PFF_NORMALIZED, PCT_SHORT, 2, 16, 16, 0, 0, 0x0000FFFF, 0xFFFF0000, 0, 0, 0, 16, 0, 0 },
+      { "RGB16", 6, PFF_INTEGER | PFF_NORMALIZED, PCT_SHORT, 3, 16, 16, 16, 0, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF, 0, 0, 16, 0, 0 },
+      { "RGBA16", 8, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_SHORT, 4, 16, 16, 16, 16, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF,
+        0xFFFF0000, 0, 16, 0, 16 },
     } };
     static_assert(PIXEL_FORMATS.size() == static_cast<size_t>(TextureFormat::FormatCount));
 
