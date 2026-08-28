@@ -484,7 +484,7 @@ void main() { outColor = SharedColor(); }
     std::filesystem::remove_all(directory, error);
 }
 
-TEST_CASE("Built-in pack contains current Toon and Unlit shader assets", "[Shader][Assets]")
+TEST_CASE("Built-in pack contains current material shader assets", "[Shader][Assets]")
 {
     const Path repositoryRoot = std::filesystem::current_path();
     const Path sourcePack = repositoryRoot / "Crowny-Editor/Resources/Builtin.cwpack";
@@ -501,7 +501,8 @@ TEST_CASE("Built-in pack contains current Toon and Unlit shader assets", "[Shade
 
     BuiltInResourcePack pack(copiedPack);
     REQUIRE(pack.IsValid());
-    for (const Path shaderPath : { Path(TOON_SHADER_PATH), Path(UNLIT_SHADER_PATH) })
+    for (const Path shaderPath :
+         { Path(TOON_SHADER_PATH), Path(UNLIT_SHADER_PATH), Path("Resources/Shaders/GpuMaskedDepth.asset") })
     {
         INFO(shaderPath.string());
         REQUIRE(pack.Contains(shaderPath));
@@ -691,6 +692,9 @@ TEST_CASE("Masked depth shader compiles all animation and output-layout variants
     std::ifstream stream(path, std::ios::binary);
     REQUIRE(stream.good());
     const String source((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    CHECK(source.find("layout(location = 5) in vec4 cw_Color;") != String::npos);
+    CHECK(source.find("cwVertexAlpha = cw_Color.a;") != String::npos);
+    CHECK(source.find("material.baseColor.a * cwVertexAlpha") != String::npos);
     const ShaderCompileResult result = ShaderCompiler::CompileWithDiagnostics(path, source);
     for (const ShaderDiagnostic& diagnostic : result.Diagnostics)
         INFO(diagnostic.Message);

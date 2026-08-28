@@ -26,6 +26,7 @@ layout(location = 0) in vec3 cw_Position;
 layout(location = 1) in vec3 cw_PreviousPosition;
 #endif
 layout(location = 4) in vec2 cw_TexCoord0;
+layout(location = 5) in vec4 cw_Color;
 layout(set = 0, binding = 0) uniform CwDepthView
 {
     mat4 viewProjection;
@@ -42,6 +43,7 @@ layout(std430, set = 0, binding = 2) readonly buffer CwVisibleInstanceIds
 
 layout(location = 0) out vec2 cwUv;
 layout(location = 1) flat out uint cwMaterialIndex;
+layout(location = 5) out float cwVertexAlpha;
 #ifdef CW_DEPTH_OBJECT_ID_ONLY
 layout(location = 2) flat out uint cwObjectId;
 #else
@@ -61,6 +63,7 @@ void main()
 
     cwUv = cw_TexCoord0;
     cwMaterialIndex = visibleInstance.y;
+    cwVertexAlpha = cw_Color.a;
 #ifdef CW_DEPTH_OBJECT_ID_ONLY
     cwObjectId = instance.draw.w;
 #else
@@ -106,6 +109,7 @@ struct CwMaterialRecord
 
 layout(location = 0) in vec2 cwUv;
 layout(location = 1) flat in uint cwMaterialIndex;
+layout(location = 5) in float cwVertexAlpha;
 #ifdef CW_DEPTH_OBJECT_ID_ONLY
 layout(location = 2) flat in uint cwObjectId;
 layout(location = 0) out int cwDepthObjectId;
@@ -125,7 +129,7 @@ layout(set = 1, binding = 1) uniform sampler2D cwTextures[];
 void main()
 {
     CwMaterialRecord material = materials[cwMaterialIndex];
-    float alpha = texture(cwTextures[nonuniformEXT(material.textureIndices0.x)], cwUv).a * material.baseColor.a;
+    float alpha = texture(cwTextures[nonuniformEXT(material.textureIndices0.x)], cwUv).a * material.baseColor.a * cwVertexAlpha;
     if (alpha < material.emissiveAlphaCutoff.w)
         discard;
 
