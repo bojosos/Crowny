@@ -61,7 +61,8 @@ namespace Crowny
     static constexpr uint32_t ANIMATION_CLIP_FORMAT_VERSION = 1;
     // Version 2 removes duplicate glyph storage and persists the tab width.
     // Version 3 persists complete layout metrics and the MSDF pixel range.
-    static constexpr uint32_t FONT_FORMAT_VERSION = 3;
+    // Version 4 persists fallback font asset references.
+    static constexpr uint32_t FONT_FORMAT_VERSION = 4;
     static constexpr uint32_t AUDIO_FORMAT_VERSION = 1;
     static constexpr uint32_t AUDIO_MIXER_FORMAT_VERSION = 1;
     // Version 2 adds material combine modes and an asset header. Headerless

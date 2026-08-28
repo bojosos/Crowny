@@ -2,6 +2,7 @@
 
 #include "Crowny/Renderer/Font.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/RenderAPI/Texture.h"
@@ -179,25 +180,133 @@ namespace Crowny
 
     void Font::SetFallbackFonts(const Vector<AssetHandle<Font>>& fonts)
     {
-        m_FallbackFonts.clear();
+        ClearFallbackFonts();
         m_FallbackFonts.reserve(std::min(fonts.size(), MAX_FALLBACK_FONTS));
+        m_FallbackFontIds.reserve(std::min(fonts.size(), MAX_FALLBACK_FONTS));
         for (const AssetHandle<Font>& font : fonts)
         {
-            if (!AddFallbackFont(font) && m_FallbackFonts.size() == MAX_FALLBACK_FONTS)
+            if (!AddFallbackFont(font) && m_FallbackFontIds.size() == MAX_FALLBACK_FONTS)
                 break;
         }
     }
 
     bool Font::AddFallbackFont(const AssetHandle<Font>& font)
     {
-        if (!font || font.Get() == this || m_FallbackFonts.size() >= MAX_FALLBACK_FONTS)
+        if (!font || !font.HasUUID() || font.Get() == this)
             return false;
-        const auto duplicate = std::find_if(m_FallbackFonts.begin(), m_FallbackFonts.end(),
-                                            [&font](const AssetHandle<Font>& candidate) { return candidate.Get() == font.Get(); });
+        const UUID& fontId = font.GetUUID();
+        const bool hasId = std::find(m_FallbackFontIds.begin(), m_FallbackFontIds.end(), fontId) != m_FallbackFontIds.end();
+        if (!hasId && m_FallbackFontIds.size() >= MAX_FALLBACK_FONTS)
+            return false;
+        const auto duplicate = std::find_if(m_FallbackFonts.begin(), m_FallbackFonts.end(), [&font, &fontId](const AssetHandle<Font>& candidate) {
+            return candidate.Get() == font.Get() || candidate.GetUUID() == fontId;
+        });
         if (duplicate != m_FallbackFonts.end())
             return false;
+
+        UnorderedSet<const Font*> visited;
+        if (font->ReferencesFont(this, visited))
+            return false;
         m_FallbackFonts.push_back(font);
+        if (!hasId)
+            m_FallbackFontIds.push_back(fontId);
         return true;
+    }
+
+    void Font::SetFallbackFontIds(const Vector<UUID>& fontIds)
+    {
+        ClearFallbackFonts();
+        m_FallbackFontIds.reserve(std::min(fontIds.size(), MAX_FALLBACK_FONTS));
+        for (const UUID& fontId : fontIds)
+        {
+            if (fontId.Empty() || std::find(m_FallbackFontIds.begin(), m_FallbackFontIds.end(), fontId) != m_FallbackFontIds.end())
+                continue;
+            m_FallbackFontIds.push_back(fontId);
+            if (m_FallbackFontIds.size() == MAX_FALLBACK_FONTS)
+                break;
+        }
+    }
+
+    bool Font::LoadFallbackFonts()
+    {
+        if (m_FallbackFontIds.empty())
+        {
+            m_FallbackFonts.clear();
+            return true;
+        }
+        if (AssetManager::TryGet() == nullptr)
+            return false;
+
+        Vector<AssetHandle<Font>> previousFonts = std::move(m_FallbackFonts);
+        m_FallbackFonts.clear();
+        Vector<UUID> retainedIds;
+        retainedIds.reserve(m_FallbackFontIds.size());
+        bool allLoaded = true;
+
+        for (const UUID& fontId : m_FallbackFontIds)
+        {
+            AssetHandle<Font> font;
+            const auto previous = std::find_if(previousFonts.begin(), previousFonts.end(),
+                                               [&fontId](const AssetHandle<Font>& candidate) { return candidate.GetUUID() == fontId; });
+            if (previous != previousFonts.end() && *previous)
+                font = *previous;
+            else
+            {
+                const AssetHandle<Asset> asset = AssetManager::TryGet()->LoadFromUUID(fontId, false);
+                if (asset && asset->GetAssetType() != AssetType::Font)
+                {
+                    CW_ENGINE_ERROR("Discarding a font fallback that references a non-font asset.");
+                    allLoaded = false;
+                    continue;
+                }
+                font = static_asset_cast<Font>(asset);
+            }
+
+            if (!font)
+            {
+                retainedIds.push_back(fontId);
+                allLoaded = false;
+                continue;
+            }
+            if (font.Get() == this)
+            {
+                CW_ENGINE_ERROR("Discarding a font fallback that references itself.");
+                allLoaded = false;
+                continue;
+            }
+
+            UnorderedSet<const Font*> visited;
+            if (font->ReferencesFont(this, visited))
+            {
+                CW_ENGINE_ERROR("Discarding a font fallback that creates a cycle.");
+                allLoaded = false;
+                continue;
+            }
+            m_FallbackFonts.push_back(font);
+            retainedIds.push_back(fontId);
+        }
+        m_FallbackFontIds = std::move(retainedIds);
+        return allLoaded;
+    }
+
+    void Font::ClearFallbackFonts()
+    {
+        m_FallbackFonts.clear();
+        m_FallbackFontIds.clear();
+    }
+
+    bool Font::ReferencesFont(const Font* font, UnorderedSet<const Font*>& visited) const
+    {
+        if (this == font)
+            return true;
+        if (!visited.insert(this).second)
+            return false;
+        for (const AssetHandle<Font>& fallback : m_FallbackFonts)
+        {
+            if (fallback && fallback->ReferencesFont(font, visited))
+                return true;
+        }
+        return false;
     }
 
 } // namespace Crowny

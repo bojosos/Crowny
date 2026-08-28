@@ -68,6 +68,8 @@ namespace Crowny
     class Font : public Asset
     {
     public:
+        static constexpr size_t MAX_FALLBACK_FONTS = 8;
+
         struct GlyphLookup
         {
             const Font* SourceFont = nullptr;
@@ -110,8 +112,11 @@ namespace Crowny
 
         void SetFallbackFonts(const Vector<AssetHandle<Font>>& fonts);
         bool AddFallbackFont(const AssetHandle<Font>& font);
-        void ClearFallbackFonts() { m_FallbackFonts.clear(); }
+        void SetFallbackFontIds(const Vector<UUID>& fontIds);
+        bool LoadFallbackFonts();
+        void ClearFallbackFonts();
         const Vector<AssetHandle<Font>>& GetFallbackFonts() const { return m_FallbackFonts; }
+        const Vector<UUID>& GetFallbackFontIds() const { return m_FallbackFontIds; }
 
         virtual AssetType GetAssetType() const override { return AssetType::Font; }
         static AssetType GetStaticType() { return AssetType::Font; }
@@ -123,13 +128,15 @@ namespace Crowny
         CW_SERIALIZABLE(Font);
 
     private:
-        static constexpr size_t MAX_FALLBACK_FONTS = 8;
+        bool ReferencesFont(const Font* font, UnorderedSet<const Font*>& visited) const;
+
         static AssetHandle<Font> s_DefaultFont;
         Scope<MSDFData> m_MSDFData;
         Ref<Texture> m_AtlasTexture;
         uint32_t m_TabWidth = 4;
         float m_AtlasPixelRange = 2.0f;
         Vector<AssetHandle<Font>> m_FallbackFonts;
+        Vector<UUID> m_FallbackFontIds;
     };
 
 } // namespace Crowny
