@@ -494,6 +494,8 @@ TEST_CASE("Texture import options survive metadata round trip", "[Assets][Import
 
 TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer][Font]")
 {
+    const UUID firstFallback(1, 2, 3, 4);
+    const UUID secondFallback(5, 6, 7, 8);
     Ref<FontImportOptions> source = CreateRef<FontImportOptions>();
     source->GetKerningData = false;
     source->AutomaticFontSampling = false;
@@ -505,6 +507,7 @@ TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer]
     source->Padding = 3;
     source->DynamicFontAtlas = true;
     source->TabMultiple = 6;
+    source->FallbackFonts = { UUID::EMPTY, firstFallback, firstFallback, secondFallback };
 
     YAML::Emitter emitter;
     emitter << YAML::BeginMap;
@@ -523,4 +526,7 @@ TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer]
     CHECK(restored->Padding == 3);
     CHECK(restored->DynamicFontAtlas);
     CHECK(restored->TabMultiple == 6);
+    REQUIRE(restored->FallbackFonts.size() == 2);
+    CHECK(restored->FallbackFonts[0] == firstFallback);
+    CHECK(restored->FallbackFonts[1] == secondFallback);
 }

@@ -133,6 +133,16 @@ namespace Crowny
             SerializeValueYAML(out, "BoldSpacing", fontImportOptions->BoldSpacing);
             SerializeValueYAML(out, "TabMultiple", fontImportOptions->TabMultiple);
             SerializeValueYAML(out, "ItalicStyle", fontImportOptions->ItalicStyle);
+            out << YAML::Key << "FallbackFonts" << YAML::Value << YAML::BeginSeq;
+            Set<UUID> serializedFallbacks;
+            for (const UUID& fallback : fontImportOptions->FallbackFonts)
+            {
+                if (serializedFallbacks.size() == Font::MAX_FALLBACK_FONTS)
+                    break;
+                if (!fallback.Empty() && serializedFallbacks.insert(fallback).second)
+                    out << fallback;
+            }
+            out << YAML::EndSeq;
 
             EndYAMLMap(out, "FontImporter");
             break;
@@ -250,6 +260,19 @@ namespace Crowny
             DeserializeValueYAML(fontImportOptionsNode, "BoldSpacing", fontImportOptions->BoldSpacing, 7.0f);
             DeserializeValueYAML(fontImportOptionsNode, "TabMultiple", fontImportOptions->TabMultiple, 4U);
             DeserializeValueYAML(fontImportOptionsNode, "ItalicStyle", fontImportOptions->ItalicStyle, 35U);
+            if (const YAML::Node fallbackFonts = fontImportOptionsNode["FallbackFonts"]; fallbackFonts && fallbackFonts.IsSequence())
+            {
+                for (const YAML::Node fallback : fallbackFonts)
+                {
+                    const UUID fallbackId = fallback.as<UUID>(UUID::EMPTY);
+                    if (fallbackId.Empty() || std::find(fontImportOptions->FallbackFonts.begin(), fontImportOptions->FallbackFonts.end(),
+                                                        fallbackId) != fontImportOptions->FallbackFonts.end())
+                        continue;
+                    fontImportOptions->FallbackFonts.push_back(fallbackId);
+                    if (fontImportOptions->FallbackFonts.size() == Font::MAX_FALLBACK_FONTS)
+                        break;
+                }
+            }
 
             return fontImportOptions;
         }

@@ -45,15 +45,38 @@ TEST_CASE("Font fallback chains ignore unusable and duplicate entries", "[Render
     AssetManager assetManager;
     const AssetHandle<Font> primary = CreateFontHandle(assetManager);
     const AssetHandle<Font> fallback = CreateFontHandle(assetManager);
+    const AssetHandle<Font> unloaded = static_asset_cast<Font>(assetManager.GetAssetHandle(UUID("10000000-0000-0000-0000-000000000001")));
 
     primary->SetFallbackFonts({ {}, primary, fallback, fallback });
 
     REQUIRE(primary->GetFallbackFonts().size() == 1);
     CHECK(primary->GetFallbackFonts().front().Get() == fallback.Get());
+    CHECK_FALSE(primary->AddFallbackFont(fallback));
+    CHECK_FALSE(primary->AddFallbackFont(unloaded));
+    CHECK_FALSE(fallback->AddFallbackFont(primary));
     CHECK_FALSE(primary->ResolveGlyph(U'\u0416'));
 
     primary->ClearFallbackFonts();
     CHECK(primary->GetFallbackFonts().empty());
+    CHECK(primary->GetFallbackFontIds().empty());
+}
+
+TEST_CASE("Font fallback references discard empty and duplicate asset IDs", "[Renderer][Font][Fallback]")
+{
+    const UUID first(1, 2, 3, 4);
+    const UUID second(5, 6, 7, 8);
+    Font font;
+
+    font.SetFallbackFontIds({ UUID::EMPTY, first, first, second });
+
+    REQUIRE(font.GetFallbackFontIds().size() == 2);
+    CHECK(font.GetFallbackFontIds()[0] == first);
+    CHECK(font.GetFallbackFontIds()[1] == second);
+    CHECK(font.GetFallbackFonts().empty());
+
+    font.SetFallbackFontIds({ UUID(1, 0, 0, 0), UUID(2, 0, 0, 0), UUID(3, 0, 0, 0), UUID(4, 0, 0, 0), UUID(5, 0, 0, 0), UUID(6, 0, 0, 0),
+                              UUID(7, 0, 0, 0), UUID(8, 0, 0, 0), UUID(9, 0, 0, 0) });
+    CHECK(font.GetFallbackFontIds().size() == Font::MAX_FALLBACK_FONTS);
 }
 
 TEST_CASE("Font manager provides exact lookup and an optional default fallback", "[Renderer][Font][Manager]")
