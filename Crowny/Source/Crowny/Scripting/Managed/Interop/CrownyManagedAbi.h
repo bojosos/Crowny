@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 6u
+#define CW_MANAGED_ABI_VERSION 7u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -220,6 +220,18 @@ enum cw_managed_host_binding
     CW_MANAGED_BINDING_TEXT_SET_SORTING_LAYER = 265,
     CW_MANAGED_BINDING_TEXT_GET_ORDER_IN_LAYER = 266,
     CW_MANAGED_BINDING_TEXT_SET_ORDER_IN_LAYER = 267,
+    CW_MANAGED_BINDING_FONT_GET_IS_VALID = 300,
+    CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT = 301,
+    CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH = 302,
+    CW_MANAGED_BINDING_FONT_GET_ATLAS_WIDTH = 303,
+    CW_MANAGED_BINDING_FONT_GET_ATLAS_HEIGHT = 304,
+    CW_MANAGED_BINDING_FONT_GET_ATLAS_PIXEL_RANGE = 305,
+    CW_MANAGED_BINDING_FONT_HAS_GLYPH = 306,
+    CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO = 307,
+    CW_MANAGED_BINDING_FONT_GET_FALLBACK_COUNT = 308,
+    CW_MANAGED_BINDING_FONT_GET_FALLBACK = 309,
+    CW_MANAGED_BINDING_FONT_ADD_FALLBACK = 310,
+    CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS = 311,
     CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT = 130,
     CW_MANAGED_BINDING_MATH_MATRIX_INVERSE = 131,
     CW_MANAGED_BINDING_MATH_MATRIX_AFFINE_INVERSE = 132,
@@ -242,6 +254,27 @@ typedef struct cw_managed_uuid
 {
     uint8_t bytes[16];
 } cw_managed_uuid;
+
+typedef struct cw_managed_font_character_info
+{
+    cw_managed_uuid source_font;
+    uint32_t requested_code_point;
+    uint32_t resolved_code_point;
+    int32_t glyph_index;
+    uint32_t reserved;
+    double advance;
+    double plane_left;
+    double plane_bottom;
+    double plane_right;
+    double plane_top;
+    double atlas_left;
+    double atlas_bottom;
+    double atlas_right;
+    double atlas_top;
+    uint8_t whitespace;
+    uint8_t valid;
+    uint8_t reserved_tail[6];
+} cw_managed_font_character_info;
 
 typedef struct cw_managed_vec2
 {
@@ -482,6 +515,18 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_sorting_layer_fn)
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_is_valid_fn)(void* context, cw_managed_uuid font, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_glyph_count_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_tab_width_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_width_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_height_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_pixel_range_fn)(void* context, cw_managed_uuid font, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_has_glyph_fn)(void* context, cw_managed_uuid font, uint32_t codePoint, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_character_info_fn)(void* context, cw_managed_uuid font, uint32_t codePoint, uint8_t useFallbacks, cw_managed_font_character_info* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_fallback_count_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_fallback_fn)(void* context, cw_managed_uuid font, uint32_t index, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_add_fallback_fn)(void* context, cw_managed_uuid font, cw_managed_uuid value, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_clear_fallbacks_fn)(void* context, cw_managed_uuid font);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_determinant_fn)(void* context, const cw_managed_mat4* matrix, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_inverse_fn)(void* context, const cw_managed_mat4* matrix, cw_managed_mat4* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_affine_inverse_fn)(void* context, const cw_managed_mat4* matrix, cw_managed_mat4* result);
@@ -662,6 +707,18 @@ typedef struct cw_managed_host_api
     cw_managed_text_set_sorting_layer_fn text_set_sorting_layer;
     cw_managed_text_get_order_in_layer_fn text_get_order_in_layer;
     cw_managed_text_set_order_in_layer_fn text_set_order_in_layer;
+    cw_managed_font_get_is_valid_fn font_get_is_valid;
+    cw_managed_font_get_glyph_count_fn font_get_glyph_count;
+    cw_managed_font_get_tab_width_fn font_get_tab_width;
+    cw_managed_font_get_atlas_width_fn font_get_atlas_width;
+    cw_managed_font_get_atlas_height_fn font_get_atlas_height;
+    cw_managed_font_get_atlas_pixel_range_fn font_get_atlas_pixel_range;
+    cw_managed_font_has_glyph_fn font_has_glyph;
+    cw_managed_font_get_character_info_fn font_get_character_info;
+    cw_managed_font_get_fallback_count_fn font_get_fallback_count;
+    cw_managed_font_get_fallback_fn font_get_fallback;
+    cw_managed_font_add_fallback_fn font_add_fallback;
+    cw_managed_font_clear_fallbacks_fn font_clear_fallbacks;
     cw_managed_math_matrix_determinant_fn math_matrix_determinant;
     cw_managed_math_matrix_inverse_fn math_matrix_inverse;
     cw_managed_math_matrix_affine_inverse_fn math_matrix_affine_inverse;
@@ -830,6 +887,18 @@ typedef struct cw_managed_host_api
     X(TextSetSortingLayer, text_set_sorting_layer) \
     X(TextGetOrderInLayer, text_get_order_in_layer) \
     X(TextSetOrderInLayer, text_set_order_in_layer) \
+    X(FontGetIsValid, font_get_is_valid) \
+    X(FontGetGlyphCount, font_get_glyph_count) \
+    X(FontGetTabWidth, font_get_tab_width) \
+    X(FontGetAtlasWidth, font_get_atlas_width) \
+    X(FontGetAtlasHeight, font_get_atlas_height) \
+    X(FontGetAtlasPixelRange, font_get_atlas_pixel_range) \
+    X(FontHasGlyph, font_has_glyph) \
+    X(FontGetCharacterInfo, font_get_character_info) \
+    X(FontGetFallbackCount, font_get_fallback_count) \
+    X(FontGetFallback, font_get_fallback) \
+    X(FontAddFallback, font_add_fallback) \
+    X(FontClearFallbacks, font_clear_fallbacks) \
     X(MathMatrixDeterminant, math_matrix_determinant) \
     X(MathMatrixInverse, math_matrix_inverse) \
     X(MathMatrixAffineInverse, math_matrix_affine_inverse) \
@@ -876,6 +945,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_api_fn)(cw_managed_pro
 }
 
 static_assert(sizeof(cw_managed_uuid) == 16, "Managed UUID ABI layout changed.");
+static_assert(sizeof(cw_managed_font_character_info) == 112, "Managed font character ABI layout changed.");
 static_assert(sizeof(cw_managed_vec2) == 8, "Managed Vector2 ABI layout changed.");
 static_assert(sizeof(cw_managed_vec3) == 12, "Managed Vector3 ABI layout changed.");
 static_assert(sizeof(cw_managed_vec4) == 16, "Managed Vector4 ABI layout changed.");

@@ -45,6 +45,7 @@ NATIVE_TYPES = {
     "i32": "int32_t",
     "u32": "uint32_t",
     "uuid": "cw_managed_uuid",
+    "font_character_info": "cw_managed_font_character_info",
     "string": "cw_managed_string_view",
     "vec2": "cw_managed_vec2",
     "vec3": "cw_managed_vec3",
@@ -59,6 +60,7 @@ HOST_CS_TYPES = {
     "i32": "int",
     "u32": "uint",
     "uuid": "NativeUuid",
+    "font_character_info": "NativeFontCharacterInfo",
     "string": "NativeStringView",
     "vec2": "NativeVec2",
     "vec3": "NativeVec3",
@@ -73,6 +75,7 @@ SHARP_CS_TYPES = {
     "i32": "int",
     "u32": "uint",
     "uuid": "ManagedNativeUuid",
+    "font_character_info": "ManagedNativeFontCharacterInfo",
     "string": "ManagedNativeStringView",
     "vec2": "ManagedNativeVec2",
     "vec3": "ManagedNativeVec3",
@@ -205,6 +208,27 @@ typedef struct cw_managed_uuid
 {{
     uint8_t bytes[16];
 }} cw_managed_uuid;
+
+typedef struct cw_managed_font_character_info
+{{
+    cw_managed_uuid source_font;
+    uint32_t requested_code_point;
+    uint32_t resolved_code_point;
+    int32_t glyph_index;
+    uint32_t reserved;
+    double advance;
+    double plane_left;
+    double plane_bottom;
+    double plane_right;
+    double plane_top;
+    double atlas_left;
+    double atlas_bottom;
+    double atlas_right;
+    double atlas_top;
+    uint8_t whitespace;
+    uint8_t valid;
+    uint8_t reserved_tail[6];
+}} cw_managed_font_character_info;
 
 typedef struct cw_managed_vec2
 {{
@@ -345,6 +369,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_api_fn)(cw_managed_pro
 }}
 
 static_assert(sizeof(cw_managed_uuid) == 16, "Managed UUID ABI layout changed.");
+static_assert(sizeof(cw_managed_font_character_info) == 112, "Managed font character ABI layout changed.");
 static_assert(sizeof(cw_managed_vec2) == 8, "Managed Vector2 ABI layout changed.");
 static_assert(sizeof(cw_managed_vec3) == 12, "Managed Vector3 ABI layout changed.");
 static_assert(sizeof(cw_managed_vec4) == 16, "Managed Vector4 ABI layout changed.");
@@ -400,6 +425,33 @@ namespace Crowny.ManagedHost.Interop
     public unsafe struct NativeUuid
     {{
         public fixed byte Bytes[16];
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeFontCharacterInfo
+    {{
+        public NativeUuid SourceFont;
+        public uint RequestedCodePoint;
+        public uint ResolvedCodePoint;
+        public int GlyphIndex;
+        public uint Reserved;
+        public double Advance;
+        public double PlaneLeft;
+        public double PlaneBottom;
+        public double PlaneRight;
+        public double PlaneTop;
+        public double AtlasLeft;
+        public double AtlasBottom;
+        public double AtlasRight;
+        public double AtlasTop;
+        public byte Whitespace;
+        public byte Valid;
+        public byte ReservedTail0;
+        public byte ReservedTail1;
+        public byte ReservedTail2;
+        public byte ReservedTail3;
+        public byte ReservedTail4;
+        public byte ReservedTail5;
     }}
 
     [StructLayout(LayoutKind.Sequential)]
@@ -570,6 +622,33 @@ namespace Crowny
     internal unsafe struct ManagedNativeUuid
     {{
         internal fixed byte Bytes[16];
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativeFontCharacterInfo
+    {{
+        internal ManagedNativeUuid SourceFont;
+        internal uint RequestedCodePoint;
+        internal uint ResolvedCodePoint;
+        internal int GlyphIndex;
+        internal uint Reserved;
+        internal double Advance;
+        internal double PlaneLeft;
+        internal double PlaneBottom;
+        internal double PlaneRight;
+        internal double PlaneTop;
+        internal double AtlasLeft;
+        internal double AtlasBottom;
+        internal double AtlasRight;
+        internal double AtlasTop;
+        internal byte Whitespace;
+        internal byte Valid;
+        internal byte ReservedTail0;
+        internal byte ReservedTail1;
+        internal byte ReservedTail2;
+        internal byte ReservedTail3;
+        internal byte ReservedTail4;
+        internal byte ReservedTail5;
     }}
 
     [StructLayout(LayoutKind.Sequential)]

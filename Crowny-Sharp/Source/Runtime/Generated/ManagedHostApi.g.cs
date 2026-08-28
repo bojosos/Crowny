@@ -21,6 +21,33 @@ namespace Crowny
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativeFontCharacterInfo
+    {
+        internal ManagedNativeUuid SourceFont;
+        internal uint RequestedCodePoint;
+        internal uint ResolvedCodePoint;
+        internal int GlyphIndex;
+        internal uint Reserved;
+        internal double Advance;
+        internal double PlaneLeft;
+        internal double PlaneBottom;
+        internal double PlaneRight;
+        internal double PlaneTop;
+        internal double AtlasLeft;
+        internal double AtlasBottom;
+        internal double AtlasRight;
+        internal double AtlasTop;
+        internal byte Whitespace;
+        internal byte Valid;
+        internal byte ReservedTail0;
+        internal byte ReservedTail1;
+        internal byte ReservedTail2;
+        internal byte ReservedTail3;
+        internal byte ReservedTail4;
+        internal byte ReservedTail5;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal struct ManagedNativeVec2
     {
         internal float X;
@@ -235,6 +262,18 @@ namespace Crowny
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int, int> TextSetSortingLayer;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int*, int> TextGetOrderInLayer;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int, int> TextSetOrderInLayer;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, byte*, int> FontGetIsValid;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint*, int> FontGetGlyphCount;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint*, int> FontGetTabWidth;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint*, int> FontGetAtlasWidth;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint*, int> FontGetAtlasHeight;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, float*, int> FontGetAtlasPixelRange;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint, byte*, int> FontHasGlyph;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint, byte, ManagedNativeFontCharacterInfo*, int> FontGetCharacterInfo;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint*, int> FontGetFallbackCount;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, uint, ManagedNativeUuid*, int> FontGetFallback;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, ManagedNativeUuid, byte*, int> FontAddFallback;
+        internal delegate* unmanaged[Cdecl]<void*, ManagedNativeUuid, int> FontClearFallbacks;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeMatrix4*, float*, int> MathMatrixDeterminant;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeMatrix4*, ManagedNativeMatrix4*, int> MathMatrixInverse;
         internal delegate* unmanaged[Cdecl]<void*, ManagedNativeMatrix4*, ManagedNativeMatrix4*, int> MathMatrixAffineInverse;
