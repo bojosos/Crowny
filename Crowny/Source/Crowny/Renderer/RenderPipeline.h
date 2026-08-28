@@ -27,7 +27,23 @@ namespace Crowny
         uint32_t ObjectIDAttachment = NoAttachment;
     };
 
+    enum class DepthPrepassProgram : uint8_t
+    {
+        Static,
+        Animated,
+        StaticObjectID,
+        AnimatedObjectID
+    };
+
+    struct DepthPrepassProgramSelection
+    {
+        DepthPrepassProgram Primary = DepthPrepassProgram::Static;
+        DepthPrepassProgram Fallback = DepthPrepassProgram::Static;
+        bool HasFallback = false;
+    };
+
     DepthPrepassOutputLayout ResolveDepthPrepassOutputLayout(bool enableMotionVectors, bool enableObjectID);
+    DepthPrepassProgramSelection ResolveDepthPrepassProgram(DepthPrepassOutputMode outputMode, bool animated);
 
     struct RenderPipelineGraphDesc
     {
@@ -54,8 +70,6 @@ namespace Crowny
         uint32_t DrawBinCount = 0;
         uint32_t DrawBinLookupCapacity = 0;
         bool EnableGpuDrawBins = false;
-        bool EnableMotionVectors = true;
-        bool EnableObjectID = false;
         bool EnableTransparency = true;
         bool EnablePostProcessing = true;
     };

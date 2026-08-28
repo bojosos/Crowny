@@ -65,6 +65,14 @@ namespace Crowny
         return {};
     }
 
+    DepthPrepassProgramSelection ResolveDepthPrepassProgram(DepthPrepassOutputMode outputMode, bool animated)
+    {
+        const DepthPrepassProgram standard = animated ? DepthPrepassProgram::Animated : DepthPrepassProgram::Static;
+        if (outputMode == DepthPrepassOutputMode::ObjectID)
+            return { animated ? DepthPrepassProgram::AnimatedObjectID : DepthPrepassProgram::StaticObjectID, standard, true };
+        return { standard, standard, false };
+    }
+
     void RenderBlackboard::Set(StringView name, RenderGraphResourceHandle resource)
     {
         auto entry = m_Resources.find(name);
@@ -218,11 +226,11 @@ namespace Crowny
         output.CurrentHiZ = currentHiZ;
         output.HdrColor = graph.CreateTexture("HdrColor", Texture2D(width, height, TextureFormat::RGBA16F));
         output.FinalTarget = desc.OutputTarget;
-        output.DepthPrepassLayout = ResolveDepthPrepassOutputLayout(desc.EnableMotionVectors, desc.EnableObjectID);
+        output.DepthPrepassLayout = ResolveDepthPrepassOutputLayout(view.EnableMotionVectors, view.EnableObjectID);
 
         const RenderGraphResourceHandle velocity =
-          desc.EnableMotionVectors ? graph.CreateTexture("Velocity", Texture2D(width, height, TextureFormat::RG16F)) : RenderGraphResourceHandle{};
-        if (desc.EnableObjectID)
+          view.EnableMotionVectors ? graph.CreateTexture("Velocity", Texture2D(width, height, TextureFormat::RG16F)) : RenderGraphResourceHandle{};
+        if (view.EnableObjectID)
             output.ObjectID = graph.CreateTexture("ObjectID", Texture2D(width, height, TextureFormat::R32I));
 
         const RenderGraphResourceHandle shadowAtlas =
