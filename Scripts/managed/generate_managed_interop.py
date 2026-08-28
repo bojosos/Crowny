@@ -94,7 +94,7 @@ SHARP_API_TYPES = {
     "string": "string",
     "vec2": "Vector2",
     "vec3": "Vector3",
-    "vec4": "Vector4",
+    "vec4": "Color",
     "quat": "Quaternion",
     "mat4": "Matrix4",
 }
@@ -258,7 +258,7 @@ def sharp_native_parameter(parameter: dict) -> tuple[list[str], str]:
     if parameter_type == "vec3":
         return [f"            ManagedNativeVec3 {native_name} = new ManagedNativeVec3 {{ X = {name}.x, Y = {name}.y, Z = {name}.z }};"], f"&{native_name}"
     if parameter_type == "vec4":
-        return [f"            ManagedNativeVec4 {native_name} = new ManagedNativeVec4 {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
+        return [f"            ManagedNativeVec4 {native_name} = new ManagedNativeVec4 {{ X = {name}.r, Y = {name}.g, Z = {name}.b, W = {name}.a }};"], f"&{native_name}"
     if parameter_type == "quat":
         return [f"            ManagedNativeQuaternion {native_name} = new ManagedNativeQuaternion {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
     if parameter_type == "mat4":
@@ -282,7 +282,7 @@ def sharp_result_declaration(result_type: str) -> tuple[str, str]:
     if result_type == "vec3":
         return declaration, "new Vector3(result.X, result.Y, result.Z)"
     if result_type == "vec4":
-        return declaration, "new Vector4(result.X, result.Y, result.Z, result.W)"
+        return declaration, "new Color(result.X, result.Y, result.Z, result.W)"
     if result_type == "quat":
         return declaration, "new Quaternion(result.X, result.Y, result.Z, result.W)"
     if result_type == "mat4":

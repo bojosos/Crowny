@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 7u
+#define CW_MANAGED_ABI_VERSION 8u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -199,6 +199,20 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_button_up_
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_scroll_x_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_scroll_y_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_position_fn)(void* context, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_delta_fn)(void* context, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_is_gamepad_connected_fn)(void* context, uint32_t gamepad, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_down_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_up_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_axis_fn)(void* context, uint32_t gamepad, uint32_t code, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_down_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_up_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_axis_fn)(void* context, cw_managed_string_view actionName, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_vector_fn)(void* context, cw_managed_string_view actionName, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_enable_action_map_fn)(void* context, cw_managed_string_view mapName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_disable_action_map_fn)(void* context, cw_managed_string_view mapName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_clear_action_rebinds_fn)(void* context);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_delta_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_fixed_delta_time_fn)(void* context, float* result);
@@ -392,6 +406,20 @@ typedef struct cw_managed_host_api
     cw_managed_input_get_mouse_scroll_x_fn input_get_mouse_scroll_x;
     cw_managed_input_get_mouse_scroll_y_fn input_get_mouse_scroll_y;
     cw_managed_input_get_mouse_position_fn input_get_mouse_position;
+    cw_managed_input_get_mouse_delta_fn input_get_mouse_delta;
+    cw_managed_input_is_gamepad_connected_fn input_is_gamepad_connected;
+    cw_managed_input_get_gamepad_button_fn input_get_gamepad_button;
+    cw_managed_input_get_gamepad_button_down_fn input_get_gamepad_button_down;
+    cw_managed_input_get_gamepad_button_up_fn input_get_gamepad_button_up;
+    cw_managed_input_get_gamepad_axis_fn input_get_gamepad_axis;
+    cw_managed_input_get_action_fn input_get_action;
+    cw_managed_input_get_action_down_fn input_get_action_down;
+    cw_managed_input_get_action_up_fn input_get_action_up;
+    cw_managed_input_get_axis_fn input_get_axis;
+    cw_managed_input_get_action_vector_fn input_get_action_vector;
+    cw_managed_input_enable_action_map_fn input_enable_action_map;
+    cw_managed_input_disable_action_map_fn input_disable_action_map;
+    cw_managed_input_clear_action_rebinds_fn input_clear_action_rebinds;
     cw_managed_time_get_delta_time_fn time_get_delta_time;
     cw_managed_time_get_time_fn time_get_time;
     cw_managed_time_get_fixed_delta_time_fn time_get_fixed_delta_time;
@@ -575,6 +603,20 @@ typedef struct cw_managed_host_api
     X(InputGetMouseScrollX, input_get_mouse_scroll_x) \
     X(InputGetMouseScrollY, input_get_mouse_scroll_y) \
     X(InputGetMousePosition, input_get_mouse_position) \
+    X(InputGetMouseDelta, input_get_mouse_delta) \
+    X(InputIsGamepadConnected, input_is_gamepad_connected) \
+    X(InputGetGamepadButton, input_get_gamepad_button) \
+    X(InputGetGamepadButtonDown, input_get_gamepad_button_down) \
+    X(InputGetGamepadButtonUp, input_get_gamepad_button_up) \
+    X(InputGetGamepadAxis, input_get_gamepad_axis) \
+    X(InputGetAction, input_get_action) \
+    X(InputGetActionDown, input_get_action_down) \
+    X(InputGetActionUp, input_get_action_up) \
+    X(InputGetAxis, input_get_axis) \
+    X(InputGetActionVector, input_get_action_vector) \
+    X(InputEnableActionMap, input_enable_action_map) \
+    X(InputDisableActionMap, input_disable_action_map) \
+    X(InputClearActionRebinds, input_clear_action_rebinds) \
     X(TimeGetDeltaTime, time_get_delta_time) \
     X(TimeGetTime, time_get_time) \
     X(TimeGetFixedDeltaTime, time_get_fixed_delta_time) \

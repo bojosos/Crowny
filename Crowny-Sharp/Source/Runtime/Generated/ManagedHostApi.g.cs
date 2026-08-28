@@ -130,6 +130,20 @@ namespace Crowny
         internal IntPtr InputGetMouseScrollX;
         internal IntPtr InputGetMouseScrollY;
         internal IntPtr InputGetMousePosition;
+        internal IntPtr InputGetMouseDelta;
+        internal IntPtr InputIsGamepadConnected;
+        internal IntPtr InputGetGamepadButton;
+        internal IntPtr InputGetGamepadButtonDown;
+        internal IntPtr InputGetGamepadButtonUp;
+        internal IntPtr InputGetGamepadAxis;
+        internal IntPtr InputGetAction;
+        internal IntPtr InputGetActionDown;
+        internal IntPtr InputGetActionUp;
+        internal IntPtr InputGetAxis;
+        internal IntPtr InputGetActionVector;
+        internal IntPtr InputEnableActionMap;
+        internal IntPtr InputDisableActionMap;
+        internal IntPtr InputClearActionRebinds;
         internal IntPtr TimeGetDeltaTime;
         internal IntPtr TimeGetTime;
         internal IntPtr TimeGetFixedDeltaTime;
@@ -297,7 +311,7 @@ namespace Crowny
                 api = value;
                 return;
             }
-            if (value.AbiVersion != 7 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
+            if (value.AbiVersion != 8 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
                 throw new InvalidOperationException("The native host uses an incompatible managed scripting ABI.");
             bool complete =
                 value.GetEntityName != IntPtr.Zero &&
@@ -337,6 +351,20 @@ namespace Crowny
                    value.InputGetMouseScrollX != IntPtr.Zero &&
                    value.InputGetMouseScrollY != IntPtr.Zero &&
                    value.InputGetMousePosition != IntPtr.Zero &&
+                   value.InputGetMouseDelta != IntPtr.Zero &&
+                   value.InputIsGamepadConnected != IntPtr.Zero &&
+                   value.InputGetGamepadButton != IntPtr.Zero &&
+                   value.InputGetGamepadButtonDown != IntPtr.Zero &&
+                   value.InputGetGamepadButtonUp != IntPtr.Zero &&
+                   value.InputGetGamepadAxis != IntPtr.Zero &&
+                   value.InputGetAction != IntPtr.Zero &&
+                   value.InputGetActionDown != IntPtr.Zero &&
+                   value.InputGetActionUp != IntPtr.Zero &&
+                   value.InputGetAxis != IntPtr.Zero &&
+                   value.InputGetActionVector != IntPtr.Zero &&
+                   value.InputEnableActionMap != IntPtr.Zero &&
+                   value.InputDisableActionMap != IntPtr.Zero &&
+                   value.InputClearActionRebinds != IntPtr.Zero &&
                    value.TimeGetDeltaTime != IntPtr.Zero &&
                    value.TimeGetTime != IntPtr.Zero &&
                    value.TimeGetFixedDeltaTime != IntPtr.Zero &&
@@ -525,6 +553,20 @@ namespace Crowny
             InputGetMouseScrollXCallback = (InputGetMouseScrollXDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseScrollX, typeof(InputGetMouseScrollXDelegate));
             InputGetMouseScrollYCallback = (InputGetMouseScrollYDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseScrollY, typeof(InputGetMouseScrollYDelegate));
             InputGetMousePositionCallback = (InputGetMousePositionDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMousePosition, typeof(InputGetMousePositionDelegate));
+            InputGetMouseDeltaCallback = (InputGetMouseDeltaDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetMouseDelta, typeof(InputGetMouseDeltaDelegate));
+            InputIsGamepadConnectedCallback = (InputIsGamepadConnectedDelegate)Marshal.GetDelegateForFunctionPointer(value.InputIsGamepadConnected, typeof(InputIsGamepadConnectedDelegate));
+            InputGetGamepadButtonCallback = (InputGetGamepadButtonDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetGamepadButton, typeof(InputGetGamepadButtonDelegate));
+            InputGetGamepadButtonDownCallback = (InputGetGamepadButtonDownDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetGamepadButtonDown, typeof(InputGetGamepadButtonDownDelegate));
+            InputGetGamepadButtonUpCallback = (InputGetGamepadButtonUpDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetGamepadButtonUp, typeof(InputGetGamepadButtonUpDelegate));
+            InputGetGamepadAxisCallback = (InputGetGamepadAxisDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetGamepadAxis, typeof(InputGetGamepadAxisDelegate));
+            InputGetActionCallback = (InputGetActionDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetAction, typeof(InputGetActionDelegate));
+            InputGetActionDownCallback = (InputGetActionDownDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetActionDown, typeof(InputGetActionDownDelegate));
+            InputGetActionUpCallback = (InputGetActionUpDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetActionUp, typeof(InputGetActionUpDelegate));
+            InputGetAxisCallback = (InputGetAxisDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetAxis, typeof(InputGetAxisDelegate));
+            InputGetActionVectorCallback = (InputGetActionVectorDelegate)Marshal.GetDelegateForFunctionPointer(value.InputGetActionVector, typeof(InputGetActionVectorDelegate));
+            InputEnableActionMapCallback = (InputEnableActionMapDelegate)Marshal.GetDelegateForFunctionPointer(value.InputEnableActionMap, typeof(InputEnableActionMapDelegate));
+            InputDisableActionMapCallback = (InputDisableActionMapDelegate)Marshal.GetDelegateForFunctionPointer(value.InputDisableActionMap, typeof(InputDisableActionMapDelegate));
+            InputClearActionRebindsCallback = (InputClearActionRebindsDelegate)Marshal.GetDelegateForFunctionPointer(value.InputClearActionRebinds, typeof(InputClearActionRebindsDelegate));
             TimeGetDeltaTimeCallback = (TimeGetDeltaTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetDeltaTime, typeof(TimeGetDeltaTimeDelegate));
             TimeGetTimeCallback = (TimeGetTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetTime, typeof(TimeGetTimeDelegate));
             TimeGetFixedDeltaTimeCallback = (TimeGetFixedDeltaTimeDelegate)Marshal.GetDelegateForFunctionPointer(value.TimeGetFixedDeltaTime, typeof(TimeGetFixedDeltaTimeDelegate));
@@ -788,6 +830,48 @@ namespace Crowny
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int InputGetMousePositionDelegate(void* context, ManagedNativeVec2* result);
         private static InputGetMousePositionDelegate InputGetMousePositionCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetMouseDeltaDelegate(void* context, ManagedNativeVec2* result);
+        private static InputGetMouseDeltaDelegate InputGetMouseDeltaCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputIsGamepadConnectedDelegate(void* context, uint gamepad, byte* result);
+        private static InputIsGamepadConnectedDelegate InputIsGamepadConnectedCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetGamepadButtonDelegate(void* context, uint gamepad, uint code, byte* result);
+        private static InputGetGamepadButtonDelegate InputGetGamepadButtonCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetGamepadButtonDownDelegate(void* context, uint gamepad, uint code, byte* result);
+        private static InputGetGamepadButtonDownDelegate InputGetGamepadButtonDownCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetGamepadButtonUpDelegate(void* context, uint gamepad, uint code, byte* result);
+        private static InputGetGamepadButtonUpDelegate InputGetGamepadButtonUpCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetGamepadAxisDelegate(void* context, uint gamepad, uint code, float* result);
+        private static InputGetGamepadAxisDelegate InputGetGamepadAxisCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetActionDelegate(void* context, ManagedNativeStringView actionName, byte* result);
+        private static InputGetActionDelegate InputGetActionCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetActionDownDelegate(void* context, ManagedNativeStringView actionName, byte* result);
+        private static InputGetActionDownDelegate InputGetActionDownCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetActionUpDelegate(void* context, ManagedNativeStringView actionName, byte* result);
+        private static InputGetActionUpDelegate InputGetActionUpCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetAxisDelegate(void* context, ManagedNativeStringView actionName, float* result);
+        private static InputGetAxisDelegate InputGetAxisCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputGetActionVectorDelegate(void* context, ManagedNativeStringView actionName, ManagedNativeVec2* result);
+        private static InputGetActionVectorDelegate InputGetActionVectorCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputEnableActionMapDelegate(void* context, ManagedNativeStringView mapName, byte* result);
+        private static InputEnableActionMapDelegate InputEnableActionMapCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputDisableActionMapDelegate(void* context, ManagedNativeStringView mapName, byte* result);
+        private static InputDisableActionMapDelegate InputDisableActionMapCallback;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int InputClearActionRebindsDelegate(void* context);
+        private static InputClearActionRebindsDelegate InputClearActionRebindsCallback;
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int TimeGetDeltaTimeDelegate(void* context, float* result);
         private static TimeGetDeltaTimeDelegate TimeGetDeltaTimeCallback;
@@ -1273,6 +1357,20 @@ namespace Crowny
         internal static int InputGetMouseScrollX(float* result) => InputGetMouseScrollXCallback(api.Context.ToPointer(), result);
         internal static int InputGetMouseScrollY(float* result) => InputGetMouseScrollYCallback(api.Context.ToPointer(), result);
         internal static int InputGetMousePosition(ManagedNativeVec2* result) => InputGetMousePositionCallback(api.Context.ToPointer(), result);
+        internal static int InputGetMouseDelta(ManagedNativeVec2* result) => InputGetMouseDeltaCallback(api.Context.ToPointer(), result);
+        internal static int InputIsGamepadConnected(uint gamepad, byte* result) => InputIsGamepadConnectedCallback(api.Context.ToPointer(), gamepad, result);
+        internal static int InputGetGamepadButton(uint gamepad, uint code, byte* result) => InputGetGamepadButtonCallback(api.Context.ToPointer(), gamepad, code, result);
+        internal static int InputGetGamepadButtonDown(uint gamepad, uint code, byte* result) => InputGetGamepadButtonDownCallback(api.Context.ToPointer(), gamepad, code, result);
+        internal static int InputGetGamepadButtonUp(uint gamepad, uint code, byte* result) => InputGetGamepadButtonUpCallback(api.Context.ToPointer(), gamepad, code, result);
+        internal static int InputGetGamepadAxis(uint gamepad, uint code, float* result) => InputGetGamepadAxisCallback(api.Context.ToPointer(), gamepad, code, result);
+        internal static int InputGetAction(ManagedNativeStringView actionName, byte* result) => InputGetActionCallback(api.Context.ToPointer(), actionName, result);
+        internal static int InputGetActionDown(ManagedNativeStringView actionName, byte* result) => InputGetActionDownCallback(api.Context.ToPointer(), actionName, result);
+        internal static int InputGetActionUp(ManagedNativeStringView actionName, byte* result) => InputGetActionUpCallback(api.Context.ToPointer(), actionName, result);
+        internal static int InputGetAxis(ManagedNativeStringView actionName, float* result) => InputGetAxisCallback(api.Context.ToPointer(), actionName, result);
+        internal static int InputGetActionVector(ManagedNativeStringView actionName, ManagedNativeVec2* result) => InputGetActionVectorCallback(api.Context.ToPointer(), actionName, result);
+        internal static int InputEnableActionMap(ManagedNativeStringView mapName, byte* result) => InputEnableActionMapCallback(api.Context.ToPointer(), mapName, result);
+        internal static int InputDisableActionMap(ManagedNativeStringView mapName, byte* result) => InputDisableActionMapCallback(api.Context.ToPointer(), mapName, result);
+        internal static int InputClearActionRebinds() => InputClearActionRebindsCallback(api.Context.ToPointer());
         internal static int TimeGetDeltaTime(float* result) => TimeGetDeltaTimeCallback(api.Context.ToPointer(), result);
         internal static int TimeGetTime(float* result) => TimeGetTimeCallback(api.Context.ToPointer(), result);
         internal static int TimeGetFixedDeltaTime(float* result) => TimeGetFixedDeltaTimeCallback(api.Context.ToPointer(), result);
@@ -1727,6 +1825,151 @@ namespace Crowny
             ManagedNativeVec2 result = default;
             EnsureStatus(ManagedHostTransport.InputGetMousePosition(&result), "InputGetMousePosition");
             return new Vector2(result.X, result.Y);
+        }
+
+        internal static Vector2 InputGetMouseDelta()
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 result = default;
+            EnsureStatus(ManagedHostTransport.InputGetMouseDelta(&result), "InputGetMouseDelta");
+            return new Vector2(result.X, result.Y);
+        }
+
+        internal static bool InputIsGamepadConnected(uint gamepad)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.InputIsGamepadConnected(gamepad, &result), "InputIsGamepadConnected");
+            return result != 0;
+        }
+
+        internal static bool InputGetGamepadButton(uint gamepad, uint code)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.InputGetGamepadButton(gamepad, code, &result), "InputGetGamepadButton");
+            return result != 0;
+        }
+
+        internal static bool InputGetGamepadButtonDown(uint gamepad, uint code)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.InputGetGamepadButtonDown(gamepad, code, &result), "InputGetGamepadButtonDown");
+            return result != 0;
+        }
+
+        internal static bool InputGetGamepadButtonUp(uint gamepad, uint code)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.InputGetGamepadButtonUp(gamepad, code, &result), "InputGetGamepadButtonUp");
+            return result != 0;
+        }
+
+        internal static float InputGetGamepadAxis(uint gamepad, uint code)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.InputGetGamepadAxis(gamepad, code, &result), "InputGetGamepadAxis");
+            return result;
+        }
+
+        internal static bool InputGetAction(string actionName)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetAction(nativeActionName, &result), "InputGetAction");
+            }
+            return result != 0;
+        }
+
+        internal static bool InputGetActionDown(string actionName)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetActionDown(nativeActionName, &result), "InputGetActionDown");
+            }
+            return result != 0;
+        }
+
+        internal static bool InputGetActionUp(string actionName)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetActionUp(nativeActionName, &result), "InputGetActionUp");
+            }
+            return result != 0;
+        }
+
+        internal static float InputGetAxis(string actionName)
+        {
+            EnsureHostBindings();
+            float result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetAxis(nativeActionName, &result), "InputGetAxis");
+            }
+            return result;
+        }
+
+        internal static Vector2 InputGetActionVector(string actionName)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetActionVector(nativeActionName, &result), "InputGetActionVector");
+            }
+            return new Vector2(result.X, result.Y);
+        }
+
+        internal static bool InputEnableActionMap(string mapName)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedMapName = Encoding.UTF8.GetBytes(mapName ?? string.Empty);
+            fixed (byte* mapNameBytes = encodedMapName)
+            {
+                ManagedNativeStringView nativeMapName = new ManagedNativeStringView(mapNameBytes, (uint)encodedMapName.Length);
+                EnsureStatus(ManagedHostTransport.InputEnableActionMap(nativeMapName, &result), "InputEnableActionMap");
+            }
+            return result != 0;
+        }
+
+        internal static bool InputDisableActionMap(string mapName)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedMapName = Encoding.UTF8.GetBytes(mapName ?? string.Empty);
+            fixed (byte* mapNameBytes = encodedMapName)
+            {
+                ManagedNativeStringView nativeMapName = new ManagedNativeStringView(mapNameBytes, (uint)encodedMapName.Length);
+                EnsureStatus(ManagedHostTransport.InputDisableActionMap(nativeMapName, &result), "InputDisableActionMap");
+            }
+            return result != 0;
+        }
+
+        internal static void InputClearActionRebinds()
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.InputClearActionRebinds(), "InputClearActionRebinds");
         }
 
         internal static float TimeGetDeltaTime()
@@ -2225,18 +2468,18 @@ namespace Crowny
             EnsureStatus(ManagedHostTransport.TextSetFont(EncodeUuid(entity), EncodeUuid(value)), "TextSetFont");
         }
 
-        internal static Vector4 TextGetColor(UUID entity)
+        internal static Color TextGetColor(UUID entity)
         {
             EnsureHostBindings();
             ManagedNativeVec4 result = default;
             EnsureStatus(ManagedHostTransport.TextGetColor(EncodeUuid(entity), &result), "TextGetColor");
-            return new Vector4(result.X, result.Y, result.Z, result.W);
+            return new Color(result.X, result.Y, result.Z, result.W);
         }
 
-        internal static void TextSetColor(UUID entity, Vector4 value)
+        internal static void TextSetColor(UUID entity, Color value)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.x, Y = value.y, Z = value.z, W = value.w };
+            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.r, Y = value.g, Z = value.b, W = value.a };
             EnsureStatus(ManagedHostTransport.TextSetColor(EncodeUuid(entity), &nativeValue), "TextSetColor");
         }
 
@@ -2423,18 +2666,18 @@ namespace Crowny
             EnsureStatus(ManagedHostTransport.TextSetFontStyle(EncodeUuid(entity), value), "TextSetFontStyle");
         }
 
-        internal static Vector4 TextGetOutlineColor(UUID entity)
+        internal static Color TextGetOutlineColor(UUID entity)
         {
             EnsureHostBindings();
             ManagedNativeVec4 result = default;
             EnsureStatus(ManagedHostTransport.TextGetOutlineColor(EncodeUuid(entity), &result), "TextGetOutlineColor");
-            return new Vector4(result.X, result.Y, result.Z, result.W);
+            return new Color(result.X, result.Y, result.Z, result.W);
         }
 
-        internal static void TextSetOutlineColor(UUID entity, Vector4 value)
+        internal static void TextSetOutlineColor(UUID entity, Color value)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.x, Y = value.y, Z = value.z, W = value.w };
+            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.r, Y = value.g, Z = value.b, W = value.a };
             EnsureStatus(ManagedHostTransport.TextSetOutlineColor(EncodeUuid(entity), &nativeValue), "TextSetOutlineColor");
         }
 
@@ -2452,18 +2695,18 @@ namespace Crowny
             EnsureStatus(ManagedHostTransport.TextSetOutlineWidth(EncodeUuid(entity), value), "TextSetOutlineWidth");
         }
 
-        internal static Vector4 TextGetShadowColor(UUID entity)
+        internal static Color TextGetShadowColor(UUID entity)
         {
             EnsureHostBindings();
             ManagedNativeVec4 result = default;
             EnsureStatus(ManagedHostTransport.TextGetShadowColor(EncodeUuid(entity), &result), "TextGetShadowColor");
-            return new Vector4(result.X, result.Y, result.Z, result.W);
+            return new Color(result.X, result.Y, result.Z, result.W);
         }
 
-        internal static void TextSetShadowColor(UUID entity, Vector4 value)
+        internal static void TextSetShadowColor(UUID entity, Color value)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.x, Y = value.y, Z = value.z, W = value.w };
+            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.r, Y = value.g, Z = value.b, W = value.a };
             EnsureStatus(ManagedHostTransport.TextSetShadowColor(EncodeUuid(entity), &nativeValue), "TextSetShadowColor");
         }
 
@@ -2580,18 +2823,18 @@ namespace Crowny
             EnsureStatus(ManagedHostTransport.TextSetUseCustomDecorationColor(EncodeUuid(entity), value ? (byte)1 : (byte)0), "TextSetUseCustomDecorationColor");
         }
 
-        internal static Vector4 TextGetDecorationColor(UUID entity)
+        internal static Color TextGetDecorationColor(UUID entity)
         {
             EnsureHostBindings();
             ManagedNativeVec4 result = default;
             EnsureStatus(ManagedHostTransport.TextGetDecorationColor(EncodeUuid(entity), &result), "TextGetDecorationColor");
-            return new Vector4(result.X, result.Y, result.Z, result.W);
+            return new Color(result.X, result.Y, result.Z, result.W);
         }
 
-        internal static void TextSetDecorationColor(UUID entity, Vector4 value)
+        internal static void TextSetDecorationColor(UUID entity, Color value)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.x, Y = value.y, Z = value.z, W = value.w };
+            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.r, Y = value.g, Z = value.b, W = value.a };
             EnsureStatus(ManagedHostTransport.TextSetDecorationColor(EncodeUuid(entity), &nativeValue), "TextSetDecorationColor");
         }
 
