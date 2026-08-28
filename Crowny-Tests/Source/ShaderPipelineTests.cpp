@@ -2,6 +2,7 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/BuiltInResourcePack.h"
 #include "Crowny/Common/Constants.h"
+#include "Crowny/Common/UUID.h"
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/Renderer/ShaderVariation.h"
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
@@ -18,6 +19,24 @@ using namespace Crowny;
 
 namespace
 {
+    class ScopedTemporaryDirectory
+    {
+    public:
+        explicit ScopedTemporaryDirectory(StringView prefix)
+          : Root(std::filesystem::temp_directory_path() /
+                 (String(prefix) + UuidGenerator::Generate().ToString()))
+        {
+        }
+
+        ~ScopedTemporaryDirectory()
+        {
+            std::error_code error;
+            std::filesystem::remove_all(Root, error);
+        }
+
+        Path Root;
+    };
+
     class ScopedAssetManagerModule
     {
     public:
@@ -287,9 +306,11 @@ void main() {}
 
 TEST_CASE("Shader includes expand relative files and reject cycles", "[Shader]")
 {
-    const Path directory = std::filesystem::temp_directory_path() / "crowny_shader_include_tests";
+    const ScopedTemporaryDirectory temporary("crowny_shader_include_tests_");
+    const Path& directory = temporary.Root;
     std::error_code error;
     std::filesystem::create_directories(directory, error);
+    REQUIRE_FALSE(error);
     const Path common = directory / "common.glslinc";
     const Path nested = directory / "nested.glslinc";
     const Path shader = directory / "shader.glsl";
@@ -340,16 +361,15 @@ TEST_CASE("Shader includes expand relative files and reject cycles", "[Shader]")
     CHECK(std::any_of(cyclic.Diagnostics.begin(), cyclic.Diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
         return diagnostic.Message.find("cycle") != String::npos;
     }));
-
-    std::filesystem::remove_all(directory, error);
 }
 
 TEST_CASE("Shader compiler cache invalidates stages that consume a changed include", "[Shader]")
 {
-    const Path directory = std::filesystem::temp_directory_path() / "crowny_shader_include_cache_tests";
+    const ScopedTemporaryDirectory temporary("crowny_shader_include_cache_tests_");
+    const Path& directory = temporary.Root;
     std::error_code error;
-    std::filesystem::remove_all(directory, error);
     std::filesystem::create_directories(directory, error);
+    REQUIRE_FALSE(error);
     const Path include = directory / "color.glslinc";
     const Path shader = directory / "shader.glsl";
     {
@@ -389,14 +409,12 @@ void main() { outColor = SharedColor(); }
     const ShaderCompilerCacheStats afterChanged = ShaderCompiler::GetCacheStats();
     CHECK(afterChanged.Misses == afterUnchanged.Misses + 1);
     CHECK(afterChanged.Hits == afterUnchanged.Hits + 1);
-
-    std::filesystem::remove_all(directory, error);
 }
 
 TEST_CASE("Built-in shader freshness follows transitive include content", "[Shader][Assets]")
 {
-    const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
-    const Path directory = std::filesystem::temp_directory_path() / ("crowny_builtin_shader_" + std::to_string(unique));
+    const ScopedTemporaryDirectory temporary("crowny_builtin_shader_");
+    const Path& directory = temporary.Root;
     std::error_code error;
     std::filesystem::create_directories(directory, error);
     REQUIRE_FALSE(error);
@@ -480,8 +498,6 @@ void main() { outColor = SharedColor(); }
     AssetFileHeader preservedHeader;
     REQUIRE(PeekAssetHeader(asset, preservedHeader));
     CHECK(preservedHeader.SourceContentHash == changedHeader.SourceContentHash);
-
-    std::filesystem::remove_all(directory, error);
 }
 
 TEST_CASE("Built-in pack contains current material shader assets", "[Shader][Assets]")
@@ -490,8 +506,8 @@ TEST_CASE("Built-in pack contains current material shader assets", "[Shader][Ass
     const Path sourcePack = repositoryRoot / "Crowny-Editor/Resources/Builtin.cwpack";
     REQUIRE(std::filesystem::is_regular_file(sourcePack));
 
-    const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
-    const Path directory = std::filesystem::temp_directory_path() / ("crowny_builtin_pack_" + std::to_string(unique));
+    const ScopedTemporaryDirectory temporary("crowny_builtin_pack_");
+    const Path& directory = temporary.Root;
     const Path copiedPack = directory / "Resources/Builtin.cwpack";
     std::error_code error;
     std::filesystem::create_directories(copiedPack.parent_path(), error);
@@ -522,8 +538,6 @@ TEST_CASE("Built-in pack contains current material shader assets", "[Shader][Ass
         const Vector<uint8_t> looseBytes((std::istreambuf_iterator<char>(looseStream)), std::istreambuf_iterator<char>());
         CHECK(packedBytes == looseBytes);
     }
-
-    std::filesystem::remove_all(directory, error);
 }
 
 TEST_CASE("Shader variation expansion has a fixed upper bound", "[Shader]")

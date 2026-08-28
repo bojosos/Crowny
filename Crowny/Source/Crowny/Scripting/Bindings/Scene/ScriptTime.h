@@ -2,6 +2,8 @@
 
 #include "Crowny/Scripting/ScriptObject.h"
 
+#include <cstdint>
+
 namespace Crowny
 {
     class ScriptTime : public ScriptObject<ScriptTime>
@@ -17,6 +19,6 @@ namespace Crowny
         static float Internal_GetFixedDeltaTime();
         static float Internal_GetSmoothDeltaTime();
         static float Internal_RealtimeSinceStartup();
-        static float Internal_GetFrameCount();
+        static uint32_t Internal_GetFrameCount();
     };
 } // namespace Crowny

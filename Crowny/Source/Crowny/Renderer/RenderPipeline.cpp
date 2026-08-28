@@ -152,12 +152,11 @@ namespace Crowny
         const uint32_t height = std::max(desc.Height, 1u);
         const ClusteredLightGridDesc clusterDesc = ClusteredLightBuilder::ResolveDesc(m_Settings, width, height);
         const uint64_t clusterCount = ClusteredLightBuilder::GetClusterCount(clusterDesc);
-        auto executePass = [&](StringView name) -> RenderGraph::ExecuteCallback {
+        auto executePass = [&](RenderPipelinePass pass) -> RenderGraph::ExecuteCallback {
             if (!desc.PassExecutor)
                 return {};
-            const String passName(name);
-            const auto executor = desc.PassExecutor;
-            return [executor, passName](RenderGraphContext& context) { executor(passName, context); };
+            IRenderPipelinePassExecutor* executor = desc.PassExecutor;
+            return [executor, pass](RenderGraphContext& context) { executor->Execute(pass, context); };
         };
 
         const RenderGraphResourceHandle instances =
@@ -310,7 +309,7 @@ namespace Crowny
                   builder.DependsOn(desc.Prerequisite);
               builder.Write(visibilityCounters, RenderGraphResourceState::TransferWrite);
           },
-          executePass("ClearVisibilityCounters"));
+          executePass(RenderPipelinePass::ClearVisibilityCounters));
         const RenderGraphPassHandle instanceCulling = graph.AddPass(
           "CullInstancesAndSelectLod", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
@@ -323,7 +322,7 @@ namespace Crowny
               builder.Write(earlyCommands);
               builder.Write(visibilityCounters);
           },
-          executePass("CullInstancesAndSelectLod"));
+          executePass(RenderPipelinePass::CullInstancesAndSelectLod));
         const RenderGraphPassHandle shadowCulling = graph.AddPass(
           "CullShadowViews", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
@@ -332,7 +331,7 @@ namespace Crowny
               builder.Read(visibleInstances);
               builder.Read(earlyCommands, RenderGraphResourceState::IndirectArgument);
           },
-          executePass("CullShadowViews"));
+          executePass(RenderPipelinePass::CullShadowViews));
         graph.AddPass(
           "RenderScheduledShadows", RenderGraphQueue::Graphics,
           [&](RenderGraphPassBuilder& builder) {
@@ -359,7 +358,7 @@ namespace Crowny
               if (output.ObjectID)
                   builder.Write(output.ObjectID, RenderGraphResourceState::ColorAttachment);
           },
-          executePass("ReverseZDepthVelocity"));
+          executePass(RenderPipelinePass::ReverseZDepthVelocity));
 
         AddFeaturePasses(RenderGraphInsertionPoint::AfterDepth, graph, view, blackboard);
 
@@ -369,11 +368,11 @@ namespace Crowny
               builder.Read(output.SceneDepth, RenderGraphResourceState::DepthRead);
               builder.Write(currentHiZ);
           },
-          executePass("BuildCurrentHiZ"));
+          executePass(RenderPipelinePass::BuildCurrentHiZ));
         const RenderGraphPassHandle clearMeshletCandidates = graph.AddPass(
           "ClearMeshletCandidateCounters", RenderGraphQueue::Transfer,
           [&](RenderGraphPassBuilder& builder) { builder.Write(meshletCandidateCounters, RenderGraphResourceState::TransferWrite); },
-          executePass("ClearMeshletCandidateCounters"));
+          executePass(RenderPipelinePass::ClearMeshletCandidateCounters));
         graph.AddPass(
           "ExpandVisibleMeshlets", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
@@ -386,15 +385,15 @@ namespace Crowny
               builder.Write(meshletCandidates);
               builder.Write(meshletCandidateCounters);
           },
-          executePass("ExpandVisibleMeshlets"));
+          executePass(RenderPipelinePass::ExpandVisibleMeshlets));
         const RenderGraphPassHandle clearDrawCounters = graph.AddPass(
           "ClearDrawCounters", RenderGraphQueue::Transfer,
           [&](RenderGraphPassBuilder& builder) { builder.Write(drawCounters, RenderGraphResourceState::TransferWrite); },
-          executePass("ClearDrawCounters"));
+          executePass(RenderPipelinePass::ClearDrawCounters));
         const RenderGraphPassHandle clearDrawBinCounts = graph.AddPass(
           "ClearIndirectDrawCounts", RenderGraphQueue::Transfer,
           [&](RenderGraphPassBuilder& builder) { builder.Write(drawCounts, RenderGraphResourceState::TransferWrite); },
-          executePass("ClearIndirectDrawCounts"));
+          executePass(RenderPipelinePass::ClearIndirectDrawCounts));
         graph.AddPass(
           "LateOcclusionAndMeshletCulling", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
@@ -409,7 +408,7 @@ namespace Crowny
               builder.Write(drawSortKeys);
               builder.Write(drawCounters);
           },
-          executePass("LateOcclusionAndMeshletCulling"));
+          executePass(RenderPipelinePass::LateOcclusionAndMeshletCulling));
         graph.AddPass(
           "BinAndCompactIndirectDraws", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
@@ -424,14 +423,14 @@ namespace Crowny
               builder.Write(visibleDrawInstances);
               builder.ReadWrite(drawCounts);
           },
-          executePass("BinAndCompactIndirectDraws"));
+          executePass(RenderPipelinePass::BinAndCompactIndirectDraws));
         graph.AddPass(
           "ClearClusterLightCounters", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
               builder.Write(clusterCounters);
               builder.Write(directionalLightIndices);
           },
-          executePass("ClearClusterLightCounters"));
+          executePass(RenderPipelinePass::ClearClusterLightCounters));
         graph.AddPass(
           "BuildClusteredLightLists", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
@@ -442,7 +441,7 @@ namespace Crowny
               builder.Write(directionalLightIndices);
               builder.ReadWrite(clusterCounters);
           },
-          executePass("BuildClusteredLightLists"));
+          executePass(RenderPipelinePass::BuildClusteredLightLists));
         if (ambientOcclusion)
         {
             graph.AddPass(
@@ -452,7 +451,7 @@ namespace Crowny
                   builder.Read(currentHiZ);
                   builder.Write(ambientOcclusion);
               },
-              executePass("GTAO"));
+              executePass(RenderPipelinePass::Gtao));
         }
 
         auto readSharedLighting = [&](RenderGraphPassBuilder& builder) {
@@ -511,7 +510,7 @@ namespace Crowny
                   if (output.ObjectID)
                       builder.ReadWrite(output.ObjectID, RenderGraphResourceState::ColorAttachmentReadWrite);
               },
-              executePass("DeferredGBuffer"));
+              executePass(RenderPipelinePass::DeferredGBuffer));
             graph.AddPass(
               "DeferredPlusLighting8x8", RenderGraphQueue::Compute,
               [&](RenderGraphPassBuilder& builder) {
@@ -534,7 +533,7 @@ namespace Crowny
                       builder.Read(ambientOcclusion);
                   builder.Write(output.HdrColor);
               },
-              executePass("DeferredPlusLighting8x8"));
+              executePass(RenderPipelinePass::DeferredPlusLighting));
         }
         else
         {
@@ -548,7 +547,7 @@ namespace Crowny
                   if (output.ObjectID)
                       builder.ReadWrite(output.ObjectID, RenderGraphResourceState::ColorAttachmentReadWrite);
               },
-              executePass("ForwardPlusOpaque"));
+              executePass(RenderPipelinePass::ForwardPlusOpaque));
         }
 
         graph.AddPass(
@@ -557,7 +556,7 @@ namespace Crowny
               builder.Read(output.SceneDepth, RenderGraphResourceState::DepthRead);
               builder.Write(output.HdrColor, RenderGraphResourceState::ColorAttachmentReadWrite);
           },
-          desc.CompatibilityRenderer ? desc.CompatibilityRenderer : executePass("SkyAndForwardOnlyOpaque"));
+          desc.CompatibilityRenderer ? desc.CompatibilityRenderer : executePass(RenderPipelinePass::SkyAndForwardOnlyOpaque));
         if (m_Settings.EnableToonOutlines)
         {
             graph.AddPass(
@@ -570,7 +569,7 @@ namespace Crowny
                       builder.Read(blackboard.Get("GBufferNormalRoughMetal"));
                   builder.ReadWrite(output.HdrColor);
               },
-              executePass("ToonOutlines"));
+              executePass(RenderPipelinePass::ToonOutlines));
         }
         AddFeaturePasses(RenderGraphInsertionPoint::AfterOpaque, graph, view, blackboard);
         AddFeaturePasses(RenderGraphInsertionPoint::BeforeTransparency, graph, view, blackboard);
@@ -599,7 +598,7 @@ namespace Crowny
                   builder.Read(shadowViewTable);
                   builder.Write(output.HdrColor, RenderGraphResourceState::ColorAttachmentReadWrite);
               },
-              executePass("ForwardPlusTransparencyAndWorld2D"));
+              executePass(RenderPipelinePass::ForwardPlusTransparencyAndWorld2D));
         }
 
         AddFeaturePasses(RenderGraphInsertionPoint::BeforeTonemap, graph, view, blackboard);
@@ -624,7 +623,7 @@ namespace Crowny
                   builder.Write(taaHistoryWrite);
                   builder.Write(resolved);
               },
-              executePass("TemporalResolve"));
+              executePass(RenderPipelinePass::TemporalResolve));
         }
         output.ResolvedColor = resolved;
         blackboard.Set("ResolvedColor", resolved);
@@ -639,7 +638,7 @@ namespace Crowny
                   builder.Read(resolved);
                   builder.Write(bloom);
               },
-              executePass("Bloom"));
+              executePass(RenderPipelinePass::Bloom));
             blackboard.Set("Bloom", bloom);
         }
 
@@ -654,7 +653,7 @@ namespace Crowny
                   builder.Read(bloom);
               builder.Write(desc.OutputTarget, RenderGraphResourceState::ColorAttachment);
           },
-          executePass("ExposureToneMapAndColorGrade"));
+          executePass(RenderPipelinePass::ExposureToneMapAndColorGrade));
         AddFeaturePasses(RenderGraphInsertionPoint::AfterTonemap, graph, view, blackboard);
         graph.AddPass(
           "FinalUIComposition", RenderGraphQueue::Graphics,

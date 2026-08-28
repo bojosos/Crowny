@@ -46,6 +46,40 @@ namespace Crowny
     DepthPrepassProgramSelection ResolveDepthPrepassProgram(DepthPrepassOutputMode outputMode, bool animated);
     constexpr bool ParticipatesInDepthPrepass(AlphaMode alphaMode) { return alphaMode == AlphaMode::Opaque || alphaMode == AlphaMode::Mask; }
 
+    enum class RenderPipelinePass : uint8_t
+    {
+        ClearVisibilityCounters,
+        CullInstancesAndSelectLod,
+        CullShadowViews,
+        ReverseZDepthVelocity,
+        BuildCurrentHiZ,
+        ClearMeshletCandidateCounters,
+        ExpandVisibleMeshlets,
+        ClearDrawCounters,
+        ClearIndirectDrawCounts,
+        LateOcclusionAndMeshletCulling,
+        BinAndCompactIndirectDraws,
+        ClearClusterLightCounters,
+        BuildClusteredLightLists,
+        Gtao,
+        DeferredGBuffer,
+        DeferredPlusLighting,
+        ForwardPlusOpaque,
+        SkyAndForwardOnlyOpaque,
+        ToonOutlines,
+        ForwardPlusTransparencyAndWorld2D,
+        TemporalResolve,
+        Bloom,
+        ExposureToneMapAndColorGrade
+    };
+
+    class IRenderPipelinePassExecutor
+    {
+    public:
+        virtual ~IRenderPipelinePassExecutor() = default;
+        virtual void Execute(RenderPipelinePass pass, RenderGraphContext& context) = 0;
+    };
+
     struct RenderPipelineGraphDesc
     {
         uint32_t Width = 1;
@@ -67,7 +101,7 @@ namespace Crowny
         RenderGraph::ExecuteCallback CompatibilityRenderer;
         RenderGraph::ExecuteCallback ScheduledShadowRenderer;
         RenderGraph::ExecuteCallback FinalComposition;
-        std::function<void(StringView, RenderGraphContext&)> PassExecutor;
+        IRenderPipelinePassExecutor* PassExecutor = nullptr;
         uint32_t DrawBinCount = 0;
         uint32_t DrawBinLookupCapacity = 0;
         bool EnableGpuDrawBins = false;

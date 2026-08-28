@@ -528,17 +528,66 @@ TEST_CASE("RenderGraph registry preserves transient aliasing within a frame", "[
 
     RenderGraphResourceRegistry resources;
     REQUIRE(resources.BeginFrame(compiled, 1, 1));
-    CHECK(resources.Get(first).PhysicalId == resources.Get(second).PhysicalId);
+    const uint64_t firstPhysicalId = resources.Get(first).PhysicalId;
+    CHECK(firstPhysicalId == resources.Get(second).PhysicalId);
     const RenderGraphResourceRegistryStats firstFrameStats = resources.GetStats();
-    CHECK(firstFrameStats.FramePhysicalScratchCapacity >= 1);
-    CHECK(firstFrameStats.FramePhysicalScratchGrowths == 1);
+    CHECK(firstFrameStats.TransientAllocations == 1);
     resources.EndFrame();
 
     REQUIRE(resources.BeginFrame(compiled, 3, 1));
-    CHECK(resources.Get(first).PhysicalId == resources.Get(second).PhysicalId);
-    CHECK(resources.GetStats().FramePhysicalScratchCapacity == firstFrameStats.FramePhysicalScratchCapacity);
-    CHECK(resources.GetStats().FramePhysicalScratchGrowths == firstFrameStats.FramePhysicalScratchGrowths);
+    CHECK(resources.Get(first).PhysicalId == firstPhysicalId);
+    CHECK(resources.Get(second).PhysicalId == firstPhysicalId);
+    CHECK(resources.GetStats().TransientAllocations == firstFrameStats.TransientAllocations);
     resources.EndFrame();
+}
+
+TEST_CASE("RenderGraph transient bindings allocate nothing after frame-slot warm-up",
+          "[Memory][Frame][Renderer][RenderGraph][Resources]")
+{
+#if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL > 0
+    SKIP("MSVC debug iterators allocate bookkeeping storage during container reuse.");
+#endif
+
+    RenderGraph graph;
+    const RenderGraphResourceHandle first = graph.CreateBuffer("FirstTransient", { 4096, 16, GpuBufferType::Structured });
+    const RenderGraphResourceHandle second = graph.CreateBuffer("SecondTransient", { 8192, 16, GpuBufferType::Structured });
+    const RenderGraphResourceHandle third = graph.CreateBuffer("ThirdTransient", { 16384, 16, GpuBufferType::Structured });
+    graph.AddPass("WriteTransientBuffers", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) {
+        builder.Write(first);
+        builder.Write(second);
+        builder.Write(third);
+    });
+    const RenderGraphCompileResult& compiled = graph.Compile();
+    REQUIRE(compiled.Succeeded);
+
+    RenderGraphResourceRegistry resources(2);
+    std::array<std::array<uint64_t, 3>, 2> physicalIds{};
+    for (uint64_t frame = 0; frame < physicalIds.size(); frame++)
+    {
+        REQUIRE(resources.BeginFrame(compiled, frame + 1u, 1u));
+        physicalIds[frame] = { resources.Get(first).PhysicalId, resources.Get(second).PhysicalId, resources.Get(third).PhysicalId };
+        resources.EndFrame();
+    }
+
+    bool stable = true;
+    uint64_t checksum = 0;
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint64_t frame = 0; frame < 120u; frame++)
+    {
+        stable &= resources.BeginFrame(compiled, frame + 3u, 1u);
+        const std::array<uint64_t, 3> current{ resources.Get(first).PhysicalId, resources.Get(second).PhysicalId,
+                                               resources.Get(third).PhysicalId };
+        stable &= current == physicalIds[frame % physicalIds.size()];
+        checksum += current[0] + current[1] + current[2];
+        resources.EndFrame();
+    }
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+    CHECK(stable);
+    CHECK(checksum != 0u);
+    CHECK(delta.AllocationCount == 0u);
+    CHECK(delta.RequestedBytes == 0u);
 }
 
 TEST_CASE("RenderGraph resources allocate lazily and preserve physical aliasing", "[Renderer][RenderGraph]")
