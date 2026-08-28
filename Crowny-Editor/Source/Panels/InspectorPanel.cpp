@@ -663,6 +663,60 @@ namespace Crowny
         m_HasPropertyChanged |= UI::Property("Get Kerning Data", opts->GetKerningData);
         m_HasPropertyChanged |= UI::Property("Tab Width", opts->TabMultiple, 1U, 64U);
 
+        const Ref<AssetMetadata> inspectedMetadata = ProjectLibrary::Get().FindAssetMetadata(m_InspectedAssetPath);
+        const UUID inspectedFont = inspectedMetadata != nullptr ? inspectedMetadata->Uuid : UUID::EMPTY;
+        if (!inspectedFont.Empty())
+        {
+            const auto fallbackEnd = std::remove(opts->FallbackFonts.begin(), opts->FallbackFonts.end(), inspectedFont);
+            if (fallbackEnd != opts->FallbackFonts.end())
+            {
+                opts->FallbackFonts.erase(fallbackEnd, opts->FallbackFonts.end());
+                m_HasPropertyChanged = true;
+            }
+        }
+        AssetManager* assetManager = AssetManager::TryGet();
+        for (size_t index = 0; index < opts->FallbackFonts.size();)
+        {
+            AssetHandle<Font> fallback;
+            if (assetManager != nullptr)
+                fallback = static_asset_cast<Font>(assetManager->GetAssetHandle(opts->FallbackFonts[index]));
+
+            if (UIUtils::AssetReference<Font>("Fallback " + std::to_string(index + 1), fallback))
+            {
+                const UUID selectedFont = fallback.GetUUID();
+                if (selectedFont.Empty())
+                {
+                    opts->FallbackFonts.erase(opts->FallbackFonts.begin() + index);
+                    m_HasPropertyChanged = true;
+                    continue;
+                }
+
+                const bool isDuplicate = std::find(opts->FallbackFonts.begin(), opts->FallbackFonts.end(), selectedFont) != opts->FallbackFonts.end() &&
+                                         selectedFont != opts->FallbackFonts[index];
+                if (selectedFont != inspectedFont && !isDuplicate)
+                {
+                    opts->FallbackFonts[index] = selectedFont;
+                    m_HasPropertyChanged = true;
+                }
+            }
+            ++index;
+        }
+
+        if (opts->FallbackFonts.size() < Font::MAX_FALLBACK_FONTS)
+        {
+            AssetHandle<Font> fallback;
+            if (UIUtils::AssetReference<Font>("Add Fallback", fallback) && fallback.HasUUID())
+            {
+                const UUID selectedFont = fallback.GetUUID();
+                const bool isDuplicate = std::find(opts->FallbackFonts.begin(), opts->FallbackFonts.end(), selectedFont) != opts->FallbackFonts.end();
+                if (selectedFont != inspectedFont && !isDuplicate)
+                {
+                    opts->FallbackFonts.push_back(selectedFont);
+                    m_HasPropertyChanged = true;
+                }
+            }
+        }
+
         EndImportInspector(0, ImGui::GetColumnWidth());
 
         // Make sure the font is imported
