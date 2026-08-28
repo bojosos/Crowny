@@ -202,6 +202,18 @@ namespace Crowny.ManagedHost.Interop
         TextSetSortingLayer = 265,
         TextGetOrderInLayer = 266,
         TextSetOrderInLayer = 267,
+        FontGetIsValid = 300,
+        FontGetGlyphCount = 301,
+        FontGetTabWidth = 302,
+        FontGetAtlasWidth = 303,
+        FontGetAtlasHeight = 304,
+        FontGetAtlasPixelRange = 305,
+        FontHasGlyph = 306,
+        FontGetCharacterInfo = 307,
+        FontGetFallbackCount = 308,
+        FontGetFallback = 309,
+        FontAddFallback = 310,
+        FontClearFallbacks = 311,
         MathMatrixDeterminant = 130,
         MathMatrixInverse = 131,
         MathMatrixAffineInverse = 132,
@@ -230,6 +242,33 @@ namespace Crowny.ManagedHost.Interop
     public unsafe struct NativeUuid
     {
         public fixed byte Bytes[16];
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativeFontCharacterInfo
+    {
+        public NativeUuid SourceFont;
+        public uint RequestedCodePoint;
+        public uint ResolvedCodePoint;
+        public int GlyphIndex;
+        public uint Reserved;
+        public double Advance;
+        public double PlaneLeft;
+        public double PlaneBottom;
+        public double PlaneRight;
+        public double PlaneTop;
+        public double AtlasLeft;
+        public double AtlasBottom;
+        public double AtlasRight;
+        public double AtlasTop;
+        public byte Whitespace;
+        public byte Valid;
+        public byte ReservedTail0;
+        public byte ReservedTail1;
+        public byte ReservedTail2;
+        public byte ReservedTail3;
+        public byte ReservedTail4;
+        public byte ReservedTail5;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -479,6 +518,18 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetSortingLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetOrderInLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetOrderInLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> FontGetIsValid;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetGlyphCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetTabWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetAtlasWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetAtlasHeight;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> FontGetAtlasPixelRange;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, byte*, NativeStatus> FontHasGlyph;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, byte, NativeFontCharacterInfo*, NativeStatus> FontGetCharacterInfo;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetFallbackCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeUuid*, NativeStatus> FontGetFallback;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, byte*, NativeStatus> FontAddFallback;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> FontClearFallbacks;
         public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, float*, NativeStatus> MathMatrixDeterminant;
         public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixInverse;
         public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixAffineInverse;
@@ -647,6 +698,18 @@ namespace Crowny.ManagedHost.Interop
                    TextSetSortingLayer != null &&
                    TextGetOrderInLayer != null &&
                    TextSetOrderInLayer != null &&
+                   FontGetIsValid != null &&
+                   FontGetGlyphCount != null &&
+                   FontGetTabWidth != null &&
+                   FontGetAtlasWidth != null &&
+                   FontGetAtlasHeight != null &&
+                   FontGetAtlasPixelRange != null &&
+                   FontHasGlyph != null &&
+                   FontGetCharacterInfo != null &&
+                   FontGetFallbackCount != null &&
+                   FontGetFallback != null &&
+                   FontAddFallback != null &&
+                   FontClearFallbacks != null &&
                    MathMatrixDeterminant != null &&
                    MathMatrixInverse != null &&
                    MathMatrixAffineInverse != null &&
@@ -673,7 +736,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 6;
+        public const uint Version = 7;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

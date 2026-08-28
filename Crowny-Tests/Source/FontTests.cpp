@@ -137,3 +137,12 @@ TEST_CASE("Font importer rejects options for another asset type", "[Assets][Impo
     FontImporter importer;
     CHECK(importer.Import("ignored.ttf", CreateRef<ImportOptions>()) == nullptr);
 }
+
+TEST_CASE("Font importer rejects unsupported dynamic atlases before reading the source", "[Assets][Importer][Font]")
+{
+    FontImporter importer;
+    Ref<FontImportOptions> options = CreateRef<FontImportOptions>();
+    options->DynamicFontAtlas = true;
+
+    CHECK(importer.Import("missing.ttf", options) == nullptr);
+}

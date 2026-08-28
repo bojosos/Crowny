@@ -1,95 +1,195 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Crowny
 {
+    /// <summary>Resolved geometry and atlas coordinates for one Unicode code point.</summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct CharacterInfo
     {
-        public int advance;
-        public int glyphWidth;
-        public int glyphHeight;
-        public int bearing;
-        public int minX;
-        public int maxX;
-        public int minY;
-        public int maxY;
+        /// <summary>UUID of the primary or fallback font that supplied the glyph.</summary>
+        public UUID sourceFont;
+
+        /// <summary>Unicode code point requested by the caller.</summary>
+        public uint requestedCodePoint;
+
+        /// <summary>Unicode code point selected from the font, including replacement glyphs.</summary>
+        public uint resolvedCodePoint;
+
+        /// <summary>Index of the resolved glyph in its source font.</summary>
+        public int glyphIndex;
+
+        private uint reserved;
+
+        /// <summary>Horizontal advance in font-em units.</summary>
+        public double advance;
+
+        /// <summary>Left edge of the glyph quad in font-em units.</summary>
+        public double planeLeft;
+
+        /// <summary>Bottom edge of the glyph quad in font-em units.</summary>
+        public double planeBottom;
+
+        /// <summary>Right edge of the glyph quad in font-em units.</summary>
+        public double planeRight;
+
+        /// <summary>Top edge of the glyph quad in font-em units.</summary>
+        public double planeTop;
+
+        /// <summary>Left edge of the glyph in atlas pixels.</summary>
+        public double atlasLeft;
+
+        /// <summary>Bottom edge of the glyph in atlas pixels.</summary>
+        public double atlasBottom;
+
+        /// <summary>Right edge of the glyph in atlas pixels.</summary>
+        public double atlasRight;
+
+        /// <summary>Top edge of the glyph in atlas pixels.</summary>
+        public double atlasTop;
+
+        /// <summary>Whether the glyph represents whitespace.</summary>
+        [MarshalAs(UnmanagedType.I1)]
+        public bool whitespace;
+
+        /// <summary>Whether the font or one of its fallbacks resolved a glyph.</summary>
+        [MarshalAs(UnmanagedType.I1)]
+        public bool valid;
     }
 
+    /// <summary>A static MSDF font asset imported by Crowny.</summary>
     public class Font : Asset
     {
-        public float fontSize
+        /// <summary>Whether the font has usable metrics, glyphs, and atlas data.</summary>
+        public bool isValid => GetIsValid();
+
+        /// <summary>Number of glyphs stored in the imported font.</summary>
+        public uint glyphCount => GetGlyphCount();
+
+        /// <summary>Number of space advances used for a tab.</summary>
+        public uint tabWidth => GetTabWidth();
+
+        /// <summary>Width of the imported atlas in pixels.</summary>
+        public uint atlasWidth => GetAtlasWidth();
+
+        /// <summary>Height of the imported atlas in pixels.</summary>
+        public uint atlasHeight => GetAtlasHeight();
+
+        /// <summary>Distance-field pixel range used to generate the atlas.</summary>
+        public float atlasPixelRange => GetAtlasPixelRange();
+
+        /// <summary>Number of runtime fallback fonts assigned to this font.</summary>
+        public uint fallbackCount => GetFallbackCount();
+
+        /// <summary>Checks whether this font contains an exact glyph for a Unicode code point.</summary>
+        public bool HasGlyph(uint codePoint)
         {
-            get { return Internal_GetFontSize(m_InternalPtr); }
-            set { Internal_SetFontSize(m_InternalPtr, value); }
+            return HasGlyphNative(codePoint);
         }
 
-        public bool dynamic
+        /// <summary>Checks whether this font contains an exact glyph for a UTF-16 character.</summary>
+        public bool HasCharacter(char character)
         {
-            get { return Internal_GetIsDynamic(m_InternalPtr); }
-            set { Internal_SetIsDynamic(m_InternalPtr, value); }
+            return HasGlyphNative(character);
         }
 
-        public CharacterInfo[] characterInfo
+        /// <summary>Resolves glyph data, optionally searching fallback fonts and replacement glyphs.</summary>
+        public CharacterInfo GetCharacterInfo(uint codePoint, bool useFallbacks = true)
         {
-            get { return Internal_GetCharacterInfos(m_InternalPtr); }
-            set { Internal_SetCharacterInfos(m_InternalPtr, value); }
+            TryGetCharacterInfo(codePoint, out CharacterInfo characterInfo, useFallbacks);
+            return characterInfo;
         }
 
-        public bool GetCharacterInfo(char c, out CharacterInfo characterInfo, int size = 0, FontStyle style = FontStyle.None)
+        /// <summary>Attempts to resolve glyph data for a UTF-16 character.</summary>
+        public bool GetCharacterInfo(char character, out CharacterInfo characterInfo, bool useFallbacks = true)
         {
-            return Internal_GetCharacterInfo(m_InternalPtr, c, out characterInfo, size, style);
+            return TryGetCharacterInfo(character, out characterInfo, useFallbacks);
         }
 
-        public bool HasCharacter(char c)
+        /// <summary>Attempts to resolve glyph data, optionally searching fallback fonts and replacement glyphs.</summary>
+        public bool TryGetCharacterInfo(uint codePoint, out CharacterInfo characterInfo, bool useFallbacks = true)
         {
-            return Internal_HasCharacter(m_InternalPtr, c);
+            return TryGetCharacterInfoNative(codePoint, useFallbacks, out characterInfo);
         }
 
-        public void RequestCharacters(string characters, int size = 0, FontStyle style = FontStyle.None)
+        /// <summary>Returns a runtime fallback font by index, or null when the index is out of range.</summary>
+        public Font GetFallback(uint index)
         {
-            Internal_RequestCharacters(characters, size, style);
+            return GetFallbackNative(index);
         }
 
-        public static Font CreateDynamicFont()
+        /// <summary>Adds a runtime fallback font when it is usable, unique, and the chain has room.</summary>
+        public bool AddFallback(Font font)
         {
-            return Internal_CreateDynamicFont();
+            return font != null && AddFallbackNative(font);
         }
 
-        public static string[] GetPathsToOSFonts()
+        /// <summary>Removes every runtime fallback font.</summary>
+        public void ClearFallbacks()
         {
-            return Internal_GetPathsToOSFonts();
+            ClearFallbacksNative();
         }
 
-        public static string[] GetInstalledFontNames()
-        {
-            return Internal_GetInstalledFontNames();
-        }
+#if CROWNY_MONO
+        private bool GetIsValid() => Internal_GetIsValid(m_InternalPtr);
+        private uint GetGlyphCount() => Internal_GetGlyphCount(m_InternalPtr);
+        private uint GetTabWidth() => Internal_GetTabWidth(m_InternalPtr);
+        private uint GetAtlasWidth() => Internal_GetAtlasWidth(m_InternalPtr);
+        private uint GetAtlasHeight() => Internal_GetAtlasHeight(m_InternalPtr);
+        private float GetAtlasPixelRange() => Internal_GetAtlasPixelRange(m_InternalPtr);
+        private bool HasGlyphNative(uint codePoint) => Internal_HasGlyph(m_InternalPtr, codePoint);
+        private bool TryGetCharacterInfoNative(uint codePoint, bool useFallbacks, out CharacterInfo characterInfo) =>
+            Internal_GetCharacterInfo(m_InternalPtr, codePoint, useFallbacks, out characterInfo);
+        private uint GetFallbackCount() => Internal_GetFallbackCount(m_InternalPtr);
+        private Font GetFallbackNative(uint index) => Internal_GetFallback(m_InternalPtr, index);
+        private bool AddFallbackNative(Font font) => Internal_AddFallback(m_InternalPtr, font);
+        private void ClearFallbacksNative() => Internal_ClearFallbacks(m_InternalPtr);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern float Internal_GetFontSize(IntPtr thisptr);
+        private static extern bool Internal_GetIsValid(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetFontSize(IntPtr thisptr, float size);
+        private static extern uint Internal_GetGlyphCount(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_GetIsDynamic(IntPtr thisptr);
+        private static extern uint Internal_GetTabWidth(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetIsDynamic(IntPtr thisptr, bool dynamic);
+        private static extern uint Internal_GetAtlasWidth(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetCharacterInfos(IntPtr thisptr, CharacterInfo[] characterInfos);
+        private static extern uint Internal_GetAtlasHeight(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern CharacterInfo[] Internal_GetCharacterInfos(IntPtr thisptr);
+        private static extern float Internal_GetAtlasPixelRange(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_GetCharacterInfo(IntPtr thisPtr, char c, out CharacterInfo characterInfo, int size, FontStyle style);
+        private static extern bool Internal_HasGlyph(IntPtr thisptr, uint codePoint);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_HasCharacter(IntPtr thisPtr, char c);
+        private static extern bool Internal_GetCharacterInfo(IntPtr thisptr, uint codePoint, bool useFallbacks,
+                                                              out CharacterInfo characterInfo);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_RequestCharacters(string characters, int size, FontStyle style);
+        private static extern uint Internal_GetFallbackCount(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Font Internal_CreateDynamicFont();
+        private static extern Font Internal_GetFallback(IntPtr thisptr, uint index);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern string[] Internal_GetInstalledFontNames();
+        private static extern bool Internal_AddFallback(IntPtr thisptr, Font font);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern string[] Internal_GetPathsToOSFonts();
+        private static extern void Internal_ClearFallbacks(IntPtr thisptr);
+#else
+        private bool GetIsValid() => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.FontGetIsValid, uuid);
+        private uint GetGlyphCount() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetGlyphCount, uuid);
+        private uint GetTabWidth() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetTabWidth, uuid);
+        private uint GetAtlasWidth() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetAtlasWidth, uuid);
+        private uint GetAtlasHeight() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetAtlasHeight, uuid);
+        private float GetAtlasPixelRange() => ManagedRuntimeContext.GetBindingFloat(ManagedBindingId.FontGetAtlasPixelRange, uuid);
+        private bool HasGlyphNative(uint codePoint) => ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.FontHasGlyph, uuid, codePoint);
+        private bool TryGetCharacterInfoNative(uint codePoint, bool useFallbacks, out CharacterInfo characterInfo)
+        {
+            characterInfo = ManagedRuntimeContext.GetBindingCharacterInfo(ManagedBindingId.FontGetCharacterInfo, uuid, codePoint, useFallbacks);
+            return characterInfo.valid;
+        }
+        private uint GetFallbackCount() => ManagedRuntimeContext.GetBindingUInt32(ManagedBindingId.FontGetFallbackCount, uuid);
+        private Font GetFallbackNative(uint index) =>
+            ManagedRuntimeContext.CreateAsset<Font>(ManagedRuntimeContext.GetBindingUuid(ManagedBindingId.FontGetFallback, uuid, index));
+        private bool AddFallbackNative(Font font) =>
+            ManagedRuntimeContext.GetBindingBoolean(ManagedBindingId.FontAddFallback, uuid, font.uuid);
+        private void ClearFallbacksNative() => ManagedRuntimeContext.InvokeBinding(ManagedBindingId.FontClearFallbacks, uuid);
+#endif
     }
 }

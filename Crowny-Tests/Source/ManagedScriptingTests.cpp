@@ -7,6 +7,7 @@
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
 
 #include <cstdlib>
+#include <cstddef>
 
 using namespace Crowny;
 
@@ -164,6 +165,17 @@ TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scri
     const ManagedOperationResult result = ValidateManagedProgramApi(api, ManagedBackendId::CoreCLR);
     CHECK_FALSE(result.Succeeded);
     CHECK(result.HasDiagnosticCode("managed.abi.version_mismatch"));
+}
+
+TEST_CASE("Managed font ABI exposes stable glyph and fallback data", "[Scripting][Managed][Contract][Font]")
+{
+    CHECK(CW_MANAGED_BINDING_FONT_GET_IS_VALID == 300);
+    CHECK(CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO == 307);
+    CHECK(CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS == 311);
+    CHECK(sizeof(cw_managed_font_character_info) == 112);
+    CHECK(offsetof(cw_managed_font_character_info, source_font) == 0);
+    CHECK(offsetof(cw_managed_font_character_info, advance) == 32);
+    CHECK(offsetof(cw_managed_font_character_info, valid) == 105);
 }
 
 TEST_CASE("CoreCLR adapter validates its private runtime before activation", "[Scripting][Managed][CoreCLR]")

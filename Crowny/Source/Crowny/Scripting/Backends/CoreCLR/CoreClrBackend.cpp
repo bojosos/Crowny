@@ -196,6 +196,55 @@ namespace Crowny
             return UUID(word(0), word(4), word(8), word(12));
         }
 
+        cw_managed_status ResolveFontHandle(const cw_managed_uuid& fontId, AssetHandle<Font>& font)
+        {
+            AssetManager* assetManager = AssetManager::TryGet();
+            if (assetManager == nullptr)
+                return CW_MANAGED_STATUS_NOT_INITIALIZED;
+            const UUID uuid = FromAbiUuid(fontId);
+            if (uuid.Empty())
+                return CW_MANAGED_STATUS_STALE_HANDLE;
+            font = assetManager->LoadFromUUID<Font>(uuid);
+            return font ? CW_MANAGED_STATUS_OK : CW_MANAGED_STATUS_STALE_HANDLE;
+        }
+
+        UUID GetSourceFontUuid(const AssetHandle<Font>& font, const Font* source)
+        {
+            if (source == nullptr)
+                return {};
+            if (font.Get() == source)
+                return font.GetUUID();
+            if (!font)
+                return {};
+            for (const AssetHandle<Font>& fallback : font->GetFallbackFonts())
+            {
+                if (fallback.Get() == source)
+                    return fallback.GetUUID();
+            }
+            return {};
+        }
+
+        cw_managed_font_character_info ToAbiCharacterInfo(const AssetHandle<Font>& font, const CharacterInfo& source)
+        {
+            cw_managed_font_character_info result{};
+            result.source_font = ToAbiUuid(GetSourceFontUuid(font, source.SourceFont));
+            result.requested_code_point = static_cast<uint32_t>(source.RequestedCodePoint);
+            result.resolved_code_point = static_cast<uint32_t>(source.ResolvedCodePoint);
+            result.glyph_index = source.GlyphIndex;
+            result.advance = source.Advance;
+            result.plane_left = source.PlaneLeft;
+            result.plane_bottom = source.PlaneBottom;
+            result.plane_right = source.PlaneRight;
+            result.plane_top = source.PlaneTop;
+            result.atlas_left = source.AtlasLeft;
+            result.atlas_bottom = source.AtlasBottom;
+            result.atlas_right = source.AtlasRight;
+            result.atlas_top = source.AtlasTop;
+            result.whitespace = source.Whitespace ? 1 : 0;
+            result.valid = source.Valid ? 1 : 0;
+            return result;
+        }
+
         cw_managed_status CW_MANAGED_CALL WriteBlob(void* context, const uint8_t* data, uint64_t length)
         {
             if (context == nullptr || (data == nullptr && length != 0) || length > std::numeric_limits<size_t>::max())
@@ -1248,6 +1297,44 @@ namespace Crowny
             CW_TYPED_ENTITY_GET(TextGetOrderInLayer, CW_MANAGED_BINDING_TEXT_GET_ORDER_IN_LAYER, int32_t)
             CW_TYPED_ENTITY_SET_VALUE(TextSetOrderInLayer, CW_MANAGED_BINDING_TEXT_SET_ORDER_IN_LAYER, int32_t)
 
+            CW_TYPED_ENTITY_GET(FontGetIsValid, CW_MANAGED_BINDING_FONT_GET_IS_VALID, uint8_t)
+            CW_TYPED_ENTITY_GET(FontGetGlyphCount, CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT, uint32_t)
+            CW_TYPED_ENTITY_GET(FontGetTabWidth, CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH, uint32_t)
+            CW_TYPED_ENTITY_GET(FontGetAtlasWidth, CW_MANAGED_BINDING_FONT_GET_ATLAS_WIDTH, uint32_t)
+            CW_TYPED_ENTITY_GET(FontGetAtlasHeight, CW_MANAGED_BINDING_FONT_GET_ATLAS_HEIGHT, uint32_t)
+            CW_TYPED_ENTITY_GET(FontGetAtlasPixelRange, CW_MANAGED_BINDING_FONT_GET_ATLAS_PIXEL_RANGE, float)
+            CW_TYPED_ENTITY_GET(FontGetFallbackCount, CW_MANAGED_BINDING_FONT_GET_FALLBACK_COUNT, uint32_t)
+
+            static cw_managed_status CW_MANAGED_CALL FontHasGlyph(void* context, cw_managed_uuid font, uint32_t codePoint, uint8_t* result)
+            {
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_FONT_HAS_GLYPH, font, &codePoint, sizeof(codePoint), result, sizeof(*result));
+            }
+
+            static cw_managed_status CW_MANAGED_CALL FontGetCharacterInfo(void* context, cw_managed_uuid font, uint32_t codePoint,
+                                                                          uint8_t useFallbacks,
+                                                                          cw_managed_font_character_info* result)
+            {
+                Array<uint8_t, sizeof(codePoint) + sizeof(useFallbacks)> payload{};
+                std::memcpy(payload.data(), &codePoint, sizeof(codePoint));
+                payload[sizeof(codePoint)] = useFallbacks;
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO, font, payload.data(), payload.size(), result,
+                                           sizeof(*result));
+            }
+
+            static cw_managed_status CW_MANAGED_CALL FontGetFallback(void* context, cw_managed_uuid font, uint32_t index,
+                                                                      cw_managed_uuid* result)
+            {
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_FONT_GET_FALLBACK, font, &index, sizeof(index), result, sizeof(*result));
+            }
+
+            static cw_managed_status CW_MANAGED_CALL FontAddFallback(void* context, cw_managed_uuid font, cw_managed_uuid value,
+                                                                      uint8_t* result)
+            {
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_FONT_ADD_FALLBACK, font, &value, sizeof(value), result, sizeof(*result));
+            }
+
+            CW_TYPED_ENTITY_ACTION(FontClearFallbacks, CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS)
+
             static cw_managed_status CW_MANAGED_CALL MathMatrixDeterminant(void* context, const cw_managed_mat4* matrix, float* result)
             {
                 return ForwardTypedBinding(context, CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT, {}, matrix, matrix != nullptr ? sizeof(*matrix) : 0,
@@ -2108,6 +2195,99 @@ namespace Crowny
                         else
                             return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                         return CW_MANAGED_STATUS_OK;
+                    }
+                    case CW_MANAGED_BINDING_FONT_GET_IS_VALID:
+                    case CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT:
+                    case CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH:
+                    case CW_MANAGED_BINDING_FONT_GET_ATLAS_WIDTH:
+                    case CW_MANAGED_BINDING_FONT_GET_ATLAS_HEIGHT:
+                    case CW_MANAGED_BINDING_FONT_GET_ATLAS_PIXEL_RANGE:
+                    case CW_MANAGED_BINDING_FONT_HAS_GLYPH:
+                    case CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO:
+                    case CW_MANAGED_BINDING_FONT_GET_FALLBACK_COUNT:
+                    case CW_MANAGED_BINDING_FONT_GET_FALLBACK:
+                    case CW_MANAGED_BINDING_FONT_ADD_FALLBACK:
+                    case CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS: {
+                        AssetHandle<Font> font;
+                        const cw_managed_status fontStatus = ResolveFontHandle(entityId, font);
+                        if (fontStatus != CW_MANAGED_STATUS_OK)
+                            return fontStatus;
+
+                        switch (binding)
+                        {
+                        case CW_MANAGED_BINDING_FONT_GET_IS_VALID: {
+                            if (input.length != 0)
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            const uint8_t result = font->IsValid() ? 1 : 0;
+                            return WriteBindingResult(output, result);
+                        }
+                        case CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT: {
+                            if (input.length != 0)
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            const uint32_t result = static_cast<uint32_t>(
+                              std::min(font->GetGlyphCount(), static_cast<size_t>(std::numeric_limits<uint32_t>::max())));
+                            return WriteBindingResult(output, result);
+                        }
+                        case CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH:
+                            return input.length == 0 ? WriteBindingResult(output, font->GetTabWidth())
+                                                     : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        case CW_MANAGED_BINDING_FONT_GET_ATLAS_WIDTH:
+                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasWidth())
+                                                     : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        case CW_MANAGED_BINDING_FONT_GET_ATLAS_HEIGHT:
+                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasHeight())
+                                                     : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        case CW_MANAGED_BINDING_FONT_GET_ATLAS_PIXEL_RANGE:
+                            return input.length == 0 ? WriteBindingResult(output, font->GetAtlasPixelRange())
+                                                     : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        case CW_MANAGED_BINDING_FONT_HAS_GLYPH: {
+                            uint32_t codePoint = 0;
+                            if (!ReadBindingValue(input, codePoint))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            const uint8_t result = font->HasGlyph(static_cast<char32_t>(codePoint)) ? 1 : 0;
+                            return WriteBindingResult(output, result);
+                        }
+                        case CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO: {
+                            if (input.data == nullptr || input.length != sizeof(uint32_t) + sizeof(uint8_t))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            uint32_t codePoint = 0;
+                            std::memcpy(&codePoint, input.data, sizeof(codePoint));
+                            const bool useFallbacks = input.data[sizeof(codePoint)] != 0;
+                            const CharacterInfo characterInfo = font->GetCharacterInfo(static_cast<char32_t>(codePoint), useFallbacks);
+                            return WriteBindingResult(output, ToAbiCharacterInfo(font, characterInfo));
+                        }
+                        case CW_MANAGED_BINDING_FONT_GET_FALLBACK_COUNT: {
+                            if (input.length != 0)
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            const uint32_t result = static_cast<uint32_t>(font->GetFallbackFonts().size());
+                            return WriteBindingResult(output, result);
+                        }
+                        case CW_MANAGED_BINDING_FONT_GET_FALLBACK: {
+                            uint32_t index = 0;
+                            if (!ReadBindingValue(input, index))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            const UUID fallback = index < font->GetFallbackFonts().size() ? font->GetFallbackFonts()[index].GetUUID() : UUID{};
+                            return WriteBindingResult(output, ToAbiUuid(fallback));
+                        }
+                        case CW_MANAGED_BINDING_FONT_ADD_FALLBACK: {
+                            cw_managed_uuid fallbackId{};
+                            if (!ReadBindingValue(input, fallbackId))
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            AssetHandle<Font> fallback;
+                            const cw_managed_status fallbackStatus = ResolveFontHandle(fallbackId, fallback);
+                            if (fallbackStatus != CW_MANAGED_STATUS_OK)
+                                return fallbackStatus;
+                            const uint8_t result = font->AddFallbackFont(fallback) ? 1 : 0;
+                            return WriteBindingResult(output, result);
+                        }
+                        case CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS:
+                            if (input.length != 0)
+                                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                            font->ClearFallbackFonts();
+                            return CW_MANAGED_STATUS_OK;
+                        default:
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        }
                     }
                     case CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT:
                     case CW_MANAGED_BINDING_MATH_MATRIX_INVERSE:

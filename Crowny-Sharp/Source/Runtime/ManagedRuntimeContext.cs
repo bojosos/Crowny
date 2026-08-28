@@ -159,6 +159,12 @@ namespace Crowny
         internal static bool GetBindingBoolean(ManagedBindingId binding, UUID entity) =>
             ReadBoolean(Invoke(binding, entity, Array.Empty<byte>()));
 
+        internal static bool GetBindingBoolean(ManagedBindingId binding, UUID entity, uint value) =>
+            ReadBoolean(Invoke(binding, entity, Encode(value)));
+
+        internal static bool GetBindingBoolean(ManagedBindingId binding, UUID entity, UUID value) =>
+            ReadBoolean(Invoke(binding, entity, Encode(value)));
+
         internal static void SetBindingBoolean(ManagedBindingId binding, UUID entity, bool value)
         {
             Invoke(binding, entity, new[] { value ? (byte)1 : (byte)0 });
@@ -265,9 +271,43 @@ namespace Crowny
             return DecodeUuid(value);
         }
 
+        internal static UUID GetBindingUuid(ManagedBindingId binding, UUID entity, uint value)
+        {
+            byte[] result = Invoke(binding, entity, Encode(value));
+            RequireLength(result, 16);
+            return DecodeUuid(result);
+        }
+
         internal static void SetBindingUuid(ManagedBindingId binding, UUID entity, UUID value)
         {
             Invoke(binding, entity, Encode(value));
+        }
+
+        internal static CharacterInfo GetBindingCharacterInfo(ManagedBindingId binding, UUID font, uint codePoint, bool useFallbacks)
+        {
+            byte[] input = new byte[sizeof(uint) + sizeof(byte)];
+            Buffer.BlockCopy(BitConverter.GetBytes(codePoint), 0, input, 0, sizeof(uint));
+            input[sizeof(uint)] = useFallbacks ? (byte)1 : (byte)0;
+            byte[] value = Invoke(binding, font, input);
+            RequireLength(value, 112);
+            return new CharacterInfo
+            {
+                sourceFont = DecodeUuid(value, 0),
+                requestedCodePoint = BitConverter.ToUInt32(value, 16),
+                resolvedCodePoint = BitConverter.ToUInt32(value, 20),
+                glyphIndex = BitConverter.ToInt32(value, 24),
+                advance = BitConverter.ToDouble(value, 32),
+                planeLeft = BitConverter.ToDouble(value, 40),
+                planeBottom = BitConverter.ToDouble(value, 48),
+                planeRight = BitConverter.ToDouble(value, 56),
+                planeTop = BitConverter.ToDouble(value, 64),
+                atlasLeft = BitConverter.ToDouble(value, 72),
+                atlasBottom = BitConverter.ToDouble(value, 80),
+                atlasRight = BitConverter.ToDouble(value, 88),
+                atlasTop = BitConverter.ToDouble(value, 96),
+                whitespace = value[104] != 0,
+                valid = value[105] != 0
+            };
         }
 
 #if !CROWNY_MONO
@@ -397,7 +437,13 @@ namespace Crowny
 
         private static UUID DecodeUuid(byte[] value)
         {
-            return new UUID(ReadBigEndian(value, 0), ReadBigEndian(value, 4), ReadBigEndian(value, 8), ReadBigEndian(value, 12));
+            return DecodeUuid(value, 0);
+        }
+
+        private static UUID DecodeUuid(byte[] value, int offset)
+        {
+            return new UUID(ReadBigEndian(value, offset), ReadBigEndian(value, offset + 4), ReadBigEndian(value, offset + 8),
+                            ReadBigEndian(value, offset + 12));
         }
 
         private static Matrix4 DecodeMatrix(byte[] value)

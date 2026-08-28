@@ -607,63 +607,115 @@ namespace Crowny
             opts->AutomaticFontSampling = dropdownIdx == 1 ? false : true;
         }
         if (!opts->AutomaticFontSampling || opts->AutoSizeAtlas)
-            m_HasPropertyChanged |= UI::Property("Sampling Size", opts->SamplingFontSize);
+            m_HasPropertyChanged |= UI::Property("Sampling Size", opts->SamplingFontSize, 4U, 512U);
 
-        UI::SetTooltip("Static atlases use a predefined charset range. On the other hand Dynamic atlases are populated \
-                dynamically during runtime. Static atlases use more memory but are more efficient during execution.");
-
-        dropdownIdx = opts->DynamicFontAtlas ? 1 : 0;
-        if (UI::PropertyDropdown("Atlas Mode", { "Static", "Dynamic" }, dropdownIdx))
+        if (opts->DynamicFontAtlas)
         {
+            opts->DynamicFontAtlas = false;
             m_HasPropertyChanged = true;
-            opts->DynamicFontAtlas = dropdownIdx == 1 ? true : false;
         }
-
-        // Only static fonts will need these options.
-        if (!opts->DynamicFontAtlas)
+        uint32_t atlasMode = 0;
         {
-
-            UI::Property("Auto size atlas", opts->AutoSizeAtlas);
-
-            if (opts->AutoSizeAtlas)
-            {
-                m_HasPropertyChanged |= UI::PropertyDropdown(
-                  "Dimension Constraints", { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square", "Square" },
-                  opts->AtlasDimensionsConstraint);
-            }
-            else
-            {
-                Vector<String> atlasSizeUIValues = { "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192" };
-                auto findSizeIdx = [&atlasSizeUIValues](uint32_t size) -> uint32_t {
-                    const String value = std::to_string(size);
-                    const auto iter = std::find(atlasSizeUIValues.begin(), atlasSizeUIValues.end(), value);
-                    return iter == atlasSizeUIValues.end() ? 8U : static_cast<uint32_t>(std::distance(atlasSizeUIValues.begin(), iter));
-                };
-
-                uint32_t widthIdx = findSizeIdx(opts->AtlasWidth);
-                if (UI::PropertyDropdown("Atlas Width", atlasSizeUIValues, widthIdx))
-                {
-                    opts->AtlasWidth = StringUtils::ParseInt(atlasSizeUIValues[widthIdx]);
-                    m_HasPropertyChanged = true;
-                }
-
-                uint32_t heightIdx = findSizeIdx(opts->AtlasHeight);
-                if (UI::PropertyDropdown("Atlas Height", atlasSizeUIValues, heightIdx))
-                {
-                    opts->AtlasHeight = StringUtils::ParseInt(atlasSizeUIValues[heightIdx]);
-                    m_HasPropertyChanged = true;
-                }
-            }
-            m_HasPropertyChanged |= UI::PropertyDropdown(
-              "Charset Range",
-              { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols", "Symbol Range", "Decimal Range", "Hex Range" },
-              opts->Range);
-            if (opts->Range == CharsetRange::DecimalRange || opts->Range == CharsetRange::HexRange || opts->Range == CharsetRange::SymbolRange)
-                m_HasPropertyChanged |= UI::PropertyMultiline("Symbols", opts->CustomCharset); // TODO: Replace this with multiline input
+            UI::ScopedDisable disableAtlasMode(true);
+            UI::PropertyDropdown("Atlas Mode", { "Static MSDF" }, atlasMode);
         }
-        m_HasPropertyChanged |= UI::Property("Padding", opts->Padding);
+        UI::SetTooltip("Crowny currently imports static MSDF atlases. Runtime-populated dynamic atlases are rejected by the importer.");
+
+        m_HasPropertyChanged |= UI::Property("Auto size atlas", opts->AutoSizeAtlas);
+
+        if (opts->AutoSizeAtlas)
+        {
+            m_HasPropertyChanged |= UI::PropertyDropdown(
+              "Dimension Constraints", { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square", "Square" },
+              opts->AtlasDimensionsConstraint);
+        }
+        else
+        {
+            Vector<String> atlasSizeUIValues = { "4",   "8",    "16",   "32",   "64",   "128",  "256",
+                                                 "512", "1024", "2048", "4096", "8192", "16384" };
+            auto findSizeIdx = [&atlasSizeUIValues](uint32_t size) -> uint32_t {
+                const String value = std::to_string(size);
+                const auto iter = std::find(atlasSizeUIValues.begin(), atlasSizeUIValues.end(), value);
+                return iter == atlasSizeUIValues.end() ? 8U : static_cast<uint32_t>(std::distance(atlasSizeUIValues.begin(), iter));
+            };
+
+            uint32_t widthIdx = findSizeIdx(opts->AtlasWidth);
+            if (UI::PropertyDropdown("Atlas Width", atlasSizeUIValues, widthIdx))
+            {
+                opts->AtlasWidth = StringUtils::ParseInt(atlasSizeUIValues[widthIdx]);
+                m_HasPropertyChanged = true;
+            }
+
+            uint32_t heightIdx = findSizeIdx(opts->AtlasHeight);
+            if (UI::PropertyDropdown("Atlas Height", atlasSizeUIValues, heightIdx))
+            {
+                opts->AtlasHeight = StringUtils::ParseInt(atlasSizeUIValues[heightIdx]);
+                m_HasPropertyChanged = true;
+            }
+        }
+        m_HasPropertyChanged |= UI::PropertyDropdown(
+          "Charset Range",
+          { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols", "Symbol Range", "Decimal Range", "Hex Range" },
+          opts->Range);
+        if (opts->Range == CharsetRange::DecimalRange || opts->Range == CharsetRange::HexRange || opts->Range == CharsetRange::SymbolRange)
+            m_HasPropertyChanged |= UI::PropertyMultiline("Symbols", opts->CustomCharset);
+        m_HasPropertyChanged |= UI::Property("Padding", opts->Padding, 0U, 256U);
         m_HasPropertyChanged |= UI::Property("Get Kerning Data", opts->GetKerningData);
-        m_HasPropertyChanged |= UI::Property("Tab Width", opts->TabMultiple, 1U, 32U);
+        m_HasPropertyChanged |= UI::Property("Tab Width", opts->TabMultiple, 1U, 64U);
+
+        const Ref<AssetMetadata> inspectedMetadata = ProjectLibrary::Get().FindAssetMetadata(m_InspectedAssetPath);
+        const UUID inspectedFont = inspectedMetadata != nullptr ? inspectedMetadata->Uuid : UUID::EMPTY;
+        if (!inspectedFont.Empty())
+        {
+            const auto fallbackEnd = std::remove(opts->FallbackFonts.begin(), opts->FallbackFonts.end(), inspectedFont);
+            if (fallbackEnd != opts->FallbackFonts.end())
+            {
+                opts->FallbackFonts.erase(fallbackEnd, opts->FallbackFonts.end());
+                m_HasPropertyChanged = true;
+            }
+        }
+        AssetManager* assetManager = AssetManager::TryGet();
+        for (size_t index = 0; index < opts->FallbackFonts.size();)
+        {
+            AssetHandle<Font> fallback;
+            if (assetManager != nullptr)
+                fallback = static_asset_cast<Font>(assetManager->GetAssetHandle(opts->FallbackFonts[index]));
+
+            if (UIUtils::AssetReference<Font>("Fallback " + std::to_string(index + 1), fallback))
+            {
+                const UUID selectedFont = fallback.GetUUID();
+                if (selectedFont.Empty())
+                {
+                    opts->FallbackFonts.erase(opts->FallbackFonts.begin() + index);
+                    m_HasPropertyChanged = true;
+                    continue;
+                }
+
+                const bool isDuplicate = std::find(opts->FallbackFonts.begin(), opts->FallbackFonts.end(), selectedFont) != opts->FallbackFonts.end() &&
+                                         selectedFont != opts->FallbackFonts[index];
+                if (selectedFont != inspectedFont && !isDuplicate)
+                {
+                    opts->FallbackFonts[index] = selectedFont;
+                    m_HasPropertyChanged = true;
+                }
+            }
+            ++index;
+        }
+
+        if (opts->FallbackFonts.size() < Font::MAX_FALLBACK_FONTS)
+        {
+            AssetHandle<Font> fallback;
+            if (UIUtils::AssetReference<Font>("Add Fallback", fallback) && fallback.HasUUID())
+            {
+                const UUID selectedFont = fallback.GetUUID();
+                const bool isDuplicate = std::find(opts->FallbackFonts.begin(), opts->FallbackFonts.end(), selectedFont) != opts->FallbackFonts.end();
+                if (selectedFont != inspectedFont && !isDuplicate)
+                {
+                    opts->FallbackFonts.push_back(selectedFont);
+                    m_HasPropertyChanged = true;
+                }
+            }
+        }
 
         EndImportInspector(0, ImGui::GetColumnWidth());
 
