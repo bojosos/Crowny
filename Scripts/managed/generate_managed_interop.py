@@ -101,6 +101,15 @@ SHARP_API_TYPES = {
 
 POINTER_INPUT_TYPES = {"vec2", "vec3", "vec4", "quat", "mat4"}
 
+SHARP_BASE_HOST_FUNCTIONS = {
+    "GetEntityName": {"parameters": [{"name": "entity", "type": "uuid"}], "result": "string"},
+    "SetEntityName": {"parameters": [{"name": "entity", "type": "uuid"}, {"name": "name", "type": "string"}]},
+    "FindEntityByName": {"parameters": [{"name": "name", "type": "string"}], "result": "uuid"},
+    "GetEntityParent": {"parameters": [{"name": "entity", "type": "uuid"}], "result": "uuid"},
+    "SetEntityParent": {"parameters": [{"name": "entity", "type": "uuid"}, {"name": "parent", "type": "uuid"}]},
+    "DestroyEntity": {"parameters": [{"name": "entity", "type": "uuid"}]},
+}
+
 
 def native_host_function_typedefs(functions: dict) -> str:
     lines: list[str] = []
@@ -165,6 +174,73 @@ def sharp_cs_function_fields(functions: dict) -> str:
     )
 
 
+def sharp_mono_function_fields(functions: dict) -> str:
+    return "\n".join(f"        internal IntPtr {name};" for name in functions)
+
+
+def sharp_transport_signature(function: dict, include_context: bool = False) -> tuple[str, str]:
+    declarations = ["void* context"] if include_context else []
+    arguments = ["context"] if include_context else []
+    for parameter in function.get("parameters", []):
+        parameter_type = SHARP_CS_TYPES[parameter["type"]]
+        if parameter["type"] in POINTER_INPUT_TYPES:
+            parameter_type += "*"
+        declarations.append(f"{parameter_type} {parameter['name']}")
+        arguments.append(parameter["name"])
+    if result := function.get("result"):
+        declarations.append(f"{SHARP_CS_TYPES[result]}* result")
+        arguments.append("result")
+    return ", ".join(declarations), ", ".join(arguments)
+
+
+def sharp_core_transport_methods(functions: dict) -> str:
+    methods = []
+    for name, function in functions.items():
+        signature, arguments = sharp_transport_signature(function)
+        call_arguments = f", {arguments}" if arguments else ""
+        methods.append(
+            f"        internal static int {name}({signature}) => api.{name}(api.Context{call_arguments});"
+        )
+    return "\n".join(methods)
+
+
+def sharp_mono_transport_delegates(functions: dict) -> str:
+    declarations = []
+    for name, function in functions.items():
+        signature, _ = sharp_transport_signature(function, include_context=True)
+        declarations.extend(
+            [
+                "        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]",
+                f"        private delegate int {name}Delegate({signature});",
+                f"        private static {name}Delegate {name}Callback;",
+            ]
+        )
+    return "\n".join(declarations)
+
+
+def sharp_mono_transport_bindings(functions: dict) -> str:
+    return "\n".join(
+        f"            {name}Callback = ({name}Delegate)Marshal.GetDelegateForFunctionPointer(value.{name}, typeof({name}Delegate));"
+        for name in functions
+    )
+
+
+def sharp_mono_transport_validation(functions: dict) -> str:
+    conditions = " &&\n                   ".join(f"value.{name} != IntPtr.Zero" for name in functions)
+    return f"            bool complete =\n                {conditions};"
+
+
+def sharp_mono_transport_methods(functions: dict) -> str:
+    methods = []
+    for name, function in functions.items():
+        signature, arguments = sharp_transport_signature(function)
+        call_arguments = f", {arguments}" if arguments else ""
+        methods.append(
+            f"        internal static int {name}({signature}) => {name}Callback(api.Context.ToPointer(){call_arguments});"
+        )
+    return "\n".join(methods)
+
+
 def sharp_native_parameter(parameter: dict) -> tuple[list[str], str]:
     name = parameter["name"]
     native_name = f"native{name[0].upper()}{name[1:]}"
@@ -178,13 +254,13 @@ def sharp_native_parameter(parameter: dict) -> tuple[list[str], str]:
     if parameter_type == "string":
         return [], native_name
     if parameter_type == "vec2":
-        return [f"            ManagedNativeVec2 {native_name} = new() {{ X = {name}.x, Y = {name}.y }};"], f"&{native_name}"
+        return [f"            ManagedNativeVec2 {native_name} = new ManagedNativeVec2 {{ X = {name}.x, Y = {name}.y }};"], f"&{native_name}"
     if parameter_type == "vec3":
-        return [f"            ManagedNativeVec3 {native_name} = new() {{ X = {name}.x, Y = {name}.y, Z = {name}.z }};"], f"&{native_name}"
+        return [f"            ManagedNativeVec3 {native_name} = new ManagedNativeVec3 {{ X = {name}.x, Y = {name}.y, Z = {name}.z }};"], f"&{native_name}"
     if parameter_type == "vec4":
-        return [f"            ManagedNativeVec4 {native_name} = new() {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
+        return [f"            ManagedNativeVec4 {native_name} = new ManagedNativeVec4 {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
     if parameter_type == "quat":
-        return [f"            ManagedNativeQuaternion {native_name} = new() {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
+        return [f"            ManagedNativeQuaternion {native_name} = new ManagedNativeQuaternion {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
     if parameter_type == "mat4":
         return [f"            ManagedNativeMatrix4 {native_name} = EncodeMatrix({name});"], f"&{native_name}"
     raise ValueError(f"unsupported managed parameter type: {parameter_type}")
@@ -199,8 +275,6 @@ def sharp_result_declaration(result_type: str) -> tuple[str, str]:
         return declaration, "result"
     if result_type == "uuid":
         return declaration, "DecodeUuid(result)"
-    if result_type == "string":
-        return declaration, "DecodeString(result)"
     if result_type == "font_character_info":
         return declaration, "DecodeFontCharacterInfo(result)"
     if result_type == "vec2":
@@ -213,6 +287,8 @@ def sharp_result_declaration(result_type: str) -> tuple[str, str]:
         return declaration, "new Quaternion(result.X, result.Y, result.Z, result.W)"
     if result_type == "mat4":
         return declaration, "DecodeMatrix(result)"
+    if result_type == "string":
+        return declaration, "DecodeString(result)"
     raise ValueError(f"unsupported managed result type: {result_type}")
 
 
@@ -228,7 +304,7 @@ def sharp_cs_function_wrappers(functions: dict) -> str:
             "        {",
             "            EnsureHostBindings();",
         ]
-        call_arguments = ["nativeHostApi.Context"]
+        call_arguments = []
         for parameter in parameters:
             declarations, argument = sharp_native_parameter(parameter)
             body.extend(declarations)
@@ -252,11 +328,11 @@ def sharp_cs_function_wrappers(functions: dict) -> str:
             body.append(f"{indent}{{")
             indent += "    "
             body.append(
-                f"{indent}ManagedNativeStringView native{title} = new({name}Bytes, (uint)encoded{title}.Length);"
+                f"{indent}ManagedNativeStringView native{title} = new ManagedNativeStringView({name}Bytes, (uint)encoded{title}.Length);"
             )
 
         arguments = ", ".join(call_arguments)
-        body.append(f"{indent}EnsureStatus(nativeHostApi.{function_name}({arguments}), \"{function_name}\");")
+        body.append(f"{indent}EnsureStatus(ManagedHostTransport.{function_name}({arguments}), \"{function_name}\");")
         for _ in reversed(string_parameters):
             indent = indent[:-4]
             body.append(f"{indent}}}")
@@ -692,18 +768,19 @@ namespace Crowny.ManagedHost
 
 
 def generate_typed_host_api(manifest: dict) -> str:
+    functions = {**SHARP_BASE_HOST_FUNCTIONS, **manifest["hostFunctions"]}
     return f"""// <auto-generated />
-#if !CROWNY_MONO
+using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Crowny
 {{
     [StructLayout(LayoutKind.Sequential)]
-    internal readonly unsafe struct ManagedNativeStringView
+    internal unsafe struct ManagedNativeStringView
     {{
-        internal readonly byte* Data;
-        internal readonly uint Length;
+        internal byte* Data;
+        internal uint Length;
 
         internal ManagedNativeStringView(byte* data, uint length) {{ Data = data; Length = length; }}
     }}
@@ -785,23 +862,46 @@ namespace Crowny
     {{
         internal uint Size;
         internal uint AbiVersion;
-        internal void* Context;
-        internal void* Log;
-        internal void* GetEntityName;
-        internal void* SetEntityName;
-        internal void* FindEntityByName;
-        internal void* GetEntityParent;
-        internal void* SetEntityParent;
-        internal void* DestroyEntity;
-{sharp_cs_function_fields(manifest['hostFunctions'])}
+        internal IntPtr Context;
+        internal IntPtr Log;
+{sharp_mono_function_fields(functions)}
+    }}
+
+    internal static unsafe class ManagedHostTransport
+    {{
+        private static ManagedNativeHostApi api;
+
+        internal static bool IsInitialized
+        {{
+            get {{ return api.Context != IntPtr.Zero; }}
+        }}
+
+        internal static void SetApi(ManagedNativeHostApi value)
+        {{
+            if (value.Context == IntPtr.Zero)
+            {{
+                api = value;
+                return;
+            }}
+            if (value.AbiVersion != {manifest['abiVersion']} || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
+                throw new InvalidOperationException("The native host uses an incompatible managed scripting ABI.");
+{sharp_mono_transport_validation(functions)}
+            if (!complete)
+                throw new InvalidOperationException("The native host did not provide every managed binding.");
+{sharp_mono_transport_bindings(functions)}
+            api = value;
+        }}
+
+{sharp_mono_transport_delegates(functions)}
+
+{sharp_mono_transport_methods(functions)}
     }}
 
     internal static unsafe partial class ManagedRuntimeContext
     {{
-{sharp_cs_function_wrappers(manifest['hostFunctions'])}
+{sharp_cs_function_wrappers(functions)}
     }}
 }}
-#endif
 """
 
 

@@ -158,108 +158,63 @@ namespace Crowny
         /// </summary>
         /// <param name="code">The key code.</param>
         /// <returns>True if they key is pressed, false otherwise.</returns>
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetKey(KeyCode code);
-#else
         public static bool GetKey(KeyCode code) => ManagedRuntimeContext.InputGetKey((uint)code);
-#endif
 
         /// <summary>
         /// Checks if a key wasn't pressed last frame and now is.
         /// </summary>
         /// <param name="code">The key code.</param>
         /// <returns>True if the key wasn't pressed last frame and now is, false otherwise.</returns>
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetKeyDown(KeyCode code);
-#else
         public static bool GetKeyDown(KeyCode code) => ManagedRuntimeContext.InputGetKeyDown((uint)code);
-#endif
 
         /// <summary>
         /// Checks if a key was pressed last frame and now isn't.
         /// </summary>
         /// <param name="code">The key code.</param>
         /// <returns>True if the key was pressed last frame and now isn't, false otherwise.</returns>
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetKeyUp(KeyCode code);
-#else
         public static bool GetKeyUp(KeyCode code) => ManagedRuntimeContext.InputGetKeyUp((uint)code);
-#endif
 
         /// <summary>
         /// Cheks if a mouse button is pressed.
         /// </summary>
         /// <param name="code">Mouse button code.</param>
         /// <returns>True if the mouse button is pressed, false otherwise.</returns>
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetMouseButton(MouseCode code);
-#else
         public static bool GetMouseButton(MouseCode code) =>
             ManagedRuntimeContext.InputGetMouseButton((uint)code);
-#endif
 
         /// <summary>
         /// Checks if a mouse button is pressed now and wasn't last frame.
         /// </summary>
         /// <param name="code">Mouse button code.</param>
         /// <returns>True if the mouse button is pressed not and wasn't last frame, false otherwise.</returns>
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetMouseButtonDown(MouseCode code);
-#else
         public static bool GetMouseButtonDown(MouseCode code) =>
             ManagedRuntimeContext.InputGetMouseButtonDown((uint)code);
-#endif
 
         /// <summary>
         /// Checks if a mouse button was pressed last frame and now isn't.
         /// </summary>
         /// <param name="code">Mouse button code.</param>
         /// <returns>True if the mouse button was pressed last frame and now isn't, false otherwise.</returns>
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] public extern static bool GetMouseButtonUp(MouseCode code);
-#else
         public static bool GetMouseButtonUp(MouseCode code) =>
             ManagedRuntimeContext.InputGetMouseButtonUp((uint)code);
-#endif
 
         /// <summary>
         /// The horizontal delta of mouse wheel.
         /// </summary>
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] public extern static float GetMouseScrollX();
-#else
         public static float GetMouseScrollX() => ManagedRuntimeContext.InputGetMouseScrollX();
-#endif
 
         /// <summary>
         /// The vertical delta of the mouse wheel.
         /// </summary>
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] public extern static float GetMouseScrollY();
-#else
         public static float GetMouseScrollY() => ManagedRuntimeContext.InputGetMouseScrollY();
-#endif
 
         /// <summary>
         /// The current mouse position.
         /// </summary>
         public static Vector2 mousePosition
         {
-            get
-            {
-#if CROWNY_MONO
-                Internal_GetMousePosition(out Vector2 pos);
-                return pos;
-#else
-                return ManagedRuntimeContext.InputGetMousePosition();
-#endif
-            }
+            get { return ManagedRuntimeContext.InputGetMousePosition(); }
         }
-
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static void Internal_GetMousePosition(out Vector2 pos);
-#endif
         
     }
 }

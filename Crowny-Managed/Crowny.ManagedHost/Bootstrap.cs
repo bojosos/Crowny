@@ -53,8 +53,6 @@ public static unsafe class Bootstrap
         _host = *host;
         _initialized = true;
         ManagedRuntimeContext.SetLogHandler(ForwardLog);
-        ManagedRuntimeContext.SetEntityHandlers(GetEntityName, SetEntityName, FindEntityByName, GetEntityParent, SetEntityParent,
-                                                DestroyEntity);
         ManagedRuntimeContext.SetNativeHostApi(*(ManagedNativeHostApi*)host);
         ManagedRuntimeContext.SetScriptResolver(Program.ResolveScriptComponent);
         ManagedAotRoots.Preserve();
@@ -75,7 +73,6 @@ public static unsafe class Bootstrap
         }
         _initialized = false;
         ManagedRuntimeContext.SetLogHandler(null);
-        ManagedRuntimeContext.SetEntityHandlers(null, null, null, null, null, null);
         ManagedRuntimeContext.SetNativeHostApi(default);
         ManagedRuntimeContext.SetScriptResolver(null);
         _host = default;
@@ -338,78 +335,4 @@ public static unsafe class Bootstrap
         }
     }
 
-    private static string GetEntityName(UUID entity)
-    {
-        NativeStringView name = default;
-        EnsureHostStatus(_host.GetEntityName(_host.Context, Encode(entity), &name), "get an entity name");
-        if (!IsValid(name))
-            throw new InvalidOperationException("The native host returned an invalid entity name.");
-        return Decode(name);
-    }
-
-    private static void SetEntityName(UUID entity, string value)
-    {
-        byte[] encoded = Encoding.UTF8.GetBytes(value ?? string.Empty);
-        fixed (byte* bytes = encoded)
-            EnsureHostStatus(_host.SetEntityName(_host.Context, Encode(entity), new NativeStringView(bytes, (uint)encoded.Length)),
-                             "set an entity name");
-    }
-
-    private static UUID FindEntityByName(string value)
-    {
-        byte[] encoded = Encoding.UTF8.GetBytes(value ?? string.Empty);
-        NativeUuid entity = default;
-        fixed (byte* bytes = encoded)
-            EnsureHostStatus(_host.FindEntityByName(_host.Context, new NativeStringView(bytes, (uint)encoded.Length), &entity),
-                             "find an entity by name");
-        return DecodeCrownyUuid(entity);
-    }
-
-    private static UUID GetEntityParent(UUID entity)
-    {
-        NativeUuid parent = default;
-        EnsureHostStatus(_host.GetEntityParent(_host.Context, Encode(entity), &parent), "get an entity parent");
-        return DecodeCrownyUuid(parent);
-    }
-
-    private static void SetEntityParent(UUID entity, UUID parent)
-    {
-        EnsureHostStatus(_host.SetEntityParent(_host.Context, Encode(entity), Encode(parent)), "set an entity parent");
-    }
-
-    private static void DestroyEntity(UUID entity)
-    {
-        EnsureHostStatus(_host.DestroyEntity(_host.Context, Encode(entity)), "destroy an entity");
-    }
-
-    private static void EnsureHostStatus(NativeStatus status, string operation)
-    {
-        if (status != NativeStatus.Ok)
-            throw new InvalidOperationException($"The native host could not {operation}. Status {status}.");
-    }
-
-    private static NativeUuid Encode(UUID value)
-    {
-        NativeUuid result = default;
-        byte* bytes = result.Bytes;
-        for (int wordIndex = 0; wordIndex < 4; ++wordIndex)
-        {
-            uint word = wordIndex switch { 0 => value.d0, 1 => value.d1, 2 => value.d2, _ => value.d3 };
-            int offset = wordIndex * 4;
-            bytes[offset] = (byte)(word >> 24);
-            bytes[offset + 1] = (byte)(word >> 16);
-            bytes[offset + 2] = (byte)(word >> 8);
-            bytes[offset + 3] = (byte)word;
-        }
-        return result;
-    }
-
-    private static UUID DecodeCrownyUuid(NativeUuid value)
-    {
-        byte* bytes = value.Bytes;
-        return new UUID(ReadUuidWord(bytes, 0), ReadUuidWord(bytes, 4), ReadUuidWord(bytes, 8), ReadUuidWord(bytes, 12));
-    }
-
-    private static uint ReadUuidWord(byte* value, int offset) =>
-        (uint)value[offset] << 24 | (uint)value[offset + 1] << 16 | (uint)value[offset + 2] << 8 | value[offset + 3];
 }

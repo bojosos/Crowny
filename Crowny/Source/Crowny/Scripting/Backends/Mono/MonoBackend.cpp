@@ -9,6 +9,7 @@
 #include "Crowny/Scripting/Bindings/ScriptBindings.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptSceneManager.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
+#include "Crowny/Scripting/Managed/Interop/ManagedHostBindings.h"
 #include "Crowny/Scripting/Managed/LegacyScriptState.h"
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
@@ -26,6 +27,9 @@ namespace Crowny
     namespace
     {
         constexpr uint32_t MONO_DEBUG_PORT = 17615;
+        cw_managed_host_api* g_MonoHostApi = nullptr;
+
+        void* CW_MANAGED_CALL GetMonoHostApi() { return g_MonoHostApi; }
 
         const ManagedProgramArtifact* FindArtifact(const ManagedProgramDefinition& program, ManagedProgramArtifactKind kind)
         {
@@ -579,6 +583,8 @@ namespace Crowny
             {
                 if (config.ExecutionMode != ManagedExecutionMode::Interpreter && config.ExecutionMode != ManagedExecutionMode::Jit)
                     return Failure("managed.mono.execution_mode", "Mono supports interpreter and JIT execution modes.");
+                if (g_MonoHostApi != nullptr)
+                    return Failure("managed.mono.already_started", "Another Mono managed backend is already running.");
                 if (!MonoManager::IsStartedUp())
                 {
                     const MonoRuntimePaths paths = config.RuntimeRoot.empty() ? ResolveMonoRuntimePaths(Path("."))
@@ -589,6 +595,12 @@ namespace Crowny
                     m_OwnsMono = true;
                 }
                 m_Config = config;
+                m_HostApi = {};
+                m_HostApi.size = sizeof(m_HostApi);
+                m_HostApi.abi_version = CW_MANAGED_ABI_VERSION;
+                m_HostApi.context = this;
+                PopulateManagedHostBindings(m_HostApi);
+                g_MonoHostApi = &m_HostApi;
                 m_Started = true;
                 return ManagedOperationResult::Success();
             }
@@ -601,6 +613,9 @@ namespace Crowny
                 m_Catalog = {};
                 m_CurrentProgram = {};
                 m_ProgramLoaded = false;
+                if (g_MonoHostApi == &m_HostApi)
+                    g_MonoHostApi = nullptr;
+                m_HostApi = {};
                 if (m_OwnsScriptAssets)
                     ScriptAssetManager::Shutdown();
                 if (m_OwnsScriptObjects)
@@ -946,7 +961,11 @@ namespace Crowny
                 {
                     MonoAssembly* loadedEngine = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
                     if (loadedEngine == nullptr || !loadedEngine->IsLoaded())
-                        MonoManager::Get().LoadAssembly(engine->Filepath, CROWNY_ASSEMBLY);
+                        loadedEngine = &MonoManager::Get().LoadAssembly(engine->Filepath, CROWNY_ASSEMBLY);
+                    MonoClass* runtimeContext = loadedEngine->GetClass(CROWNY_NS, "ManagedRuntimeContext");
+                    if (runtimeContext == nullptr)
+                        return Failure("managed.mono.host_api_missing", "CrownySharp does not contain the managed runtime context.");
+                    runtimeContext->AddInternalCall("Internal_GetNativeHostApi", reinterpret_cast<const void*>(&GetMonoHostApi));
                     ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
                     if (game != nullptr && fs::is_regular_file(game->Filepath))
                     {
@@ -1051,6 +1070,7 @@ namespace Crowny
             ManagedScriptingConfig m_Config;
             ManagedProgramDefinition m_CurrentProgram;
             ScriptCatalog m_Catalog;
+            cw_managed_host_api m_HostApi{};
             Map<uint64_t, Instance> m_Instances;
             uint64_t m_NextHandle = 1;
             bool m_Started = false;

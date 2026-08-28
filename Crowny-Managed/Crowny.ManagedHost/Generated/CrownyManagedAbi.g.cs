@@ -194,6 +194,7 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetEulerAngles;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetLocalEulerAngles;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetLocalEulerAngles;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, byte*, NativeStatus> TransformIsDirty;
         public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetKey;
         public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetKeyDown;
         public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputGetKeyUp;
@@ -203,6 +204,7 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> InputGetMouseScrollX;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> InputGetMouseScrollY;
         public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> InputGetMousePosition;
+        public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetDeltaTime;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetTime;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetFixedDeltaTime;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetSmoothDeltaTime;
@@ -374,6 +376,7 @@ namespace Crowny.ManagedHost.Interop
                    TransformSetEulerAngles != null &&
                    TransformGetLocalEulerAngles != null &&
                    TransformSetLocalEulerAngles != null &&
+                   TransformIsDirty != null &&
                    InputGetKey != null &&
                    InputGetKeyDown != null &&
                    InputGetKeyUp != null &&
@@ -383,6 +386,7 @@ namespace Crowny.ManagedHost.Interop
                    InputGetMouseScrollX != null &&
                    InputGetMouseScrollY != null &&
                    InputGetMousePosition != null &&
+                   TimeGetDeltaTime != null &&
                    TimeGetTime != null &&
                    TimeGetFixedDeltaTime != null &&
                    TimeGetSmoothDeltaTime != null &&

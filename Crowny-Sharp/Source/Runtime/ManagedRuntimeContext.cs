@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Crowny
@@ -8,16 +10,7 @@ namespace Crowny
         [ThreadStatic]
         private static float callbackDeltaTime;
         private static Action<int, string> logHandler;
-        private static Func<UUID, string> getEntityName;
-        private static Action<UUID, string> setEntityName;
-        private static Func<string, UUID> findEntityByName;
-        private static Func<UUID, UUID> getEntityParent;
-        private static Action<UUID, UUID> setEntityParent;
-        private static Action<UUID> destroyEntity;
         private static Func<UUID, Type, Component> scriptResolver;
-#if !CROWNY_MONO
-        private static ManagedNativeHostApi nativeHostApi;
-#endif
 
         internal static float DeltaTime => callbackDeltaTime;
 
@@ -38,57 +31,14 @@ namespace Crowny
             logHandler?.Invoke(severity, message);
         }
 
-        internal static void SetEntityHandlers(Func<UUID, string> getName, Action<UUID, string> setName, Func<string, UUID> findByName,
-                                               Func<UUID, UUID> getParent, Action<UUID, UUID> setParent, Action<UUID> destroy)
-        {
-            getEntityName = getName;
-            setEntityName = setName;
-            findEntityByName = findByName;
-            getEntityParent = getParent;
-            setEntityParent = setParent;
-            destroyEntity = destroy;
-        }
-
-#if !CROWNY_MONO
         internal static void SetNativeHostApi(ManagedNativeHostApi api)
         {
-            nativeHostApi = api;
+            ManagedHostTransport.SetApi(api);
         }
-#endif
 
         internal static void SetScriptResolver(Func<UUID, Type, Component> resolver)
         {
             scriptResolver = resolver;
-        }
-
-        internal static string GetEntityName(UUID entity) =>
-            getEntityName != null ? getEntityName(entity) : throw new InvalidOperationException("Managed entity bindings are unavailable.");
-
-        internal static void SetEntityName(UUID entity, string name)
-        {
-            if (setEntityName == null)
-                throw new InvalidOperationException("Managed entity bindings are unavailable.");
-            setEntityName(entity, name);
-        }
-
-        internal static UUID FindEntityByName(string name) =>
-            findEntityByName != null ? findEntityByName(name) : throw new InvalidOperationException("Managed entity bindings are unavailable.");
-
-        internal static UUID GetEntityParent(UUID entity) =>
-            getEntityParent != null ? getEntityParent(entity) : throw new InvalidOperationException("Managed entity bindings are unavailable.");
-
-        internal static void SetEntityParent(UUID entity, UUID parent)
-        {
-            if (setEntityParent == null)
-                throw new InvalidOperationException("Managed entity bindings are unavailable.");
-            setEntityParent(entity, parent);
-        }
-
-        internal static void DestroyEntity(UUID entity)
-        {
-            if (destroyEntity == null)
-                throw new InvalidOperationException("Managed entity bindings are unavailable.");
-            destroyEntity(entity);
         }
 
 #if !CROWNY_MONO
@@ -142,10 +92,19 @@ namespace Crowny
             component.m_ManagedEntity = new Entity { m_ManagedUuid = entity };
             return component;
         }
+#endif
 
         private static void EnsureHostBindings()
         {
-            if (nativeHostApi.Context == null)
+#if CROWNY_MONO
+            if (!ManagedHostTransport.IsInitialized)
+            {
+                IntPtr hostApi = Internal_GetNativeHostApi();
+                if (hostApi != IntPtr.Zero)
+                    ManagedHostTransport.SetApi((ManagedNativeHostApi)Marshal.PtrToStructure(hostApi, typeof(ManagedNativeHostApi)));
+            }
+#endif
+            if (!ManagedHostTransport.IsInitialized)
                 throw new InvalidOperationException("Managed native host bindings are unavailable.");
         }
 
@@ -168,9 +127,9 @@ namespace Crowny
 
         private static string DecodeString(ManagedNativeStringView value)
         {
-            return value.Data == null || value.Length == 0
-                ? string.Empty
-                : Encoding.UTF8.GetString(value.Data, checked((int)value.Length));
+            if (value.Data == null || value.Length == 0)
+                return string.Empty;
+            return Encoding.UTF8.GetString(value.Data, checked((int)value.Length));
         }
 
         private static CharacterInfo DecodeFontCharacterInfo(ManagedNativeFontCharacterInfo value)
@@ -231,6 +190,10 @@ namespace Crowny
             if (status != 0)
                 throw new InvalidOperationException($"The native host could not complete {operation}. Status {status}.");
         }
+
+#if CROWNY_MONO
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern IntPtr Internal_GetNativeHostApi();
 #endif
 
         internal struct CallbackScope : IDisposable

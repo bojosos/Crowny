@@ -189,6 +189,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_get_euler_angles
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_set_euler_angles_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_get_local_euler_angles_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_set_local_euler_angles_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_is_dirty_fn)(void* context, cw_managed_uuid entity, int32_t flag, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_key_fn)(void* context, uint32_t code, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_key_down_fn)(void* context, uint32_t code, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_key_up_fn)(void* context, uint32_t code, uint8_t* result);
@@ -198,6 +199,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_button_up_
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_scroll_x_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_scroll_y_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_position_fn)(void* context, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_delta_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_fixed_delta_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_smooth_delta_time_fn)(void* context, float* result);
@@ -380,6 +382,7 @@ typedef struct cw_managed_host_api
     cw_managed_transform_set_euler_angles_fn transform_set_euler_angles;
     cw_managed_transform_get_local_euler_angles_fn transform_get_local_euler_angles;
     cw_managed_transform_set_local_euler_angles_fn transform_set_local_euler_angles;
+    cw_managed_transform_is_dirty_fn transform_is_dirty;
     cw_managed_input_get_key_fn input_get_key;
     cw_managed_input_get_key_down_fn input_get_key_down;
     cw_managed_input_get_key_up_fn input_get_key_up;
@@ -389,6 +392,7 @@ typedef struct cw_managed_host_api
     cw_managed_input_get_mouse_scroll_x_fn input_get_mouse_scroll_x;
     cw_managed_input_get_mouse_scroll_y_fn input_get_mouse_scroll_y;
     cw_managed_input_get_mouse_position_fn input_get_mouse_position;
+    cw_managed_time_get_delta_time_fn time_get_delta_time;
     cw_managed_time_get_time_fn time_get_time;
     cw_managed_time_get_fixed_delta_time_fn time_get_fixed_delta_time;
     cw_managed_time_get_smooth_delta_time_fn time_get_smooth_delta_time;
@@ -561,6 +565,7 @@ typedef struct cw_managed_host_api
     X(TransformSetEulerAngles, transform_set_euler_angles) \
     X(TransformGetLocalEulerAngles, transform_get_local_euler_angles) \
     X(TransformSetLocalEulerAngles, transform_set_local_euler_angles) \
+    X(TransformIsDirty, transform_is_dirty) \
     X(InputGetKey, input_get_key) \
     X(InputGetKeyDown, input_get_key_down) \
     X(InputGetKeyUp, input_get_key_up) \
@@ -570,6 +575,7 @@ typedef struct cw_managed_host_api
     X(InputGetMouseScrollX, input_get_mouse_scroll_x) \
     X(InputGetMouseScrollY, input_get_mouse_scroll_y) \
     X(InputGetMousePosition, input_get_mouse_position) \
+    X(TimeGetDeltaTime, time_get_delta_time) \
     X(TimeGetTime, time_get_time) \
     X(TimeGetFixedDeltaTime, time_get_fixed_delta_time) \
     X(TimeGetSmoothDeltaTime, time_get_smooth_delta_time) \

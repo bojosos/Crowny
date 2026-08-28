@@ -10,6 +10,7 @@
 #include "Crowny/Scene/SceneManager.h"
 
 #include <cstring>
+#include <limits>
 
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -204,6 +205,95 @@ namespace Crowny
             });
         }
 
+        cw_managed_status CW_MANAGED_CALL GetEntityName(void* context, cw_managed_uuid entityId, cw_managed_string_view* name)
+        {
+            return Execute(context, [&]() {
+                if (name == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const Entity entity = ResolveEntity(entityId);
+                if (!entity)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                thread_local String storage;
+                storage = entity.GetName();
+                if (storage.size() > std::numeric_limits<uint32_t>::max())
+                    return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
+                name->data = reinterpret_cast<const uint8_t*>(storage.data());
+                name->length = static_cast<uint32_t>(storage.size());
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL SetEntityName(void* context, cw_managed_uuid entityId, cw_managed_string_view name)
+        {
+            return Execute(context, [&]() {
+                if (name.data == nullptr && name.length != 0)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                Entity entity = ResolveEntity(entityId);
+                if (!entity)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                entity.GetComponent<TagComponent>().Tag = Decode(name);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL FindEntityByName(void* context, cw_managed_string_view name, cw_managed_uuid* entityId)
+        {
+            return Execute(context, [&]() {
+                if (entityId == nullptr || (name.data == nullptr && name.length != 0))
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                SceneManager* manager = SceneManager::TryGet();
+                const Ref<Scene> scene = manager != nullptr ? manager->GetActiveScene() : nullptr;
+                if (scene == nullptr)
+                    return CW_MANAGED_STATUS_NOT_INITIALIZED;
+                const Entity entity = scene->FindEntityByName(Decode(name));
+                *entityId = entity ? ToAbiUuid(entity.GetUuid()) : cw_managed_uuid{};
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL GetEntityParent(void* context, cw_managed_uuid entityId, cw_managed_uuid* parentId)
+        {
+            return Execute(context, [&]() {
+                if (parentId == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const Entity entity = ResolveEntity(entityId);
+                if (!entity)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                const Entity parent = entity.GetParent();
+                *parentId = parent ? ToAbiUuid(parent.GetUuid()) : cw_managed_uuid{};
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL SetEntityParent(void* context, cw_managed_uuid entityId, cw_managed_uuid parentId)
+        {
+            return Execute(context, [&]() {
+                Entity entity = ResolveEntity(entityId);
+                if (!entity)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                const UUID parentUuid = FromAbiUuid(parentId);
+                if (parentUuid.Empty())
+                    return CW_MANAGED_STATUS_OK;
+                const Entity parent = ResolveEntity(parentId);
+                if (!parent)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                return entity.SetParent(parent) ? CW_MANAGED_STATUS_OK : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL DestroyEntity(void* context, cw_managed_uuid entityId)
+        {
+            return Execute(context, [&]() {
+                SceneManager* manager = SceneManager::TryGet();
+                const Ref<Scene> scene = manager != nullptr ? manager->GetActiveScene() : nullptr;
+                const Entity entity = scene != nullptr ? scene->TryGetEntityFromUuid(FromAbiUuid(entityId)) : Entity();
+                if (!entity)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                scene->DestroyEntity(entity);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
 #define CW_TRANSFORM_GET_VEC3(functionName, expression)                                                                              \
     cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, cw_managed_vec3* result)                 \
     {                                                                                                                                \
@@ -300,6 +390,20 @@ namespace Crowny
         CW_TRANSFORM_GET_MATRIX(TransformGetWorldToLocalMatrix, glm::inverse(entity.GetWorldMatrix()))
 #undef CW_TRANSFORM_GET_MATRIX
 
+        cw_managed_status CW_MANAGED_CALL TransformIsDirty(void* context, cw_managed_uuid entityId, int32_t flag, uint8_t* result)
+        {
+            return Execute(context, [&]() {
+                const Entity entity = ResolveEntity(entityId);
+                if (!entity)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (result == nullptr || flag < 0 || flag > 1)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const TransformComponent& transform = entity.GetComponent<TransformComponent>();
+                *result = flag == 0 ? !transform.IsCachedLocalTransformValid() : !transform.IsCachedWorldTransformValid();
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
 #define CW_INPUT_BUTTON(functionName, expression)                                                                                    \
     cw_managed_status CW_MANAGED_CALL functionName(void* context, uint32_t code, uint8_t* result)                                   \
     {                                                                                                                                \
@@ -330,6 +434,7 @@ namespace Crowny
     }
         CW_GLOBAL_FLOAT(InputGetMouseScrollX, Input::GetMouseScrollX())
         CW_GLOBAL_FLOAT(InputGetMouseScrollY, Input::GetMouseScrollY())
+        CW_GLOBAL_FLOAT(TimeGetDeltaTime, Time::GetDeltaTime())
         CW_GLOBAL_FLOAT(TimeGetTime, Time::GetTime())
         CW_GLOBAL_FLOAT(TimeGetFixedDeltaTime, Time::GetFixedDeltaTime())
         CW_GLOBAL_FLOAT(TimeGetSmoothDeltaTime, Time::GetSmoothDeltaTime())
@@ -629,6 +734,12 @@ namespace Crowny
 
     void PopulateManagedHostBindings(cw_managed_host_api& api)
     {
+        api.get_entity_name = &GetEntityName;
+        api.set_entity_name = &SetEntityName;
+        api.find_entity_by_name = &FindEntityByName;
+        api.get_entity_parent = &GetEntityParent;
+        api.set_entity_parent = &SetEntityParent;
+        api.destroy_entity = &DestroyEntity;
 #define CW_ASSIGN_HOST_FUNCTION(functionName, fieldName) api.fieldName = &functionName;
         CW_MANAGED_HOST_FUNCTION_LIST(CW_ASSIGN_HOST_FUNCTION)
 #undef CW_ASSIGN_HOST_FUNCTION
