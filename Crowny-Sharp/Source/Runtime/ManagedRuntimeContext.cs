@@ -110,7 +110,7 @@ namespace Crowny
 
         private static ManagedNativeUuid EncodeUuid(UUID value)
         {
-            ManagedNativeUuid result = default;
+            ManagedNativeUuid result = default(ManagedNativeUuid);
             byte* bytes = result.Bytes;
             WriteBigEndian(bytes, 0, value.d0);
             WriteBigEndian(bytes, 4, value.d1);
@@ -156,7 +156,7 @@ namespace Crowny
 
         private static ManagedNativeMatrix4 EncodeMatrix(Matrix4 value)
         {
-            ManagedNativeMatrix4 result = default;
+            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
             float* values = result.Values;
             for (int index = 0; index < 16; ++index)
                 values[index] = value[index];
