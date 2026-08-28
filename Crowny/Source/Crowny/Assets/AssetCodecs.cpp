@@ -283,13 +283,17 @@ namespace Crowny
         archive(metrics.emSize, metrics.underlineY, metrics.underlineThickness, metrics.strikethroughY);
         archive(font.m_TabWidth);
         archive(font.m_AtlasPixelRange);
+        const uint32_t fallbackCount = static_cast<uint32_t>(std::min(font.m_FallbackFontIds.size(), Font::MAX_FALLBACK_FONTS));
+        archive(fallbackCount);
+        for (uint32_t index = 0; index < fallbackCount; index++)
+            archive(font.m_FallbackFontIds[index]);
         archive(font.m_AtlasTexture);
     }
 
     void Load(BinaryDataStreamInputArchive& archive, Font& font)
     {
         const AssetFileHeader header = ReadAssetHeader(archive);
-        if (header.Magic == ASSET_FILE_MAGIC && (header.Type != AssetType::Font || (header.Version != 2 && header.Version != FONT_FORMAT_VERSION)))
+        if (header.Magic == ASSET_FILE_MAGIC && (header.Type != AssetType::Font || header.Version < 2 || header.Version > FONT_FORMAT_VERSION))
             throw cereal::Exception("Font asset format is not supported. Reimport the source font.");
         archive(cereal::base_class<Asset>(&font));
         font.m_MSDFData = CreateScope<MSDFData>();
@@ -307,8 +311,25 @@ namespace Crowny
             font.m_AtlasPixelRange = 2.0f;
         if (!std::isfinite(font.m_AtlasPixelRange) || font.m_AtlasPixelRange <= 0.0f)
             throw cereal::Exception("Font atlas pixel range is invalid. Reimport the source font.");
+        if (header.Magic == ASSET_FILE_MAGIC && header.Version >= 4)
+        {
+            uint32_t fallbackCount = 0;
+            archive(fallbackCount);
+            if (fallbackCount > Font::MAX_FALLBACK_FONTS)
+                throw cereal::Exception("Font asset contains too many fallback references.");
+            Vector<UUID> fallbackFontIds;
+            fallbackFontIds.reserve(fallbackCount);
+            for (uint32_t index = 0; index < fallbackCount; index++)
+            {
+                UUID fallbackId;
+                archive(fallbackId);
+                fallbackFontIds.push_back(fallbackId);
+            }
+            font.SetFallbackFontIds(fallbackFontIds);
+        }
+        else
+            font.ClearFallbackFonts();
         archive(font.m_AtlasTexture);
-        font.m_FallbackFonts.clear();
     }
 
     void Load(BinaryDataStreamInputArchive& archive, Texture& texture)
