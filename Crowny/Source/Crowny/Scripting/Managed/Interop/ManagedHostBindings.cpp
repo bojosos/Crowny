@@ -420,7 +420,37 @@ namespace Crowny
         CW_INPUT_BUTTON(InputGetMouseButton, Input::IsMouseButtonPressed(static_cast<MouseCode>(code)))
         CW_INPUT_BUTTON(InputGetMouseButtonDown, Input::IsMouseButtonDown(static_cast<MouseCode>(code)))
         CW_INPUT_BUTTON(InputGetMouseButtonUp, Input::IsMouseButtonUp(static_cast<MouseCode>(code)))
+        CW_INPUT_BUTTON(InputIsGamepadConnected, Input::IsGamepadConnected(code))
 #undef CW_INPUT_BUTTON
+
+#define CW_GAMEPAD_BUTTON(functionName, expression)                                                                                 \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, uint32_t gamepad, uint32_t code, uint8_t* result)                \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            if (result == nullptr)                                                                                                   \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            *result = expression ? 1 : 0;                                                                                            \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+        CW_GAMEPAD_BUTTON(InputGetGamepadButton,
+                          Input::IsGamepadButtonPressed(gamepad, static_cast<GamepadButtonCode>(code)))
+        CW_GAMEPAD_BUTTON(InputGetGamepadButtonDown,
+                          Input::IsGamepadButtonDown(gamepad, static_cast<GamepadButtonCode>(code)))
+        CW_GAMEPAD_BUTTON(InputGetGamepadButtonUp,
+                          Input::IsGamepadButtonUp(gamepad, static_cast<GamepadButtonCode>(code)))
+#undef CW_GAMEPAD_BUTTON
+
+        cw_managed_status CW_MANAGED_CALL InputGetGamepadAxis(void* context, uint32_t gamepad, uint32_t code,
+                                                               float* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = Input::GetGamepadAxis(gamepad, static_cast<GamepadAxisCode>(code));
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
 
 #define CW_GLOBAL_FLOAT(functionName, expression)                                                                                    \
     cw_managed_status CW_MANAGED_CALL functionName(void* context, float* result)                                                     \
@@ -449,6 +479,76 @@ namespace Crowny
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 const glm::vec2 value = Input::GetMousePosition();
                 *result = { value.x, value.y };
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL InputGetMouseDelta(void* context, cw_managed_vec2* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const glm::vec2 value = Input::GetMouseDelta();
+                *result = { value.x, value.y };
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+#define CW_ACTION_BUTTON(functionName, expression)                                                                                  \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_string_view actionName, uint8_t* result)              \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            if (result == nullptr || (actionName.data == nullptr && actionName.length != 0))                                        \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            *result = expression ? 1 : 0;                                                                                            \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+        CW_ACTION_BUTTON(InputGetAction, Input::GetAction(Decode(actionName)))
+        CW_ACTION_BUTTON(InputGetActionDown, Input::GetActionDown(Decode(actionName)))
+        CW_ACTION_BUTTON(InputGetActionUp, Input::GetActionUp(Decode(actionName)))
+#undef CW_ACTION_BUTTON
+
+        cw_managed_status CW_MANAGED_CALL InputGetAxis(void* context, cw_managed_string_view actionName, float* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr || (actionName.data == nullptr && actionName.length != 0))
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = Input::GetAxis(Decode(actionName));
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL InputGetActionVector(void* context, cw_managed_string_view actionName,
+                                                                cw_managed_vec2* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr || (actionName.data == nullptr && actionName.length != 0))
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const glm::vec2 value = Input::GetActionVector(Decode(actionName));
+                *result = { value.x, value.y };
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+#define CW_ACTION_MAP(functionName, enabled)                                                                                        \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_string_view mapName, uint8_t* result)                 \
+    {                                                                                                                                \
+        return Execute(context, [&]() {                                                                                              \
+            if (result == nullptr || (mapName.data == nullptr && mapName.length != 0))                                              \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                           \
+            *result = Input::SetActionMapEnabled(Decode(mapName), enabled) ? 1 : 0;                                                  \
+            return CW_MANAGED_STATUS_OK;                                                                                              \
+        });                                                                                                                          \
+    }
+        CW_ACTION_MAP(InputEnableActionMap, true)
+        CW_ACTION_MAP(InputDisableActionMap, false)
+#undef CW_ACTION_MAP
+
+        cw_managed_status CW_MANAGED_CALL InputClearActionRebinds(void* context)
+        {
+            return Execute(context, [&]() {
+                Input::ClearActionRebinds();
                 return CW_MANAGED_STATUS_OK;
             });
         }

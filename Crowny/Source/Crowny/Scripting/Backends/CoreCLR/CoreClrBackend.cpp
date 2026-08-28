@@ -1051,6 +1051,11 @@ namespace Crowny
     {                                                                                                                                                \
         return ForwardTypedBinding(context, bindingName, {}, nullptr, 0, result, sizeof(resultType));                                                \
     }
+#define CW_TYPED_INPUT_STRING_GET(functionName, bindingName, resultType)                                                                             \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_string_view name, resultType* result)                            \
+    {                                                                                                                                                \
+        return ForwardTypedBinding(context, bindingName, {}, name.data, name.length, result, sizeof(resultType));                                    \
+    }
 
             static cw_managed_status CW_MANAGED_CALL EntityHasComponent(void* context, cw_managed_uuid entity, cw_managed_string_view typeName,
                                                                         uint8_t* result)
@@ -1093,6 +1098,12 @@ namespace Crowny
     {                                                                                                                                                \
         return ForwardTypedBinding(context, bindingName, {}, &code, sizeof(code), result, sizeof(*result));                                          \
     }
+#define CW_TYPED_GAMEPAD_VALUE(functionName, bindingName, resultType)                                                                                \
+    static cw_managed_status CW_MANAGED_CALL functionName(void* context, uint32_t gamepad, uint32_t code, resultType* result)                        \
+    {                                                                                                                                                \
+        const uint32_t input[] = { gamepad, code };                                                                                                  \
+        return ForwardTypedBinding(context, bindingName, {}, input, sizeof(input), result, sizeof(*result));                                         \
+    }
             CW_TYPED_INPUT_BUTTON(InputGetKey, CW_MANAGED_BINDING_INPUT_GET_KEY)
             CW_TYPED_INPUT_BUTTON(InputGetKeyDown, CW_MANAGED_BINDING_INPUT_GET_KEY_DOWN)
             CW_TYPED_INPUT_BUTTON(InputGetKeyUp, CW_MANAGED_BINDING_INPUT_GET_KEY_UP)
@@ -1102,6 +1113,25 @@ namespace Crowny
             CW_TYPED_GLOBAL_GET(InputGetMouseScrollX, CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_X, float)
             CW_TYPED_GLOBAL_GET(InputGetMouseScrollY, CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_Y, float)
             CW_TYPED_GLOBAL_GET(InputGetMousePosition, CW_MANAGED_BINDING_INPUT_GET_MOUSE_POSITION, cw_managed_vec2)
+            CW_TYPED_GLOBAL_GET(InputGetMouseDelta, CW_MANAGED_BINDING_INPUT_GET_MOUSE_DELTA, cw_managed_vec2)
+            CW_TYPED_INPUT_BUTTON(InputIsGamepadConnected, CW_MANAGED_BINDING_INPUT_IS_GAMEPAD_CONNECTED)
+            CW_TYPED_GAMEPAD_VALUE(InputGetGamepadButton, CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON, uint8_t)
+            CW_TYPED_GAMEPAD_VALUE(InputGetGamepadButtonDown, CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON_DOWN, uint8_t)
+            CW_TYPED_GAMEPAD_VALUE(InputGetGamepadButtonUp, CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON_UP, uint8_t)
+            CW_TYPED_GAMEPAD_VALUE(InputGetGamepadAxis, CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_AXIS, float)
+            CW_TYPED_INPUT_STRING_GET(InputGetAction, CW_MANAGED_BINDING_INPUT_GET_ACTION, uint8_t)
+            CW_TYPED_INPUT_STRING_GET(InputGetActionDown, CW_MANAGED_BINDING_INPUT_GET_ACTION_DOWN, uint8_t)
+            CW_TYPED_INPUT_STRING_GET(InputGetActionUp, CW_MANAGED_BINDING_INPUT_GET_ACTION_UP, uint8_t)
+            CW_TYPED_INPUT_STRING_GET(InputGetAxis, CW_MANAGED_BINDING_INPUT_GET_AXIS, float)
+            CW_TYPED_INPUT_STRING_GET(InputGetActionVector, CW_MANAGED_BINDING_INPUT_GET_ACTION_VECTOR, cw_managed_vec2)
+            CW_TYPED_INPUT_STRING_GET(InputEnableActionMap, CW_MANAGED_BINDING_INPUT_ENABLE_ACTION_MAP, uint8_t)
+            CW_TYPED_INPUT_STRING_GET(InputDisableActionMap, CW_MANAGED_BINDING_INPUT_DISABLE_ACTION_MAP, uint8_t)
+
+            static cw_managed_status CW_MANAGED_CALL InputClearActionRebinds(void* context)
+            {
+                return ForwardTypedBinding(context, CW_MANAGED_BINDING_INPUT_CLEAR_ACTION_REBINDS, {}, nullptr, 0, nullptr, 0);
+            }
+
             CW_TYPED_GLOBAL_GET(TimeGetTime, CW_MANAGED_BINDING_TIME_GET_TIME, float)
             CW_TYPED_GLOBAL_GET(TimeGetFixedDeltaTime, CW_MANAGED_BINDING_TIME_GET_FIXED_DELTA_TIME, float)
             CW_TYPED_GLOBAL_GET(TimeGetSmoothDeltaTime, CW_MANAGED_BINDING_TIME_GET_SMOOTH_DELTA_TIME, float)
@@ -1366,7 +1396,9 @@ namespace Crowny
 
 #undef CW_TYPED_MATRIX_OPERATION
 #undef CW_TYPED_ENTITY_ACTION
+#undef CW_TYPED_GAMEPAD_VALUE
 #undef CW_TYPED_INPUT_BUTTON
+#undef CW_TYPED_INPUT_STRING_GET
 #undef CW_TYPED_GLOBAL_GET
 #undef CW_TYPED_ENTITY_SET_STRUCT
 #undef CW_TYPED_ENTITY_SET_VALUE
@@ -1540,6 +1572,61 @@ namespace Crowny
                         return WriteBindingResult(output, Input::GetMouseScrollY());
                     case CW_MANAGED_BINDING_INPUT_GET_MOUSE_POSITION:
                         return writeVector2(Input::GetMousePosition());
+                    case CW_MANAGED_BINDING_INPUT_GET_MOUSE_DELTA:
+                        return writeVector2(Input::GetMouseDelta());
+                    case CW_MANAGED_BINDING_INPUT_IS_GAMEPAD_CONNECTED: {
+                        if (input.length != sizeof(uint32_t))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        const uint8_t result = Input::IsGamepadConnected(readCode()) ? 1 : 0;
+                        return WriteBindingResult(output, result);
+                    }
+                    case CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON:
+                    case CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON_DOWN:
+                    case CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON_UP:
+                    case CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_AXIS: {
+                        if (input.data == nullptr || input.length != 2 * sizeof(uint32_t))
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        uint32_t values[2]{};
+                        std::memcpy(values, input.data, sizeof(values));
+                        if (binding == CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_AXIS)
+                            return WriteBindingResult(output, Input::GetGamepadAxis(values[0], static_cast<GamepadAxisCode>(values[1])));
+                        const GamepadButtonCode code = static_cast<GamepadButtonCode>(values[1]);
+                        const bool pressed = binding == CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON ? Input::IsGamepadButtonPressed(values[0], code)
+                                             : binding == CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON_DOWN
+                                               ? Input::IsGamepadButtonDown(values[0], code)
+                                               : Input::IsGamepadButtonUp(values[0], code);
+                        const uint8_t result = pressed ? 1 : 0;
+                        return WriteBindingResult(output, result);
+                    }
+                    case CW_MANAGED_BINDING_INPUT_GET_ACTION:
+                    case CW_MANAGED_BINDING_INPUT_GET_ACTION_DOWN:
+                    case CW_MANAGED_BINDING_INPUT_GET_ACTION_UP:
+                    case CW_MANAGED_BINDING_INPUT_GET_AXIS:
+                    case CW_MANAGED_BINDING_INPUT_GET_ACTION_VECTOR:
+                    case CW_MANAGED_BINDING_INPUT_ENABLE_ACTION_MAP:
+                    case CW_MANAGED_BINDING_INPUT_DISABLE_ACTION_MAP: {
+                        const StringView name(input.data != nullptr ? reinterpret_cast<const char*>(input.data) : "", input.length);
+                        if (binding == CW_MANAGED_BINDING_INPUT_GET_AXIS)
+                            return WriteBindingResult(output, Input::GetAxis(name));
+                        if (binding == CW_MANAGED_BINDING_INPUT_GET_ACTION_VECTOR)
+                            return writeVector2(Input::GetActionVector(name));
+                        if (binding == CW_MANAGED_BINDING_INPUT_ENABLE_ACTION_MAP || binding == CW_MANAGED_BINDING_INPUT_DISABLE_ACTION_MAP)
+                        {
+                            const bool enabled = binding == CW_MANAGED_BINDING_INPUT_ENABLE_ACTION_MAP;
+                            const uint8_t result = Input::SetActionMapEnabled(name, enabled) ? 1 : 0;
+                            return WriteBindingResult(output, result);
+                        }
+                        const bool active = binding == CW_MANAGED_BINDING_INPUT_GET_ACTION        ? Input::GetAction(name)
+                                            : binding == CW_MANAGED_BINDING_INPUT_GET_ACTION_DOWN ? Input::GetActionDown(name)
+                                                                                                  : Input::GetActionUp(name);
+                        const uint8_t result = active ? 1 : 0;
+                        return WriteBindingResult(output, result);
+                    }
+                    case CW_MANAGED_BINDING_INPUT_CLEAR_ACTION_REBINDS:
+                        if (input.length != 0)
+                            return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                        Input::ClearActionRebinds();
+                        return CW_MANAGED_STATUS_OK;
                     case CW_MANAGED_BINDING_TIME_GET_TIME:
                         return WriteBindingResult(output, Time::GetTime());
                     case CW_MANAGED_BINDING_TIME_GET_FIXED_DELTA_TIME:
