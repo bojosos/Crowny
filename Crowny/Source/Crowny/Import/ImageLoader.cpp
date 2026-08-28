@@ -608,9 +608,7 @@ namespace Crowny
                 result.Info.Layers = transcode.Info.Layers;
                 result.Info.Faces = transcode.Info.Faces;
                 result.Info.MipLevels = transcode.Info.Levels;
-                result.Info.Channels = 4;
                 result.Info.BitDepth = 8;
-                result.Info.ChannelLayout = ImageChannelLayout::RGBA;
                 result.Info.IsFloat = false;
                 result.Info.IsCompressed = false;
                 result.Info.Orientation = options.FlipVertically ? ImageOrientation::BottomLeft : ImageOrientation::TopLeft;
