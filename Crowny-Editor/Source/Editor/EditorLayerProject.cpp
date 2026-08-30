@@ -43,7 +43,9 @@
 #include "Editor/ColliderOverlay.h"
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
+#include "Editor/EditorScenePersistence.h"
 #include "Editor/ProjectLibrary.h"
+#include "Serialization/ProjectSettingsSerializer.h"
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
@@ -156,13 +158,10 @@ namespace Crowny
         s_EditorCamera.SetPitch(projSettings->EditorCameraRotation.x);
         s_EditorCamera.SetYaw(projSettings->EditorCameraRotation.y);
         s_EditorCamera.SetDistance(projSettings->EditorCameraDistance);
-        if (fs::is_regular_file(projSettings->LastOpenScenePath))
-        {
-            Ref<Scene> scene = CreateRef<Scene>(projSettings->LastOpenScenePath, false);
-            SceneSerializer serializer(scene);
-            serializer.Deserialize(projSettings->LastOpenScenePath);
-            m_Temp = scene;
-        }
+        m_Temp = nullptr;
+        m_TempSceneId = UUID::EMPTY;
+        if (!projSettings->LastOpenSceneId.Empty())
+            OpenScene(projSettings->LastOpenSceneId);
         m_ViewportPanel->SetGizmoMode(projSettings->GizmoMode);
         m_ViewportPanel->SetGizmoLocalMode(projSettings->GizmoLocalMode);
 
@@ -184,8 +183,7 @@ namespace Crowny
         projSettings->EditorCameraRotation = { s_EditorCamera.GetPitch(), s_EditorCamera.GetYaw() };
         projSettings->EditorCameraDistance = s_EditorCamera.GetDistance();
         const Ref<Scene>& activeScene = SceneManager::TryGet()->GetActiveScene();
-        if (activeScene && fs::is_regular_file(activeScene->GetFilepath()))
-            projSettings->LastOpenScenePath = activeScene->GetFilepath().string();
+        projSettings->LastOpenSceneId = activeScene ? SceneManager::TryGet()->GetActiveSceneId() : UUID::EMPTY;
         projSettings->LastAssetBrowserSelectedEntry = m_AssetBrowser->GetCurrentEntryPath();
 
         projSettings->GizmoMode = m_ViewportPanel->GetGizmoMode();
@@ -656,6 +654,7 @@ namespace Crowny
     void EditorLayer::CreateNewScene()
     {
         m_Temp = CreateRef<Scene>("Scene");
+        m_TempSceneId = UUID::EMPTY;
         m_Temp->SetEditorScene(true);
         const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + m_Temp->GetName();
         Application::TryGet()->GetWindow().SetTitle(title);
@@ -671,25 +670,75 @@ namespace Crowny
 
     void EditorLayer::OpenScene(const Path& filepath)
     {
-        m_Temp = CreateRef<Scene>(filepath.string(), false);
-        m_Temp->SetEditorScene(true);
-        SceneSerializer serializer(m_Temp);
-        serializer.Deserialize(filepath);
-        AddRecentScene(filepath);
+        const Path sourcePath = filepath.lexically_normal();
+        if (!AssetFileSystemScanner::IsPathWithin(ProjectLibrary::Get().GetAssetFolder(), sourcePath) || !fs::is_regular_file(sourcePath))
+        {
+            AddNotification("Scenes must be opened from the project Assets folder.", NotificationKind::Error);
+            return;
+        }
+
+        UUID sceneId;
+        if (!ProjectLibrary::Get().TryGetAssetId(sourcePath, AssetType::Scene, sceneId))
+        {
+            ProjectLibrary::Get().Refresh(sourcePath);
+            if (!ProjectLibrary::Get().TryGetAssetId(sourcePath, AssetType::Scene, sceneId))
+            {
+                AddNotification(fmt::format("Could not import {0} as a scene asset.", sourcePath.filename().string()), NotificationKind::Error);
+                return;
+            }
+        }
+        OpenScene(sceneId);
+    }
+
+    void EditorLayer::OpenScene(const UUID& sceneId)
+    {
+        Path sourcePath;
+        if (!ProjectLibrary::Get().TryGetSourcePath(sceneId, AssetType::Scene, sourcePath))
+        {
+            AddNotification("The scene asset is missing or is no longer a scene.", NotificationKind::Error);
+            return;
+        }
+
+        Ref<Scene> scene = CreateRef<Scene>(sourcePath.string(), false);
+        scene->SetEditorScene(true);
+        SceneSerializer serializer(scene);
+        if (!serializer.Deserialize(sourcePath))
+        {
+            AddNotification(fmt::format("Could not open {0}.", sourcePath.filename().string()), NotificationKind::Error);
+            return;
+        }
+        m_Temp = std::move(scene);
+        m_TempSceneId = sceneId;
+        AddRecentScene(sceneId);
     }
 
     void EditorLayer::SaveActiveSceneAs()
     {
+        SceneManager* sceneManager = SceneManager::TryGet();
+        if (sceneManager == nullptr || !CanSaveEditorScene(sceneManager->GetExecutionState()))
+        {
+            AddNotification("Stop Play or Simulate before saving the scene.");
+            return;
+        }
+
         Vector<Path> outPaths;
         if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene", ProjectLibrary::Get().GetAssetFolder(),
                                        { Editor::GetSceneDialogFilter() }))
         {
-            const Path path = outPaths[0].replace_extension(".cwscene");
+            const Path path = outPaths[0].replace_extension(".cwscene").lexically_normal();
+            if (!AssetFileSystemScanner::IsPathWithin(ProjectLibrary::Get().GetAssetFolder(), path))
+            {
+                AddNotification("Scenes must be saved inside the project Assets folder.", NotificationKind::Error);
+                return;
+            }
             const auto& scene = SceneManager::TryGet()->GetActiveScene();
+            if (!scene)
+                return;
             scene->SetImGuiLayout(Application::TryGet()->GetImGuiLayer()->SaveLayout());
             SceneSerializer serializer(scene);
             serializer.Serialize(path);
-            AddRecentScene(path);
+            if (!SynchronizeActiveSceneAsset(scene))
+                return;
             const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + SceneManager::TryGet()->GetActiveScene()->GetName();
             Application::TryGet()->GetWindow().SetTitle(title);
             AddNotification(fmt::format("Saved {0}.", path.filename().string()), NotificationKind::Success);
@@ -698,7 +747,14 @@ namespace Crowny
 
     void EditorLayer::SaveActiveScene()
     {
-        const auto& scene = SceneManager::TryGet()->GetActiveScene();
+        SceneManager* sceneManager = SceneManager::TryGet();
+        if (sceneManager == nullptr || !CanSaveEditorScene(sceneManager->GetExecutionState()))
+        {
+            AddNotification("Stop Play or Simulate before saving the scene.");
+            return;
+        }
+
+        const auto& scene = sceneManager->GetActiveScene();
         if (!scene)
             return;
         if (scene->GetFilepath().empty())
@@ -708,27 +764,41 @@ namespace Crowny
             scene->SetImGuiLayout(Application::TryGet()->GetImGuiLayer()->SaveLayout());
             SceneSerializer serializer(scene);
             serializer.Serialize(scene->GetFilepath());
-            AddRecentScene(scene->GetFilepath());
+            if (!SynchronizeActiveSceneAsset(scene))
+                return;
             const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + scene->GetName();
             Application::TryGet()->GetWindow().SetTitle(title);
             AddNotification(fmt::format("Saved {0}.", scene->GetFilepath().filename().string()), NotificationKind::Success);
         }
     }
 
-    void EditorLayer::AddRecentScene(const Path& path)
+    bool EditorLayer::SynchronizeActiveSceneAsset(const Ref<Scene>& scene)
     {
-        Ref<ProjectSettings> settings = Editor::Get().GetProjectSettings();
-        auto& recentScenes = settings->RecentScenes;
+        if (!scene || scene->GetFilepath().empty())
+            return false;
+        ProjectLibrary::Get().Refresh(scene->GetFilepath());
 
-        auto it = std::find(recentScenes.begin(), recentScenes.end(), path);
-        if (it != recentScenes.end())
-            recentScenes.erase(it);
+        UUID sceneId;
+        if (!ProjectLibrary::Get().TryGetAssetId(scene->GetFilepath(), AssetType::Scene, sceneId))
+        {
+            AddNotification("The scene was written, but its asset identity could not be updated.", NotificationKind::Error);
+            return false;
+        }
 
-        recentScenes.insert(recentScenes.begin(), path);
-
-        if (recentScenes.size() > 5)
-            recentScenes.resize(5);
+        SceneManager* sceneManager = SceneManager::TryGet();
+        const UUID previousSceneId = sceneManager->GetActiveSceneId();
+        if (previousSceneId != sceneId)
+        {
+            sceneManager->SetActiveScene(scene, sceneId);
+            if (!previousSceneId.Empty())
+                sceneManager->UnloadScene(previousSceneId);
+        }
+        Editor::Get().GetProjectSettings()->LastOpenSceneId = sceneId;
+        AddRecentScene(sceneId);
+        return true;
     }
+
+    void EditorLayer::AddRecentScene(const UUID& sceneId) { ProjectSettingsSerializer::AddRecentScene(*Editor::Get().GetProjectSettings(), sceneId); }
 
     void EditorLayer::AddRecentEntry(const Path& path)
     {

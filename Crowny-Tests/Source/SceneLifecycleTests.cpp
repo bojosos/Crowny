@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Editor/EditorScenePersistence.h"
+
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Memory/AllocationCounter.h"
@@ -33,8 +35,7 @@ TEST_CASE("Play and simulation restore the untouched edit scene", "[Scene][Lifec
     CHECK(manager.GetActiveScene() == editScene);
     CHECK_FALSE(editScene->IsRuntimeActive());
     CHECK(manager.GetEditSelection() == sourceId);
-    CHECK(editScene->TryGetEntityFromUuid(sourceId).GetTransform().GetLocalTransform().GetPosition() ==
-          glm::vec3(1.0f, 2.0f, 3.0f));
+    CHECK(editScene->TryGetEntityFromUuid(sourceId).GetTransform().GetLocalTransform().GetPosition() == glm::vec3(1.0f, 2.0f, 3.0f));
 
     REQUIRE(manager.BeginSimulation(sourceId) == SceneOperationStatus::Completed);
     CHECK(manager.GetExecutionState() == SceneExecutionState::Simulate);
@@ -122,8 +123,7 @@ TEST_CASE("Loaded scene enumeration is sorted and allocation-free after mutation
         const std::span<const UUID> scenes = manager.GetLoadedScenes();
         observed += static_cast<uint32_t>(scenes.size());
     }
-    const Memory::ThreadAllocationSnapshot delta =
-      Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+    const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
 
     CHECK(observed == 360);
     CHECK(delta.AllocationCount == 0);
@@ -135,6 +135,31 @@ TEST_CASE("Loaded scene enumeration is sorted and allocation-free after mutation
     REQUIRE(remaining.size() == 2);
     CHECK(remaining[0] == firstId);
     CHECK(remaining[1] == thirdId);
+}
+
+TEST_CASE("An editor scene can adopt a new asset identity after Save As", "[Scene][Lifecycle][Editor]")
+{
+    SceneManager manager;
+    Ref<Scene> scene = CreateRef<Scene>("Saved scene");
+    const UUID originalId(10, 0, 0, 0);
+    const UUID savedAsId(20, 0, 0, 0);
+
+    manager.SetActiveScene(scene, originalId);
+    manager.SetActiveScene(scene, savedAsId);
+    REQUIRE(manager.UnloadScene(originalId) == SceneOperationStatus::Completed);
+
+    CHECK(manager.GetActiveScene() == scene);
+    CHECK(manager.GetActiveSceneId() == savedAsId);
+    CHECK(manager.GetLoadedScene(originalId) == nullptr);
+    CHECK(manager.GetLoadedScene(savedAsId) == scene);
+}
+
+TEST_CASE("Editor scene persistence is disabled for runtime clones", "[Scene][Lifecycle][Editor]")
+{
+    CHECK(CanSaveEditorScene(SceneExecutionState::Edit));
+    CHECK_FALSE(CanSaveEditorScene(SceneExecutionState::Play));
+    CHECK_FALSE(CanSaveEditorScene(SceneExecutionState::PlayPaused));
+    CHECK_FALSE(CanSaveEditorScene(SceneExecutionState::Simulate));
 }
 
 TEST_CASE("Runtime scene changes preserve play mode and the original edit scene", "[Scene][Lifecycle][Scripting]")

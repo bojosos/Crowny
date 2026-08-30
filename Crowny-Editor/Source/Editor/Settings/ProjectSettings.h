@@ -18,9 +18,12 @@ namespace Crowny
         Path LastAssetBrowserSelectedEntry;
 
         // Scene
-        String LastOpenScenePath; // This will probably be replaced by the UUID of a scene, and a scene will most likely
-                                  // be a prefab.
-        Vector<Path> RecentScenes;
+        UUID LastOpenSceneId;
+        Vector<UUID> RecentSceneIds;
+
+        // Kept only until legacy path-based settings can be resolved through the project asset index.
+        Path LegacyLastOpenScenePath;
+        Vector<Path> LegacyRecentScenePaths;
         UUID LastSelectedEntityID;
         UnorderedSet<UUID> ExpandedEntities;
 

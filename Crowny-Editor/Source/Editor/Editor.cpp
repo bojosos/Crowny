@@ -65,6 +65,10 @@ namespace Crowny
 
         LoadProjectSettings();
         ProjectLibrary::Get().LoadLibrary();
+        const bool migratedSceneReferences = ProjectSettingsSerializer::MigrateLegacySceneReferences(
+          *m_ProjectSettings, [](const Path& path, UUID& sceneId) { return ProjectLibrary::Get().TryGetAssetId(path, AssetType::Scene, sceneId); });
+        if (migratedSceneReferences)
+            SaveProjectSettings();
         Log::RenameClientLogger(projectPath.filename().string());
     }
 

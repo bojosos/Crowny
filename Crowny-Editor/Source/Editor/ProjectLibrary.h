@@ -37,6 +37,8 @@ namespace Crowny
 
         Ref<AssetMetadata> FindAssetMetadata(const Path& path) const;
         Path UuidToPath(const UUID& uuid) const;
+        bool TryGetAssetId(const Path& sourcePath, AssetType expectedType, UUID& outUuid) const;
+        bool TryGetSourcePath(const UUID& uuid, AssetType expectedType, Path& outSourcePath) const;
 
         void SaveEntry(const Ref<Asset>& asset);
         void SetIncludeInBuild(const Path& path, bool force);

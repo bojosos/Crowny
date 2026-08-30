@@ -78,18 +78,21 @@ namespace Crowny
             if (ImGui::BeginMenu(m_Title.c_str()))
             {
                 const Ref<ProjectSettings> settings = Editor::Get().GetProjectSettings();
-                if (settings->RecentScenes.empty())
+                bool renderedScene = false;
+                for (const UUID& sceneId : settings->RecentSceneIds)
+                {
+                    Path sourcePath;
+                    if (!ProjectLibrary::Get().TryGetSourcePath(sceneId, AssetType::Scene, sourcePath))
+                        continue;
+                    renderedScene = true;
+                    if (ImGui::MenuItem(sourcePath.filename().string().c_str()))
+                        m_Layer->OpenScene(sceneId);
+                }
+                if (!renderedScene)
                 {
                     ImGui::BeginDisabled();
                     ImGui::MenuItem("No recent scenes");
                     ImGui::EndDisabled();
-                }
-                for (const Path& path : settings->RecentScenes)
-                {
-                    if (ImGui::MenuItem(path.filename().string().c_str()))
-                    {
-                        m_Layer->OpenScene(path);
-                    }
                 }
                 ImGui::EndMenu();
             }
@@ -311,7 +314,7 @@ namespace Crowny
                 return true;
             const AssetType assetType = fileEntry->Metadata->Type;
             if (assetType == AssetType::Scene)
-                OpenScene(fileEntry->Filepath);
+                OpenScene(fileEntry->Metadata->Uuid);
             else if (assetType == AssetType::Material)
             {
                 Entity entity = PickEntity(fileDragEvent.GetScreenPosition());
@@ -616,20 +619,14 @@ namespace Crowny
             if (activeScene)
                 activeScene->SetImGuiLayout(Application::TryGet()->GetImGuiLayer()->SaveLayout());
             UndoRedo::Get().Clear();
-            UUID sceneId = UUID::EMPTY;
-            if (ProjectLibrary::IsStartedUp())
-            {
-                const Ref<AssetMetadata> metadata = ProjectLibrary::Get().FindAssetMetadata(m_Temp->GetFilepath());
-                if (metadata)
-                    sceneId = metadata->Uuid;
-            }
             const UUID previousSceneId = SceneManager::TryGet()->GetActiveSceneId();
-            SceneManager::TryGet()->SetActiveScene(m_Temp, sceneId);
-            if (!previousSceneId.Empty() && previousSceneId != sceneId)
+            SceneManager::TryGet()->SetActiveScene(m_Temp, m_TempSceneId);
+            if (!previousSceneId.Empty() && previousSceneId != m_TempSceneId)
                 SceneManager::TryGet()->UnloadScene(previousSceneId);
             Application::TryGet()->GetImGuiLayer()->LoadLayout(m_Temp->GetImGuiLayout());
-            Editor::Get().GetProjectSettings()->LastOpenScenePath = m_Temp->GetFilepath().string();
+            Editor::Get().GetProjectSettings()->LastOpenSceneId = m_TempSceneId;
             m_Temp = nullptr;
+            m_TempSceneId = UUID::EMPTY;
             // ScriptRuntime::Init();
             const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + SceneManager::TryGet()->GetActiveScene()->GetName();
             Application::TryGet()->GetWindow().SetTitle(title);

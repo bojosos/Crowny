@@ -9,6 +9,26 @@ namespace Crowny
 {
     namespace
     {
+        constexpr size_t MAX_RECENT_SCENES = 5;
+
+        bool NormalizeRecentScenes(Vector<UUID>& sceneIds)
+        {
+            Vector<UUID> normalized;
+            normalized.reserve(std::min(sceneIds.size(), MAX_RECENT_SCENES));
+            for (const UUID& sceneId : sceneIds)
+            {
+                if (sceneId.Empty() || std::find(normalized.begin(), normalized.end(), sceneId) != normalized.end())
+                    continue;
+                normalized.push_back(sceneId);
+                if (normalized.size() == MAX_RECENT_SCENES)
+                    break;
+            }
+            if (normalized == sceneIds)
+                return false;
+            sceneIds = std::move(normalized);
+            return true;
+        }
+
         const char* ToString(InputActionType type)
         {
             switch (type)
@@ -217,11 +237,20 @@ namespace Crowny
         out << YAML::Key << "EditorCameraFocalPoint" << YAML::Value << settings->EditorCameraFocalPoint;
         out << YAML::Key << "EditorCameraPosition" << YAML::Value << settings->EditorCameraPosition;
         out << YAML::Key << "EditorCameraRotation" << YAML::Value << settings->EditorCameraRotation;
-        out << YAML::Key << "LastOpenScene" << YAML::Value << settings->LastOpenScenePath;
-        out << YAML::Key << "RecentScenes" << YAML::Value << YAML::BeginSeq;
-        for (const Path& path : settings->RecentScenes)
-            out << path.string();
+        out << YAML::Key << "LastOpenSceneId" << YAML::Value << settings->LastOpenSceneId;
+        out << YAML::Key << "RecentSceneIds" << YAML::Value << YAML::BeginSeq;
+        for (const UUID& sceneId : settings->RecentSceneIds)
+            out << sceneId;
         out << YAML::EndSeq;
+        if (!settings->LegacyLastOpenScenePath.empty())
+            out << YAML::Key << "LastOpenScene" << YAML::Value << settings->LegacyLastOpenScenePath.string();
+        if (!settings->LegacyRecentScenePaths.empty())
+        {
+            out << YAML::Key << "RecentScenes" << YAML::Value << YAML::BeginSeq;
+            for (const Path& path : settings->LegacyRecentScenePaths)
+                out << path.string();
+            out << YAML::EndSeq;
+        }
         out << YAML::Key << "GizmoMode" << YAML::Value << (uint32_t)settings->GizmoMode; // TODO: Maybe move to project settings
         out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
         out << YAML::Key << "LastAssetBrowserEntry" << YAML::Value << settings->LastAssetBrowserSelectedEntry.string();
@@ -246,13 +275,22 @@ namespace Crowny
         projectSettings->EditorCameraRotation = node["EditorCameraRotation"].as<glm::vec2>();
         projectSettings->GizmoMode = (GizmoEditMode)node["GizmoMode"].as<uint32_t>();
         projectSettings->LastAssetBrowserSelectedEntry = node["LastAssetBrowserEntry"].as<String>();
-        projectSettings->LastOpenScenePath = node["LastOpenScene"].as<String>();
+        projectSettings->LastOpenSceneId = node["LastOpenSceneId"].as<UUID>(UUID::EMPTY);
         projectSettings->LastSelectedEntityID = node["LastSelectedEntity"].as<UUID>(UUID::EMPTY);
 
-        if (const auto& recentScenes = node["RecentScenes"])
+        if (const YAML::Node recentSceneIds = node["RecentSceneIds"]; recentSceneIds && recentSceneIds.IsSequence())
         {
-            for (const auto& path : recentScenes)
-                projectSettings->RecentScenes.push_back(path.as<String>());
+            for (const YAML::Node& sceneId : recentSceneIds)
+                projectSettings->RecentSceneIds.push_back(sceneId.as<UUID>(UUID::EMPTY));
+        }
+        NormalizeRecentScenes(projectSettings->RecentSceneIds);
+
+        if (const YAML::Node legacyLastScene = node["LastOpenScene"])
+            projectSettings->LegacyLastOpenScenePath = legacyLastScene.as<String>(String());
+        if (const YAML::Node legacyRecentScenes = node["RecentScenes"]; legacyRecentScenes && legacyRecentScenes.IsSequence())
+        {
+            for (const YAML::Node& path : legacyRecentScenes)
+                projectSettings->LegacyRecentScenePaths.emplace_back(path.as<String>());
         }
 
         if (const auto& hierarchy = node["Hierarchy"])
@@ -265,6 +303,59 @@ namespace Crowny
             projectSettings->InputActions = DeserializeInputMap(inputNode);
 
         return projectSettings;
+    }
+
+    bool ProjectSettingsSerializer::MigrateLegacySceneReferences(ProjectSettings& settings, const ScenePathResolver& resolver)
+    {
+        bool changed = false;
+        changed = NormalizeRecentScenes(settings.RecentSceneIds);
+
+        if (!settings.LastOpenSceneId.Empty())
+        {
+            changed = changed || !settings.LegacyLastOpenScenePath.empty();
+            settings.LegacyLastOpenScenePath.clear();
+        }
+        else if (!settings.LegacyLastOpenScenePath.empty() && resolver)
+        {
+            UUID sceneId;
+            if (resolver(settings.LegacyLastOpenScenePath, sceneId) && !sceneId.Empty())
+            {
+                settings.LastOpenSceneId = sceneId;
+                settings.LegacyLastOpenScenePath.clear();
+                changed = true;
+            }
+        }
+
+        Vector<Path> unresolvedPaths;
+        unresolvedPaths.reserve(settings.LegacyRecentScenePaths.size());
+        for (const Path& path : settings.LegacyRecentScenePaths)
+        {
+            UUID sceneId;
+            if (resolver && resolver(path, sceneId) && !sceneId.Empty())
+            {
+                if (std::find(settings.RecentSceneIds.begin(), settings.RecentSceneIds.end(), sceneId) == settings.RecentSceneIds.end())
+                    settings.RecentSceneIds.push_back(sceneId);
+                changed = true;
+            }
+            else if (std::find(unresolvedPaths.begin(), unresolvedPaths.end(), path) == unresolvedPaths.end())
+                unresolvedPaths.push_back(path);
+        }
+        if (unresolvedPaths.size() != settings.LegacyRecentScenePaths.size())
+            changed = true;
+        settings.LegacyRecentScenePaths = std::move(unresolvedPaths);
+        changed = NormalizeRecentScenes(settings.RecentSceneIds) || changed;
+        return changed;
+    }
+
+    void ProjectSettingsSerializer::AddRecentScene(ProjectSettings& settings, const UUID& sceneId)
+    {
+        if (sceneId.Empty())
+            return;
+        const auto existing = std::find(settings.RecentSceneIds.begin(), settings.RecentSceneIds.end(), sceneId);
+        if (existing != settings.RecentSceneIds.end())
+            settings.RecentSceneIds.erase(existing);
+        settings.RecentSceneIds.insert(settings.RecentSceneIds.begin(), sceneId);
+        NormalizeRecentScenes(settings.RecentSceneIds);
     }
 
 } // namespace Crowny

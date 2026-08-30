@@ -522,6 +522,53 @@ namespace Crowny
 
     Path ProjectLibrary::UuidToPath(const UUID& uuid) const { return m_AssetIndex.UuidToPath(uuid); }
 
+    bool ProjectLibrary::TryGetAssetId(const Path& sourcePath, AssetType expectedType, UUID& outUuid) const
+    {
+        outUuid = UUID::EMPTY;
+        auto resolve = [&](const Path& candidate) {
+            const Ref<AssetMetadata> metadata = FindAssetMetadata(candidate);
+            if (metadata == nullptr || metadata->Uuid.Empty() || metadata->Type != expectedType)
+                return false;
+            outUuid = metadata->Uuid;
+            return true;
+        };
+
+        if (sourcePath.empty())
+            return false;
+        if (resolve(sourcePath))
+            return true;
+
+        if (sourcePath.is_relative())
+        {
+            if (resolve((m_ProjectFolder / sourcePath).lexically_normal()) || resolve((m_AssetFolder / sourcePath).lexically_normal()))
+                return true;
+        }
+
+        // Older settings stored absolute paths. Recover the project-relative suffix when the project has moved.
+        for (auto segment = sourcePath.begin(); segment != sourcePath.end(); ++segment)
+        {
+            if (*segment != ASSET_DIR)
+                continue;
+            Path relativePath;
+            for (++segment; segment != sourcePath.end(); ++segment)
+                relativePath /= *segment;
+            return !relativePath.empty() && resolve((m_AssetFolder / relativePath).lexically_normal());
+        }
+        return false;
+    }
+
+    bool ProjectLibrary::TryGetSourcePath(const UUID& uuid, AssetType expectedType, Path& outSourcePath) const
+    {
+        outSourcePath.clear();
+        if (uuid.Empty() || m_AssetIndex.GetAssetType(uuid) != expectedType)
+            return false;
+        const Path sourcePath = m_AssetIndex.UuidToPath(uuid);
+        if (sourcePath.empty() || !fs::is_regular_file(sourcePath))
+            return false;
+        outSourcePath = sourcePath;
+        return true;
+    }
+
     Ref<AssetMetadata> ProjectLibrary::FindAssetMetadata(const Path& path) const
     {
         LibraryEntry* entry = FindEntry(path).get();

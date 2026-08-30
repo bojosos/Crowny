@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Editor/BoxCollider2DBoundsTransaction.h"
-#include "Editor/UndoRedo.h"
+#include "Editor/ViewportTransformInteraction.h"
 #include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
@@ -73,13 +73,6 @@ namespace Crowny
         bool IsMouseOverHud() const { return m_MouseOverHud; }
 
     private:
-        struct TransformSnapshot
-        {
-            Ref<Scene> SceneRef;
-            Entity Target;
-            glm::mat4 WorldTransform{ 1.0f };
-        };
-
         void DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity primary, const Vector<Entity>& selectedEntities);
         const Vector<Entity>& RefreshSelectionScratch(Entity primary);
         const Vector<Entity>& GetTopLevelSelection(const Vector<Entity>& selectedEntities);
@@ -90,7 +83,6 @@ namespace Crowny
         void CancelTransformInteraction();
         void EndColliderBoundsInteraction(bool cancel);
         void CancelActiveInteractions();
-        Ref<UndoAction> BuildTransformAction() const;
 
         bool m_LocalMode = true;
         bool m_SnapEnabled = false;
@@ -105,11 +97,8 @@ namespace Crowny
         std::function<const Vector<Entity>&()> m_SelectedEntities;
         Vector<Entity> m_SelectedEntitiesScratch;
         Vector<Entity> m_TopLevelSelectionScratch;
-        Vector<TransformSnapshot> m_TransformSnapshots;
-        UndoTransaction m_TransformTransaction;
+        ViewportTransformInteraction m_TransformInteraction;
         BoxCollider2DBoundsTransaction m_ColliderBoundsTransaction;
-        glm::mat4 m_InitialGizmoTransform{ 1.0f };
-        glm::mat4 m_CurrentGizmoTransform{ 1.0f };
         bool m_GizmoWasUsing = false;
     };
 

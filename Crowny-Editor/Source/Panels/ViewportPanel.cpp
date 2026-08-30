@@ -25,8 +25,6 @@ namespace Crowny
 
     namespace
     {
-        constexpr UndoTransaction::Id TransformTransactionId = 1u;
-
         bool IsSupportedViewportAsset(const FileEntry* fileEntry)
         {
             if (fileEntry == nullptr || fileEntry->Metadata == nullptr)
@@ -117,44 +115,6 @@ namespace Crowny
                 snprintf(output, outputSize, "%llu", static_cast<unsigned long long>(value));
         }
 
-        class WorldTransformAction : public UndoAction
-        {
-        public:
-            WorldTransformAction(Entity target, const glm::mat4& oldTransform, const glm::mat4& newTransform)
-              : UndoAction("Transform entity"), m_Scene(target.GetScene()), m_Target(target.GetUuid()), m_OldTransform(oldTransform),
-                m_NewTransform(newTransform)
-            {
-            }
-
-            void Commit() override
-            {
-                if (Entity target = Resolve())
-                    target.SetWorldTransform(m_NewTransform);
-            }
-            void Revert() override
-            {
-                if (Entity target = Resolve())
-                    target.SetWorldTransform(m_OldTransform);
-            }
-
-        private:
-            Entity Resolve() const { return m_Scene ? m_Scene->TryGetEntityFromUuid(m_Target) : Entity{}; }
-
-            Ref<Scene> m_Scene;
-            UUID m_Target = UUID::EMPTY;
-            glm::mat4 m_OldTransform{ 1.0f };
-            glm::mat4 m_NewTransform{ 1.0f };
-        };
-
-        bool MatrixChanged(const glm::mat4& lhs, const glm::mat4& rhs)
-        {
-            for (uint32_t column = 0; column < 4u; ++column)
-            {
-                if (glm::any(glm::greaterThan(glm::abs(lhs[column] - rhs[column]), glm::vec4(0.00001f))))
-                    return true;
-            }
-            return false;
-        }
     } // namespace
 
     static ImGuizmo::OPERATION GetImGuizmoMode(GizmoEditMode gizmoMode)
@@ -247,47 +207,22 @@ namespace Crowny
 
     void ViewportPanel::BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot)
     {
-        if (m_TransformTransaction.IsActive())
+        if (m_TransformInteraction.IsActive())
             EndTransformInteraction();
 
-        m_TransformSnapshots.clear();
         const Vector<Entity>& topLevelSelection = GetTopLevelSelection(selectedEntities);
-        m_TransformSnapshots.reserve(topLevelSelection.size());
-        for (Entity entity : topLevelSelection)
-            m_TransformSnapshots.push_back({ Ref<Scene>(entity.GetScene()), entity, entity.GetWorldMatrix() });
-        m_InitialGizmoTransform = pivot;
-        m_CurrentGizmoTransform = pivot;
-        m_TransformTransaction.Begin(TransformTransactionId, [this] { return BuildTransformAction(); });
+        m_TransformInteraction.Begin(topLevelSelection, pivot);
     }
 
-    void ViewportPanel::ApplyTransformInteraction(const glm::mat4& pivot)
-    {
-        m_CurrentGizmoTransform = pivot;
-        const glm::mat4 delta = pivot * glm::inverse(m_InitialGizmoTransform);
-        for (TransformSnapshot& snapshot : m_TransformSnapshots)
-        {
-            if (snapshot.Target)
-                snapshot.Target.SetWorldTransform(delta * snapshot.WorldTransform);
-        }
-        m_TransformTransaction.Update(TransformTransactionId, MatrixChanged(m_InitialGizmoTransform, m_CurrentGizmoTransform));
-    }
+    void ViewportPanel::ApplyTransformInteraction(const glm::mat4& pivot) { m_TransformInteraction.Update(pivot); }
 
     void ViewportPanel::EndTransformInteraction()
     {
-        UndoRedo::Get().RegisterAction(m_TransformTransaction.Commit(TransformTransactionId));
-        m_TransformSnapshots.clear();
+        const ViewportTransformResolution resolution = m_TransformInteraction.Resolve(false, false);
+        UndoRedo::Get().RegisterAction(resolution.Action);
     }
 
-    void ViewportPanel::CancelTransformInteraction()
-    {
-        for (TransformSnapshot& snapshot : m_TransformSnapshots)
-        {
-            if (snapshot.Target)
-                snapshot.Target.SetWorldTransform(snapshot.WorldTransform);
-        }
-        m_TransformTransaction.Cancel(TransformTransactionId);
-        m_TransformSnapshots.clear();
-    }
+    void ViewportPanel::CancelTransformInteraction() { m_TransformInteraction.Cancel(); }
 
     void ViewportPanel::EndColliderBoundsInteraction(bool cancel)
     {
@@ -299,28 +234,10 @@ namespace Crowny
 
     void ViewportPanel::CancelActiveInteractions()
     {
-        if (m_TransformTransaction.IsActive())
+        if (m_TransformInteraction.IsActive())
             CancelTransformInteraction();
-        else
-            m_TransformSnapshots.clear();
         m_GizmoWasUsing = false;
         m_ColliderBoundsTransaction.Cancel();
-    }
-
-    Ref<UndoAction> ViewportPanel::BuildTransformAction() const
-    {
-        Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(m_TransformSnapshots.size() == 1u ? "Transform entity" : "Transform entities");
-        for (const TransformSnapshot& snapshot : m_TransformSnapshots)
-        {
-            if (!snapshot.Target)
-                continue;
-            const glm::mat4 current = snapshot.Target.GetWorldMatrix();
-            if (MatrixChanged(snapshot.WorldTransform, current))
-                actions->Add(CreateRef<WorldTransformAction>(snapshot.Target, snapshot.WorldTransform, current));
-        }
-        if (actions->Empty())
-            return {};
-        return actions;
     }
 
     void ViewportPanel::DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity selectedEntity, const Vector<Entity>& selectedEntities)
@@ -714,9 +631,9 @@ namespace Crowny
                 if (m_ColliderBoundsTransaction.IsActive())
                     EndColliderBoundsInteraction(Input::IsKeyPressed(Key::Escape));
 
-                glm::mat4 transform = m_GizmoWasUsing                ? m_CurrentGizmoTransform
-                                      : selectedEntities.size() > 1u ? GetSelectionPivot(selected, selectedEntities)
-                                                                     : selected.GetWorldMatrix();
+                glm::mat4 transform = m_TransformInteraction.IsActive() ? m_TransformInteraction.GetCurrentPivot()
+                                      : selectedEntities.size() > 1u    ? GetSelectionPivot(selected, selectedEntities)
+                                                                        : selected.GetWorldMatrix();
                 const glm::mat4 originalTransform = transform;
                 const bool supportsWorldSpace = m_GizmoMode == GizmoEditMode::Translate || m_GizmoMode == GizmoEditMode::Rotate;
                 const ImGuizmo::OPERATION operation = m_GizmoMode == GizmoEditMode::Bounds ? ImGuizmo::SCALE : GetImGuizmoMode(m_GizmoMode);
@@ -731,12 +648,8 @@ namespace Crowny
                 }
 
                 const bool usingGizmo = ImGuizmo::IsUsing();
-                const TransformInteractionCompletion completion = ResolveTransformInteractionCompletion(
-                  m_TransformTransaction.IsActive(), usingGizmo, Input::IsKeyPressed(Key::Escape));
-                if (completion == TransformInteractionCompletion::Cancel)
-                    CancelTransformInteraction();
-                else if (completion == TransformInteractionCompletion::Commit)
-                    EndTransformInteraction();
+                const ViewportTransformResolution resolution = m_TransformInteraction.Resolve(usingGizmo, Input::IsKeyPressed(Key::Escape));
+                UndoRedo::Get().RegisterAction(resolution.Action);
                 // Keep the capture latched until ImGuizmo releases the mouse so
                 // an Escape cancellation cannot begin a second transaction.
                 m_GizmoWasUsing = usingGizmo;

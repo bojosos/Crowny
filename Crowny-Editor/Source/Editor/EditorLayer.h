@@ -53,10 +53,11 @@ namespace Crowny
 
         void CreateNewScene();
         void OpenScene();
+        void OpenScene(const UUID& sceneId);
         void OpenScene(const Path& filepath);
         void SaveActiveScene();
         void SaveActiveSceneAs();
-        void AddRecentScene(const Path& path);
+        void AddRecentScene(const UUID& sceneId);
 
     private:
         void ExecuteProjectAssetRefresh();
@@ -70,6 +71,7 @@ namespace Crowny
         void SetupImGuiRender();
 
         void RenderOverlay();
+        bool SynchronizeActiveSceneAsset(const Ref<Scene>& scene);
         void AddRecentEntry(const Path& path);
         void SetProjectSettings();
         void SaveProjectSettings();
@@ -108,6 +110,7 @@ namespace Crowny
         Scope<EditorPanelRegistry> m_Panels;
         Scope<ImGuiMenuBar> m_MenuBar;
         Ref<Scene> m_Temp;
+        UUID m_TempSceneId;
         Ref<RenderTexture> m_RenderTarget;
         Ref<RenderTarget> m_ResizedRenderTarget;
         RenderSnapshot m_FallbackSnapshot;
