@@ -55,6 +55,15 @@ function Initialize-CrownyBuildEnvironment {
     $dependencyRoot = Join-Path $RepositoryRoot ".deps"
     if (-not $env:CROWNY_MONO_ROOT) { $env:CROWNY_MONO_ROOT = Join-Path $env:ProgramFiles "Mono" }
     if (-not $env:VULKAN_SDK) { $env:VULKAN_SDK = Join-Path $dependencyRoot "VulkanSDK" }
+    if (-not $env:CROWNY_VMA_INCLUDE) {
+        $vulkanInclude = Join-Path $env:VULKAN_SDK "Include"
+        if (Test-Path -LiteralPath (Join-Path $vulkanInclude "vma\vk_mem_alloc.h")) {
+            $env:CROWNY_VMA_INCLUDE = $vulkanInclude
+        }
+        else {
+            $env:CROWNY_VMA_INCLUDE = Join-Path $dependencyRoot "VulkanSDK\Include"
+        }
+    }
     if (-not $env:CROWNY_OPENAL_ROOT) { $env:CROWNY_OPENAL_ROOT = Join-Path $dependencyRoot "openal" }
     if (-not $env:CROWNY_PHYSICS_ROOT) { $env:CROWNY_PHYSICS_ROOT = Join-Path $dependencyRoot "physics\install" }
     if (-not $env:CROWNY_SPIRV_CROSS_ROOT) { $env:CROWNY_SPIRV_CROSS_ROOT = Join-Path $dependencyRoot "spirv-cross\install" }
@@ -454,7 +463,30 @@ function Get-CrownyProjectFingerprint {
         }
     }
 
-    $fingerprintValues = @("vs2022", "with-nodes", $Simd.ToLowerInvariant()) + @($sourceLayout | Sort-Object)
+    $generationEnvironment = foreach ($name in @(
+        "VULKAN_SDK",
+        "CROWNY_VMA_INCLUDE",
+        "CROWNY_OPENAL_ROOT",
+        "CROWNY_PHYSICS_ROOT",
+        "CROWNY_SPIRV_CROSS_ROOT",
+        "CROWNY_MONO_ROOT"
+    )) {
+        $value = [Environment]::GetEnvironmentVariable($name)
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            "$name=<unset>"
+            continue
+        }
+
+        try { $value = [IO.Path]::GetFullPath($value) }
+        catch { }
+        "$name=$($value.Replace('\', '/').TrimEnd('/').ToLowerInvariant())"
+    }
+
+    # Premake embeds dependency roots into the generated projects. Treat those
+    # roots as project inputs so switching between bootstrapped and override
+    # SDKs cannot silently reuse stale include and library paths.
+    $fingerprintValues = @("vs2022", "with-nodes", $Simd.ToLowerInvariant()) + $generationEnvironment +
+                         @($sourceLayout | Sort-Object)
     return Get-CrownyHash -Files $files.ToArray() -Values $fingerprintValues
 }
 
