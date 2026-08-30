@@ -289,6 +289,27 @@ namespace Crowny
 
             void RenderShadows(RenderGraphContext& context, const Vector<ShadowRenderView>& views, uint32_t viewCount)
             {
+                auto initializeHistory = [&](StringView resourceName) {
+                    const RenderGraphResourceHandle resource = Resource(resourceName);
+                    if (!resource || context.IsHistoryValid(resource))
+                        return;
+                    const Ref<Texture> texture = context.GetTexture(resource);
+                    if (!texture)
+                        return;
+                    RenderGraphRenderTargetDesc attachments;
+                    attachments.Depth = resource;
+                    attachments.LayerCount = std::max(texture->GetDesc().Faces, 1u);
+                    const Ref<RenderTarget> target = context.GetRenderTarget(attachments);
+                    if (!target)
+                        return;
+                    RenderAPI::TryGet()->SetRenderTarget(target);
+                    RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+                    RenderAPI::TryGet()->ClearViewport(FBT_DEPTH, glm::vec4(0.0f), 0.0f);
+                };
+                initializeHistory("ShadowAtlas");
+                initializeHistory("PointShadowArray");
+                initializeHistory("DirectionalShadowArray");
+
                 viewCount = std::min<uint32_t>(viewCount, static_cast<uint32_t>(views.size()));
                 if (viewCount == 0 || !Ensure(m_ShadowDepth, m_ShadowDepthAttempted, "Resources/Shaders/GpuShadowDepth.asset"))
                     return;
@@ -674,7 +695,7 @@ namespace Crowny
                 m_CullInstances.SetBuffer(0, 1, instances);
                 m_CullInstances.SetBuffer(0, 2, visible);
                 m_CullInstances.SetBuffer(0, 3, counters);
-                m_CullInstances.SetTexture(0, 4, TextureResource(context, "PreviousHiZ"));
+                m_CullInstances.SetTexture(0, 4, historyValid ? hiZ : nullptr);
                 m_CullInstances.SetBuffer(0, 5, meshes);
                 m_CullInstances.SetBuffer(0, 6, lods);
                 m_GpuInstanceCullingReady = m_CullInstances.Dispatch((constants.InstanceCapacity + 63u) / 64u);
@@ -824,14 +845,6 @@ namespace Crowny
 
             void RenderDepth(RenderGraphContext& context)
             {
-                if (m_DepthDrawList == nullptr || m_DepthDrawList->Commands.empty())
-                    return;
-                const Ref<GenericGpuBuffer> instances = Buffer(context, "InstanceTable");
-                const Ref<GenericGpuBuffer> instanceIds = Buffer(context, "DepthInstanceIds");
-                const Ref<GenericGpuBuffer> commands = Buffer(context, "DepthIndirectCommands");
-                if (!instances || !instanceIds || !commands)
-                    return;
-
                 const DepthPrepassOutputLayout outputLayout =
                   ResolveDepthPrepassOutputLayout(Resource("Velocity").IsValid(), Resource("ObjectID").IsValid());
 
@@ -851,6 +864,14 @@ namespace Crowny
                 RenderAPI::TryGet()->SetRenderTarget(outputTarget);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
                 RenderAPI::TryGet()->ClearViewport(FBT_DEPTH | (attachments.ColorCount != 0 ? FBT_COLOR : 0), glm::vec4(0.0f), 0.0f);
+
+                if (m_DepthDrawList == nullptr || m_DepthDrawList->Commands.empty())
+                    return;
+                const Ref<GenericGpuBuffer> instances = Buffer(context, "InstanceTable");
+                const Ref<GenericGpuBuffer> instanceIds = Buffer(context, "DepthInstanceIds");
+                const Ref<GenericGpuBuffer> commands = Buffer(context, "DepthIndirectCommands");
+                if (!instances || !instanceIds || !commands)
+                    return;
 
                 GraphicsMaterial* boundMaterial = nullptr;
                 RenderTarget* boundTarget = outputTarget.get();
@@ -938,12 +959,12 @@ namespace Crowny
                 m_BuildHiZ.Dispatch((constants.DestinationSize.x + 7u) / 8u, (constants.DestinationSize.y + 7u) / 8u);
 
                 constants.CopySource = 0;
-                m_BuildHiZ.SetTexture(0, 1, hiZ);
                 for (uint32_t mip = 1; mip < mipCount; mip++)
                 {
                     constants.DestinationSize = { std::max(hiZ->GetWidth() >> mip, 1u), std::max(hiZ->GetHeight() >> mip, 1u) };
                     constants.SourceMip = mip - 1u;
                     m_BuildHiZ.WriteUniformBlock(0, 0, &constants, sizeof(constants));
+                    m_BuildHiZ.SetTexture(0, 1, hiZ, TextureSurface(mip - 1u, 1, 0, 1));
                     m_BuildHiZ.SetLoadStoreTexture(0, 2, hiZ, TextureSurface(mip, 1, 0, 1));
                     m_BuildHiZ.Dispatch((constants.DestinationSize.x + 7u) / 8u, (constants.DestinationSize.y + 7u) / 8u);
                 }
@@ -1480,7 +1501,12 @@ namespace Crowny
 
             void RenderToneMap(RenderGraphContext& context)
             {
-                if (!Ensure(m_ToneMap, m_ToneMapAttempted, "Resources/Shaders/ToneMap.asset"))
+                const bool writeObjectId = Resource("ObjectID").IsValid();
+                const size_t programIndex = writeObjectId ? 1u : 0u;
+                ShaderVariation variation;
+                variation.Set("CW_TONEMAP_OBJECT_ID", writeObjectId);
+                GraphicsMaterial& toneMap = m_ToneMap[programIndex];
+                if (!Ensure(toneMap, m_ToneMapAttempted[programIndex], "Resources/Shaders/ToneMap.asset", variation))
                     return;
                 const RenderGraphResourceHandle output = Resource("OutputTarget");
                 const Ref<RenderTarget>& target = output ? context.GetRenderTarget(output) : nullptr;
@@ -1491,15 +1517,16 @@ namespace Crowny
                 const float requestedSharpening = m_Settings.SharpeningStrength;
                 constants.SharpeningStrength =
                   m_EnablePostProcessing && std::isfinite(requestedSharpening) ? std::clamp(requestedSharpening, 0.0f, 1.0f) : 0.0f;
-                m_ToneMap.SetTexture(0, 0, TextureResource(context, "ResolvedColor"));
-                m_ToneMap.WriteUniformBlock(0, 1, &constants, sizeof(constants));
-                m_ToneMap.SetTexture(0, 2, TextureResource(context, "ObjectID"));
-                m_ToneMap.SetTexture(0, 3, TextureResource(context, "SceneDepth"));
-                m_ToneMap.SetTexture(0, 4, TextureResource(context, "Bloom") ? TextureResource(context, "Bloom") : Texture::BLACK);
+                toneMap.SetTexture(0, 0, TextureResource(context, "ResolvedColor"));
+                toneMap.WriteUniformBlock(0, 1, &constants, sizeof(constants));
+                if (writeObjectId)
+                    toneMap.SetTexture(0, 2, TextureResource(context, "ObjectID"));
+                toneMap.SetTexture(0, 3, TextureResource(context, "SceneDepth"));
+                toneMap.SetTexture(0, 4, TextureResource(context, "Bloom") ? TextureResource(context, "Bloom") : Texture::BLACK);
                 RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_ALL);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
                 RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f, 0, 1u);
-                if (m_ToneMap.Bind())
+                if (toneMap.Bind())
                     RenderAPI::TryGet()->Draw(0, 3, 1);
             }
 
@@ -1586,7 +1613,7 @@ namespace Crowny
             GraphicsMaterial m_WeightedOitAccumulation;
             GraphicsMaterial m_WeightedOitRevealage;
             GraphicsMaterial m_DeferredGBuffer;
-            GraphicsMaterial m_ToneMap;
+            std::array<GraphicsMaterial, 2> m_ToneMap;
             GraphicsMaterial m_Sky;
             Ref<Texture> m_BrdfLut;
             Ref<SamplerState> m_ShadowSampler;
@@ -1632,7 +1659,7 @@ namespace Crowny
             bool m_WeightedOitCompositeAttempted = false;
             bool m_TemporalResolveAttempted = false;
             bool m_BloomAttempted = false;
-            bool m_ToneMapAttempted = false;
+            std::array<bool, 2> m_ToneMapAttempted{};
             bool m_SkyAttempted = false;
             bool m_BrdfAttempted = false;
         };

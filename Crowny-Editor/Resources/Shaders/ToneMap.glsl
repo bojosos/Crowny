@@ -1,4 +1,5 @@
 #lang glsl
+#pragma variation CW_TONEMAP_OBJECT_ID
 #pragma depth_read false
 #pragma depth_write true
 #pragma depth_compare always_pass
@@ -25,12 +26,16 @@ layout(set = 0, binding = 1) uniform CwToneMapConstants
     float sharpeningStrength;
     float padding;
 } cwToneMap;
+#if CW_TONEMAP_OBJECT_ID
 layout(set = 0, binding = 2) uniform isampler2D cwObjectIds;
+#endif
 layout(set = 0, binding = 3) uniform sampler2D cwSceneDepth;
 layout(set = 0, binding = 4) uniform sampler2D cwBloom;
 
 layout(location = 0) out vec4 cwColor;
+#if CW_TONEMAP_OBJECT_ID
 layout(location = 1) out int cwObjectId;
+#endif
 
 float finiteOrZero(float value)
 {
@@ -93,6 +98,8 @@ void main()
     ivec2 imageSize = textureSize(cwHdrColor, 0);
     ivec2 colorPixel = clamp(ivec2(cwUv * vec2(imageSize)), ivec2(0), imageSize - ivec2(1));
     cwColor = vec4(contrastAdaptiveSharpen(colorPixel, imageSize, cwToneMap.sharpeningStrength), 1.0);
+#if CW_TONEMAP_OBJECT_ID
     cwObjectId = texelFetch(cwObjectIds, pixel, 0).r;
+#endif
     gl_FragDepth = texelFetch(cwSceneDepth, pixel, 0).r;
 }

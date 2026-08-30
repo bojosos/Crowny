@@ -355,13 +355,10 @@ namespace Crowny
         if ((shaderStageFlags & VK_SHADER_STAGE_COMPUTE_BIT) != 0)
             output |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
-        if ((shaderStageFlags & VK_SHADER_STAGE_RAYGEN_BIT_KHR) != 0)
-            output |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-
-        if ((shaderStageFlags & VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR) != 0)
-            output |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-
-        if ((shaderStageFlags & VK_SHADER_STAGE_COMPUTE_BIT) != 0)
+        constexpr VkShaderStageFlags rayTracingStages =
+          VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+          VK_SHADER_STAGE_MISS_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_KHR | VK_SHADER_STAGE_CALLABLE_BIT_KHR;
+        if ((shaderStageFlags & rayTracingStages) != 0)
             output |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 
         return output;

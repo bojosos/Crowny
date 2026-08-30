@@ -49,6 +49,7 @@ namespace Crowny
             params.Depth = entry.Depth;
             params.Faces = entry.ArraySize;
             params.Format = TextureFormat::RGBA8;
+            params.sRGB = false;
             params.Usage = TextureUsage::TEXTURE_STATIC;
 
             m_DummyReadTextures[idx] = StaticRefCast<VulkanTexture>(Texture::Create(params));

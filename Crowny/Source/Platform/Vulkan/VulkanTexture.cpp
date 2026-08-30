@@ -658,8 +658,8 @@ namespace Crowny
         nameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
         nameInfo.objectHandle = (uint64_t)image;
         nameInfo.pObjectName = m_Desc.DebugName.c_str();
-        // vkSetDebugUtilsObjectNameEXT(device.GetLogicalDevice(), &nameInfo);
-        // CW_ENGINE_INFO("Image: {}, {}", (void*)image, m_Desc.DebugName);
+        if (vkSetDebugUtilsObjectNameEXT != nullptr && !m_Desc.DebugName.empty())
+            vkSetDebugUtilsObjectNameEXT(device.GetLogicalDevice(), &nameInfo);
         VmaAllocation allocation = device.AllocateMemory(image, memoryFlags, m_Desc.DebugName.c_str());
         return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout, m_ImageCreateInfo.format, m_Desc);
     }

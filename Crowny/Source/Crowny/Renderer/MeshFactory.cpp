@@ -22,7 +22,8 @@ namespace Crowny
                      { ShaderDataType::Float3, VertexAttribute::Normal },
                      { ShaderDataType::Float3, VertexAttribute::Tangent },
                      { ShaderDataType::Float3, VertexAttribute::Bitangent },
-                     { ShaderDataType::Float2, VertexAttribute::TexCoord0 } };
+                     { ShaderDataType::Float2, VertexAttribute::TexCoord0 },
+                     { ShaderDataType::Float4, VertexAttribute::Color } };
         }
 
         bool IsPositiveFinite(float value) { return std::isfinite(value) && value > 0.0f; }
@@ -115,6 +116,7 @@ namespace Crowny
             data->SetTangents(tangents);
             data->SetBitangents(bitangents);
             data->SetUVs(0, uvs);
+            data->SetColors(Vector<glm::vec4>(vertexCount, glm::vec4(1.0f)));
             data->SetIndices(indices);
             return data;
         }

@@ -524,7 +524,7 @@ void main()
             TextureDesc textureDesc;
             textureDesc.Width = 8u;
             textureDesc.Height = 8u;
-            textureDesc.MipLevels = 4u;
+            textureDesc.MipLevels = 3u; // Three levels after the base level: 8, 4, 2, 1.
             textureDesc.Format = TextureFormat::RGBA8;
             textureDesc.Usage = TextureUsage::TEXTURE_STATIC;
             textureDesc.sRGB = false;

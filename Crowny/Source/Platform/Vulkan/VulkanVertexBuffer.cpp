@@ -4,6 +4,22 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        uint32_t ResolveVertexLocation(const BufferElement& shaderElement, uint32_t fallback)
+        {
+            if (shaderElement.Location != UINT32_MAX)
+                return shaderElement.Location;
+
+            // Older shader assets omit explicit locations. Keep the standard semantic gaps instead of
+            // compacting locations by the number of attributes provided by a particular mesh.
+            if (shaderElement.Attribute == VertexAttribute::TexCoord0)
+                return 4;
+            if (shaderElement.Attribute == VertexAttribute::Color)
+                return 5;
+            return fallback;
+        }
+    } // namespace
 
     VulkanBufferLayout::VulkanBufferLayout(uint32_t id, const VkPipelineVertexInputStateCreateInfo& createInfo) : m_Id(id), m_CreateInfo(createInfo)
     {
@@ -107,7 +123,7 @@ namespace Crowny
                     (shaderElement.Name == meshElement.Name && shaderElement.Type == meshElement.Type))
                 {
                     semantic = true;
-                    attr.location = shaderElement.Location != UINT32_MAX ? shaderElement.Location : attrIdx;
+                    attr.location = ResolveVertexLocation(shaderElement, attrIdx);
                     break;
                 }
             }

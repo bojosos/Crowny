@@ -842,6 +842,7 @@ namespace Crowny
             imageInfo.UseHandle.Used = false;
             imageInfo.UseHandle.Flags = accessFlags;
             registerSubresourceInfo(range);
+            m_QueuedLayoutTransitions[image] = imageInfoIdx;
             image->NotifyBound();
         }
         else
