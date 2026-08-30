@@ -2,12 +2,42 @@
 
 #include "Crowny/Audio/EFXLoader.h"
 
+#define CW_EFX_ENTRYPOINTS(X)                                                                                                                        \
+    X(GenEffects, LPALGENEFFECTS)                                                                                                                    \
+    X(DeleteEffects, LPALDELETEEFFECTS)                                                                                                              \
+    X(IsEffect, LPALISEFFECT)                                                                                                                        \
+    X(Effecti, LPALEFFECTI)                                                                                                                          \
+    X(Effectiv, LPALEFFECTIV)                                                                                                                        \
+    X(Effectf, LPALEFFECTF)                                                                                                                          \
+    X(Effectfv, LPALEFFECTFV)                                                                                                                        \
+    X(GetEffecti, LPALGETEFFECTI)                                                                                                                    \
+    X(GetEffectf, LPALGETEFFECTF)                                                                                                                    \
+    X(GenFilters, LPALGENFILTERS)                                                                                                                    \
+    X(DeleteFilters, LPALDELETEFILTERS)                                                                                                              \
+    X(IsFilter, LPALISFILTER)                                                                                                                        \
+    X(Filteri, LPALFILTERI)                                                                                                                          \
+    X(Filterf, LPALFILTERF)                                                                                                                          \
+    X(GetFilteri, LPALGETFILTERI)                                                                                                                    \
+    X(GetFilterf, LPALGETFILTERF)                                                                                                                    \
+    X(GenAuxiliaryEffectSlots, LPALGENAUXILIARYEFFECTSLOTS)                                                                                          \
+    X(DeleteAuxiliaryEffectSlots, LPALDELETEAUXILIARYEFFECTSLOTS)                                                                                    \
+    X(IsAuxiliaryEffectSlot, LPALISAUXILIARYEFFECTSLOT)                                                                                              \
+    X(AuxiliaryEffectSloti, LPALAUXILIARYEFFECTSLOTI)                                                                                                \
+    X(AuxiliaryEffectSlotf, LPALAUXILIARYEFFECTSLOTF)
+
 namespace Crowny
 {
     namespace
     {
-        void* ResolveEFXEntrypoint(ALCdevice* device, const char* name)
+#define CW_COUNT_EFX_ENTRYPOINT(symbol, type) +1
+        constexpr uint32_t EFXEntrypointCount = 0 CW_EFX_ENTRYPOINTS(CW_COUNT_EFX_ENTRYPOINT);
+#undef CW_COUNT_EFX_ENTRYPOINT
+
+        static_assert(EFXEntrypointCount == EFX::RequiredEntrypointCount);
+
+        void* ResolveEFXEntrypoint(void* context, const char* name)
         {
+            ALCdevice* device = static_cast<ALCdevice*>(context);
             if (void* entrypoint = alGetProcAddress(name))
                 return entrypoint;
 
@@ -51,40 +81,9 @@ namespace Crowny
 
         ClearOpenALErrors(device);
 
-#define CW_LOAD_EFX(symbol, type) symbol = reinterpret_cast<type>(ResolveEFXEntrypoint(device, "al" #symbol))
-
-        CW_LOAD_EFX(GenEffects, LPALGENEFFECTS);
-        CW_LOAD_EFX(DeleteEffects, LPALDELETEEFFECTS);
-        CW_LOAD_EFX(IsEffect, LPALISEFFECT);
-        CW_LOAD_EFX(Effecti, LPALEFFECTI);
-        CW_LOAD_EFX(Effectiv, LPALEFFECTIV);
-        CW_LOAD_EFX(Effectf, LPALEFFECTF);
-        CW_LOAD_EFX(Effectfv, LPALEFFECTFV);
-        CW_LOAD_EFX(GetEffecti, LPALGETEFFECTI);
-        CW_LOAD_EFX(GetEffectf, LPALGETEFFECTF);
-
-        CW_LOAD_EFX(GenFilters, LPALGENFILTERS);
-        CW_LOAD_EFX(DeleteFilters, LPALDELETEFILTERS);
-        CW_LOAD_EFX(IsFilter, LPALISFILTER);
-        CW_LOAD_EFX(Filteri, LPALFILTERI);
-        CW_LOAD_EFX(Filterf, LPALFILTERF);
-        CW_LOAD_EFX(GetFilteri, LPALGETFILTERI);
-        CW_LOAD_EFX(GetFilterf, LPALGETFILTERF);
-
-        CW_LOAD_EFX(GenAuxiliaryEffectSlots, LPALGENAUXILIARYEFFECTSLOTS);
-        CW_LOAD_EFX(DeleteAuxiliaryEffectSlots, LPALDELETEAUXILIARYEFFECTSLOTS);
-        CW_LOAD_EFX(IsAuxiliaryEffectSlot, LPALISAUXILIARYEFFECTSLOT);
-        CW_LOAD_EFX(AuxiliaryEffectSloti, LPALAUXILIARYEFFECTSLOTI);
-        CW_LOAD_EFX(AuxiliaryEffectSlotf, LPALAUXILIARYEFFECTSLOTF);
-
-#undef CW_LOAD_EFX
-
-        if (const char* missing = GetMissingRequiredEntrypoint())
+        if (!ResolveEntrypoints(ResolveEFXEntrypoint, device))
         {
             ClearOpenALErrors(device);
-            Reset();
-            Status = EFXLoadStatus::MissingEntrypoint;
-            MissingEntrypoint = missing;
             return false;
         }
 
@@ -101,7 +100,7 @@ namespace Crowny
             if (probe != 0)
                 DeleteEffects(1, &probe);
             ClearOpenALErrors(device);
-            Reset();
+            Available = false;
             Status = EFXLoadStatus::EffectCreationFailed;
             return false;
         }
@@ -115,7 +114,8 @@ namespace Crowny
             {
                 DeleteEffects(1, &probe);
                 ClearOpenALErrors(device);
-                Reset();
+                Available = false;
+                HasEAXReverb = false;
                 Status = EFXLoadStatus::EffectCreationFailed;
                 return false;
             }
@@ -128,35 +128,52 @@ namespace Crowny
         return true;
     }
 
+    bool EFX::ResolveEntrypoints(EFXEntrypointResolver resolver, void* context)
+    {
+        Reset();
+
+#define CW_RESOLVE_EFX(symbol, type) symbol = resolver != nullptr ? reinterpret_cast<type>(resolver(context, "al" #symbol)) : nullptr;
+
+        CW_EFX_ENTRYPOINTS(CW_RESOLVE_EFX)
+
+#undef CW_RESOLVE_EFX
+
+        MissingEntrypoint = GetMissingRequiredEntrypoint();
+        if (MissingEntrypoint == nullptr)
+            return true;
+
+        Status = EFXLoadStatus::MissingEntrypoint;
+        return false;
+    }
+
     void EFX::Reset() { *this = EFX{}; }
+
+    EFXCapabilityState EFX::GetCapabilityState() const
+    {
+        uint32_t loadedEntrypoints = 0;
+
+#define CW_COUNT_EFX(symbol, type) loadedEntrypoints += symbol != nullptr ? 1 : 0;
+
+        CW_EFX_ENTRYPOINTS(CW_COUNT_EFX)
+
+#undef CW_COUNT_EFX
+
+        EFXEntrypointState entrypointState = EFXEntrypointState::Partial;
+        if (loadedEntrypoints == 0)
+            entrypointState = EFXEntrypointState::Empty;
+        else if (loadedEntrypoints == RequiredEntrypointCount)
+            entrypointState = EFXEntrypointState::Complete;
+
+        return { Status, entrypointState, loadedEntrypoints, RequiredEntrypointCount, MaxAuxiliarySends, HasEAXReverb, Available, MissingEntrypoint };
+    }
 
     const char* EFX::GetMissingRequiredEntrypoint() const
     {
-#define CW_REQUIRE_EFX(symbol)                                                                                                                       \
+#define CW_REQUIRE_EFX(symbol, type)                                                                                                                 \
     if (symbol == nullptr)                                                                                                                           \
-        return "al" #symbol
+        return "al" #symbol;
 
-        CW_REQUIRE_EFX(GenEffects);
-        CW_REQUIRE_EFX(DeleteEffects);
-        CW_REQUIRE_EFX(IsEffect);
-        CW_REQUIRE_EFX(Effecti);
-        CW_REQUIRE_EFX(Effectiv);
-        CW_REQUIRE_EFX(Effectf);
-        CW_REQUIRE_EFX(Effectfv);
-        CW_REQUIRE_EFX(GetEffecti);
-        CW_REQUIRE_EFX(GetEffectf);
-        CW_REQUIRE_EFX(GenFilters);
-        CW_REQUIRE_EFX(DeleteFilters);
-        CW_REQUIRE_EFX(IsFilter);
-        CW_REQUIRE_EFX(Filteri);
-        CW_REQUIRE_EFX(Filterf);
-        CW_REQUIRE_EFX(GetFilteri);
-        CW_REQUIRE_EFX(GetFilterf);
-        CW_REQUIRE_EFX(GenAuxiliaryEffectSlots);
-        CW_REQUIRE_EFX(DeleteAuxiliaryEffectSlots);
-        CW_REQUIRE_EFX(IsAuxiliaryEffectSlot);
-        CW_REQUIRE_EFX(AuxiliaryEffectSloti);
-        CW_REQUIRE_EFX(AuxiliaryEffectSlotf);
+        CW_EFX_ENTRYPOINTS(CW_REQUIRE_EFX)
 
 #undef CW_REQUIRE_EFX
         return nullptr;
@@ -166,15 +183,25 @@ namespace Crowny
     {
         switch (status)
         {
-        case EFXLoadStatus::NotLoaded: return "not loaded";
-        case EFXLoadStatus::Available: return "available";
-        case EFXLoadStatus::NoDevice: return "no OpenAL device";
-        case EFXLoadStatus::NoCurrentContext: return "the device context is not current";
-        case EFXLoadStatus::ExtensionUnavailable: return "ALC_EXT_EFX is not advertised";
-        case EFXLoadStatus::MissingEntrypoint: return "a required entrypoint is unavailable";
-        case EFXLoadStatus::EffectCreationFailed: return "the driver could not create an effect object";
-        default: return "unknown";
+        case EFXLoadStatus::NotLoaded:
+            return "not loaded";
+        case EFXLoadStatus::Available:
+            return "available";
+        case EFXLoadStatus::NoDevice:
+            return "no OpenAL device";
+        case EFXLoadStatus::NoCurrentContext:
+            return "the device context is not current";
+        case EFXLoadStatus::ExtensionUnavailable:
+            return "ALC_EXT_EFX is not advertised";
+        case EFXLoadStatus::MissingEntrypoint:
+            return "a required entrypoint is unavailable";
+        case EFXLoadStatus::EffectCreationFailed:
+            return "the driver could not create an effect object";
+        default:
+            return "unknown";
         }
     }
 
 } // namespace Crowny
+
+#undef CW_EFX_ENTRYPOINTS

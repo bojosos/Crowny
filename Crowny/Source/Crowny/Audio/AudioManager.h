@@ -60,6 +60,7 @@ namespace Crowny
         const EFX& GetEFX() const { return m_EFX; }
         bool IsEFXAvailable() const { return m_EFX.Available; }
         EFXLoadStatus GetEFXStatus() const { return m_EFX.Status; }
+        EFXCapabilityState GetEFXCapabilityState() const { return m_EFX.GetCapabilityState(); }
 
         // Sets the currently active audio mixer. Sources without an explicit bus will route to the
         // master bus of this mixer. Passing a null handle reverts to direct-output (no bus routing).

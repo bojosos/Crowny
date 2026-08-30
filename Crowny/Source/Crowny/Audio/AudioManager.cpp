@@ -117,11 +117,16 @@ namespace Crowny
 
         if (m_EFXFallbackReported)
             return;
+        const EFXCapabilityState capability = m_EFX.GetCapabilityState();
         if (m_EFX.Status == EFXLoadStatus::MissingEntrypoint)
-            CW_ENGINE_WARN("OpenAL EFX unavailable (missing {0}); effects are disabled, core playback remains available.",
-                           m_EFX.MissingEntrypoint != nullptr ? m_EFX.MissingEntrypoint : "unknown entrypoint");
+            CW_ENGINE_WARN("OpenAL EFX disabled: {0}/{1} entrypoints loaded, missing {2}. Core playback continues. Use an OpenAL runtime and "
+                           "device with complete ALC_EXT_EFX support.",
+                           capability.LoadedEntrypoints, capability.RequiredEntrypoints,
+                           capability.MissingEntrypoint != nullptr ? capability.MissingEntrypoint : "an unknown entrypoint");
         else
-            CW_ENGINE_WARN("OpenAL EFX unavailable ({0}); effects are disabled, core playback remains available.", EFX::GetStatusName(m_EFX.Status));
+            CW_ENGINE_WARN("OpenAL EFX disabled: {0}. Core playback continues. Check the selected device and OpenAL runtime for ALC_EXT_EFX "
+                           "support.",
+                           EFX::GetStatusName(m_EFX.Status));
         m_EFXFallbackReported = true;
     }
 

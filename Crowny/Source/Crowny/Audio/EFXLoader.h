@@ -19,12 +19,35 @@ namespace Crowny
         EffectCreationFailed,
     };
 
+    enum class EFXEntrypointState : uint8_t
+    {
+        Empty,
+        Partial,
+        Complete,
+    };
+
+    struct EFXCapabilityState
+    {
+        EFXLoadStatus Status = EFXLoadStatus::NotLoaded;
+        EFXEntrypointState Entrypoints = EFXEntrypointState::Empty;
+        uint32_t LoadedEntrypoints = 0;
+        uint32_t RequiredEntrypoints = 0;
+        ALCint MaxAuxiliarySends = 0;
+        bool SupportsEAXReverb = false;
+        bool Available = false;
+        const char* MissingEntrypoint = nullptr;
+    };
+
+    using EFXEntrypointResolver = void* (*)(void* context, const char* name);
+
     // Wrapper around the ALC_EXT_EFX extension entrypoints.
     // The struct holds function pointers loaded once at AudioManager startup.
     // If the device does not advertise EFX, m_Available is false and the rest of the audio system
     // collapses to a gain-only path (bus volumes still propagate, effects/filters become no-ops).
     struct EFX
     {
+        static constexpr uint32_t RequiredEntrypointCount = 21;
+
         // Effect objects
         LPALGENEFFECTS GenEffects = nullptr;
         LPALDELETEEFFECTS DeleteEffects = nullptr;
@@ -65,7 +88,11 @@ namespace Crowny
         const char* MissingEntrypoint = nullptr;
 
         bool Load(ALCdevice* device);
+        // Resolves and classifies the function table without calling an entrypoint. A complete
+        // table is not marked available until Load() also validates it against the active device.
+        bool ResolveEntrypoints(EFXEntrypointResolver resolver, void* context = nullptr);
         void Reset();
+        EFXCapabilityState GetCapabilityState() const;
         const char* GetMissingRequiredEntrypoint() const;
         static const char* GetStatusName(EFXLoadStatus status);
     };

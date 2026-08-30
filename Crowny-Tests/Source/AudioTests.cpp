@@ -21,6 +21,20 @@ using namespace Crowny;
 
 namespace
 {
+    struct FakeEFXResolver
+    {
+        const char* MissingEntrypoint = nullptr;
+        uint8_t EntrypointToken = 0;
+    };
+
+    void* ResolveFakeEFXEntrypoint(void* context, const char* name)
+    {
+        auto& resolver = *static_cast<FakeEFXResolver*>(context);
+        if (resolver.MissingEntrypoint != nullptr && std::strcmp(resolver.MissingEntrypoint, name) == 0)
+            return nullptr;
+        return &resolver.EntrypointToken;
+    }
+
     void EnsureHeadlessAudioRuntime()
     {
         if (!Application::IsStartedUp())
@@ -249,6 +263,11 @@ TEST_CASE("EFX capability failures remain inspectable without an OpenAL device",
     CHECK_FALSE(efx.Available);
     CHECK(String(EFX::GetStatusName(efx.Status)) == "not loaded");
     CHECK(String(efx.GetMissingRequiredEntrypoint()) == "alGenEffects");
+    EFXCapabilityState capability = efx.GetCapabilityState();
+    CHECK(capability.Entrypoints == EFXEntrypointState::Empty);
+    CHECK(capability.LoadedEntrypoints == 0);
+    CHECK(capability.RequiredEntrypoints == EFX::RequiredEntrypointCount);
+    CHECK_FALSE(capability.Available);
 
     CHECK_FALSE(efx.Load(nullptr));
     CHECK(efx.Status == EFXLoadStatus::NoDevice);
@@ -257,6 +276,49 @@ TEST_CASE("EFX capability failures remain inspectable without an OpenAL device",
     efx.Reset();
     CHECK(efx.Status == EFXLoadStatus::NotLoaded);
     CHECK(efx.MissingEntrypoint == nullptr);
+}
+
+TEST_CASE("EFX entrypoint tables classify full partial and missing support without a device", "[Audio][EFX]")
+{
+    EFX efx;
+    FakeEFXResolver resolver;
+
+    SECTION("full table")
+    {
+        REQUIRE(efx.ResolveEntrypoints(ResolveFakeEFXEntrypoint, &resolver));
+        const EFXCapabilityState capability = efx.GetCapabilityState();
+        CHECK(capability.Status == EFXLoadStatus::NotLoaded);
+        CHECK(capability.Entrypoints == EFXEntrypointState::Complete);
+        CHECK(capability.LoadedEntrypoints == EFX::RequiredEntrypointCount);
+        CHECK(capability.RequiredEntrypoints == EFX::RequiredEntrypointCount);
+        CHECK(capability.MissingEntrypoint == nullptr);
+        CHECK_FALSE(capability.Available);
+    }
+
+    SECTION("partial table")
+    {
+        resolver.MissingEntrypoint = "alGenEffects";
+        CHECK_FALSE(efx.ResolveEntrypoints(ResolveFakeEFXEntrypoint, &resolver));
+        const EFXCapabilityState capability = efx.GetCapabilityState();
+        CHECK(capability.Status == EFXLoadStatus::MissingEntrypoint);
+        CHECK(capability.Entrypoints == EFXEntrypointState::Partial);
+        CHECK(capability.LoadedEntrypoints == EFX::RequiredEntrypointCount - 1);
+        REQUIRE(capability.MissingEntrypoint != nullptr);
+        CHECK(String(capability.MissingEntrypoint) == "alGenEffects");
+        CHECK_FALSE(capability.Available);
+    }
+
+    SECTION("missing table")
+    {
+        CHECK_FALSE(efx.ResolveEntrypoints(nullptr));
+        const EFXCapabilityState capability = efx.GetCapabilityState();
+        CHECK(capability.Status == EFXLoadStatus::MissingEntrypoint);
+        CHECK(capability.Entrypoints == EFXEntrypointState::Empty);
+        CHECK(capability.LoadedEntrypoints == 0);
+        REQUIRE(capability.MissingEntrypoint != nullptr);
+        CHECK(String(capability.MissingEntrypoint) == "alGenEffects");
+        CHECK_FALSE(capability.Available);
+    }
 }
 
 TEST_CASE("Audio component snapshots apply settings without replacing identity", "[Audio][Ecs][Lifecycle]")
