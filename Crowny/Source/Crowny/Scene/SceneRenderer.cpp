@@ -449,11 +449,11 @@ namespace Crowny
                 float Feedback = 0.9f;
             };
 
-            struct alignas(16) WeightedOitConstants
+            struct WeightedOitConstants
             {
                 glm::uvec2 Resolution = glm::uvec2(1u);
-                glm::uvec2 Padding = glm::uvec2(0u);
             };
+            static_assert(sizeof(WeightedOitConstants) == 8u);
 
             struct alignas(16) BloomConstants
             {
