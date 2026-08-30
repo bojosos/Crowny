@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Panels/AssetBrowserOperations.h"
+#include "Panels/AssetBrowserViewport.h"
 #include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
@@ -73,6 +74,14 @@ namespace Crowny
     private:
         using DisplayList = Vector<Ref<LibraryEntry>>;
 
+        struct DisplayPresentation
+        {
+            AssetBrowserPresentationFingerprint Fingerprint;
+            String Modified;
+            String Size;
+            bool Initialized = false;
+        };
+
         void SetCurrentDirectory(DirectoryEntry* entry);
         void HandleOpen(LibraryEntry* entry);
         void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
@@ -89,6 +98,8 @@ namespace Crowny
         void ApplyDeferredOperations();
         const DisplayList& GetDisplayList();
         void UpdateDisplayList(const std::optional<Path>& preferredStartPath = {}, const std::optional<Path>& preferredEndPath = {});
+        void UpdateDisplayPresentation();
+        uint32_t FindDisplayIndex(const Path& path) const;
 
         void GoForward();
         void GoBackward();
@@ -98,6 +109,7 @@ namespace Crowny
     private:
         Vector<DirectoryEntry*> m_DirectoryPathEntries;
         Vector<Ref<LibraryEntry>> m_DisplayList;
+        Vector<DisplayPresentation> m_DisplayPresentation;
         String m_SearchString;
         uint32_t m_ColumnCount = 5;
         ImTextureID m_FolderIcon;

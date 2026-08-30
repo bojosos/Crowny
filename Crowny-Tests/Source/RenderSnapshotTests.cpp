@@ -3,6 +3,8 @@
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
 
+#include <type_traits>
+
 using namespace Crowny;
 
 TEST_CASE("2D render order is stable across renderable types", "[Renderer][2D]")
@@ -46,4 +48,73 @@ TEST_CASE("2D render ordering allocates nothing after warm-up", "[Renderer][2D][
     CHECK(std::is_sorted(items.begin(), items.end(), Renderable2DOrderLess));
     CHECK(delta.AllocationCount == 0);
     CHECK(delta.RequestedBytes == 0);
+}
+
+TEST_CASE("Legacy snapshot materials stay flat and allocation-free after warm-up", "[Renderer][Memory][Frame]")
+{
+    constexpr std::array<uint32_t, 3> entityCounts{ 1u, 1000u, 10000u };
+    constexpr uint32_t materialsPerEntity = 4u;
+    constexpr uint32_t frameCount = 120u;
+    const Vector<AssetHandle<Material>> materials(materialsPerEntity);
+
+    using MaterialSetter = bool (RenderSnapshot::*)(RenderableObject&, const Vector<AssetHandle<Material>>&);
+    static_assert(!std::is_invocable_v<MaterialSetter, RenderSnapshot&, RenderableObject&,
+                                       std::span<const AssetHandle<Material>>>);
+
+    constexpr size_t maxMaterialCount = std::numeric_limits<uint32_t>::max();
+    static_assert(RenderSnapshot::CanAppendMaterials(0u, maxMaterialCount));
+    static_assert(RenderSnapshot::CanAppendMaterials(maxMaterialCount, 0u));
+    static_assert(!RenderSnapshot::CanAppendMaterials(maxMaterialCount, 1u));
+    static_assert(!RenderSnapshot::CanAppendMaterials(maxMaterialCount + 1u, 0u));
+
+    for (const uint32_t entityCount : entityCounts)
+    {
+        RenderSnapshot snapshot;
+        snapshot.MeshObjects.Reserve(entityCount);
+        snapshot.LegacyMaterials.Reserve(static_cast<size_t>(entityCount) * materialsPerEntity);
+
+        const auto rebuild = [&]() {
+            snapshot.Clear();
+            bool storedAllMaterials = true;
+            for (uint32_t entity = 0; entity < entityCount; entity++)
+            {
+                RenderableObject& object = snapshot.MeshObjects.Acquire();
+                storedAllMaterials = snapshot.SetMaterials(object, materials) && storedAllMaterials;
+            }
+            return storedAllMaterials;
+        };
+
+        REQUIRE(rebuild());
+        REQUIRE(snapshot.MeshObjects.Size() == entityCount);
+        REQUIRE(snapshot.LegacyMaterials.Size() == static_cast<size_t>(entityCount) * materialsPerEntity);
+        CHECK(snapshot.MeshObjects[0].MaterialOffset == 0u);
+        CHECK(snapshot.MeshObjects[0].MaterialCount == materialsPerEntity);
+        const RenderableObject& middleObject = snapshot.MeshObjects[entityCount / 2u];
+        const std::span<const AssetHandle<Material>> middleMaterials = snapshot.GetMaterials(middleObject);
+        CHECK(middleMaterials.size() == materialsPerEntity);
+        CHECK(middleMaterials.data() == snapshot.LegacyMaterials.begin() + middleObject.MaterialOffset);
+        CHECK(snapshot.MeshObjects[entityCount - 1u].MaterialOffset == (entityCount - 1u) * materialsPerEntity);
+
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        bool storedAllMaterials = true;
+        for (uint32_t frame = 0; frame < frameCount; frame++)
+            storedAllMaterials = rebuild() && storedAllMaterials;
+        const Memory::ThreadAllocationSnapshot delta =
+          Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+        INFO("Entity count: " << entityCount);
+        CHECK(storedAllMaterials);
+        CHECK(delta.AllocationCount == 0u);
+        CHECK(delta.RequestedBytes == 0u);
+
+        snapshot.Clear();
+        const uint32_t reducedCount = std::max(entityCount / 2u, 1u);
+        for (uint32_t entity = 0; entity < reducedCount; entity++)
+        {
+            RenderableObject& object = snapshot.MeshObjects.Acquire();
+            REQUIRE(snapshot.SetMaterials(object, materials));
+        }
+        CHECK(snapshot.MeshObjects.Size() == reducedCount);
+        CHECK(snapshot.LegacyMaterials.Size() == static_cast<size_t>(reducedCount) * materialsPerEntity);
+    }
 }

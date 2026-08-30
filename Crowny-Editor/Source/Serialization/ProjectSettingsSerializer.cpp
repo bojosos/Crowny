@@ -109,9 +109,8 @@ namespace Crowny
             return InputBindingPart::Whole;
         }
 
-        void SerializeInputMap(InputMap& inputMap, YAML::Emitter& out)
+        void SerializeInputMap(const InputMap& inputMap, YAML::Emitter& out)
         {
-            inputMap.EnsureStableIds();
             out << YAML::Key << "Input" << YAML::Value << YAML::BeginMap;
             out << YAML::Key << "Version" << YAML::Value << 1;
             out << YAML::Key << "Contexts" << YAML::Value << YAML::BeginSeq;

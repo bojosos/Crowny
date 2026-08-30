@@ -418,75 +418,75 @@ namespace Crowny
 
     bool InputSettingsEditor::Render(InputMap& inputMap)
     {
-        inputMap.EnsureStableIds();
-        bool changed = false;
-        Vector<InputContext>& contexts = inputMap.GetContexts();
+        return inputMap.EditContexts([](Vector<InputContext>& contexts) {
+            bool changed = false;
 
-        ImGui::TextWrapped(
-          "Define named actions here, then query them from gameplay code. Higher priorities win when contexts use the same action name.");
-        if (ImGui::Button("Add context"))
-        {
-            InputContext context;
-            context.Id = UuidGenerator::Generate();
-            context.Name = contexts.empty() ? "Gameplay" : "New context";
-            contexts.push_back(std::move(context));
-            changed = true;
-        }
-
-        size_t removeContext = contexts.size();
-        for (size_t contextIndex = 0; contextIndex < contexts.size(); contextIndex++)
-        {
-            InputContext& context = contexts[contextIndex];
-            ImGui::PushID(context.Id.ToString().c_str());
-            ImGui::Separator();
-            const String header = context.Name.empty() ? "Unnamed context" : context.Name;
-            const bool open =
-              ImGui::TreeNodeEx("##Context", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth, "%s", header.c_str());
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Remove"))
-                removeContext = contextIndex;
-
-            if (open)
+            ImGui::TextWrapped(
+              "Define named actions here, then query them from gameplay code. Higher priorities win when contexts use the same action name.");
+            if (ImGui::Button("Add context"))
             {
-                ImGui::SetNextItemWidth(220.0f);
-                changed |= ImGui::InputText("Name", &context.Name);
-                changed |= ImGui::InputInt("Priority", &context.Priority);
-                changed |= ImGui::Checkbox("Enabled", &context.Enabled);
-                changed |= ImGui::Checkbox("Consume active bindings", &context.ConsumeInput);
-                ImGui::TextDisabled("Consumed controls do not reach lower-priority contexts.");
-
-                size_t removeAction = context.Actions.size();
-                for (size_t actionIndex = 0; actionIndex < context.Actions.size(); actionIndex++)
-                {
-                    bool remove = false;
-                    changed |= RenderAction(context, actionIndex, remove);
-                    if (remove)
-                        removeAction = actionIndex;
-                }
-                if (removeAction < context.Actions.size())
-                {
-                    context.Actions.erase(context.Actions.begin() + static_cast<ptrdiff_t>(removeAction));
-                    changed = true;
-                }
-
-                if (ImGui::Button("Add action"))
-                {
-                    InputAction action;
-                    action.Id = UuidGenerator::Generate();
-                    action.Name = "New action";
-                    context.Actions.push_back(std::move(action));
-                    changed = true;
-                }
-                ImGui::TreePop();
+                InputContext context;
+                context.Id = UuidGenerator::Generate();
+                context.Name = contexts.empty() ? "Gameplay" : "New context";
+                contexts.push_back(std::move(context));
+                changed = true;
             }
-            ImGui::PopID();
-        }
 
-        if (removeContext < contexts.size())
-        {
-            contexts.erase(contexts.begin() + static_cast<ptrdiff_t>(removeContext));
-            changed = true;
-        }
-        return changed;
+            size_t removeContext = contexts.size();
+            for (size_t contextIndex = 0; contextIndex < contexts.size(); contextIndex++)
+            {
+                InputContext& context = contexts[contextIndex];
+                ImGui::PushID(context.Id.ToString().c_str());
+                ImGui::Separator();
+                const String header = context.Name.empty() ? "Unnamed context" : context.Name;
+                const bool open =
+                  ImGui::TreeNodeEx("##Context", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth, "%s", header.c_str());
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Remove"))
+                    removeContext = contextIndex;
+
+                if (open)
+                {
+                    ImGui::SetNextItemWidth(220.0f);
+                    changed |= ImGui::InputText("Name", &context.Name);
+                    changed |= ImGui::InputInt("Priority", &context.Priority);
+                    changed |= ImGui::Checkbox("Enabled", &context.Enabled);
+                    changed |= ImGui::Checkbox("Consume active bindings", &context.ConsumeInput);
+                    ImGui::TextDisabled("Consumed controls do not reach lower-priority contexts.");
+
+                    size_t removeAction = context.Actions.size();
+                    for (size_t actionIndex = 0; actionIndex < context.Actions.size(); actionIndex++)
+                    {
+                        bool remove = false;
+                        changed |= RenderAction(context, actionIndex, remove);
+                        if (remove)
+                            removeAction = actionIndex;
+                    }
+                    if (removeAction < context.Actions.size())
+                    {
+                        context.Actions.erase(context.Actions.begin() + static_cast<ptrdiff_t>(removeAction));
+                        changed = true;
+                    }
+
+                    if (ImGui::Button("Add action"))
+                    {
+                        InputAction action;
+                        action.Id = UuidGenerator::Generate();
+                        action.Name = "New action";
+                        context.Actions.push_back(std::move(action));
+                        changed = true;
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+
+            if (removeContext < contexts.size())
+            {
+                contexts.erase(contexts.begin() + static_cast<ptrdiff_t>(removeContext));
+                changed = true;
+            }
+            return changed;
+        });
     }
 } // namespace Crowny

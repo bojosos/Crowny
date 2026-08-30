@@ -1,6 +1,7 @@
 #include "cwtpch.h"
 
 #include "Crowny/Input/InputMap.h"
+#include "Crowny/Memory/AllocationCounter.h"
 
 using namespace Crowny;
 
@@ -161,7 +162,6 @@ TEST_CASE("Higher priority contexts override names and consume active controls",
 TEST_CASE("Runtime rebinds do not change authored defaults", "[Input]")
 {
     InputMap map({ Context("Gameplay", 0, { Action("Jump", InputActionType::Button, { KeyBinding(Key::Space) }) }) });
-    map.EnsureStableIds();
     const UUID bindingId = map.GetContexts()[0].Actions[0].Bindings[0].Id;
 
     InputBinding rebound;
@@ -204,4 +204,125 @@ TEST_CASE("Input capture filters keyboard and mouse actions only", "[Input]")
     CHECK_FALSE(map.IsHeld("Keyboard"));
     CHECK_FALSE(map.IsHeld("Pointer"));
     CHECK(map.IsHeld("Controller"));
+}
+
+TEST_CASE("Input map state transitions survive disabled contexts", "[Input][Memory]")
+{
+    constexpr StringView actionName = "Toggleable gameplay action";
+    InputMap map({ Context("Gameplay", 0, { Action(String(actionName), InputActionType::Button, { KeyBinding(Key::Space) }) }) });
+    FakeInputStateReader input;
+    input.Keys[Key::Space].Held = true;
+
+    map.Update(input);
+    CHECK(map.IsPressed(actionName));
+    CHECK(map.IsHeld(actionName));
+
+    REQUIRE(map.SetContextEnabled("Gameplay", false));
+    map.Update(input);
+    CHECK(map.IsReleased(actionName));
+    CHECK_FALSE(map.IsHeld(actionName));
+
+    map.Update(input);
+    CHECK_FALSE(map.IsReleased(actionName));
+
+    REQUIRE(map.SetContextEnabled("Gameplay", true));
+    map.Update(input);
+    CHECK(map.IsPressed(actionName));
+    CHECK(map.IsHeld(actionName));
+}
+
+TEST_CASE("Input context edits repair stable IDs before publication", "[Input][Memory]")
+{
+    InputMap map({ Context("Gameplay", 0, { Action("Jump", InputActionType::Button, { KeyBinding(Key::Space) }) }) });
+    REQUIRE(map.EditContexts([](Vector<InputContext>& contexts) {
+        REQUIRE(contexts.size() == 1);
+        REQUIRE(contexts[0].Actions.size() == 1);
+        REQUIRE(contexts[0].Actions[0].Bindings.size() == 1);
+        contexts[0].Actions[0].Id = contexts[0].Id;
+        contexts[0].Actions[0].Bindings[0].Id = UUID::EMPTY;
+        return true;
+    }));
+
+    const Vector<InputContext>& repaired = map.GetContexts();
+    const UUID contextId = repaired[0].Id;
+    const UUID actionId = repaired[0].Actions[0].Id;
+    const UUID bindingId = repaired[0].Actions[0].Bindings[0].Id;
+    CHECK_FALSE(contextId.Empty());
+    CHECK_FALSE(actionId.Empty());
+    CHECK_FALSE(bindingId.Empty());
+    CHECK(contextId != actionId);
+    CHECK(contextId != bindingId);
+    CHECK(actionId != bindingId);
+
+    CHECK(map.GetContexts()[0].Id == contextId);
+    CHECK(map.GetContexts()[0].Actions[0].Id == actionId);
+    CHECK(map.GetContexts()[0].Actions[0].Bindings[0].Id == bindingId);
+}
+
+TEST_CASE("Unchanged input context edit callbacks skip ID repair and allocations", "[Input][Memory][Frame]")
+{
+    InputMap map({ Context("Gameplay", 0, { Action("Jump", InputActionType::Button, { KeyBinding(Key::Space) }) }) });
+    const UUID contextId = map.GetContexts()[0].Id;
+    const UUID actionId = map.GetContexts()[0].Actions[0].Id;
+    const UUID bindingId = map.GetContexts()[0].Actions[0].Bindings[0].Id;
+
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    uint32_t visitedContexts = 0;
+    bool changed = false;
+    for (uint32_t frame = 0; frame < 240; frame++)
+    {
+        changed |= map.EditContexts([&visitedContexts](Vector<InputContext>& contexts) {
+            visitedContexts += static_cast<uint32_t>(contexts.size());
+            return false;
+        });
+    }
+    const Memory::ThreadAllocationSnapshot delta =
+      Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+    CHECK_FALSE(changed);
+    CHECK(visitedContexts == 240u);
+    CHECK(map.GetContexts()[0].Id == contextId);
+    CHECK(map.GetContexts()[0].Actions[0].Id == actionId);
+    CHECK(map.GetContexts()[0].Actions[0].Bindings[0].Id == bindingId);
+    CHECK(delta.AllocationCount == 0u);
+    CHECK(delta.RequestedBytes == 0u);
+}
+
+TEST_CASE("Input maps allocate nothing after warm-up", "[Input][Memory][Frame]")
+{
+    const String sharedAction = "Crowny long shared action name beyond small string storage";
+    const String sameContextAction = "Crowny long same-context action beyond small string storage";
+    const String consumedAction = "Crowny long consumed action name beyond small string storage";
+
+    InputMap map({ Context("Gameplay", 0,
+                           { Action(sharedAction, InputActionType::Button, { KeyBinding(Key::W) }),
+                             Action(consumedAction, InputActionType::Button, { KeyBinding(Key::E) }) }),
+                   Context("Menu", 100,
+                           { Action(sharedAction, InputActionType::Button, { KeyBinding(Key::E) }),
+                             Action(sameContextAction, InputActionType::Button, { KeyBinding(Key::E) }) }) });
+    FakeInputStateReader input;
+    input.Keys[Key::E].Held = true;
+    input.Keys[Key::W].Held = true;
+
+    map.Update(input);
+    REQUIRE(map.IsHeld(sharedAction));
+    REQUIRE(map.IsHeld(sameContextAction));
+    REQUIRE_FALSE(map.IsHeld(consumedAction));
+
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    uint32_t observedHeldActions = 0;
+    for (uint32_t frame = 0; frame < 240; frame++)
+    {
+        map.Update(input);
+        observedHeldActions += map.IsHeld(sharedAction) ? 1u : 0u;
+        observedHeldActions += map.IsHeld(sameContextAction) ? 1u : 0u;
+        observedHeldActions += map.IsHeld(consumedAction) ? 1u : 0u;
+        observedHeldActions += map.GetValue(sharedAction).AsButton() ? 1u : 0u;
+    }
+    const Memory::ThreadAllocationSnapshot delta =
+      Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+    CHECK(observedHeldActions == 240u * 3u);
+    CHECK(delta.AllocationCount == 0u);
+    CHECK(delta.RequestedBytes == 0u);
 }

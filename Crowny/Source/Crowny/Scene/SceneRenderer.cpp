@@ -1536,7 +1536,7 @@ namespace Crowny
                 {
                     if (!IsRenderableObjectVisible(object, frustum, m_View.VisibilityMask))
                         continue;
-                    ForwardRenderer::SubmitForwardOnlyOpaque(object.MeshHandle, object.Materials, object.WorldMatrix);
+                    ForwardRenderer::SubmitForwardOnlyOpaque(object.MeshHandle, m_Snapshot->GetMaterials(object), object.WorldMatrix);
                 }
                 ForwardRenderer::Flush();
                 ForwardRenderer::EndScene();
@@ -2283,7 +2283,7 @@ namespace Crowny
                                                    : renderMesh->GetSphereBounds();
                     object.BoundingSphere = VisibilityCulling::TransformSphere(bounds, object.WorldMatrix);
                     object.MeshHandle = renderMesh;
-                    object.Materials.assign(mesh.Materials.begin(), mesh.Materials.end());
+                    snapshot.SetMaterials(object, mesh.Materials);
                     object.VisibilityLayers = mesh.VisibilityLayers;
                     object.Visible = mesh.Visible;
                 }
@@ -2302,7 +2302,7 @@ namespace Crowny
                     object.WorldMatrix = transform.GetWorldMatrix(relationship.Parent);
                     object.BoundingSphere = VisibilityCulling::TransformSphere(proc.RuntimeMeshHandle->GetSphereBounds(), object.WorldMatrix);
                     object.MeshHandle = proc.RuntimeMeshHandle;
-                    object.Materials.assign(proc.Materials.begin(), proc.Materials.end());
+                    snapshot.SetMaterials(object, proc.Materials);
                     object.VisibilityLayers = RenderLayerMask::All();
                     object.Visible = true;
                 }
@@ -2792,7 +2792,7 @@ namespace Crowny
             for (const auto& obj : snapshot.MeshObjects)
             {
                 if (IsRenderableObjectVisible(obj, frustum, RenderLayerMask::All()))
-                    ForwardRenderer::Submit(obj.MeshHandle, obj.Materials, obj.WorldMatrix);
+                    ForwardRenderer::Submit(obj.MeshHandle, snapshot.GetMaterials(obj), obj.WorldMatrix);
             }
             ForwardRenderer::Flush();
             ForwardRenderer::EndScene();

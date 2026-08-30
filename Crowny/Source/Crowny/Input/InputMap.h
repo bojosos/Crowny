@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/HashedString.h"
 #include "Crowny/Input/InputAction.h"
 
 namespace Crowny
@@ -17,7 +18,15 @@ namespace Crowny
         explicit InputMap(Vector<InputContext> contexts);
 
         const Vector<InputContext>& GetContexts() const { return m_Contexts; }
-        Vector<InputContext>& GetContexts() { return m_Contexts; }
+        /** Callback references are valid only for the call and must not escape. Return true only after an actual edit. */
+        template <typename Callback> bool EditContexts(Callback&& callback)
+        {
+            if (!std::invoke(std::forward<Callback>(callback), m_Contexts))
+                return false;
+
+            EnsureStableIds();
+            return true;
+        }
         void SetContexts(Vector<InputContext> contexts);
 
         void Update();
@@ -41,20 +50,25 @@ namespace Crowny
         void ClearAllRebinds();
         const InputBinding* GetEffectiveBinding(const InputBinding& authoredBinding) const;
 
+    private:
         void EnsureStableIds();
 
-    private:
         struct ActionState
         {
             InputActionValue Current;
             bool Pressed = false;
             bool Released = false;
             float PressThreshold = 0.5f;
+            uint64_t LastResolvedGeneration = 0;
         };
 
         Vector<InputContext> m_Contexts;
-        UnorderedMap<String, ActionState> m_ActionStates;
+        UnorderedMap<String, ActionState, StringHash, StringEqual> m_ActionStates;
         UnorderedMap<UUID, InputBinding> m_RebindOverrides;
+        Vector<size_t> m_OrderedContextIndices;
+        Vector<uint64_t> m_ConsumedControls;
+        Vector<uint64_t> m_ContextConsumedControls;
+        uint64_t m_UpdateGeneration = 0;
         bool m_KeyboardCaptured = false;
         bool m_PointerCaptured = false;
     };

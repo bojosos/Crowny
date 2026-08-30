@@ -209,34 +209,46 @@ namespace Crowny
 
     void InputMap::Update(const InputStateReader& input)
     {
-        EnsureStableIds();
-
-        UnorderedMap<String, ActionState> previousStates = std::move(m_ActionStates);
-        m_ActionStates.clear();
-
-        Vector<const InputContext*> orderedContexts;
-        orderedContexts.reserve(m_Contexts.size());
-        for (const InputContext& context : m_Contexts)
+        m_UpdateGeneration++;
+        if (m_UpdateGeneration == 0)
         {
-            if (context.Enabled)
-                orderedContexts.push_back(&context);
+            for (auto& [name, state] : m_ActionStates)
+                state.LastResolvedGeneration = 0;
+            m_UpdateGeneration = 1;
         }
-        std::stable_sort(orderedContexts.begin(), orderedContexts.end(),
-                         [](const InputContext* lhs, const InputContext* rhs) { return lhs->Priority > rhs->Priority; });
 
-        UnorderedSet<String> resolvedActions;
-        UnorderedSet<uint64_t> consumedControls;
-        for (const InputContext* context : orderedContexts)
+        m_OrderedContextIndices.clear();
+        for (size_t index = 0; index < m_Contexts.size(); index++)
         {
-            UnorderedSet<uint64_t> contextConsumedControls;
-            for (const InputAction& action : context->Actions)
+            if (m_Contexts[index].Enabled)
+                m_OrderedContextIndices.push_back(index);
+        }
+        std::sort(m_OrderedContextIndices.begin(), m_OrderedContextIndices.end(), [this](size_t lhs, size_t rhs) {
+            const int32_t lhsPriority = m_Contexts[lhs].Priority;
+            const int32_t rhsPriority = m_Contexts[rhs].Priority;
+            return lhsPriority != rhsPriority ? lhsPriority > rhsPriority : lhs < rhs;
+        });
+
+        m_ConsumedControls.clear();
+        for (const size_t contextIndex : m_OrderedContextIndices)
+        {
+            const InputContext& context = m_Contexts[contextIndex];
+            m_ContextConsumedControls.clear();
+            for (const InputAction& action : context.Actions)
             {
-                if (action.Name.empty() || !resolvedActions.insert(action.Name).second)
+                if (action.Name.empty())
                     continue;
 
+                auto [stateIter, inserted] = m_ActionStates.try_emplace(action.Name);
+                if (stateIter->second.LastResolvedGeneration == m_UpdateGeneration)
+                    continue;
+
+                const bool wasHeld =
+                  !inserted && stateIter->second.Current.AsButton(stateIter->second.PressThreshold);
                 ActionState state;
                 state.Current.Type = action.Type;
                 state.PressThreshold = std::clamp(action.PressThreshold, MIN_THRESHOLD, 1.0f);
+                state.LastResolvedGeneration = m_UpdateGeneration;
                 bool bindingPressed = false;
                 bool bindingReleased = false;
 
@@ -244,15 +256,17 @@ namespace Crowny
                 {
                     const InputBinding& binding = *GetEffectiveBinding(authoredBinding);
                     const uint64_t controlId = GetControlId(binding);
-                    if (consumedControls.find(controlId) != consumedControls.end())
+                    if (std::find(m_ConsumedControls.begin(), m_ConsumedControls.end(), controlId) != m_ConsumedControls.end())
                         continue;
 
                     const BindingResult bindingResult = EvaluateBinding(binding, action.Type, input, m_KeyboardCaptured, m_PointerCaptured);
                     state.Current.Value += bindingResult.Value;
                     bindingPressed |= bindingResult.Pressed;
                     bindingReleased |= bindingResult.Released;
-                    if (context->ConsumeInput && bindingResult.Active)
-                        contextConsumedControls.insert(controlId);
+                    if (context.ConsumeInput && bindingResult.Active &&
+                        std::find(m_ContextConsumedControls.begin(), m_ContextConsumedControls.end(), controlId) ==
+                          m_ContextConsumedControls.end())
+                        m_ContextConsumedControls.push_back(controlId);
                 }
 
                 state.Current.Value.x = std::clamp(state.Current.Value.x, -1.0f, 1.0f);
@@ -262,25 +276,33 @@ namespace Crowny
                 else if (action.Type == InputActionType::Axis2D && glm::length(state.Current.Value) > 1.0f)
                     state.Current.Value = glm::normalize(state.Current.Value);
 
-                const auto previous = previousStates.find(action.Name);
-                const bool wasHeld = previous != previousStates.end() && previous->second.Current.AsButton(previous->second.PressThreshold);
                 const bool held = state.Current.AsButton(state.PressThreshold);
                 state.Pressed = (!wasHeld && held) || bindingPressed;
                 state.Released = (wasHeld && !held) || bindingReleased;
-                m_ActionStates.emplace(action.Name, state);
+                stateIter->second = state;
             }
-            consumedControls.insert(contextConsumedControls.begin(), contextConsumedControls.end());
+            m_ConsumedControls.insert(m_ConsumedControls.end(), m_ContextConsumedControls.begin(), m_ContextConsumedControls.end());
         }
 
-        for (const auto& [name, previous] : previousStates)
+        for (auto stateIter = m_ActionStates.begin(); stateIter != m_ActionStates.end();)
         {
-            if (m_ActionStates.find(name) != m_ActionStates.end() || !previous.Current.AsButton(previous.PressThreshold))
+            ActionState& state = stateIter->second;
+            if (state.LastResolvedGeneration == m_UpdateGeneration)
+            {
+                ++stateIter;
                 continue;
-            ActionState released = previous;
-            released.Current.Value = glm::vec2(0.0f);
-            released.Pressed = false;
-            released.Released = true;
-            m_ActionStates.emplace(name, released);
+            }
+
+            if (!state.Current.AsButton(state.PressThreshold))
+            {
+                stateIter = m_ActionStates.erase(stateIter);
+                continue;
+            }
+
+            state.Current.Value = glm::vec2(0.0f);
+            state.Pressed = false;
+            state.Released = true;
+            ++stateIter;
         }
     }
 
@@ -292,7 +314,7 @@ namespace Crowny
 
     InputActionValue InputMap::GetValue(StringView actionName) const
     {
-        const auto state = m_ActionStates.find(String(actionName));
+        const auto state = m_ActionStates.find(actionName);
         return state == m_ActionStates.end() ? InputActionValue{} : state->second.Current;
     }
 
@@ -302,19 +324,19 @@ namespace Crowny
 
     bool InputMap::IsPressed(StringView actionName) const
     {
-        const auto state = m_ActionStates.find(String(actionName));
+        const auto state = m_ActionStates.find(actionName);
         return state != m_ActionStates.end() && state->second.Pressed;
     }
 
     bool InputMap::IsHeld(StringView actionName) const
     {
-        const auto state = m_ActionStates.find(String(actionName));
+        const auto state = m_ActionStates.find(actionName);
         return state != m_ActionStates.end() && state->second.Current.AsButton(state->second.PressThreshold);
     }
 
     bool InputMap::IsReleased(StringView actionName) const
     {
-        const auto state = m_ActionStates.find(String(actionName));
+        const auto state = m_ActionStates.find(actionName);
         return state != m_ActionStates.end() && state->second.Released;
     }
 

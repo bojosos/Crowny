@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Common/Types.h"
 #include "Crowny/Renderer/Mesh.h"
@@ -19,8 +21,8 @@ namespace Crowny
                                const Ref<EnvironmentMap>& environment = nullptr);
         static void BeginForwardOnlyScene(const glm::mat4& projection, const glm::mat4& viewMatrix, const glm::vec3& cameraPosition,
                                           const Ref<EnvironmentMap>& environment = nullptr);
-        static void Submit(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials, const glm::mat4& transform);
-        static void SubmitForwardOnlyOpaque(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials,
+        static void Submit(const AssetHandle<Mesh>& mesh, std::span<const AssetHandle<Material>> materials, const glm::mat4& transform);
+        static void SubmitForwardOnlyOpaque(const AssetHandle<Mesh>& mesh, std::span<const AssetHandle<Material>> materials,
                                             const glm::mat4& transform);
         static void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform);
         static void SubmitLightSetup();

@@ -28,6 +28,7 @@
 
 #include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <spdlog/fmt/fmt.h>
 
@@ -139,6 +140,17 @@ namespace Crowny
         return buffer;
     }
 
+    static void DrawGridEntryName(const char* name, float width)
+    {
+        const ImVec2 position = ImGui::GetCursorScreenPos();
+        const ImVec2 textSize = ImGui::CalcTextSize(name);
+        const float textX = textSize.x < width ? position.x + (width - textSize.x) * 0.5f : position.x;
+        const ImVec2 textMin(textX, position.y);
+        const ImVec2 textMax(position.x + width, position.y + ImGui::GetTextLineHeight());
+        ImGui::RenderTextEllipsis(ImGui::GetWindowDrawList(), textMin, textMax, textMax.x, name, nullptr, &textSize);
+        ImGui::Dummy(ImVec2(width, ImGui::GetTextLineHeight()));
+    }
+
     static void DrawAssetTooltip(const Path& path, const AssetPreviewResult* preview)
     {
         if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
@@ -190,6 +202,7 @@ namespace Crowny
         m_CurrentDirectoryEntry = nullptr;
         m_DirectoryPathEntries.clear();
         m_DisplayList.clear();
+        m_DisplayPresentation.clear();
         m_PreviewService.Clear();
         m_BackwardHistory = Stack<DirectoryEntry*>();
         m_ForwardHistory = Stack<DirectoryEntry*>();
@@ -819,7 +832,10 @@ namespace Crowny
             SortDisplayList(displayList);
             m_RequiresSort = false;
             ReconcileSelection(selectionStartPath, selectionEndPath);
+            UpdateDisplayPresentation();
         }
+        if (m_DisplayPresentation.size() != displayList.size())
+            UpdateDisplayPresentation();
         return displayList;
     }
 
@@ -871,6 +887,45 @@ namespace Crowny
         SortDisplayList(m_DisplayList);
         m_RequiresSort = false;
         ReconcileSelection(selectionStartPath, selectionEndPath);
+        UpdateDisplayPresentation();
+    }
+
+    void AssetBrowserPanel::UpdateDisplayPresentation()
+    {
+        m_DisplayPresentation.resize(m_DisplayList.size());
+        for (size_t index = 0; index < m_DisplayList.size(); index++)
+        {
+            const Ref<LibraryEntry>& entry = m_DisplayList[index];
+            const AssetBrowserItemId itemId = MakeAssetBrowserItemId(entry->Filepath);
+            const bool isFile = entry->Type == LibraryEntryType::File;
+            const FileEntry* fileEntry = isFile ? static_cast<const FileEntry*>(entry.get()) : nullptr;
+            const AssetBrowserPresentationFingerprint fingerprint{
+                static_cast<uint64_t>(itemId.UpperBits) << 32u | itemId.LowerBits,
+                static_cast<int64_t>(entry->LastUpdateTime),
+                fileEntry != nullptr ? fileEntry->Revision : 0u,
+                fileEntry != nullptr ? fileEntry->Filesize : 0u,
+                isFile,
+            };
+
+            DisplayPresentation& presentation = m_DisplayPresentation[index];
+            if (presentation.Initialized && !NeedsAssetBrowserPresentationRefresh(presentation.Fingerprint, fingerprint))
+                continue;
+
+            presentation.Fingerprint = fingerprint;
+            presentation.Modified = FormatEntryTime(entry->LastUpdateTime);
+            presentation.Size = fileEntry != nullptr ? FormatFileSize(fileEntry->Filesize) : "-";
+            presentation.Initialized = true;
+        }
+    }
+
+    uint32_t AssetBrowserPanel::FindDisplayIndex(const Path& path) const
+    {
+        if (path.empty())
+            return static_cast<uint32_t>(m_DisplayList.size());
+
+        const auto entry = std::find_if(m_DisplayList.begin(), m_DisplayList.end(),
+                                        [&path](const Ref<LibraryEntry>& candidate) { return candidate->Filepath == path; });
+        return static_cast<uint32_t>(std::distance(m_DisplayList.begin(), entry));
     }
 
     void AssetBrowserPanel::ApplyDeferredOperations()
@@ -973,144 +1028,152 @@ namespace Crowny
 
             const float iconSize = ImGui::GetTextLineHeight();
             const float rowHeight = ImGui::GetFrameHeight() + 4.0f;
-            for (uint32_t entryIdx = 0; entryIdx < displayList.size(); entryIdx++)
+            ImGuiListClipper clipper;
+            clipper.Begin(static_cast<int>(displayList.size()), rowHeight);
+            if (!m_SelectionSet.empty() && m_SelectionEndIndex < displayList.size())
+                clipper.IncludeItemByIndex(static_cast<int>(m_SelectionEndIndex));
+            const uint32_t renamingIndex = FindDisplayIndex(m_RenamingPath);
+            if (renamingIndex < displayList.size())
+                clipper.IncludeItemByIndex(static_cast<int>(renamingIndex));
+            while (clipper.Step())
             {
-                const Ref<LibraryEntry>& entry = displayList[entryIdx];
-                const Path& path = entry->Filepath;
-                const AssetBrowserItemId itemId = MakeAssetBrowserItemId(path);
-                ImGui::PushID(static_cast<int>(itemId.UpperBits));
-                ImGui::PushID(static_cast<int>(itemId.LowerBits));
-
-                const bool selected = m_SelectionSet.contains(entry->Filepath);
-                ImTextureID texture = entry->Type == LibraryEntryType::Directory ? m_FolderIcon : m_FileIcon;
-                const AssetPreviewResult* preview = nullptr;
-                if (entry->Type == LibraryEntryType::File)
+                for (uint32_t entryIdx = static_cast<uint32_t>(clipper.DisplayStart); entryIdx < static_cast<uint32_t>(clipper.DisplayEnd);
+                     entryIdx++)
                 {
-                    preview = m_PreviewService.Request(*static_cast<FileEntry*>(entry.get()), 128);
-                    if (preview != nullptr && preview->Status == AssetPreviewStatus::Ready && preview->Image)
-                        texture = ImGuiVulkanTexture::Get(preview->Image);
-                }
+                    const Ref<LibraryEntry>& entry = displayList[entryIdx];
+                    const Path& path = entry->Filepath;
+                    const AssetBrowserItemId itemId = MakeAssetBrowserItemId(path);
+                    ImGui::PushID(static_cast<int>(itemId.UpperBits));
+                    ImGui::PushID(static_cast<int>(itemId.LowerBits));
 
-                ImGui::TableNextRow(ImGuiTableRowFlags_None, rowHeight);
-                ImGui::TableSetColumnIndex(0);
-                const bool clicked = ImGui::Selectable(
-                  "##assetRow", selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick, ImVec2(0.0f, rowHeight));
-                const bool shouldOpen = clicked && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-                const bool rowHovered = ImGui::IsItemHovered();
-                const ImVec2 rowMin = ImGui::GetItemRectMin();
-                DrawAssetTooltip(path, preview);
-
-                if (clicked)
-                {
-                    if (Input::IsKeyPressed(Key::LeftControl))
+                    const bool selected = m_SelectionSet.contains(entry->Filepath);
+                    ImTextureID texture = entry->Type == LibraryEntryType::Directory ? m_FolderIcon : m_FileIcon;
+                    const AssetPreviewResult* preview = nullptr;
+                    if (entry->Type == LibraryEntryType::File)
                     {
-                        if (selected)
-                            m_SelectionSet.erase(entry->Filepath);
-                        else
+                        preview = m_PreviewService.Request(*static_cast<FileEntry*>(entry.get()), 128);
+                        if (preview != nullptr && preview->Status == AssetPreviewStatus::Ready && preview->Image)
+                            texture = ImGuiVulkanTexture::Get(preview->Image);
+                    }
+
+                    ImGui::TableNextRow(ImGuiTableRowFlags_None, rowHeight);
+                    ImGui::TableSetColumnIndex(0);
+                    const bool clicked = ImGui::Selectable(
+                      "##assetRow", selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick, ImVec2(0.0f, rowHeight));
+                    const bool shouldOpen = clicked && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+                    const bool rowHovered = ImGui::IsItemHovered();
+                    const ImVec2 rowMin = ImGui::GetItemRectMin();
+                    DrawAssetTooltip(path, preview);
+
+                    if (clicked)
+                    {
+                        if (Input::IsKeyPressed(Key::LeftControl))
                         {
-                            if (m_SelectionSet.empty())
-                                m_SelectionStartIndex = entryIdx;
-                            m_SelectionSet.insert(entry->Filepath);
+                            if (selected)
+                                m_SelectionSet.erase(entry->Filepath);
+                            else
+                            {
+                                if (m_SelectionSet.empty())
+                                    m_SelectionStartIndex = entryIdx;
+                                m_SelectionSet.insert(entry->Filepath);
+                                m_SelectionEndIndex = entryIdx;
+                            }
+                        }
+                        else if (Input::IsKeyPressed(Key::LeftShift) && m_SelectionStartIndex != static_cast<uint32_t>(-1))
+                        {
+                            m_SelectionSet.clear();
+                            const uint32_t first = std::min(entryIdx, m_SelectionStartIndex);
+                            const uint32_t last = std::max(entryIdx, m_SelectionStartIndex);
+                            for (uint32_t i = first; i <= last; i++)
+                                m_SelectionSet.insert(displayList[i]->Filepath);
                             m_SelectionEndIndex = entryIdx;
                         }
+                        else
+                        {
+                            m_SelectionSet.clear();
+                            m_SelectionSet.insert(entry->Filepath);
+                            m_SelectionStartIndex = m_SelectionEndIndex = entryIdx;
+                            m_SetSelectedPathCallback(entry->Type == LibraryEntryType::File ? path : Path{});
+                        }
                     }
-                    else if (Input::IsKeyPressed(Key::LeftShift) && m_SelectionStartIndex != static_cast<uint32_t>(-1))
+
+                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
                     {
-                        m_SelectionSet.clear();
-                        const uint32_t first = std::min(entryIdx, m_SelectionStartIndex);
-                        const uint32_t last = std::max(entryIdx, m_SelectionStartIndex);
-                        for (uint32_t i = first; i <= last; i++)
-                            m_SelectionSet.insert(displayList[i]->Filepath);
-                        m_SelectionEndIndex = entryIdx;
+                        UIUtils::SetAssetPayload(entry.get());
+                        ImGui::Image(texture, ImVec2(32.0f, 32.0f), { 0, 1 }, { 1, 0 });
+                        ImGui::SameLine();
+                        ImGui::TextUnformatted(entry->ElementName.c_str());
+                        ImGui::EndDragDropSource();
                     }
-                    else
+
+                    if (entry->Type == LibraryEntryType::Directory && ImGui::BeginDragDropTarget())
+                    {
+                        dropping = true;
+                        if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
+                            m_DeferredOperations.EnqueueMove(fileEntry->Filepath, path / fileEntry->Filepath.filename());
+                        ImGui::EndDragDropTarget();
+                    }
+
+                    if (ImGui::IsItemClicked(ImGuiMouseButton_Right) && !selected)
                     {
                         m_SelectionSet.clear();
                         m_SelectionSet.insert(entry->Filepath);
                         m_SelectionStartIndex = m_SelectionEndIndex = entryIdx;
                         m_SetSelectedPathCallback(entry->Type == LibraryEntryType::File ? path : Path{});
                     }
-                }
+                    if (!dropping && ImGui::BeginPopupContextItem("##assetListContext"))
+                    {
+                        ShowContextMenuContents(entry.get());
+                        ImGui::EndPopup();
+                    }
 
-                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
-                {
-                    UIUtils::SetAssetPayload(entry.get());
-                    ImGui::Image(texture, ImVec2(32.0f, 32.0f), { 0, 1 }, { 1, 0 });
+                    if (entryIdx == m_SelectionEndIndex)
+                        ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
+                    hovered |= rowHovered;
+
+                    ImGui::SetCursorScreenPos(ImVec2(rowMin.x + 6.0f, rowMin.y + (rowHeight - iconSize) * 0.5f));
+                    ImGui::Image(texture, ImVec2(iconSize, iconSize), { 0, 1 }, { 1, 0 });
                     ImGui::SameLine();
-                    ImGui::TextUnformatted(entry->ElementName.c_str());
-                    ImGui::EndDragDropSource();
-                }
+                    if (m_RenamingPath == path)
+                    {
+                        const auto completeRename = [&]() {
+                            if (m_RenamingPath.empty())
+                                return;
+                            const Path renamingPath = m_RenamingPath;
+                            if (renamingPath.filename() != m_RenamingText)
+                                m_DeferredOperations.EnqueueMove(renamingPath,
+                                                                 EditorUtils::GetUniquePath(renamingPath.parent_path() / m_RenamingText));
+                            m_RenamingPath.clear();
+                            m_RenamingText.clear();
+                        };
+                        ImGui::SetNextItemWidth(std::max(80.0f, ImGui::GetColumnWidth() - iconSize - 24.0f));
+                        ImGui::SetKeyboardFocusHere();
+                        if (ImGui::InputText("##RenameAssetList", &m_RenamingText,
+                                             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                            completeRename();
+                        else if (ImGui::IsItemDeactivatedAfterEdit())
+                            completeRename();
+                        if (Input::IsKeyPressed(Key::Escape))
+                            completeRename();
+                    }
+                    else
+                        ImGui::TextUnformatted(entry->ElementName.c_str());
 
-                if (entry->Type == LibraryEntryType::Directory && ImGui::BeginDragDropTarget())
-                {
-                    dropping = true;
-                    if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
-                        m_DeferredOperations.EnqueueMove(fileEntry->Filepath, path / fileEntry->Filepath.filename());
-                    ImGui::EndDragDropTarget();
-                }
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TextDisabled("%s", GetEntryTypeName(entry));
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::TextDisabled("%s", m_DisplayPresentation[entryIdx].Modified.c_str());
+                    ImGui::TableSetColumnIndex(3);
+                    ImGui::TextDisabled("%s", m_DisplayPresentation[entryIdx].Size.c_str());
 
-                if (ImGui::IsItemClicked(ImGuiMouseButton_Right) && !selected)
-                {
-                    m_SelectionSet.clear();
-                    m_SelectionSet.insert(entry->Filepath);
-                    m_SelectionStartIndex = m_SelectionEndIndex = entryIdx;
-                    m_SetSelectedPathCallback(entry->Type == LibraryEntryType::File ? path : Path{});
-                }
-                if (!dropping && ImGui::BeginPopupContextItem("##assetListContext"))
-                {
-                    ShowContextMenuContents(entry.get());
-                    ImGui::EndPopup();
-                }
-
-                if (entryIdx == m_SelectionEndIndex)
-                    ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
-                hovered |= rowHovered;
-
-                ImGui::SetCursorScreenPos(ImVec2(rowMin.x + 6.0f, rowMin.y + (rowHeight - iconSize) * 0.5f));
-                ImGui::Image(texture, ImVec2(iconSize, iconSize), { 0, 1 }, { 1, 0 });
-                ImGui::SameLine();
-                if (m_RenamingPath == path)
-                {
-                    const auto completeRename = [&]() {
-                        if (m_RenamingPath.empty())
-                            return;
-                        const Path renamingPath = m_RenamingPath;
-                        if (renamingPath.filename() != m_RenamingText)
-                            m_DeferredOperations.EnqueueMove(
-                              renamingPath, EditorUtils::GetUniquePath(renamingPath.parent_path() / m_RenamingText));
-                        m_RenamingPath.clear();
-                        m_RenamingText.clear();
-                    };
-                    ImGui::SetNextItemWidth(std::max(80.0f, ImGui::GetColumnWidth() - iconSize - 24.0f));
-                    ImGui::SetKeyboardFocusHere();
-                    if (ImGui::InputText("##RenameAssetList", &m_RenamingText,
-                                         ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
-                        completeRename();
-                    else if (ImGui::IsItemDeactivatedAfterEdit())
-                        completeRename();
-                    if (Input::IsKeyPressed(Key::Escape))
-                        completeRename();
-                }
-                else
-                    ImGui::TextUnformatted(entry->ElementName.c_str());
-
-                ImGui::TableSetColumnIndex(1);
-                ImGui::TextDisabled("%s", GetEntryTypeName(entry));
-                ImGui::TableSetColumnIndex(2);
-                ImGui::TextDisabled("%s", FormatEntryTime(entry->LastUpdateTime).c_str());
-                ImGui::TableSetColumnIndex(3);
-                if (entry->Type == LibraryEntryType::File)
-                    ImGui::TextDisabled("%s", FormatFileSize(static_cast<FileEntry*>(entry.get())->Filesize).c_str());
-                else
-                    ImGui::TextDisabled("-");
-
-                ImGui::PopID();
-                ImGui::PopID();
-                if (shouldOpen)
-                {
-                    ImGui::EndTable();
-                    HandleOpen(entry.get());
-                    return;
+                    ImGui::PopID();
+                    ImGui::PopID();
+                    if (shouldOpen)
+                    {
+                        ImGui::EndTable();
+                        HandleOpen(entry.get());
+                        return;
+                    }
                 }
             }
 
@@ -1125,177 +1188,189 @@ namespace Crowny
         if (!ImGui::BeginTable("##assetGrid", m_ColumnCount, tableFlags))
             return;
 
-        // Files
-        for (uint32_t entryIdx = 0; entryIdx < displayList.size(); entryIdx++)
+        const uint32_t columnCount = static_cast<uint32_t>(m_ColumnCount);
+        const uint32_t rowCount = GetAssetBrowserRowCount(static_cast<uint32_t>(displayList.size()), columnCount);
+        const float gridRowHeight =
+          m_ThumbnailSize + ImGui::GetStyle().FramePadding.y * 2.0f + ImGui::GetStyle().ItemSpacing.y + ImGui::GetTextLineHeight() + m_Padding;
+        ImGuiListClipper clipper;
+        clipper.Begin(static_cast<int>(rowCount), gridRowHeight);
+        if (!m_SelectionSet.empty() && m_SelectionEndIndex < displayList.size())
+            clipper.IncludeItemByIndex(static_cast<int>(GetAssetBrowserItemRow(m_SelectionEndIndex, columnCount)));
+        const uint32_t renamingIndex = FindDisplayIndex(m_RenamingPath);
+        if (renamingIndex < displayList.size())
+            clipper.IncludeItemByIndex(static_cast<int>(GetAssetBrowserItemRow(renamingIndex, columnCount)));
+        while (clipper.Step())
         {
-            ImGui::TableNextColumn();
-            const auto entry = displayList[entryIdx];
-            const auto& path = entry->Filepath;
-
-            const AssetBrowserItemId itemId = MakeAssetBrowserItemId(path);
-            ImGui::PushID(static_cast<int>(itemId.UpperBits));
-            ImGui::PushID(static_cast<int>(itemId.LowerBits));
-
-            auto iterFind = m_SelectionSet.find(entry->Filepath); // Show selected files
-            const bool selected = iterFind != m_SelectionSet.end();
-
-            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-            if (!selected)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-            ImTextureID tid;
-            const AssetPreviewResult* preview = nullptr;
-            if (entry->Type == LibraryEntryType::Directory)
-                tid = m_FolderIcon;
-            else
+            for (uint32_t row = static_cast<uint32_t>(clipper.DisplayStart); row < static_cast<uint32_t>(clipper.DisplayEnd); row++)
             {
-                preview = m_PreviewService.Request(*static_cast<FileEntry*>(entry.get()), 128);
-                tid = preview != nullptr && preview->Status == AssetPreviewStatus::Ready && preview->Image
-                        ? ImGuiVulkanTexture::Get(preview->Image)
-                        : m_FileIcon;
-            }
-
-            // Thumbnail
-            ImGui::BeginGroup();
-            ImGui::ImageButton("##thumb", tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
-            ImGui::SetNextItemWidth(m_ThumbnailSize);
-            if (m_RenamingPath.empty() || m_RenamingPath != path) // File icon
-            {
-                float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
-                if (m_ThumbnailSize >= textWidth)
-                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + m_ThumbnailSize * 0.5f - textWidth * 0.5f);
-
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + m_ThumbnailSize);
-                ImGui::Text("%s", entry->ElementName.c_str());
-                ImGui::PopTextWrapPos();
-            }
-            else // This file is being renamed
-            {
-                auto completeRename = [&]() {
-                    if (m_RenamingPath.empty())
-                        return;
-                    const Path renamingPath = m_RenamingPath;
-                    if (renamingPath.filename() != m_RenamingText)
-                        m_DeferredOperations.EnqueueMove(
-                          renamingPath, EditorUtils::GetUniquePath(renamingPath.parent_path() / m_RenamingText));
-                    m_RenamingPath.clear();
-                    m_RenamingText.clear();
-                };
-                ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
-
-                ImGui::SetKeyboardFocusHere();
-                if (ImGui::InputText("##RenameFile", &m_RenamingText, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
-                    completeRename();
-                ImGui::PopStyleVar();
-
-                if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) && !ImGui::IsItemClicked())
-                    completeRename();
-
-                if (Input::IsKeyPressed(Key::Escape))
-                    completeRename();
-            }
-
-            ImGui::EndGroup();
-
-            // Selected card: 1px amber accent border around the card group.
-            if (selected)
-            {
-                const ImVec2 cardMin = ImGui::GetItemRectMin();
-                const ImVec2 cardMax = ImGui::GetItemRectMax();
-                ImGui::GetWindowDrawList()->AddRect(cardMin, cardMax, UI::Colors::Accent, 3.0f, 0, 1.0f);
-            }
-
-            if (entryIdx == m_SelectionEndIndex)
-                ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
-            hovered |= ImGui::IsItemHovered();
-            DrawAssetTooltip(path, preview);
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
-            {
-                UIUtils::SetAssetPayload(entry.get());
-                ImGui::ImageButton("##thumb", tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
-                ImGui::SetNextItemWidth(m_ThumbnailSize);
-                float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
-                if (m_ThumbnailSize >= textWidth)
-                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + m_ThumbnailSize * 0.5f - textWidth * 0.5f);
-
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + m_ThumbnailSize);
-                ImGui::Text("%s", entry->ElementName.c_str());
-                ImGui::PopTextWrapPos();
-
-                ImGui::EndDragDropSource();
-            }
-
-            if (entry->Type == LibraryEntryType::Directory) // Drop in directories
-            {
-                if (ImGui::BeginDragDropTarget())
+                ImGui::TableNextRow(ImGuiTableRowFlags_None, gridRowHeight);
+                const AssetBrowserItemRange rowRange =
+                  GetAssetBrowserItemRange(row, row + 1u, columnCount, static_cast<uint32_t>(displayList.size()));
+                for (uint32_t entryIdx = rowRange.Begin; entryIdx < rowRange.End; entryIdx++)
                 {
-                    dropping = true;
-                    if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
-                        m_DeferredOperations.EnqueueMove(fileEntry->Filepath, path / fileEntry->Filepath.filename());
-                    ImGui::EndDragDropTarget();
-                }
-            }
+                    ImGui::TableSetColumnIndex(static_cast<int>(entryIdx % columnCount));
+                    const Ref<LibraryEntry>& entry = displayList[entryIdx];
+                    const Path& path = entry->Filepath;
 
-            if (!selected)
-                ImGui::PopStyleColor();
-            ImGui::PopStyleColor();
+                    const AssetBrowserItemId itemId = MakeAssetBrowserItemId(path);
+                    ImGui::PushID(static_cast<int>(itemId.UpperBits));
+                    ImGui::PushID(static_cast<int>(itemId.LowerBits));
 
-            const bool shouldOpen = ImGui::IsItemHovered() && m_RenamingText.empty() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+                    auto iterFind = m_SelectionSet.find(entry->Filepath); // Show selected files
+                    const bool selected = iterFind != m_SelectionSet.end();
 
-            if (Input::IsMouseButtonUp(Mouse::ButtonLeft) || Input::IsMouseButtonUp(Mouse::ButtonRight))
-            {
-                if (ImGui::IsItemHovered() && !dropping) // TODO: Check if this is even necessary
-                {
-                    if (Input::IsKeyPressed(Key::LeftControl)) // Multi-select
-                    {
-                        if (selected)
-                            m_SelectionSet.erase(entry->Filepath);
-                        else
-                        {
-                            if (m_SelectionSet.empty())
-                                m_SelectionStartIndex = entryIdx;
-                            m_SelectionSet.insert(entry->Filepath);
-                            m_SelectionEndIndex = entryIdx;
-                        }
-                    }
-                    else if (Input::IsKeyPressed(Key::LeftShift) && m_SelectionStartIndex != (uint32_t)-1)
-                    {
-                        m_SelectionSet.clear();
-                        if (entryIdx < m_SelectionStartIndex) // Select from right to left
-                        {
-                            for (uint32_t i = entryIdx; i <= m_SelectionStartIndex; i++)
-                                m_SelectionSet.insert(displayList[i]->Filepath);
-                        }
-                        else
-                        {
-                            for (uint32_t i = m_SelectionStartIndex; i <= entryIdx; i++)
-                                m_SelectionSet.insert(displayList[i]->Filepath);
-                        }
-                        m_SelectionEndIndex = entryIdx;
-                    }
+                    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+                    if (!selected)
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+                    ImTextureID tid;
+                    const AssetPreviewResult* preview = nullptr;
+                    if (entry->Type == LibraryEntryType::Directory)
+                        tid = m_FolderIcon;
                     else
                     {
-                        m_SelectionSet.clear();
-                        m_SelectionSet.insert(entry->Filepath);
-                        m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
-                        if (entry->Type != LibraryEntryType::Directory)
-                            m_SetSelectedPathCallback(path);
-                        else
-                            m_SetSelectedPathCallback({});
+                        preview = m_PreviewService.Request(*static_cast<FileEntry*>(entry.get()), 128);
+                        tid = preview != nullptr && preview->Status == AssetPreviewStatus::Ready && preview->Image
+                                ? ImGuiVulkanTexture::Get(preview->Image)
+                                : m_FileIcon;
+                    }
+
+                    // Thumbnail
+                    ImGui::BeginGroup();
+                    ImGui::ImageButton("##thumb", tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
+                    ImGui::SetNextItemWidth(m_ThumbnailSize);
+                    if (m_RenamingPath.empty() || m_RenamingPath != path) // File icon
+                        DrawGridEntryName(entry->ElementName.c_str(), m_ThumbnailSize);
+                    else // This file is being renamed
+                    {
+                        auto completeRename = [&]() {
+                            if (m_RenamingPath.empty())
+                                return;
+                            const Path renamingPath = m_RenamingPath;
+                            if (renamingPath.filename() != m_RenamingText)
+                                m_DeferredOperations.EnqueueMove(renamingPath,
+                                                                 EditorUtils::GetUniquePath(renamingPath.parent_path() / m_RenamingText));
+                            m_RenamingPath.clear();
+                            m_RenamingText.clear();
+                        };
+                        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
+
+                        ImGui::SetKeyboardFocusHere();
+                        if (ImGui::InputText("##RenameFile", &m_RenamingText,
+                                             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                            completeRename();
+                        ImGui::PopStyleVar();
+
+                        if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) && !ImGui::IsItemClicked())
+                            completeRename();
+
+                        if (Input::IsKeyPressed(Key::Escape))
+                            completeRename();
+                    }
+
+                    ImGui::EndGroup();
+
+                    // Selected card: 1px amber accent border around the card group.
+                    if (selected)
+                    {
+                        const ImVec2 cardMin = ImGui::GetItemRectMin();
+                        const ImVec2 cardMax = ImGui::GetItemRectMax();
+                        ImGui::GetWindowDrawList()->AddRect(cardMin, cardMax, UI::Colors::Accent, 3.0f, 0, 1.0f);
+                    }
+
+                    if (entryIdx == m_SelectionEndIndex)
+                        ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
+                    hovered |= ImGui::IsItemHovered();
+                    DrawAssetTooltip(path, preview);
+                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
+                    {
+                        UIUtils::SetAssetPayload(entry.get());
+                        ImGui::ImageButton("##thumb", tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
+                        ImGui::SetNextItemWidth(m_ThumbnailSize);
+                        float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
+                        if (m_ThumbnailSize >= textWidth)
+                            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + m_ThumbnailSize * 0.5f - textWidth * 0.5f);
+
+                        ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + m_ThumbnailSize);
+                        ImGui::Text("%s", entry->ElementName.c_str());
+                        ImGui::PopTextWrapPos();
+
+                        ImGui::EndDragDropSource();
+                    }
+
+                    if (entry->Type == LibraryEntryType::Directory) // Drop in directories
+                    {
+                        if (ImGui::BeginDragDropTarget())
+                        {
+                            dropping = true;
+                            if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
+                                m_DeferredOperations.EnqueueMove(fileEntry->Filepath, path / fileEntry->Filepath.filename());
+                            ImGui::EndDragDropTarget();
+                        }
+                    }
+
+                    if (!selected)
+                        ImGui::PopStyleColor();
+                    ImGui::PopStyleColor();
+
+                    const bool shouldOpen = ImGui::IsItemHovered() && m_RenamingText.empty() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+
+                    if (Input::IsMouseButtonUp(Mouse::ButtonLeft) || Input::IsMouseButtonUp(Mouse::ButtonRight))
+                    {
+                        if (ImGui::IsItemHovered() && !dropping) // TODO: Check if this is even necessary
+                        {
+                            if (Input::IsKeyPressed(Key::LeftControl)) // Multi-select
+                            {
+                                if (selected)
+                                    m_SelectionSet.erase(entry->Filepath);
+                                else
+                                {
+                                    if (m_SelectionSet.empty())
+                                        m_SelectionStartIndex = entryIdx;
+                                    m_SelectionSet.insert(entry->Filepath);
+                                    m_SelectionEndIndex = entryIdx;
+                                }
+                            }
+                            else if (Input::IsKeyPressed(Key::LeftShift) && m_SelectionStartIndex != (uint32_t)-1)
+                            {
+                                m_SelectionSet.clear();
+                                if (entryIdx < m_SelectionStartIndex) // Select from right to left
+                                {
+                                    for (uint32_t i = entryIdx; i <= m_SelectionStartIndex; i++)
+                                        m_SelectionSet.insert(displayList[i]->Filepath);
+                                }
+                                else
+                                {
+                                    for (uint32_t i = m_SelectionStartIndex; i <= entryIdx; i++)
+                                        m_SelectionSet.insert(displayList[i]->Filepath);
+                                }
+                                m_SelectionEndIndex = entryIdx;
+                            }
+                            else
+                            {
+                                m_SelectionSet.clear();
+                                m_SelectionSet.insert(entry->Filepath);
+                                m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
+                                if (entry->Type != LibraryEntryType::Directory)
+                                    m_SetSelectedPathCallback(path);
+                                else
+                                    m_SetSelectedPathCallback({});
+                            }
+                        }
+                    }
+                    if (!dropping && ImGui::BeginPopupContextItem("##assetGridContext"))
+                    {
+                        ShowContextMenuContents(entry.get());
+                        ImGui::EndPopup();
+                    }
+                    ImGui::PopID();
+                    ImGui::PopID();
+                    if (shouldOpen)
+                    {
+                        ImGui::EndTable();
+                        HandleOpen(entry.get());
+                        return;
                     }
                 }
-            }
-            if (!dropping && ImGui::BeginPopupContextItem(entry->Filepath.string().c_str())) // Right click on a file
-            {
-                ShowContextMenuContents(entry.get());
-                ImGui::EndPopup();
-            }
-            ImGui::PopID();
-            ImGui::PopID();
-            if (shouldOpen)
-            {
-                ImGui::EndTable();
-                HandleOpen(entry.get());
-                return;
             }
         }
 
@@ -1380,7 +1455,7 @@ namespace Crowny
                     ImGui::EndDragDropSource();
                 }
 
-                if (ImGui::BeginPopupContextItem(cur->Filepath.string().c_str())) // Right click on a file
+                if (ImGui::BeginPopupContextItem())
                 {
                     ShowContextMenuContents(cur.get(), true);
                     ImGui::EndPopup();
@@ -1491,7 +1566,10 @@ namespace Crowny
         if (ImGui::MenuItem("Refresh", "Ctrl+R"))
         {
             if (entry != nullptr)
+            {
                 ProjectLibrary::Get().Refresh(entry->Filepath);
+                UpdateDisplayPresentation();
+            }
             else
             {
                 ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);

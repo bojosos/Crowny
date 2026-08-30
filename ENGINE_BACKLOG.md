@@ -63,6 +63,9 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Subtree duplication attaches each clone to its final parent once, preserves local and world transforms under transformed ancestors, and leaves source child storage untouched instead of allocating snapshots and performing transient reparent operations.
 - [x] Scene lifecycle keeps a retained sorted loaded-scene index; native and C# enumeration no longer rebuild and sort a UUID vector for every count and element query.
 - [x] Windows and Premake managed builds emit configuration-correct assemblies under the ignored `.deps/generated/managed` tree; editor and isolated tests resolve those outputs without rewriting committed fallback DLLs.
+- [x] Input-map evaluation retains action state, context ordering, and consumed-control scratch; stable updates and long-name CityHash queries allocate nothing after warm-up, while callback-scoped edits keep authored IDs valid.
+- [x] Legacy render snapshots flatten per-renderable material handles into one frame-context-owned buffer with checked offsets; 1, 1,000, and 10,000-object rebuilds allocate nothing after warm-up.
+- [x] Asset Browser list and grid views clip offscreen entries, request previews only for submitted cards, and cache metadata presentation by revision without losing absolute selection or rename state.
 
 ## Physics and ECS
 

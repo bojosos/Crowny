@@ -334,7 +334,7 @@ namespace Crowny
         }
     }
 
-    void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials, const glm::mat4& transform)
+    void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, std::span<const AssetHandle<Material>> materials, const glm::mat4& transform)
     {
         ZoneScopedN("ForwardRenderer::Submit");
         RenderAPI& rapi = (*RenderAPI::TryGet());
@@ -385,7 +385,7 @@ namespace Crowny
         }
     }
 
-    void ForwardRenderer::SubmitForwardOnlyOpaque(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials,
+    void ForwardRenderer::SubmitForwardOnlyOpaque(const AssetHandle<Mesh>& mesh, std::span<const AssetHandle<Material>> materials,
                                                    const glm::mat4& transform)
     {
         ZoneScopedN("ForwardRenderer::SubmitForwardOnlyOpaque");

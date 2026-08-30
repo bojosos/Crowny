@@ -14,6 +14,8 @@
 #include "Crowny/Renderer/ShadowAtlas.h"
 
 #include <glm/glm.hpp>
+#include <limits>
+#include <span>
 
 namespace Crowny
 {
@@ -34,7 +36,8 @@ namespace Crowny
         // provide culling bounds and must remain visible for compatibility.
         glm::vec4 BoundingSphere = glm::vec4(0.0f, 0.0f, 0.0f, -1.0f);
         AssetHandle<Mesh> MeshHandle;
-        Vector<AssetHandle<Material>> Materials;
+        uint32_t MaterialOffset = 0;
+        uint32_t MaterialCount = 0;
         RenderLayerMask VisibilityLayers = RenderLayerMask::All();
         bool Visible = true;
     };
@@ -107,6 +110,9 @@ namespace Crowny
 
         // 3D objects
         FrameVector<RenderableObject> MeshObjects;
+        // Flat snapshot-owned material storage avoids one heap allocation per
+        // renderable while preserving render-thread ownership of the handles.
+        FrameVector<AssetHandle<Material>> LegacyMaterials;
 
         // Incremental persistent-scene changes consumed by the new renderer.
         // MeshObjects remains the legacy adapter until feature parity is reached.
@@ -140,13 +146,50 @@ namespace Crowny
         GridSettings Grid;
         PolygonMode OverridePolygonMode = PolygonMode::Solid;
 
+        static constexpr bool CanAppendMaterials(size_t storedCount, size_t appendCount) noexcept
+        {
+            constexpr size_t maxMaterialCount = std::numeric_limits<uint32_t>::max();
+            return storedCount <= maxMaterialCount && appendCount <= maxMaterialCount - storedCount;
+        }
+
+        bool SetMaterials(RenderableObject& object, const Vector<AssetHandle<Material>>& materials)
+        {
+            const size_t offset = LegacyMaterials.Size();
+            if (!CanAppendMaterials(offset, materials.size()))
+            {
+                object.MaterialOffset = 0;
+                object.MaterialCount = 0;
+                return false;
+            }
+
+            object.MaterialOffset = static_cast<uint32_t>(offset);
+            object.MaterialCount = static_cast<uint32_t>(materials.size());
+            for (const AssetHandle<Material>& material : materials)
+                LegacyMaterials.Acquire() = material;
+            return true;
+        }
+
+        std::span<const AssetHandle<Material>> GetMaterials(const RenderableObject& object) const noexcept
+        {
+            const size_t offset = object.MaterialOffset;
+            const size_t count = object.MaterialCount;
+            if (offset > LegacyMaterials.Size() || count > LegacyMaterials.Size() - offset)
+                return {};
+            if (count == 0)
+                return {};
+            return { LegacyMaterials.begin() + offset, count };
+        }
+
         void Clear()
         {
             for (RenderableObject& object : MeshObjects)
             {
                 object.MeshHandle = {};
-                object.Materials.clear();
+                object.MaterialOffset = 0;
+                object.MaterialCount = 0;
             }
+            for (AssetHandle<Material>& material : LegacyMaterials)
+                material = {};
             for (RenderableSprite& sprite : Sprites)
                 sprite.Texture = nullptr;
             for (RenderableText& text : Texts)
@@ -156,6 +199,7 @@ namespace Crowny
             }
 
             MeshObjects.Reset();
+            LegacyMaterials.Reset();
             RenderWorldChanges.Reset();
             RenderLightChanges.Reset();
             for (RenderMeshResourceChange& change : MeshResourceChanges)
