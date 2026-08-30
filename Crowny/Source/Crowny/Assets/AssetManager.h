@@ -41,9 +41,9 @@ namespace Crowny
 
         AssetHandle<Asset> GetAssetHandle(const UUID& uuid);
 
-        void Save(const AssetHandle<Asset>& asset, const Path& path, bool overwrite = false);
+        bool Save(const AssetHandle<Asset>& asset, const Path& path, bool overwrite = false);
         void Save(const Ref<Asset>& asset); // TODO: Compression
-        void Save(const Ref<Asset>& asset, const Path& filepath);
+        bool Save(const Ref<Asset>& asset, const Path& filepath);
 
         bool GetAssetPath(const UUID& uuid, Path& outPath) const;
 

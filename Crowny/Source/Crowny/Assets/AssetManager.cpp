@@ -147,42 +147,41 @@ namespace Crowny
         return handle;
     }
 
-    void AssetManager::Save(const AssetHandle<Asset>& asset, const Path& filepath, bool overwrite)
+    bool AssetManager::Save(const AssetHandle<Asset>& asset, const Path& filepath, bool overwrite)
     {
         if (!asset)
-            return;
+            return false;
 
         if (fs::exists(filepath) && !overwrite)
         {
             CW_ENGINE_ERROR("File exists, not saving");
-            return;
+            return false;
         }
 
-        Save(asset.GetInternalPtr(), filepath);
+        return Save(asset.GetInternalPtr(), filepath);
     }
 
-    void AssetManager::Save(const Ref<Asset>& asset, const Path& filepath)
+    bool AssetManager::Save(const Ref<Asset>& asset, const Path& filepath)
     {
         if (asset == nullptr || filepath.empty())
         {
             CW_ENGINE_ERROR("Cannot save a null asset or use an empty filepath.");
-            return;
+            return false;
         }
 
         try
         {
-            const Path parent = filepath.parent_path();
-            if (!parent.empty() && !fs::is_directory(parent))
-                fs::create_directories(parent);
-            const Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
-            if (stream == nullptr || !stream->IsWritable())
+            const Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>(4096);
             {
-                CW_ENGINE_ERROR("Unable to open asset '{}' for writing.", filepath);
-                return;
+                BinaryDataStreamOutputArchive archive(stream);
+                archive(asset);
             }
-            BinaryDataStreamOutputArchive archive(stream);
-            archive(asset);
-            stream->Close();
+            String writeError;
+            if (!FileSystem::WriteFileAtomic(filepath, stream->Data(), stream->Tell(), &writeError))
+            {
+                CW_ENGINE_ERROR("Unable to publish asset '{}': {}", filepath, writeError);
+                return false;
+            }
 
             UUID uuid;
             if (GetUUIDFromFilepath(filepath.lexically_normal(), uuid))
@@ -197,10 +196,12 @@ namespace Crowny
                 if (AssetListenerManager::IsStartedUp())
                     AssetListenerManager::Get().NotifyListeners(uuid);
             }
+            return true;
         }
         catch (const std::exception& error)
         {
             CW_ENGINE_ERROR("Failed to save asset '{}': {}", filepath, error.what());
+            return false;
         }
     }
 

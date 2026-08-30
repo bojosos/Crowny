@@ -9,8 +9,33 @@
 
 #include <GLFW/glfw3.h>
 
+#include <atomic>
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
+#include <limits>
+#include <unistd.h>
+
 namespace Crowny
 {
+    namespace
+    {
+        bool ReportAtomicWriteError(String* outError, StringView operation, int code)
+        {
+            if (outError != nullptr)
+                *outError = String(operation) + " failed: " + std::strerror(code);
+            return false;
+        }
+
+        Path MakeAtomicTemporaryPath(const Path& path)
+        {
+            static std::atomic<uint64_t> sequence = 0;
+            const String filename = "." + path.filename().string() + ".tmp." + std::to_string(getpid()) + "." +
+                                    std::to_string(sequence.fetch_add(1, std::memory_order_relaxed));
+            return path.parent_path() / filename;
+        }
+    } // namespace
+
     static Ref<DataStream> OpenPackedFile(const Path& path)
     {
         return BuiltInResourcePack::IsStartedUp() ? BuiltInResourcePack::Get().Open(path) : nullptr;
@@ -82,6 +107,89 @@ namespace Crowny
         fout.write(text.c_str(), text.size());
         fout.close();
         return !text.empty();
+    }
+
+    bool FileSystem::WriteFileAtomic(const Path& path, const byte* buffer, uint64_t size, String* outError)
+    {
+        if (outError != nullptr)
+            outError->clear();
+        if (path.empty() || (buffer == nullptr && size != 0))
+        {
+            if (outError != nullptr)
+                *outError = "Atomic write requires a destination and non-null data for a non-empty payload.";
+            return false;
+        }
+
+        std::error_code directoryError;
+        const Path parent = path.parent_path();
+        if (!parent.empty())
+            fs::create_directories(parent, directoryError);
+        if (directoryError)
+        {
+            if (outError != nullptr)
+                *outError = "Failed to create the destination directory: " + directoryError.message();
+            return false;
+        }
+
+        Path temporary;
+        int file = -1;
+        for (uint32_t attempt = 0; attempt < 32 && file < 0; attempt++)
+        {
+            temporary = MakeAtomicTemporaryPath(path);
+            file = open(temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0666);
+            if (file < 0 && errno != EEXIST)
+                return ReportAtomicWriteError(outError, "Creating the atomic-write temporary file", errno);
+        }
+        if (file < 0)
+        {
+            if (outError != nullptr)
+                *outError = "Could not allocate a unique atomic-write temporary file.";
+            return false;
+        }
+
+        bool success = true;
+        uint64_t written = 0;
+        while (written < size)
+        {
+            const size_t chunk = static_cast<size_t>(std::min<uint64_t>(size - written, std::numeric_limits<ssize_t>::max()));
+            const ssize_t chunkWritten = write(file, buffer + written, chunk);
+            if (chunkWritten < 0 && errno == EINTR)
+                continue;
+            if (chunkWritten <= 0)
+            {
+                success = ReportAtomicWriteError(outError, "Writing the atomic-write temporary file", errno);
+                break;
+            }
+            written += static_cast<uint64_t>(chunkWritten);
+        }
+        if (success && fsync(file) != 0)
+            success = ReportAtomicWriteError(outError, "Flushing the atomic-write temporary file", errno);
+        if (close(file) != 0 && success)
+            success = ReportAtomicWriteError(outError, "Closing the atomic-write temporary file", errno);
+
+        if (success && ::rename(temporary.c_str(), path.c_str()) != 0)
+            success = ReportAtomicWriteError(outError, "Publishing the atomic-write temporary file", errno);
+        if (success)
+        {
+            const Path directory = parent.empty() ? Path(".") : parent;
+            const int directoryFile = open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+            if (directoryFile >= 0)
+            {
+                fsync(directoryFile);
+                close(directoryFile);
+            }
+        }
+        else
+        {
+            std::error_code cleanupError;
+            fs::remove(temporary, cleanupError);
+        }
+        return success;
+    }
+
+    bool FileSystem::WriteTextFileAtomic(const Path& path, StringView text, String* outError)
+    {
+        return WriteFileAtomic(path, reinterpret_cast<const byte*>(text.data()), text.size(), outError);
     }
 
     Ref<DataStream> FileSystem::OpenFile(const Path& filepath, bool readOnly)

@@ -20,24 +20,6 @@ namespace Crowny
     const char* ProjectLibrary::ASSET_MANIFEST_FILENAME = "AssetManifest.yaml";
     const char* ProjectLibrary::LIBRARY_ENTRIES_FILENAME = "Entries.asset";
 
-    LibraryEntry::LibraryEntry(const Path& path, const String& name, DirectoryEntry* parent, LibraryEntryType type)
-      : Filepath(path), ElementName(name), Parent(parent), Type(type)
-    {
-        String lower = name;
-        StringUtils::ToLower(lower);
-        ElementNameHash = Hash(lower);
-    }
-
-    FileEntry::FileEntry(const Path& path, const String& name, DirectoryEntry* parent)
-      : LibraryEntry(path, name, parent, LibraryEntryType::File), Filesize(0)
-    {
-    }
-
-    DirectoryEntry::DirectoryEntry(const Path& path, const String& name, DirectoryEntry* parent)
-      : LibraryEntry(path, name, parent, LibraryEntryType::Directory)
-    {
-    }
-
     ProjectLibrary::ProjectLibrary() : m_IsLoaded(false) {}
 
     ProjectLibrary::~ProjectLibrary()
@@ -61,6 +43,9 @@ namespace Crowny
         {
             CW_ENGINE_WARN("Removing dangling metadata '{}'.", metadataPath);
             m_Filesystem.Remove(metadataPath);
+            const Path backupPath(metadataPath.string() + ".bak");
+            if (fs::exists(backupPath))
+                m_Filesystem.Remove(backupPath);
         }
 
         for (const Ref<LibraryEntry>& entry : diff.RemovedEntries)
@@ -183,31 +168,59 @@ namespace Crowny
             asset->Init();
 
         entry->Filesize = fs::exists(entry->Filepath) ? (uint32_t)fs::file_size(entry->Filepath) : 0;
-        if (entry->Metadata == nullptr)
-            entry->Metadata = CreateRef<AssetMetadata>();
-        entry->Metadata->Type = asset->GetAssetType();
+        Ref<AssetMetadata> nextMetadata = CreateRef<AssetMetadata>();
+        if (entry->Metadata != nullptr)
+        {
+            nextMetadata->Uuid = entry->Metadata->Uuid;
+            nextMetadata->IncludeInBuild = entry->Metadata->IncludeInBuild;
+        }
+        nextMetadata->Type = asset->GetAssetType();
         if (result.Task.Options)
-            entry->Metadata->ImportOptions = result.Task.Options;
-        if (!entry->Metadata->ImportOptions)
-            entry->Metadata->ImportOptions = Importer::Get().CreateImportOptions(entry->Filepath);
-        entry->LastUpdateTime = std::time(nullptr);
+            nextMetadata->ImportOptions = result.Task.Options;
+        else if (entry->Metadata != nullptr)
+            nextMetadata->ImportOptions = entry->Metadata->ImportOptions;
+        if (!nextMetadata->ImportOptions)
+            nextMetadata->ImportOptions = Importer::Get().CreateImportOptions(entry->Filepath);
 
-        auto& uuid = entry->Metadata->Uuid;
+        const bool ownsUncommittedIdentity = nextMetadata->Uuid.Empty();
+        UUID& uuid = nextMetadata->Uuid;
         if (uuid.Empty())
             uuid = UuidGenerator::Generate();
 
-        const Path metaPath = AssetFileSystemScanner::GetMetadataPath(entry->Filepath);
-        m_MetadataStore.Save(metaPath, entry->Metadata, entry->DependentMetadata);
-
         Path outputPath = m_UuidDirectory.GetPath(uuid);
         outputPath.replace_filename(outputPath.filename().string() + ".asset");
+        const auto cleanupUncommitted = [&]() {
+            if (ownsUncommittedIdentity && fs::is_regular_file(outputPath))
+                m_Filesystem.Remove(outputPath);
+        };
+
+        bool saved = false;
+        if (asset->GetAssetType() == AssetType::Scene || asset->GetAssetType() == AssetType::Prefab)
+            saved = m_Filesystem.CopyFileAtomic(entry->Filepath, outputPath, true);
+        else
+        {
+            saved = AssetManager::TryGet()->Save(asset, outputPath);
+        }
+        if (!saved)
+        {
+            cleanupUncommitted();
+            CW_ENGINE_ERROR("Failed to publish imported asset '{}'.", entry->Filepath);
+            return;
+        }
+
+        String metadataError;
+        const Path metaPath = AssetFileSystemScanner::GetMetadataPath(entry->Filepath);
+        if (!m_MetadataStore.Save(metaPath, nextMetadata, entry->DependentMetadata, &metadataError))
+        {
+            cleanupUncommitted();
+            CW_ENGINE_ERROR("Failed to publish metadata for '{}': {}", entry->Filepath, metadataError);
+            return;
+        }
+
+        entry->Metadata = std::move(nextMetadata);
+        entry->LastUpdateTime = std::time(nullptr);
         m_AssetManifest->RegisterAsset(uuid, outputPath);
         m_AssetIndex.Register(uuid, entry->Filepath);
-
-        if (asset->GetAssetType() == AssetType::Scene || asset->GetAssetType() == AssetType::Prefab)
-            m_Filesystem.CopyFile(entry->Filepath, outputPath, true);
-        else
-            AssetManager::TryGet()->Save(asset, outputPath);
     }
 
     void ProjectLibrary::ClearEntries() { m_AssetIndex.Clear(); }
@@ -268,17 +281,26 @@ namespace Crowny
         metaPath = metaPath.replace_filename(metaPath.filename().string() + ".meta");
         if (entry->Metadata == nullptr)
         {
-            if (fs::is_regular_file(metaPath))
+            AssetMetadataLoadResult loaded = m_MetadataStore.Load(metaPath);
+            if (loaded.Status == AssetMetadataLoadStatus::Corrupt)
             {
-                Vector<Ref<AssetMetadata>> dependents;
-                Ref<AssetMetadata> loadedMeta = m_MetadataStore.Load(metaPath, &dependents);
-                if (loadedMeta != nullptr)
+                CW_ENGINE_ERROR("Refusing to replace corrupt asset metadata '{}': {}", metaPath, loaded.Error);
+                return false;
+            }
+            if (loaded)
+            {
+                entry->Metadata = loaded.Metadata;
+                entry->DependentMetadata = loaded.Dependents;
+                m_AssetIndex.Register(entry->Metadata->Uuid, entry->Filepath);
+                for (const auto& dep : entry->DependentMetadata)
+                    m_AssetIndex.Register(dep->Uuid, entry->Filepath);
+                if (loaded.Status == AssetMetadataLoadStatus::Recovered)
                 {
-                    entry->Metadata = loadedMeta;
-                    entry->DependentMetadata = dependents;
-                    m_AssetIndex.Register(loadedMeta->Uuid, entry->Filepath);
-                    for (const auto& dep : dependents)
-                        m_AssetIndex.Register(dep->Uuid, entry->Filepath);
+                    String repairError;
+                    if (!m_MetadataStore.Save(metaPath, entry->Metadata, entry->DependentMetadata, &repairError))
+                        CW_ENGINE_ERROR("Recovered metadata '{}' but could not repair its primary copy: {}", metaPath, repairError);
+                    else
+                        CW_ENGINE_WARN("Recovered asset metadata '{}' from its last-good backup.", metaPath);
                 }
             }
         }
@@ -306,62 +328,119 @@ namespace Crowny
             Ref<Asset> primaryAsset = assets[0];
             if (!primaryAsset)
                 return false;
-            if (entry->Metadata == nullptr)
-                entry->Metadata = CreateRef<AssetMetadata>();
-            entry->Metadata->Type = primaryAsset->GetAssetType();
-
-            entry->Metadata->ImportOptions = curImportOptions;
-            entry->LastUpdateTime = std::time(nullptr);
-            if (entry->Metadata->Uuid.Empty())
-                entry->Metadata->Uuid = UuidGenerator::Generate();
+            const Ref<AssetMetadata> previousMetadata = entry->Metadata;
+            const Vector<Ref<AssetMetadata>> previousDependents = entry->DependentMetadata;
+            Ref<AssetMetadata> nextMetadata = CreateRef<AssetMetadata>();
+            if (previousMetadata != nullptr)
+            {
+                nextMetadata->Uuid = previousMetadata->Uuid;
+                nextMetadata->IncludeInBuild = previousMetadata->IncludeInBuild;
+            }
+            nextMetadata->Type = primaryAsset->GetAssetType();
+            nextMetadata->ImportOptions = curImportOptions;
+            if (nextMetadata->Uuid.Empty())
+                nextMetadata->Uuid = UuidGenerator::Generate();
 
             // Save primary asset
             auto saveAsset = [&](const Ref<Asset>& asset, const UUID& uuid) {
                 Path outputPath = m_UuidDirectory.GetPath(uuid);
                 outputPath.replace_filename(outputPath.filename().string() + ".asset");
-                m_AssetManifest->RegisterAsset(uuid, outputPath);
-                m_AssetIndex.Register(uuid, entry->Filepath);
 
+                bool saved = false;
                 if (asset->GetAssetType() == AssetType::Scene || asset->GetAssetType() == AssetType::Prefab)
-                    m_Filesystem.CopyFile(entry->Filepath, outputPath, true);
+                    saved = m_Filesystem.CopyFileAtomic(entry->Filepath, outputPath, true);
                 else
-                    AssetManager::TryGet()->Save(asset, outputPath);
+                {
+                    saved = AssetManager::TryGet()->Save(asset, outputPath);
+                }
+                return saved;
             };
 
-            saveAsset(primaryAsset, entry->Metadata->Uuid);
+            if (!saveAsset(primaryAsset, nextMetadata->Uuid))
+            {
+                CW_ENGINE_ERROR("Failed to publish primary imported asset '{}'.", entry->Filepath);
+                return false;
+            }
 
-            // Clear old dependents
-            for (const auto& depMeta : entry->DependentMetadata)
+            Vector<Ref<Asset>> dependentAssets;
+            dependentAssets.reserve(assets.size() - 1);
+            for (uint32_t i = 1; i < (uint32_t)assets.size(); i++)
+            {
+                if (assets[i] != nullptr)
+                    dependentAssets.push_back(assets[i]);
+            }
+            AssetDependentReconciliation reconciled = m_MetadataStore.ReconcileDependents(previousDependents, dependentAssets);
+            UnorderedSet<UUID> previousDependentIds;
+            for (const Ref<AssetMetadata>& dependent : previousDependents)
+            {
+                if (dependent != nullptr && !dependent->Uuid.Empty())
+                    previousDependentIds.insert(dependent->Uuid);
+            }
+            Vector<UUID> uncommittedIds;
+            if (previousMetadata == nullptr || previousMetadata->Uuid.Empty())
+                uncommittedIds.push_back(nextMetadata->Uuid);
+            for (const AssetDependentAssignment& assignment : reconciled.Assignments)
+            {
+                if (previousDependentIds.find(assignment.Metadata->Uuid) == previousDependentIds.end())
+                    uncommittedIds.push_back(assignment.Metadata->Uuid);
+            }
+            const auto cleanupUncommitted = [&]() {
+                for (const UUID& uuid : uncommittedIds)
+                {
+                    Path outputPath = m_UuidDirectory.GetPath(uuid);
+                    outputPath.replace_filename(outputPath.filename().string() + ".asset");
+                    if (fs::is_regular_file(outputPath))
+                        m_Filesystem.Remove(outputPath);
+                }
+            };
+
+            Vector<Ref<AssetMetadata>> nextDependents;
+            nextDependents.reserve(reconciled.Assignments.size());
+            for (const AssetDependentAssignment& assignment : reconciled.Assignments)
+            {
+                if (!saveAsset(assignment.Asset, assignment.Metadata->Uuid))
+                {
+                    CW_ENGINE_ERROR("Failed to publish dependent '{}' imported from '{}'.", assignment.Asset->GetName(), entry->Filepath);
+                    cleanupUncommitted();
+                    return false;
+                }
+                nextDependents.push_back(assignment.Metadata);
+            }
+
+            const Path metadataPath = AssetFileSystemScanner::GetMetadataPath(entry->Filepath);
+            String metadataError;
+            if (!m_MetadataStore.Save(metadataPath, nextMetadata, nextDependents, &metadataError))
+            {
+                CW_ENGINE_ERROR("Failed to commit imported metadata '{}': {}", metadataPath, metadataError);
+                cleanupUncommitted();
+                return false;
+            }
+
+            entry->Metadata = std::move(nextMetadata);
+            entry->DependentMetadata = std::move(nextDependents);
+            entry->LastUpdateTime = std::time(nullptr);
+            auto registerAsset = [&](const UUID& uuid) {
+                Path outputPath = m_UuidDirectory.GetPath(uuid);
+                outputPath.replace_filename(outputPath.filename().string() + ".asset");
+                m_AssetManifest->RegisterAsset(uuid, outputPath);
+                m_AssetIndex.Register(uuid, entry->Filepath);
+            };
+            registerAsset(entry->Metadata->Uuid);
+            for (const Ref<AssetMetadata>& dependent : entry->DependentMetadata)
+                registerAsset(dependent->Uuid);
+
+            // The replacement metadata owns the new UUID set now. Only then may old artifacts be removed.
+            for (const Ref<AssetMetadata>& orphan : reconciled.Orphans)
             {
                 Path outPath;
-                if (m_AssetManifest->UuidToFilepath(depMeta->Uuid, outPath))
+                if (m_AssetManifest->UuidToFilepath(orphan->Uuid, outPath))
                 {
                     if (fs::is_regular_file(outPath))
                         m_Filesystem.Remove(outPath);
-                    m_AssetManifest->UnregisterAsset(depMeta->Uuid);
+                    m_AssetManifest->UnregisterAsset(orphan->Uuid);
                 }
-                m_AssetIndex.Unregister(depMeta->Uuid);
+                m_AssetIndex.Unregister(orphan->Uuid);
             }
-            entry->DependentMetadata.clear();
-
-            // Save dependent assets (materials, textures, etc.)
-            for (uint32_t i = 1; i < (uint32_t)assets.size(); i++)
-            {
-                Ref<Asset>& depAsset = assets[i];
-                if (!depAsset)
-                    continue;
-
-                Ref<AssetMetadata> depMeta = CreateRef<AssetMetadata>();
-                depMeta->Type = depAsset->GetAssetType();
-                depMeta->Uuid = UuidGenerator::Generate();
-                depMeta->IncludeInBuild = true;
-
-                saveAsset(depAsset, depMeta->Uuid);
-                entry->DependentMetadata.push_back(depMeta);
-            }
-
-            const Path metaPath = AssetFileSystemScanner::GetMetadataPath(entry->Filepath);
-            m_MetadataStore.Save(metaPath, entry->Metadata, entry->DependentMetadata);
             return true;
         }
         return false;
@@ -942,6 +1021,7 @@ namespace Crowny
         Stack<DirectoryEntry*> todos; // Load meta files
         todos.push(m_AssetIndex.GetRoot().get());
         Vector<Ref<LibraryEntry>> deletedEntries;
+        bool hasCorruptMetadata = false;
         while (!todos.empty())
         {
             DirectoryEntry* curDir = todos.top();
@@ -958,8 +1038,26 @@ namespace Crowny
                         {
                             Path metaPath = entry->Filepath;
                             metaPath = metaPath.replace_filename(metaPath.filename().string() + ".meta");
-                            if (fs::is_regular_file(metaPath))
-                                entry->Metadata = m_MetadataStore.Load(metaPath, &entry->DependentMetadata);
+                            AssetMetadataLoadResult loaded = m_MetadataStore.Load(metaPath);
+                            if (loaded)
+                            {
+                                entry->Metadata = loaded.Metadata;
+                                entry->DependentMetadata = loaded.Dependents;
+                                if (loaded.Status == AssetMetadataLoadStatus::Recovered)
+                                {
+                                    String repairError;
+                                    if (!m_MetadataStore.Save(metaPath, entry->Metadata, entry->DependentMetadata, &repairError))
+                                        CW_ENGINE_ERROR("Recovered metadata '{}' but could not repair its primary copy: {}", metaPath, repairError);
+                                    else
+                                        CW_ENGINE_WARN("Recovered asset metadata '{}' from its last-good backup.", metaPath);
+                                }
+                            }
+                            else if (loaded.Status == AssetMetadataLoadStatus::Corrupt)
+                            {
+                                hasCorruptMetadata = true;
+                                CW_ENGINE_ERROR("Asset metadata '{}' is corrupt; automatic reimport and orphan cleanup are disabled: {}", metaPath,
+                                                loaded.Error);
+                            }
                         }
 
                         if (entry->Metadata != nullptr)
@@ -991,7 +1089,7 @@ namespace Crowny
         }
 
         Path internalAssetFolder = m_ProjectFolder / INTERNAL_ASSET_DIR;
-        if (fs::exists(internalAssetFolder))
+        if (fs::exists(internalAssetFolder) && !hasCorruptMetadata)
         {
             Vector<Path> toDelete;
             auto processFile = [&](const Path& path) {

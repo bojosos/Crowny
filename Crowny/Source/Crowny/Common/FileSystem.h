@@ -32,6 +32,9 @@ namespace Crowny
         static bool WriteFile(const Path& path, byte* buffer, uint64_t size);
 
         static bool WriteTextFile(const Path& path, const String& text);
+        // Publishes a flushed sibling temporary file with one replace operation. A failure before replacement leaves the destination unchanged.
+        static bool WriteFileAtomic(const Path& path, const byte* buffer, uint64_t size, String* outError = nullptr);
+        static bool WriteTextFileAtomic(const Path& path, StringView text, String* outError = nullptr);
         static bool OpenFileDialog(FileDialogType type, Vector<Path>& outpaths, const String& title = {}, const Path& initialDir = {},
                                    const Vector<DialogFilter>& filters = {}, const String& filename = {});
 

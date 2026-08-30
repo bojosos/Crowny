@@ -17,6 +17,24 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::LibraryEntry, Crowny::FileEntry)
 
 namespace Crowny
 {
+    LibraryEntry::LibraryEntry(const Path& path, const String& name, DirectoryEntry* parent, LibraryEntryType type)
+      : Filepath(path), ElementName(name), Parent(parent), Type(type)
+    {
+        String lower = name;
+        StringUtils::ToLower(lower);
+        ElementNameHash = Hash(lower);
+    }
+
+    FileEntry::FileEntry(const Path& path, const String& name, DirectoryEntry* parent)
+      : LibraryEntry(path, name, parent, LibraryEntryType::File), Filesize(0)
+    {
+    }
+
+    DirectoryEntry::DirectoryEntry(const Path& path, const String& name, DirectoryEntry* parent)
+      : LibraryEntry(path, name, parent, LibraryEntryType::Directory)
+    {
+    }
+
     template <class Archive> void Save(Archive& archive, const LibraryEntry& entry)
     {
         archive(entry.Type, entry.Filepath, entry.ElementName, entry.LastUpdateTime);
@@ -55,7 +73,184 @@ namespace Crowny
 
     namespace
     {
-        constexpr uint32_t PROJECT_METADATA_VERSION = 1;
+        constexpr uint32_t LEGACY_PROJECT_METADATA_VERSION = 1;
+        constexpr uint32_t PROJECT_METADATA_VERSION = 2;
+
+        struct ParsedAssetMetadata
+        {
+            Ref<AssetMetadata> Metadata;
+            Vector<Ref<AssetMetadata>> Dependents;
+            uint32_t Version = 0;
+            String Error;
+
+            explicit operator bool() const { return Metadata != nullptr; }
+        };
+
+        Path GetMetadataBackupPath(const Path& path) { return Path(path.string() + ".bak"); }
+
+        bool IsMetadataBackup(const Path& path) { return path.extension() == ".bak" && path.stem().extension() == ".meta"; }
+
+        bool IsPersistableAssetType(uint32_t type)
+        {
+            return type > static_cast<uint32_t>(AssetType::None) && type <= static_cast<uint32_t>(AssetType::AnimationClip);
+        }
+
+        bool ReadText(const Path& path, String& output, String& error)
+        {
+            if (!fs::is_regular_file(path))
+            {
+                error = "Cannot open metadata file.";
+                return false;
+            }
+            output = FileSystem::ReadTextFile(path);
+            if (output.empty())
+            {
+                error = "Metadata file is empty or unreadable.";
+                return false;
+            }
+            return true;
+        }
+
+        ParsedAssetMetadata ParseMetadata(StringView text)
+        {
+            ParsedAssetMetadata result;
+            try
+            {
+                const YAML::Node data = YAML::Load(String(text));
+                if (!data || !data.IsMap())
+                {
+                    result.Error = "Metadata root must be a map.";
+                    return result;
+                }
+
+                const YAML::Node versionNode = data["Version"];
+                if (!versionNode || !versionNode.IsScalar())
+                {
+                    result.Error = "Metadata is missing its format version.";
+                    return result;
+                }
+                result.Version = versionNode.as<uint32_t>();
+                if (result.Version != LEGACY_PROJECT_METADATA_VERSION && result.Version != PROJECT_METADATA_VERSION)
+                {
+                    result.Error = "Metadata version " + std::to_string(result.Version) + " is not supported.";
+                    return result;
+                }
+
+                const YAML::Node uuidNode = data["Uuid"];
+                const YAML::Node includeNode = data["IncludeInBuild"];
+                const YAML::Node typeNode = data["TypeId"];
+                if (!uuidNode || !uuidNode.IsScalar() || !includeNode || !includeNode.IsScalar() || !typeNode || !typeNode.IsScalar())
+                {
+                    result.Error = "Metadata is missing a required identity field.";
+                    return result;
+                }
+
+                Ref<AssetMetadata> metadata = CreateRef<AssetMetadata>();
+                metadata->Uuid = uuidNode.as<UUID>(UUID::EMPTY);
+                metadata->IncludeInBuild = includeNode.as<bool>();
+                const uint32_t type = typeNode.as<uint32_t>();
+                if (metadata->Uuid.Empty() || !IsPersistableAssetType(type))
+                {
+                    result.Error = "Metadata has an invalid UUID or asset type.";
+                    return result;
+                }
+                metadata->Type = static_cast<AssetType>(type);
+                metadata->ImportOptions = ImportOptionsSerializer::Deserialize(data);
+                if (metadata->ImportOptions == nullptr)
+                {
+                    result.Error = "Metadata import options could not be decoded.";
+                    return result;
+                }
+
+                UnorderedSet<UUID> uuids{ metadata->Uuid };
+                UnorderedSet<String> keys;
+                const YAML::Node dependents = data["Dependents"];
+                if (dependents && !dependents.IsSequence())
+                {
+                    result.Error = "Metadata dependents must be a sequence.";
+                    return result;
+                }
+                if (dependents)
+                {
+                    for (const YAML::Node& node : dependents)
+                    {
+                        if (!node.IsMap())
+                        {
+                            result.Error = "A dependent metadata entry is not a map.";
+                            return result;
+                        }
+
+                        const YAML::Node dependentUuidNode = node["Uuid"];
+                        const YAML::Node dependentTypeNode = node["TypeId"];
+                        if (!dependentUuidNode || !dependentUuidNode.IsScalar() || !dependentTypeNode || !dependentTypeNode.IsScalar())
+                        {
+                            result.Error = "A dependent metadata entry is missing its UUID or asset type.";
+                            return result;
+                        }
+
+                        Ref<AssetMetadata> dependent = CreateRef<AssetMetadata>();
+                        dependent->Uuid = dependentUuidNode.as<UUID>(UUID::EMPTY);
+                        const uint32_t dependentType = dependentTypeNode.as<uint32_t>();
+                        if (dependent->Uuid.Empty() || !IsPersistableAssetType(dependentType) || !uuids.insert(dependent->Uuid).second)
+                        {
+                            result.Error = "A dependent metadata entry has an invalid or duplicate identity.";
+                            return result;
+                        }
+                        dependent->Type = static_cast<AssetType>(dependentType);
+                        dependent->IncludeInBuild = true;
+
+                        if (result.Version >= PROJECT_METADATA_VERSION)
+                        {
+                            const YAML::Node keyNode = node["Key"];
+                            if (!keyNode || !keyNode.IsScalar())
+                            {
+                                result.Error = "A version-two dependent metadata entry is missing its stable key.";
+                                return result;
+                            }
+                            dependent->SubassetKey = keyNode.as<String>();
+                            if (dependent->SubassetKey.empty() || !keys.insert(dependent->SubassetKey).second)
+                            {
+                                result.Error = "A dependent metadata entry has an empty or duplicate stable key.";
+                                return result;
+                            }
+                        }
+                        result.Dependents.push_back(std::move(dependent));
+                    }
+                }
+
+                result.Metadata = std::move(metadata);
+                return result;
+            }
+            catch (const std::exception& error)
+            {
+                result.Metadata = nullptr;
+                result.Dependents.clear();
+                result.Error = error.what();
+                return result;
+            }
+        }
+
+        ParsedAssetMetadata ParseMetadataFile(const Path& path)
+        {
+            String text;
+            String error;
+            if (!ReadText(path, text, error))
+            {
+                ParsedAssetMetadata result;
+                result.Error = std::move(error);
+                return result;
+            }
+            return ParseMetadata(text);
+        }
+
+        String BuildSubassetBaseKey(const Ref<Asset>& asset)
+        {
+            String name = asset != nullptr ? asset->GetName() : String();
+            std::replace(name.begin(), name.end(), '\\', '/');
+            if (name.empty())
+                name = "<unnamed>";
+            return std::to_string(static_cast<uint32_t>(asset->GetAssetType())) + ":" + name;
+        }
 
         Path NormalizePathForComparison(const Path& path)
         {
@@ -277,7 +472,7 @@ namespace Crowny
         return mismatch.first == normalizedRoot.end();
     }
 
-    bool AssetFileSystemScanner::IsMetadata(const Path& path) { return path.extension() == ".meta"; }
+    bool AssetFileSystemScanner::IsMetadata(const Path& path) { return path.extension() == ".meta" || IsMetadataBackup(path); }
 
     Path AssetFileSystemScanner::GetMetadataPath(const Path& path)
     {
@@ -294,6 +489,16 @@ namespace Crowny
 
         UnorderedMap<Path, LibraryEntryType, HashPath> diskEntries;
         auto inspectFile = [&](const Path& path) {
+            if (IsMetadataBackup(path))
+            {
+                Path primaryPath = path;
+                primaryPath.replace_extension("");
+                Path sourcePath = primaryPath;
+                sourcePath.replace_extension("");
+                if (!fs::is_regular_file(primaryPath) && !fs::is_regular_file(sourcePath))
+                    diff.DanglingMetadata.push_back(primaryPath);
+                return;
+            }
             if (!IsMetadata(path))
             {
                 diskEntries[path.lexically_normal()] = LibraryEntryType::File;
@@ -383,10 +588,33 @@ namespace Crowny
         return diff;
     }
 
-    void AssetMetadataStore::Save(const Path& path, const Ref<AssetMetadata>& metadata, const Vector<Ref<AssetMetadata>>& dependents) const
+    bool AssetMetadataStore::Save(const Path& path, const Ref<AssetMetadata>& metadata, const Vector<Ref<AssetMetadata>>& dependents,
+                                  String* outError) const
     {
-        if (metadata == nullptr)
-            return;
+        if (outError != nullptr)
+            outError->clear();
+        if (metadata == nullptr || metadata->Uuid.Empty() || !IsPersistableAssetType(static_cast<uint32_t>(metadata->Type)) ||
+            metadata->ImportOptions == nullptr)
+        {
+            if (outError != nullptr)
+                *outError = "Cannot save metadata without a valid primary UUID, asset type, and import options.";
+            return false;
+        }
+
+        UnorderedSet<UUID> uuids{ metadata->Uuid };
+        UnorderedSet<String> keys;
+        for (const Ref<AssetMetadata>& dependent : dependents)
+        {
+            if (dependent == nullptr || dependent->Uuid.Empty() || dependent->SubassetKey.empty() ||
+                !IsPersistableAssetType(static_cast<uint32_t>(dependent->Type)) || !uuids.insert(dependent->Uuid).second ||
+                !keys.insert(dependent->SubassetKey).second)
+            {
+                if (outError != nullptr)
+                    *outError = "Cannot save dependent metadata with an invalid or duplicate UUID, type, or stable key.";
+                return false;
+            }
+        }
+
         YAML::Emitter output;
         output << YAML::BeginMap;
         output << YAML::Key << "Version" << YAML::Value << PROJECT_METADATA_VERSION;
@@ -400,6 +628,7 @@ namespace Crowny
             for (const Ref<AssetMetadata>& dependent : dependents)
             {
                 output << YAML::BeginMap;
+                output << YAML::Key << "Key" << YAML::Value << dependent->SubassetKey;
                 output << YAML::Key << "Uuid" << YAML::Value << dependent->Uuid;
                 output << YAML::Key << "TypeId" << YAML::Value << (uint32_t)dependent->Type;
                 output << YAML::EndMap;
@@ -407,76 +636,138 @@ namespace Crowny
             output << YAML::EndSeq;
         }
         output << YAML::EndMap;
-        if (!fs::is_directory(path.parent_path()))
-            fs::create_directories(path.parent_path());
-        FileSystem::WriteTextFile(path, output.c_str());
+        if (!output.good())
+        {
+            if (outError != nullptr)
+                *outError = output.GetLastError();
+            return false;
+        }
+
+        const String serialized = output.c_str();
+        const ParsedAssetMetadata validation = ParseMetadata(serialized);
+        if (!validation)
+        {
+            if (outError != nullptr)
+                *outError = "Generated metadata failed validation: " + validation.Error;
+            return false;
+        }
+
+        if (fs::is_regular_file(path))
+        {
+            String previousText;
+            String readError;
+            if (ReadText(path, previousText, readError) && ParseMetadata(previousText))
+            {
+                String backupError;
+                if (!FileSystem::WriteTextFileAtomic(GetMetadataBackupPath(path), previousText, &backupError))
+                {
+                    if (outError != nullptr)
+                        *outError = "Failed to preserve the last-good metadata: " + backupError;
+                    return false;
+                }
+            }
+        }
+
+        return FileSystem::WriteTextFileAtomic(path, serialized, outError);
     }
 
-    Ref<AssetMetadata> AssetMetadataStore::Load(const Path& path, Vector<Ref<AssetMetadata>>* outDependents) const
+    AssetMetadataStore::LoadResult AssetMetadataStore::Load(const Path& path) const
     {
-        if (outDependents != nullptr)
-            outDependents->clear();
-        if (!fs::is_regular_file(path))
-            return nullptr;
-        try
-        {
-            const Ref<DataStream> stream = FileSystem::OpenFile(path);
-            const String text = stream->GetAsString();
-            stream->Close();
-            const YAML::Node data = YAML::Load(text);
-            if (!data || !data.IsMap())
-                return nullptr;
+        LoadResult result;
+        const Path backupPath = GetMetadataBackupPath(path);
+        const bool primaryExists = fs::is_regular_file(path);
+        const bool backupExists = fs::is_regular_file(backupPath);
+        if (!primaryExists && !backupExists)
+            return result;
 
-            const uint32_t version = data["Version"].as<uint32_t>(0);
-            if (version > PROJECT_METADATA_VERSION)
+        ParsedAssetMetadata primary;
+        if (primaryExists)
+            primary = ParseMetadataFile(path);
+        if (primary)
+        {
+            result.Status = AssetMetadataLoadStatus::Loaded;
+            result.Metadata = std::move(primary.Metadata);
+            result.Dependents = std::move(primary.Dependents);
+            result.Version = primary.Version;
+            return result;
+        }
+
+        ParsedAssetMetadata backup;
+        if (backupExists)
+            backup = ParseMetadataFile(backupPath);
+        if (backup)
+        {
+            result.Status = AssetMetadataLoadStatus::Recovered;
+            result.Metadata = std::move(backup.Metadata);
+            result.Dependents = std::move(backup.Dependents);
+            result.Version = backup.Version;
+            result.Error = primaryExists ? primary.Error : "The primary metadata file is missing.";
+            return result;
+        }
+
+        result.Status = AssetMetadataLoadStatus::Corrupt;
+        result.Error = primaryExists ? primary.Error : "The primary metadata file is missing.";
+        if (backupExists)
+            result.Error += " Backup recovery failed: " + backup.Error;
+        return result;
+    }
+
+    AssetMetadataStore::DependentReconciliation AssetMetadataStore::ReconcileDependents(const Vector<Ref<AssetMetadata>>& existing,
+                                                                                        const Vector<Ref<Asset>>& importedAssets) const
+    {
+        DependentReconciliation result;
+        UnorderedMap<String, Ref<AssetMetadata>> keyed;
+        Map<AssetType, Vector<Ref<AssetMetadata>>> legacyByType;
+        for (const Ref<AssetMetadata>& metadata : existing)
+        {
+            if (metadata == nullptr || metadata->Uuid.Empty())
+                continue;
+            if (metadata->SubassetKey.empty())
+                legacyByType[metadata->Type].push_back(metadata);
+            else if (keyed.find(metadata->SubassetKey) == keyed.end())
+                keyed.emplace(metadata->SubassetKey, metadata);
+        }
+
+        Map<AssetType, size_t> legacyCursor;
+        UnorderedMap<String, uint32_t> keyOccurrences;
+        UnorderedSet<UUID> reused;
+        result.Assignments.reserve(importedAssets.size());
+        for (const Ref<Asset>& asset : importedAssets)
+        {
+            if (asset == nullptr || !IsPersistableAssetType(static_cast<uint32_t>(asset->GetAssetType())))
+                continue;
+
+            const String baseKey = BuildSubassetBaseKey(asset);
+            const String key = baseKey + "#" + std::to_string(keyOccurrences[baseKey]++);
+            Ref<AssetMetadata> previous;
+            const auto keyedIter = keyed.find(key);
+            if (keyedIter != keyed.end() && keyedIter->second->Type == asset->GetAssetType() && reused.find(keyedIter->second->Uuid) == reused.end())
+                previous = keyedIter->second;
+            else
             {
-                CW_ENGINE_ERROR("Metadata '{}' uses unsupported version {}.", path, version);
-                return nullptr;
+                Vector<Ref<AssetMetadata>>& candidates = legacyByType[asset->GetAssetType()];
+                size_t& cursor = legacyCursor[asset->GetAssetType()];
+                while (cursor < candidates.size() && reused.find(candidates[cursor]->Uuid) != reused.end())
+                    cursor++;
+                if (cursor < candidates.size())
+                    previous = candidates[cursor++];
             }
 
             Ref<AssetMetadata> metadata = CreateRef<AssetMetadata>();
-            if (const auto& uuid = data["Uuid"])
-                metadata->Uuid = uuid.as<UUID>();
-            if (metadata->Uuid.Empty())
-            {
-                CW_ENGINE_WARN("Metadata '{}' has no valid UUID. Generating a replacement.", path);
-                metadata->Uuid = UuidGenerator::Generate();
-            }
-            metadata->IncludeInBuild = data["IncludeInBuild"].as<bool>(false);
-            const uint32_t type = data["TypeId"].as<uint32_t>((uint32_t)AssetType::None);
-            if (type <= (uint32_t)AssetType::AnimationClip)
-                metadata->Type = (AssetType)type;
-            else
-                CW_ENGINE_WARN("Metadata '{}' has invalid asset type {}.", path, type);
-            metadata->ImportOptions = ImportOptionsSerializer::Deserialize(data);
+            metadata->Uuid = previous != nullptr ? previous->Uuid : UuidGenerator::Generate();
+            metadata->Type = asset->GetAssetType();
+            metadata->IncludeInBuild = true;
+            metadata->SubassetKey = key;
+            reused.insert(metadata->Uuid);
+            result.Assignments.push_back({ asset, std::move(metadata) });
+        }
 
-            if (outDependents != nullptr)
-            {
-                const YAML::Node dependents = data["Dependents"];
-                if (dependents && dependents.IsSequence())
-                {
-                    for (const YAML::Node& node : dependents)
-                    {
-                        if (!node.IsMap())
-                            continue;
-                        Ref<AssetMetadata> dependent = CreateRef<AssetMetadata>();
-                        dependent->Uuid = node["Uuid"].as<UUID>(UUID::EMPTY);
-                        const uint32_t dependentType = node["TypeId"].as<uint32_t>((uint32_t)AssetType::None);
-                        if (dependent->Uuid.Empty() || dependentType > (uint32_t)AssetType::AnimationClip)
-                            continue;
-                        dependent->Type = (AssetType)dependentType;
-                        dependent->IncludeInBuild = true;
-                        outDependents->push_back(dependent);
-                    }
-                }
-            }
-            return metadata;
-        }
-        catch (const std::exception& error)
+        for (const Ref<AssetMetadata>& metadata : existing)
         {
-            CW_ENGINE_ERROR("Failed to read metadata '{}': {}", path, error.what());
-            return nullptr;
+            if (metadata != nullptr && !metadata->Uuid.Empty() && reused.find(metadata->Uuid) == reused.end())
+                result.Orphans.push_back(metadata);
         }
+        return result;
     }
 
     void AssetMetadataStore::SaveIndex(const Path& path, const Ref<DirectoryEntry>& root) const
@@ -525,6 +816,37 @@ namespace Crowny
         return copied && !error;
     }
 
+    bool AssetFilesystemOperations::CopyFileAtomic(const Path& source, const Path& destination, bool overwrite, String* outError) const
+    {
+        if (outError != nullptr)
+            outError->clear();
+        if (!fs::is_regular_file(source) || (!overwrite && fs::exists(destination)))
+        {
+            if (outError != nullptr)
+                *outError = "The source is not a regular file or the destination already exists.";
+            return false;
+        }
+
+        const Ref<DataStream> stream = FileSystem::OpenFile(source);
+        if (stream == nullptr || !stream->IsReadable())
+        {
+            if (outError != nullptr)
+                *outError = "The source could not be opened for reading.";
+            return false;
+        }
+
+        Vector<byte> contents(stream->Size());
+        const size_t bytesRead = stream->Read(contents.data(), contents.size());
+        stream->Close();
+        if (bytesRead != contents.size())
+        {
+            if (outError != nullptr)
+                *outError = "The source could not be read completely.";
+            return false;
+        }
+        return FileSystem::WriteFileAtomic(destination, contents.data(), contents.size(), outError);
+    }
+
     bool AssetFilesystemOperations::CopyDirectory(const Path& source, const Path& destination, bool overwrite) const
     {
         std::error_code error;
@@ -556,9 +878,14 @@ namespace Crowny
     {
         if (entry == nullptr || entry->Metadata == nullptr || entry->Metadata->IncludeInBuild == include)
             return false;
+        const bool previous = entry->Metadata->IncludeInBuild;
         entry->Metadata->IncludeInBuild = include;
-        metadataStore.Save(AssetFileSystemScanner::GetMetadataPath(entry->Filepath), entry->Metadata, entry->DependentMetadata);
-        return true;
+        String error;
+        if (metadataStore.Save(AssetFileSystemScanner::GetMetadataPath(entry->Filepath), entry->Metadata, entry->DependentMetadata, &error))
+            return true;
+        entry->Metadata->IncludeInBuild = previous;
+        CW_ENGINE_ERROR("Failed to update build inclusion metadata '{}': {}", entry->Filepath, error);
+        return false;
     }
 
     Vector<Ref<FileEntry>> BuildManifestSelection::Collect(const Ref<DirectoryEntry>& root) const

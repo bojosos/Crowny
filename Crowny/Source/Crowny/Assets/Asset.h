@@ -111,6 +111,7 @@ namespace Crowny
         Ref<ImportOptions> ImportOptions; // Asset import options
         bool IncludeInBuild = false;
         AssetType Type = AssetType::None;
+        String SubassetKey; // Stable importer identity for dependent assets. Empty only in version-one metadata.
     };
 
 } // namespace Crowny

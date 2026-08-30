@@ -67,18 +67,62 @@ namespace Crowny
     class AssetMetadataStore
     {
     public:
-        void Save(const Path& path, const Ref<AssetMetadata>& metadata, const Vector<Ref<AssetMetadata>>& dependents = {}) const;
-        Ref<AssetMetadata> Load(const Path& path, Vector<Ref<AssetMetadata>>* outDependents = nullptr) const;
+        bool Save(const Path& path, const Ref<AssetMetadata>& metadata, const Vector<Ref<AssetMetadata>>& dependents = {},
+                  String* outError = nullptr) const;
+
+        struct LoadResult;
+        struct DependentReconciliation;
+
+        LoadResult Load(const Path& path) const;
+        DependentReconciliation ReconcileDependents(const Vector<Ref<AssetMetadata>>& existing, const Vector<Ref<Asset>>& importedAssets) const;
 
         void SaveIndex(const Path& path, const Ref<DirectoryEntry>& root) const;
         Ref<DirectoryEntry> LoadIndex(const Path& path) const;
     };
+
+    enum class AssetMetadataLoadStatus
+    {
+        Missing,
+        Loaded,
+        // The primary was missing or corrupt and the last-good backup supplied the result.
+        Recovered,
+        // Neither copy passed schema and identity validation. No replacement UUID was generated.
+        Corrupt
+    };
+
+    struct AssetMetadataStore::LoadResult
+    {
+        AssetMetadataLoadStatus Status = AssetMetadataLoadStatus::Missing;
+        Ref<AssetMetadata> Metadata;
+        Vector<Ref<AssetMetadata>> Dependents;
+        uint32_t Version = 0;
+        String Error;
+
+        explicit operator bool() const { return Status == AssetMetadataLoadStatus::Loaded || Status == AssetMetadataLoadStatus::Recovered; }
+    };
+
+    using AssetMetadataLoadResult = AssetMetadataStore::LoadResult;
+
+    struct AssetDependentAssignment
+    {
+        Ref<Asset> Asset;
+        Ref<AssetMetadata> Metadata;
+    };
+
+    struct AssetMetadataStore::DependentReconciliation
+    {
+        Vector<AssetDependentAssignment> Assignments;
+        Vector<Ref<AssetMetadata>> Orphans;
+    };
+
+    using AssetDependentReconciliation = AssetMetadataStore::DependentReconciliation;
 
     class AssetFilesystemOperations
     {
     public:
         bool Move(const Path& source, const Path& destination, bool overwrite) const;
         bool CopyFile(const Path& source, const Path& destination, bool overwrite) const;
+        bool CopyFileAtomic(const Path& source, const Path& destination, bool overwrite, String* outError = nullptr) const;
         bool CopyDirectory(const Path& source, const Path& destination, bool overwrite) const;
         bool CreateDirectory(const Path& path) const;
         bool Remove(const Path& path) const;
