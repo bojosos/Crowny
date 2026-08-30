@@ -149,11 +149,13 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Shared editor property dropdowns borrow selected labels, use fixed ImGui-generated IDs, and iterate literal options directly. String, literal, and selector-backed dropdowns allocate nothing across 120 warm frames.
 - [x] Audio source and mixer dropdowns borrow bus, parent, effect, and waveform labels instead of rebuilding option strings each visible frame. The borrowed-label path preserves mixed-value previews and allocates nothing across 120 warm frames.
 - [ ] Finish `PixelUtils` and `PixelData`: validated pitches/sizes, all declared conversions, compression/decompression boundaries, mip generation, color spaces, alpha rules, safe overflow handling, and row-parallel kernels for large images.
+  - [x] Alpha-coverage mip scaling preserves premultiplied RGB through the existing unpremultiply/store path, including sparse opaque colors and fully transparent inputs.
 - [ ] Finish the cross-platform window system: multiple windows where supported, DPI, display enumeration, fullscreen modes, resize/minimize/focus, cursor modes, clipboard, drag/drop, icons, input routing, Vulkan/OpenGL surface lifetime, and C# APIs.
 
 ## Performance, quality, and platform support
 
 - [ ] Extend the allocation-count-only profiler's zero-allocation steady-state targets beyond the completed render-graph compile path to scene sync, draw preparation, editor selection/UI, text, and console.
+  - [x] Font fallback traversal uses fixed stack storage and allocates nothing for 1, 1,000, or 10,000 warm missing-glyph lookups.
 - [ ] Use retained scratch, inline containers, frame-context-owned arenas, pools, and stable handles where lifetime proves safe. Never use one global frame arena for data crossing simulation/render threads.
 - [ ] Bootstrap pinned Mono, OpenAL, Vulkan, and physics dependencies through repository scripts and caches. Support override environment variables, verify versions and hashes, avoid committing SDK binaries, and document offline/CI behavior.
 - [ ] Keep Windows and Linux builds first-class. Add sanitizer options, leak checks, ThreadSanitizer-friendly CPU tests on Linux, Vulkan validation, OpenGL parity, and clear capability fallbacks.

@@ -49,7 +49,7 @@ namespace Crowny
             return static_cast<float>(covered) / static_cast<float>(pixelCount);
         }
 
-        void PreserveAlphaCoverage(basisu::imagef& image, float targetCoverage, float cutoff)
+        void PreserveAlphaCoverage(basisu::imagef& image, float targetCoverage, float cutoff, bool premultiplied)
         {
             float low = 0.0f;
             float high = 8.0f;
@@ -65,7 +65,23 @@ namespace Crowny
             for (uint32_t y = 0; y < image.get_height(); ++y)
             {
                 for (uint32_t x = 0; x < image.get_width(); ++x)
-                    image(x, y)[3] = glm::clamp(image(x, y)[3] * high, 0.0f, 1.0f);
+                {
+                    const float oldAlpha = image(x, y)[3];
+                    const float newAlpha = glm::clamp(oldAlpha * high, 0.0f, 1.0f);
+                    if (premultiplied)
+                    {
+                        if (oldAlpha > 1e-8f)
+                        {
+                            const float colorScale = newAlpha / oldAlpha;
+                            image(x, y)[0] *= colorScale;
+                            image(x, y)[1] *= colorScale;
+                            image(x, y)[2] *= colorScale;
+                        }
+                        else
+                            image(x, y)[0] = image(x, y)[1] = image(x, y)[2] = 0.0f;
+                    }
+                    image(x, y)[3] = newAlpha;
+                }
             }
         }
     } // namespace
@@ -247,7 +263,7 @@ namespace Crowny
                 }
             }
             if (options.PreserveAlphaCoverage && hasAlpha)
-                PreserveAlphaCoverage(mipImage, sourceCoverage, alphaCutoff);
+                PreserveAlphaCoverage(mipImage, sourceCoverage, alphaCutoff, premultiplyAlpha);
 
             Ref<PixelData> pixels = PixelData::Create(width, height, 1, source.GetFormat());
             for (uint32_t y = 0; y < height; ++y)

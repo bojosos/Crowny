@@ -1,10 +1,12 @@
 #include "Crowny/Utils/PixelUtils.h"
 #include <array>
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <cmath>
 #include <cstring>
 #include <limits>
 #include <string_view>
+
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 using namespace Crowny;
 
@@ -649,6 +651,54 @@ TEST_CASE("PixelUtils::GenerateMipChain", "[PixelUtils][Mips]")
         CHECK(average.r < 0.02f);
         CHECK(average.b > 0.98f);
         CHECK_THAT(average.a, Catch::Matchers::WithinAbs(0.5f, 0.01f));
+    }
+
+    SECTION("Alpha coverage preserves the straight color of sparse opaque texels")
+    {
+        PixelData source(2, 2, 1, TextureFormat::RGBA8);
+        source.AllocateInternalBuffer();
+        source.SetColorAt(0, 0, glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+        source.SetColorAt(1, 0, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
+        source.SetColorAt(0, 1, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
+        source.SetColorAt(1, 1, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
+
+        TextureMipGenerationOptions options;
+        options.Filter = TextureMipFilter::Box;
+        options.PreserveAlphaCoverage = true;
+        options.AlphaCutoff = 0.5f;
+        Vector<Ref<PixelData>> mips;
+        REQUIRE(PixelUtils::GenerateMipChain(source, options, mips));
+        REQUIRE(mips.size() == 2);
+
+        const glm::vec4 average = mips[1]->GetColorAt(0, 0);
+        CHECK(average.r < 0.02f);
+        CHECK(average.b > 0.98f);
+        CHECK_THAT(average.a, Catch::Matchers::WithinAbs(0.5f, 0.01f));
+    }
+
+    SECTION("Alpha coverage keeps fully transparent mips finite")
+    {
+        PixelData source(2, 2, 1, TextureFormat::RGBA32F);
+        source.AllocateInternalBuffer();
+        for (uint32_t y = 0; y < source.GetHeight(); ++y)
+        {
+            for (uint32_t x = 0; x < source.GetWidth(); ++x)
+                source.SetColorAt(x, y, glm::vec4(1.0f, 0.0f, 1.0f, 0.0f));
+        }
+
+        TextureMipGenerationOptions options;
+        options.Filter = TextureMipFilter::Box;
+        options.PreserveAlphaCoverage = true;
+        Vector<Ref<PixelData>> mips;
+        REQUIRE(PixelUtils::GenerateMipChain(source, options, mips));
+        REQUIRE(mips.size() == 2);
+
+        const glm::vec4 average = mips[1]->GetColorAt(0, 0);
+        CHECK(std::isfinite(average.r));
+        CHECK(std::isfinite(average.g));
+        CHECK(std::isfinite(average.b));
+        CHECK(std::isfinite(average.a));
+        CHECK(average == glm::vec4(0.0f));
     }
 
     SECTION("Normal-map mips are renormalized")

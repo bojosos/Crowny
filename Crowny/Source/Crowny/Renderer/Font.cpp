@@ -20,11 +20,34 @@ namespace Crowny
     {
         constexpr size_t MAX_FALLBACK_SEARCH_FONTS = 64;
 
-        Font::GlyphLookup FindGlyphInFallbackGraph(const Font& font, char32_t codePoint, UnorderedSet<const Font*>& visited, size_t& remainingFonts)
+        class FallbackGlyphTraversal
         {
-            if (remainingFonts == 0 || !visited.insert(&font).second)
+        public:
+            void Reset() noexcept { m_VisitedCount = 0; }
+
+            bool TryVisit(const Font* font) noexcept
+            {
+                for (size_t index = 0; index < m_VisitedCount; index++)
+                {
+                    if (m_Visited[index] == font)
+                        return false;
+                }
+                if (m_VisitedCount == m_Visited.size())
+                    return false;
+
+                m_Visited[m_VisitedCount++] = font;
+                return true;
+            }
+
+        private:
+            Array<const Font*, MAX_FALLBACK_SEARCH_FONTS> m_Visited;
+            size_t m_VisitedCount = 0;
+        };
+
+        Font::GlyphLookup FindGlyphInFallbackGraph(const Font& font, char32_t codePoint, FallbackGlyphTraversal& traversal)
+        {
+            if (!traversal.TryVisit(&font))
                 return {};
-            remainingFonts--;
 
             if (font.IsValid())
             {
@@ -36,7 +59,7 @@ namespace Crowny
             {
                 if (fallback)
                 {
-                    if (Font::GlyphLookup lookup = FindGlyphInFallbackGraph(*fallback, codePoint, visited, remainingFonts))
+                    if (Font::GlyphLookup lookup = FindGlyphInFallbackGraph(*fallback, codePoint, traversal))
                         return lookup;
                 }
             }
@@ -122,7 +145,8 @@ namespace Crowny
 
     Font::GlyphLookup Font::ResolveGlyph(char32_t codePoint, bool useFallbacks) const
     {
-        auto find = [this, useFallbacks](char32_t candidate) {
+        FallbackGlyphTraversal traversal;
+        auto find = [this, useFallbacks, &traversal](char32_t candidate) {
             if (!useFallbacks)
             {
                 if (!IsValid())
@@ -131,9 +155,8 @@ namespace Crowny
                 return glyph != nullptr ? GlyphLookup{ this, glyph, candidate } : GlyphLookup{};
             }
 
-            UnorderedSet<const Font*> visited;
-            size_t remainingFonts = MAX_FALLBACK_SEARCH_FONTS;
-            return FindGlyphInFallbackGraph(*this, candidate, visited, remainingFonts);
+            traversal.Reset();
+            return FindGlyphInFallbackGraph(*this, candidate, traversal);
         };
 
         if (GlyphLookup lookup = find(codePoint))

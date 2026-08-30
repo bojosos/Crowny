@@ -2,6 +2,7 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/FontImporter.h"
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/FontManager.h"
 
@@ -92,6 +93,34 @@ TEST_CASE("Font fallback chains resolve nested source font identities", "[Render
     CHECK(primary->FindFallbackFontUUID(second.Get()) == second.GetUUID());
     CHECK(primary->FindFallbackFontUUID(primary.Get()).Empty());
     CHECK_FALSE(second->AddFallbackFont(primary));
+}
+
+TEST_CASE("Font fallback glyph lookup does not allocate after setup", "[Renderer][Font][Fallback][Memory]")
+{
+    AssetManager assetManager;
+    const AssetHandle<Font> primary = CreateFontHandle(assetManager);
+    const AssetHandle<Font> first = CreateFontHandle(assetManager);
+    const AssetHandle<Font> second = CreateFontHandle(assetManager);
+
+    REQUIRE(primary->AddFallbackFont(first));
+    REQUIRE(first->AddFallbackFont(second));
+    CHECK_FALSE(primary->ResolveGlyph(U'\u0416'));
+
+    constexpr Array<uint32_t, 3> lookupCounts = { 1, 1'000, 10'000 };
+    for (const uint32_t lookupCount : lookupCounts)
+    {
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        uint32_t unresolvedCount = 0;
+        for (uint32_t lookup = 0; lookup < lookupCount; lookup++)
+            unresolvedCount += primary->ResolveGlyph(U'\u0416') ? 0u : 1u;
+        const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+        const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+        INFO("Lookup count: " << lookupCount);
+        CHECK(unresolvedCount == lookupCount);
+        CHECK(delta.AllocationCount == 0);
+        CHECK(delta.RequestedBytes == 0);
+    }
 }
 
 TEST_CASE("Font manager provides exact lookup and an optional default fallback", "[Renderer][Font][Manager]")
