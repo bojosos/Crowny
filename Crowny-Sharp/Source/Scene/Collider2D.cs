@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Crowny
@@ -45,20 +44,20 @@ namespace Crowny
     {
         public bool IsTrigger
         {
-            get { return Internal_IsTrigger(m_InternalPtr); }
-            set { Internal_SetTrigger(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.Collider2DGetIsTrigger(EntityId); }
+            set { ManagedRuntimeContext.Collider2DSetIsTrigger(EntityId, value); }
         }
 
         public Vector2 Offset
         {
-            get { Internal_GetOffset(m_InternalPtr, out Vector2 value); return value; }
-            set { Internal_SetOffset(m_InternalPtr, ref value); }
+            get { return ManagedRuntimeContext.Collider2DGetOffset(EntityId); }
+            set { ManagedRuntimeContext.Collider2DSetOffset(EntityId, value); }
         }
 
         public PhysicsMaterial2D Material
         {
-            get { return Internal_GetMaterial(m_InternalPtr); }
-            set { Internal_SetMaterial(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.CreateAsset<PhysicsMaterial2D>(ManagedRuntimeContext.Collider2DGetMaterial(EntityId)); }
+            set { ManagedRuntimeContext.Collider2DSetMaterial(EntityId, value != null ? value.uuid : UUID.Empty); }
         }
 
         [Obsolete("Use IsTrigger instead.")]
@@ -67,12 +66,6 @@ namespace Crowny
         [Obsolete("Use Offset instead.")]
         public Vector2 offset { get { return Offset; } set { Offset = value; } }
 
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_IsTrigger(IntPtr collider);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetTrigger(IntPtr collider, bool trigger);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetOffset(IntPtr collider, out Vector2 offset);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetOffset(IntPtr collider, ref Vector2 offset);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsMaterial2D Internal_GetMaterial(IntPtr collider);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetMaterial(IntPtr collider, PhysicsMaterial2D material);
     }
 
     /// <summary>A rectangular 2D collision shape.</summary>
@@ -80,15 +73,13 @@ namespace Crowny
     {
         public Vector2 Size
         {
-            get { Internal_GetSize(m_InternalPtr, out Vector2 value); return value; }
-            set { Internal_SetSize(m_InternalPtr, ref value); }
+            get { return ManagedRuntimeContext.BoxCollider2DGetSize(EntityId); }
+            set { ManagedRuntimeContext.BoxCollider2DSetSize(EntityId, value); }
         }
 
         [Obsolete("Use Size instead.")]
         public Vector2 size { get { return Size; } set { Size = value; } }
 
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetSize(IntPtr collider, out Vector2 size);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetSize(IntPtr collider, ref Vector2 size);
     }
 
     /// <summary>A circular 2D collision shape.</summary>
@@ -96,14 +87,12 @@ namespace Crowny
     {
         public float Radius
         {
-            get { return Internal_GetRadius(m_InternalPtr); }
-            set { Internal_SetRadius(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.CircleCollider2DGetRadius(EntityId); }
+            set { ManagedRuntimeContext.CircleCollider2DSetRadius(EntityId, value); }
         }
 
         [Obsolete("Use Radius instead.")]
         public float radius { get { return Radius; } set { Radius = value; } }
 
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetRadius(IntPtr collider);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRadius(IntPtr collider, float radius);
     }
 }

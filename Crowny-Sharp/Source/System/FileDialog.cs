@@ -30,7 +30,7 @@ namespace Crowny
         /// <returns>Returns the selected path.</returns>
         public static string OpenFileDialog(string title, string directory, string extension)
         {
-            return Internal_OpenFileDialog(title, directory, extension);
+            return ManagedRuntimeContext.FileDialogOpenFile(title, directory, extension);
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace Crowny
         /// <returns>Returns the selected path.</returns>
         public static string OpenFolderDialog(string title, string directory)
         {
-            return Internal_OpenFolderDialog(title, directory);
+            return ManagedRuntimeContext.FileDialogOpenFolder(title, directory);
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Crowny
         /// <returns>Returns the selected path.</returns>
         public static string SaveFileDialog(string title, string directory, string defaultName, string extension)
         {
-            return Internal_SaveFileDialog(title, directory, defaultName, extension);
+            return ManagedRuntimeContext.FileDialogSaveFile(title, directory, defaultName, extension);
         }
 
         /// <summary>
@@ -66,16 +66,8 @@ namespace Crowny
         /// <returns>Returns the selected path.</returns>
         public static string SaveFolderDialog(string title, string directory, string defaultName)
         {
-            return Internal_SaveFolderDialog(title, directory, defaultName);
+            return ManagedRuntimeContext.FileDialogSaveFolder(title, directory, defaultName);
         }
 
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern string Internal_OpenFileDialog(string title, string directory, string extension);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern string Internal_OpenFolderDialog(string title, string directory);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern string Internal_SaveFileDialog(string title, string directory, string defaultName, string extension);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern string Internal_SaveFolderDialog(string title, string directory, string defualtName);
     }
 }

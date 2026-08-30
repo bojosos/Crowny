@@ -49,8 +49,6 @@ namespace Crowny
     /// <summary>A 2D rigid body controlled by the active physics backend.</summary>
     public sealed class Rigidbody2D : Component
     {
-        private UUID EntityId => entity.uuid;
-
         public float Mass { get { return ManagedRuntimeContext.Rigidbody2DGetMass(EntityId); } set { ManagedRuntimeContext.Rigidbody2DSetMass(EntityId, value); } }
         public BodyType BodyType { get { return (BodyType)ManagedRuntimeContext.Rigidbody2DGetBodyType(EntityId); } set { ManagedRuntimeContext.Rigidbody2DSetBodyType(EntityId, (int)value); } }
         public RigidbodySleepMode SleepMode { get { return (RigidbodySleepMode)ManagedRuntimeContext.Rigidbody2DGetSleepMode(EntityId); } set { ManagedRuntimeContext.Rigidbody2DSetSleepMode(EntityId, (int)value); } }

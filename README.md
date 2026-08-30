@@ -7,7 +7,7 @@ GOAL: Run the same code I wrote in a Minecraft clone I made in Unity with Crowny
 
 ### Features:
   * Editor
-  * C# scripting using Mono
+  * C# scripting through one shared managed API, with Mono and opt-in desktop CoreCLR backends
   * PBR
   * OpenGL, Vulkan
   * Windows, Linux

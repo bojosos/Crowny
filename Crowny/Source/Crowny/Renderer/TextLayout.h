@@ -3,6 +3,7 @@
 #include "Crowny/Memory/FrameVector.h"
 
 #include <glm/glm.hpp>
+#include <span>
 
 namespace msdf_atlas
 {
@@ -157,5 +158,9 @@ namespace Crowny
         static TextLayoutResult BuildPrepared(const TextComponent& component, const TextLayoutFontData& fontData, TextLayoutScratch& scratch);
         // Returns the closest visible caret in layout space, clamped to the laid-out text.
         static TextHitTestResult HitTest(const TextLayoutResult& layout, const glm::vec2& position);
+        // Synchronous query helpers reuse one scratch buffer per thread and return no views into it.
+        static TextHitTestResult HitTest(const TextComponent& component, const Font& font, const glm::vec2& position);
+        static TextHitTestResult HitTestPrepared(const TextComponent& component, const TextLayoutFontData& fontData,
+                                                 std::span<const TextLayoutToken> tokens, size_t sourceByteLength, const glm::vec2& position);
     };
 } // namespace Crowny

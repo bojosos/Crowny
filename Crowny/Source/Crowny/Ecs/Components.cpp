@@ -1328,37 +1328,7 @@ namespace Crowny
                 break;
             currentClass = baseClass;
         }
-        // Could add and call an OnAwake method like in Unity here
-
-        MonoClass* requireClass = ScriptInfoManager::Get().GetBuiltinClasses().RequireComponentAttribute;
-        MonoObject* requireComponent = m_ObjectInfo->m_TypeInfo->GetAttribute(requireClass);
-        if (requireComponent != nullptr)
-        {
-            MonoField* field = requireClass->GetField("components");
-            MonoObject* components = nullptr;
-            components = field->GetBoxed(requireComponent);
-            if (components != nullptr)
-            {
-                MonoClass* listClass = field->GetType();
-                MonoProperty* countProp = listClass->GetProperty("Count");
-                MonoObject* lengthObj = countProp->Get(components);
-                const uint32_t length = *(int32_t*)MonoUtils::Unbox(lengthObj);
-                MonoProperty* itemProp = listClass->GetProperty("Item");
-                for (uint32_t i = 0; i < length; i++)
-                {
-                    MonoReflectionType* reflType = (MonoReflectionType*)itemProp->GetIndexed(components, i);
-                    ComponentInfo* componentInfo = ScriptInfoManager::Get().GetComponentInfo(reflType);
-                    if (componentInfo != nullptr)
-                    {
-                        if (!componentInfo->HasCallback(entityBehaviour->GetNativeEntity()))
-                            componentInfo->AddCallback(entityBehaviour->GetNativeEntity());
-                    }
-                    else
-                        CW_ENGINE_WARN("Could not find component class {0} used in RequireComponent for class {1}",
-                                       MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
-                }
-            }
-        }
+        // Shared managed lifecycle policy runs after construction in both backends.
     }
 
     void MonoScript::SetClassName(const String& className)

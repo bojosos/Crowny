@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Backends/Mono/MonoObjectIdentity.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
@@ -17,6 +18,8 @@ namespace Crowny
         m_TypeName = script.GetTypeName();
         m_ScriptInstanceId = script.InstanceId;
         m_GCHandle = MonoUtils::NewGCHandle(instance, false);
+        if (!MonoObjectIdentity::SetComponentEntity(instance, entity.GetUuid()))
+            CW_ENGINE_ERROR("Could not bind the managed script entity identity.");
         script.OnInitialize(this);
     }
 
@@ -78,6 +81,8 @@ namespace Crowny
         }
 
         m_GCHandle = MonoUtils::NewGCHandle(instance, false);
+        if (!MonoObjectIdentity::SetComponentEntity(instance, m_Entity.GetUuid()))
+            CW_ENGINE_ERROR("Could not restore the managed script entity identity.");
         return instance;
     }
 

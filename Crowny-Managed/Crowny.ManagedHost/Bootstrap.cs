@@ -12,7 +12,6 @@ public static unsafe class Bootstrap
     private static readonly ManagedProgram Program = new();
     private static readonly Queue<object> Diagnostics = new();
     private static readonly object DiagnosticLock = new();
-    private static readonly byte[] ManagedLogCode = "managed.log"u8.ToArray();
     private static NativeHostApi _host;
     private static bool _initialized;
 
@@ -33,6 +32,7 @@ public static unsafe class Bootstrap
             CreateScript = &CreateScript,
             DestroyScript = &DestroyScript,
             Dispatch = &Dispatch,
+            NotifySceneEvent = &NotifySceneEvent,
             CaptureState = &CaptureState,
             ApplyState = &ApplyState,
             CollectDiagnostics = &CollectDiagnostics
@@ -53,7 +53,6 @@ public static unsafe class Bootstrap
         try
         {
             _host = *host;
-            ManagedRuntimeContext.SetLogHandler(ForwardLog);
             ManagedRuntimeContext.SetNativeHostApi(*(ManagedNativeHostApi*)host);
             ManagedRuntimeContext.SetScriptResolver(Program.ResolveScriptComponent);
             ManagedAotRoots.Preserve();
@@ -62,7 +61,6 @@ public static unsafe class Bootstrap
         }
         catch (Exception error)
         {
-            ManagedRuntimeContext.SetLogHandler(null);
             ManagedRuntimeContext.SetNativeHostApi(default);
             ManagedRuntimeContext.SetScriptResolver(null);
             _host = default;
@@ -83,7 +81,6 @@ public static unsafe class Bootstrap
             // Native shutdown cannot propagate a managed exception.
         }
         _initialized = false;
-        ManagedRuntimeContext.SetLogHandler(null);
         ManagedRuntimeContext.SetNativeHostApi(default);
         ManagedRuntimeContext.SetScriptResolver(null);
         _host = default;
@@ -208,6 +205,27 @@ public static unsafe class Bootstrap
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static NativeStatus NotifySceneEvent(uint eventType, NativeUuid scene, uint executionState)
+    {
+        if (!_initialized)
+            return NativeStatus.NotInitialized;
+        if (eventType > (uint)SceneLifecycleEventType.ExecutionStateChanged ||
+            executionState > (uint)SceneExecutionState.Simulate)
+            return NativeStatus.InvalidArgument;
+        try
+        {
+            SceneManager.NotifySceneEvent((SceneLifecycleEventType)eventType,
+                                          ManagedRuntimeContext.FromGuid(Decode(scene)),
+                                          (SceneExecutionState)executionState);
+            return NativeStatus.Ok;
+        }
+        catch (Exception error)
+        {
+            return Record(error);
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static NativeStatus CaptureState(ulong instance, NativeBlobWriter* output)
     {
         if (!_initialized)
@@ -325,25 +343,5 @@ public static unsafe class Bootstrap
     }
 
     private sealed class BlobWriteException(string message) : Exception(message);
-
-    private static void ForwardLog(int severity, string value)
-    {
-        try
-        {
-            if (_host.Log == null)
-                return;
-            byte[] message = Encoding.UTF8.GetBytes(value ?? string.Empty);
-            fixed (byte* codeBytes = ManagedLogCode)
-            fixed (byte* messageBytes = message)
-            {
-                _host.Log(_host.Context, (uint)severity, new NativeStringView(codeBytes, (uint)ManagedLogCode.Length),
-                          new NativeStringView(messageBytes, (uint)message.Length), new NativeStringView(null, 0));
-            }
-        }
-        catch
-        {
-            // Logging must not throw back into gameplay code.
-        }
-    }
 
 }

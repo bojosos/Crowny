@@ -16,12 +16,6 @@ namespace Crowny
 
     protected:
         // Shared internal calls registered on the base Collider2D C# class
-        static bool Internal_IsTrigger(ScriptCollider2DBase* thisPtr);
-        static void Internal_SetTrigger(ScriptCollider2DBase* thisPtr, bool trigger);
-        static void Internal_GetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset);
-        static void Internal_SetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset);
-        static MonoObject* Internal_GetMaterial(ScriptCollider2DBase* thisPtr);
-        static void Internal_SetMaterial(ScriptCollider2DBase* thisPtr, MonoObject* material);
     };
 
     class ScriptCollider2D : public TScriptComponent<ScriptCollider2D, Collider2D, ScriptCollider2DBase>
@@ -45,8 +39,6 @@ namespace Crowny
         Entity GetEntity() override { return GetNativeEntity(); }
 
     private:
-        static void Internal_GetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* size);
-        static void Internal_SetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* size);
     };
 
     class ScriptCircleCollider2D : public TScriptComponent<ScriptCircleCollider2D, CircleCollider2DComponent, ScriptCollider2DBase>
@@ -60,7 +52,5 @@ namespace Crowny
         Entity GetEntity() override { return GetNativeEntity(); }
 
     private:
-        static float Internal_GetRadius(ScriptCircleCollider2D* thisPtr);
-        static void Internal_SetRadius(ScriptCircleCollider2D* thisPtr, float radius);
     };
 } // namespace Crowny

@@ -11,16 +11,13 @@ namespace Crowny
 
     ScriptAssetBase::~ScriptAssetBase() { CW_ENGINE_ASSERT(m_GCHandle == 0, "ScriptAssetBase was not properly disposed of!"); }
 
-    MonoObject* ScriptAssetBase::GetManagedInstance() const
-    {
-        return m_GCHandle != 0 ? MonoUtils::GetObjectFromGCHandle(m_GCHandle) : nullptr;
-    }
+    MonoObject* ScriptAssetBase::GetManagedInstance() const { return m_GCHandle != 0 ? MonoUtils::GetObjectFromGCHandle(m_GCHandle) : nullptr; }
 
     void ScriptAssetBase::SetManagedInstance(MonoObject* instance)
     {
         CW_ENGINE_ASSERT(m_GCHandle == 0 && "Attempting to set a new managed instance without freeing the old one!");
-        m_GCHandle = m_Ownership == ScriptAssetOwnership::ManagedOwned ? MonoUtils::NewWeakGCHandle(instance, true)
-                                                                      : MonoUtils::NewGCHandle(instance, false);
+        m_GCHandle =
+          m_Ownership == ScriptAssetOwnership::ManagedOwned ? MonoUtils::NewWeakGCHandle(instance, true) : MonoUtils::NewGCHandle(instance, false);
     }
 
     void ScriptAssetBase::SetOwnership(ScriptAssetOwnership ownership)
@@ -29,9 +26,9 @@ namespace Crowny
             return;
 
         MonoObject* const instance = GetManagedInstance();
-        const uint32_t replacementHandle = instance == nullptr ? 0
-          : ownership == ScriptAssetOwnership::ManagedOwned   ? MonoUtils::NewWeakGCHandle(instance, true)
-                                                               : MonoUtils::NewGCHandle(instance, false);
+        const uint32_t replacementHandle = instance == nullptr                               ? 0
+                                           : ownership == ScriptAssetOwnership::ManagedOwned ? MonoUtils::NewWeakGCHandle(instance, true)
+                                                                                             : MonoUtils::NewGCHandle(instance, false);
         if (m_GCHandle != 0)
             MonoUtils::FreeGCHandle(m_GCHandle);
         m_Ownership = ownership;
@@ -66,13 +63,5 @@ namespace Crowny
 
     ScriptAsset::ScriptAsset(MonoObject* instance) : ScriptObject(instance) {}
 
-    void ScriptAsset::InitRuntimeData()
-    {
-        MetaData.ScriptClass->AddInternalCall("Internal_GetName", (void*)&Internal_GetName);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetUUID", (void*)&Internal_GetUUID);
-    }
-
-    MonoString* ScriptAsset::Internal_GetName(const ScriptAssetBase* thisPtr) { return MonoUtils::ToMonoString(thisPtr->GetGenericHandle()->GetName()); }
-
-    void ScriptAsset::Internal_GetUUID(const ScriptAssetBase* thisPtr, UUID* outUuid) { *outUuid = thisPtr->GetGenericHandle().GetUUID(); }
+    void ScriptAsset::InitRuntimeData() {}
 } // namespace Crowny

@@ -1,7 +1,9 @@
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Log.h"
+#include "Crowny/Scripting/Backends/Mono/MonoObjectIdentity.h"
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
+#include "Crowny/Scripting/Mono/MonoField.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
 #include "ManagedTestPaths.h"
@@ -146,6 +148,41 @@ TEST_CASE("Mono::Utils::GCHandles", "[Mono]")
 
         MonoUtils::FreeGCHandle(handle);
     }
+}
+
+TEST_CASE("Mono wrappers bind stable managed identities", "[Mono][Scripting][Identity][.ProcessIsolated]")
+{
+    AttachThread();
+
+    Crowny::MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+    if (assembly == nullptr)
+    {
+        const Path assemblyPath = Crowny::Test::ResolveManagedAssembly("CrownySharp.dll", "Crowny-Sharp/CrownySharp.dll");
+        REQUIRE(fs::is_regular_file(assemblyPath));
+        assembly = &MonoManager::Get().LoadAssembly(assemblyPath, CROWNY_ASSEMBLY);
+    }
+
+    const UUID expected(0x10203040u, 0x50607080u, 0x90a0b0c0u, 0xd0e0f000u);
+    const auto verify = [&](StringView typeName, StringView fieldName, const auto& bind) {
+        const String managedTypeName(typeName);
+        Crowny::MonoClass* type = assembly->GetClass(CROWNY_NS, managedTypeName);
+        REQUIRE(type != nullptr);
+        MonoObject* instance = type->CreateInstance(false);
+        REQUIRE(instance != nullptr);
+        REQUIRE(bind(instance, expected));
+        const String declaringTypeName = fieldName == "m_ManagedEntityId" ? "Component" : managedTypeName;
+        Crowny::MonoClass* declaringType = assembly->GetClass(CROWNY_NS, declaringTypeName);
+        REQUIRE(declaringType != nullptr);
+        Crowny::MonoField* field = declaringType->GetField(fieldName);
+        REQUIRE(field != nullptr);
+        UUID actual;
+        field->Get(instance, &actual);
+        CHECK(actual == expected);
+    };
+
+    verify("Entity", "m_ManagedUuid", MonoObjectIdentity::SetEntity);
+    verify("AnimationComponent", "m_ManagedEntityId", MonoObjectIdentity::SetComponentEntity);
+    verify("Material", "m_ManagedUuid", MonoObjectIdentity::SetAsset);
 }
 
 TEST_CASE("Managed animation API exposes clip identity and playback controls", "[Mono][Animation][.ProcessIsolated]")

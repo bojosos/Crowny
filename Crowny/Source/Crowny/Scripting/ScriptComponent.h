@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Scripting/Backends/Mono/MonoObjectIdentity.h"
 #include "Crowny/Scripting/ScriptObject.h"
 #include "Crowny/Scripting/ScriptSceneObject.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
@@ -33,6 +34,8 @@ namespace Crowny
         {
             this->SetManagedInstance(instance);
             this->SetNativeEntity(entity);
+            if (!MonoObjectIdentity::SetComponentEntity(instance, entity.GetUuid()))
+                CW_ENGINE_ERROR("Could not bind the managed component entity identity.");
         }
 
         virtual ~TScriptComponent() = default;
@@ -41,6 +44,8 @@ namespace Crowny
         {
             MonoObject* managedInstance = ScriptClass::MetaData.ScriptClass->CreateInstance(construct);
             BaseType::SetManagedInstance(managedInstance);
+            if (!MonoObjectIdentity::SetComponentEntity(managedInstance, this->GetNativeEntity().GetUuid()))
+                CW_ENGINE_ERROR("Could not restore the managed component entity identity.");
             return managedInstance;
         }
 
@@ -65,8 +70,6 @@ namespace Crowny
 
     private:
         ScriptComponent(MonoObject* instance);
-
-        static MonoObject* Internal_GetEntity(ScriptComponentBase* nativeInstance);
     };
 
 } // namespace Crowny

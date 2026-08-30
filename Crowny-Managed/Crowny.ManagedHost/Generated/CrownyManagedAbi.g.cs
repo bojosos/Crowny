@@ -129,6 +129,14 @@ namespace Crowny.ManagedHost.Interop
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct NativePhysicsFilter3D
+    {
+        public uint Layer;
+        public uint Mask;
+        public int Group;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct NativeBlobWriter
     {
         public uint Size;
@@ -210,13 +218,13 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, uint, uint, byte*, NativeStatus> InputGetGamepadButtonDown;
         public delegate* unmanaged[Cdecl]<void*, uint, uint, byte*, NativeStatus> InputGetGamepadButtonUp;
         public delegate* unmanaged[Cdecl]<void*, uint, uint, float*, NativeStatus> InputGetGamepadAxis;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputEnableActionMap;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputDisableActionMap;
         public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputGetAction;
         public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputGetActionDown;
         public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputGetActionUp;
         public delegate* unmanaged[Cdecl]<void*, NativeStringView, float*, NativeStatus> InputGetAxis;
         public delegate* unmanaged[Cdecl]<void*, NativeStringView, NativeVec2*, NativeStatus> InputGetActionVector;
-        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputEnableActionMap;
-        public delegate* unmanaged[Cdecl]<void*, NativeStringView, byte*, NativeStatus> InputDisableActionMap;
         public delegate* unmanaged[Cdecl]<void*, NativeStatus> InputClearActionRebinds;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetDeltaTime;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetTime;
@@ -283,6 +291,337 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourcePlay;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourcePause;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioSourceStop;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView*, NativeStatus> AssetGetName;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AssetAcquire;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AssetRelease;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, NativeUuid*, NativeStatus> AssetDatabaseLoad;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> AssetDatabaseLoadFromUuid;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView*, NativeStatus> AssetDatabaseGetPath;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AssetDatabaseIsValid;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AudioClipGetBitDepth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AudioClipGetChannels;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AudioClipGetFrequency;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AudioClipGetSamples;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AudioClipGetLength;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AudioClipGetReadMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AudioClipGetFormat;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AudioClipGetIs3D;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextureGetWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextureGetHeight;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioMixerSetActive;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, float*, NativeStatus> AudioMixerGetBusVolume;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, float, NativeStatus> AudioMixerSetBusVolume;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, byte*, NativeStatus> AudioMixerIsBusMuted;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, byte, NativeStatus> AudioMixerSetBusMuted;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, float, NativeStatus> MaterialSetFloat;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeVec2*, NativeStatus> MaterialSetVector2;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, int, NativeStatus> MaterialSetInt;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeVec4*, NativeStatus> MaterialSetColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeVec3*, NativeStatus> MaterialSetVector3;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeMatrix4*, NativeStatus> MaterialSetMatrix;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeUuid, NativeStatus> MaterialSetTexture;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> MaterialHasAlphaModeOverride;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> MaterialGetAlphaMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> MaterialSetAlphaMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> MaterialClearAlphaModeOverride;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> PhysicsMaterial2DCreate;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> PhysicsMaterial3DCreate;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, int, NativeStatus> Rigidbody3DAddForce;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeVec3*, int, NativeStatus> Rigidbody3DAddForceAt;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, int, NativeStatus> Rigidbody3DAddTorque;
+        public delegate* unmanaged[Cdecl]<void*, NativeMutableBlob, NativeBlob, int, int, ulong*, NativeStatus> CompressionCompress;
+        public delegate* unmanaged[Cdecl]<void*, NativeMutableBlob, ulong, NativeBlob, ulong, int, ulong*, NativeStatus> CompressionDecompress;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, NativeStringView, NativeStringView, NativeStringView*, NativeStatus> FileDialogOpenFile;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, NativeStringView, NativeStringView*, NativeStatus> FileDialogOpenFolder;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, NativeStringView, NativeStringView, NativeStringView, NativeStringView*, NativeStatus> FileDialogSaveFile;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, NativeStringView, NativeStringView, NativeStringView*, NativeStatus> FileDialogSaveFolder;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, byte*, NativeStatus> FontHasCharacter;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> FontGetIsValid;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetGlyphCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetTabWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetAtlasWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetAtlasHeight;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> FontGetAtlasPixelRange;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetFallbackCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, byte*, NativeStatus> FontHasGlyph;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, byte, NativeFontCharacterInfo*, NativeStatus> FontGetCharacterInfo;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeUuid*, NativeStatus> FontGetFallback;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, byte*, NativeStatus> FontAddFallback;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> FontClearFallbacks;
+        public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> FontGetSystemFontCount;
+        public delegate* unmanaged[Cdecl]<void*, uint, NativeStringView*, NativeStatus> FontGetSystemFontPath;
+        public delegate* unmanaged[Cdecl]<void*, uint, NativeStringView*, NativeStatus> FontGetSystemFontName;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AnimationClipGetLength;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AnimationClipGetSampleRate;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AnimationClipGetIsAdditive;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AnimationComponentPlay;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AnimationComponentPause;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AnimationComponentStop;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, uint*, NativeStatus> TextHitTest;
+        public delegate* unmanaged[Cdecl]<void*, int, NativeStringView, NativeStatus> DebugWriteLog;
+        public delegate* unmanaged[Cdecl]<void*, int, NativeStatus> RandomInitialize;
+        public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> RandomGetValue;
+        public delegate* unmanaged[Cdecl]<void*, float, float, float*, NativeStatus> RandomGetRange;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> RandomGetInsideUnitCircle;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec3*, NativeStatus> RandomGetInsideUnitSphere;
+        public delegate* unmanaged[Cdecl]<void*, float, float, float*, NativeStatus> NoiseGetPerlin2D;
+        public delegate* unmanaged[Cdecl]<void*, int, NativeStringView*, NativeStatus> LayerMaskGetName;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView, int*, NativeStatus> LayerMaskGetLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> SceneGetActive;
+        public delegate* unmanaged[Cdecl]<void*, int*, NativeStatus> SceneGetExecutionState;
+        public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> SceneGetLoadedCount;
+        public delegate* unmanaged[Cdecl]<void*, uint, NativeUuid*, NativeStatus> SceneGetLoaded;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, int*, NativeStatus> SceneLoad;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SceneUnload;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SceneReload;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SceneSetActive;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CameraGetFieldOfView;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CameraSetFieldOfView;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> CameraGetProjection;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> CameraSetProjection;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CameraGetNearClipPlane;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CameraSetNearClipPlane;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CameraGetFarClipPlane;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CameraSetFarClipPlane;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CameraGetOrthographicSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CameraSetOrthographicSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CameraGetAspectRatio;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CameraSetAspectRatio;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> CameraGetBackgroundColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> CameraSetBackgroundColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> CameraGetViewportRectangle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> CameraSetViewportRectangle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> CameraGetHdr;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> CameraSetHdr;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> CameraGetMsaa;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> CameraSetMsaa;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> CameraGetOcclusionCulling;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> CameraSetOcclusionCulling;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> SpriteRendererGetTexture;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SpriteRendererSetTexture;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteRendererGetColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteRendererSetColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SpriteRendererGetSortingLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> SpriteRendererSetSortingLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SpriteRendererGetOrderInLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> SpriteRendererSetOrderInLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> LightGetType;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> LightSetType;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> LightGetColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> LightSetColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetIntensity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetIntensity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetRange;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetRange;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetSpotInnerAngle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetSpotInnerAngle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetSpotOuterAngle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetSpotOuterAngle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetSourceRadius;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetSourceRadius;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> LightGetUseColorTemperature;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> LightSetUseColorTemperature;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetTemperature;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetTemperature;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> LightGetVisibilityLayers;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> LightSetVisibilityLayers;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> LightGetEnabled;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> LightSetEnabled;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> LightGetAffectDiffuse;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> LightSetAffectDiffuse;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> LightGetAffectSpecular;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> LightSetAffectSpecular;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> LightGetVolumetric;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> LightSetVolumetric;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> LightGetShadows;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> LightSetShadows;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetShadowBias;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetShadowBias;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetShadowNormalBias;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetShadowNormalBias;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetShadowNearPlane;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetShadowNearPlane;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> LightGetShadowImportance;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> LightSetShadowImportance;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> LightGetShadowResolution;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> LightSetShadowResolution;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> LightGetCacheStaticShadowCasters;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> LightSetCacheStaticShadowCasters;
+        public delegate* unmanaged[Cdecl]<void*, int*, NativeStatus> Physics2DGetBackend;
+        public delegate* unmanaged[Cdecl]<void*, byte*, NativeStatus> Physics2DGetIsSimulating;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> Physics2DGetGravity;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> Physics2DSetGravity;
+        public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> Physics2DGetVelocityIterations;
+        public delegate* unmanaged[Cdecl]<void*, uint, NativeStatus> Physics2DSetVelocityIterations;
+        public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> Physics2DGetPositionIterations;
+        public delegate* unmanaged[Cdecl]<void*, uint, NativeStatus> Physics2DSetPositionIterations;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> Physics2DGetDefaultMaterial;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> Physics2DSetDefaultMaterial;
+        public delegate* unmanaged[Cdecl]<void*, int, NativeStringView*, NativeStatus> Physics2DGetLayerName;
+        public delegate* unmanaged[Cdecl]<void*, int, NativeStringView, NativeStatus> Physics2DSetLayerName;
+        public delegate* unmanaged[Cdecl]<void*, int, uint*, NativeStatus> Physics2DGetLayerMask;
+        public delegate* unmanaged[Cdecl]<void*, int, uint, NativeStatus> Physics2DSetLayerMask;
+        public delegate* unmanaged[Cdecl]<void*, uint, NativeUuid*, NativeStatus> Physics2DResolveEntity;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeVec2*, float, uint, void*, uint, uint*, NativeStatus> Physics2DRaycast;
+        public delegate* unmanaged[Cdecl]<void*, int*, NativeStatus> Physics3DGetBackend;
+        public delegate* unmanaged[Cdecl]<void*, NativeStringView*, NativeStatus> Physics3DGetBackendName;
+        public delegate* unmanaged[Cdecl]<void*, byte*, NativeStatus> Physics3DGetIsSimulating;
+        public delegate* unmanaged[Cdecl]<void*, ulong*, NativeStatus> Physics3DGetCapabilities;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec3*, NativeStatus> Physics3DGetGravity;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec3*, NativeStatus> Physics3DSetGravity;
+        public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> Physics3DGetSubsteps;
+        public delegate* unmanaged[Cdecl]<void*, uint, NativeStatus> Physics3DSetSubsteps;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> Physics3DGetDefaultMaterial;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> Physics3DSetDefaultMaterial;
+        public delegate* unmanaged[Cdecl]<void*, int, byte*, NativeStatus> Physics3DTrySetBackend;
+        public delegate* unmanaged[Cdecl]<void*, int, byte*, NativeStatus> Physics3DIsBackendAvailable;
+        public delegate* unmanaged[Cdecl]<void*, ulong, NativeUuid*, NativeStatus> Physics3DResolveEntity;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec3*, NativeVec3*, float, uint, byte, ulong, void*, uint, uint*, NativeStatus> Physics3DRaycast;
+        public delegate* unmanaged[Cdecl]<void*, int, NativeVec3*, float, float, NativeVec3*, NativeQuaternion*, NativeVec3*, float, uint, byte, ulong, void*, uint, uint*, NativeStatus> Physics3DSweep;
+        public delegate* unmanaged[Cdecl]<void*, int, NativeVec3*, float, float, NativeVec3*, NativeQuaternion*, uint, byte, ulong, void*, uint, uint*, NativeStatus> Physics3DOverlap;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> MeshGetVertexCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> MeshGetIndexCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, uint*, NativeStatus> MeshCopyVertices;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, NativeStatus> MeshSetVertices;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, uint*, NativeStatus> MeshCopyNormals;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, NativeStatus> MeshSetNormals;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, void*, uint, uint*, NativeStatus> MeshCopyUvs;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, void*, uint, NativeStatus> MeshSetUvs;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, uint*, NativeStatus> MeshCopyColors;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, NativeStatus> MeshSetColors;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, uint*, NativeStatus> MeshCopyIndices;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, NativeStatus> MeshSetIndices;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> MeshRecalculateBounds;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> MeshRecalculateNormals;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> MeshRecalculateTangents;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> MeshUploadData;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> MeshClear;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> MeshGetBoundsMin;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> MeshGetBoundsMax;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, void*, uint, NativeStatus> MeshSetVertexBufferParams;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, uint, uint, NativeStatus> MeshSetVertexBufferData;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, void*, uint, uint, uint*, NativeStatus> MeshGetVertexBufferData;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> MeshGetVertexStride;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> MeshGetVertexAttributeCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, byte*, NativeStatus> MeshHasVertexAttribute;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, void*, NativeStatus> MeshGetVertexAttribute;
+        public delegate* unmanaged[Cdecl]<void*, float, float, uint, uint, NativeUuid*, NativeStatus> MeshCreatePlane;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec3*, NativeUuid*, NativeStatus> MeshCreateBox;
+        public delegate* unmanaged[Cdecl]<void*, float, NativeUuid*, NativeStatus> MeshCreateCube;
+        public delegate* unmanaged[Cdecl]<void*, float, uint, uint, NativeUuid*, NativeStatus> MeshCreateSphere;
+        public delegate* unmanaged[Cdecl]<void*, float, float, uint, byte, NativeUuid*, NativeStatus> MeshCreateCylinder;
+        public delegate* unmanaged[Cdecl]<void*, float, float, uint, byte, NativeUuid*, NativeStatus> MeshCreateCone;
+        public delegate* unmanaged[Cdecl]<void*, float, float, uint, uint, NativeUuid*, NativeStatus> MeshCreateCapsule;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeUuid*, NativeStatus> MeshRendererGetMaterial;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeUuid, NativeStatus> MeshRendererSetMaterial;
+        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, float*, NativeStatus> MathMatrixDeterminant;
+        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixInverse;
+        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixAffineInverse;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec3*, NativeVec3*, NativeVec3*, NativeMatrix4*, NativeStatus> MathLookAt;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStringView, NativeStringView, NativeStatus> AddScriptComponent;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStringView, NativeStringView, NativeStatus> RemoveScriptComponent;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> MeshRendererGetMesh;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> MeshRendererSetMesh;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> MeshRendererGetMaterialCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> MeshRendererSetMaterialCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Collider2DGetIsTrigger;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Collider2DSetIsTrigger;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> Collider2DGetOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> Collider2DSetOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> Collider2DGetMaterial;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> Collider2DSetMaterial;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> BoxCollider2DGetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> BoxCollider2DSetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CircleCollider2DGetRadius;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CircleCollider2DSetRadius;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Collider3DGetIsTrigger;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Collider3DSetIsTrigger;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> Collider3DGetOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> Collider3DSetOffset;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeQuaternion*, NativeStatus> Collider3DGetRotation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeQuaternion*, NativeStatus> Collider3DSetRotation;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> Collider3DGetMaterial;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> Collider3DSetMaterial;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativePhysicsFilter3D*, NativeStatus> Collider3DGetCollisionFilter;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativePhysicsFilter3D*, NativeStatus> Collider3DSetCollisionFilter;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> BoxCollider3DGetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> BoxCollider3DSetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> SphereCollider3DGetRadius;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> SphereCollider3DSetRadius;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CapsuleCollider3DGetRadius;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CapsuleCollider3DSetRadius;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CapsuleCollider3DGetHeight;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CapsuleCollider3DSetHeight;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody3DGetBodyType;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> Rigidbody3DSetBodyType;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody3DGetMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody3DSetMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Rigidbody3DGetAutoMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Rigidbody3DSetAutoMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody3DGetGravityScale;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody3DSetGravityScale;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody3DGetLinearDamping;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody3DSetLinearDamping;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody3DGetAngularDamping;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody3DSetAngularDamping;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> Rigidbody3DGetCenterOfMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> Rigidbody3DSetCenterOfMass;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Rigidbody3DGetAllowSleep;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Rigidbody3DSetAllowSleep;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Rigidbody3DGetStartAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Rigidbody3DSetStartAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Rigidbody3DGetContinuousCollision;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Rigidbody3DSetContinuousCollision;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> Rigidbody3DGetConstraints;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> Rigidbody3DSetConstraints;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativePhysicsFilter3D*, NativeStatus> Rigidbody3DGetCollisionFilter;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativePhysicsFilter3D*, NativeStatus> Rigidbody3DSetCollisionFilter;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> Rigidbody3DGetLinearVelocity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> Rigidbody3DSetLinearVelocity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> Rigidbody3DGetAngularVelocity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> Rigidbody3DSetAngularVelocity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> Rigidbody3DGetAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> Rigidbody3DSetAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, ulong*, NativeStatus> Rigidbody3DGetBodyHandle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> PhysicsMaterial2DGetDensity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> PhysicsMaterial2DSetDensity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> PhysicsMaterial2DGetFriction;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> PhysicsMaterial2DSetFriction;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> PhysicsMaterial2DGetRestitution;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> PhysicsMaterial2DSetRestitution;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> PhysicsMaterial2DGetRestitutionThreshold;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> PhysicsMaterial2DSetRestitutionThreshold;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> PhysicsMaterial2DGetFrictionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> PhysicsMaterial2DSetFrictionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> PhysicsMaterial2DGetRestitutionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> PhysicsMaterial2DSetRestitutionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> PhysicsMaterial3DGetDensity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> PhysicsMaterial3DSetDensity;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> PhysicsMaterial3DGetFriction;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> PhysicsMaterial3DSetFriction;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> PhysicsMaterial3DGetRestitution;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> PhysicsMaterial3DSetRestitution;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> PhysicsMaterial3DGetRestitutionThreshold;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> PhysicsMaterial3DSetRestitutionThreshold;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> PhysicsMaterial3DGetFrictionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> PhysicsMaterial3DSetFrictionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> PhysicsMaterial3DGetRestitutionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> PhysicsMaterial3DSetRestitutionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> AnimationComponentGetClip;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> AnimationComponentSetClip;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AnimationComponentGetSpeed;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> AnimationComponentSetSpeed;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AnimationComponentGetWrapMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> AnimationComponentSetWrapMode;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AnimationComponentGetPlayOnAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> AnimationComponentSetPlayOnAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AnimationComponentGetApplyRootMotion;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> AnimationComponentSetApplyRootMotion;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AnimationComponentGetTime;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> AnimationComponentSetTime;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AnimationComponentGetNormalizedTime;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> AnimationComponentSetNormalizedTime;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AnimationComponentGetState;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView*, NativeStatus> TextGetText;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStatus> TextSetText;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> TextGetFont;
@@ -313,8 +652,8 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetHorizontalAlignment;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetVerticalAlignment;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetVerticalAlignment;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextGetFontStyle;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> TextSetFontStyle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetFontStyle;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetFontStyle;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextGetOutlineColor;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextSetOutlineColor;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetOutlineWidth;
@@ -333,8 +672,6 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetLineSpacing;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> TextGetParagraphSpacing;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetParagraphSpacing;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextGetTabWidth;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> TextSetTabWidth;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> TextGetUseCustomDecorationColor;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> TextSetUseCustomDecorationColor;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> TextGetDecorationColor;
@@ -347,30 +684,21 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> TextSetStrikethroughOffset;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> TextGetUseKerning;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> TextSetUseKerning;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextGetTabWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeStatus> TextSetTabWidth;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetSortingLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetSortingLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetOrderInLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetOrderInLayer;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, uint*, NativeStatus> TextHitTest;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> FontGetIsValid;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetGlyphCount;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetTabWidth;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetAtlasWidth;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetAtlasHeight;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> FontGetAtlasPixelRange;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, byte*, NativeStatus> FontHasGlyph;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, byte, NativeFontCharacterInfo*, NativeStatus> FontGetCharacterInfo;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> FontGetFallbackCount;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeUuid*, NativeStatus> FontGetFallback;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, byte*, NativeStatus> FontAddFallback;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> FontClearFallbacks;
-        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, float*, NativeStatus> MathMatrixDeterminant;
-        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixInverse;
-        public delegate* unmanaged[Cdecl]<void*, NativeMatrix4*, NativeMatrix4*, NativeStatus> MathMatrixAffineInverse;
-        public delegate* unmanaged[Cdecl]<void*, NativeVec3*, NativeVec3*, NativeVec3*, NativeMatrix4*, NativeStatus> MathLookAt;
 
         public readonly bool HasCompleteBindings() =>
-            EntityHasComponent != null &&
+            GetEntityName != null &&
+                   SetEntityName != null &&
+                   FindEntityByName != null &&
+                   GetEntityParent != null &&
+                   SetEntityParent != null &&
+                   DestroyEntity != null &&
+                   EntityHasComponent != null &&
                    EntityAddComponent != null &&
                    EntityRemoveComponent != null &&
                    TransformGetPosition != null &&
@@ -407,13 +735,13 @@ namespace Crowny.ManagedHost.Interop
                    InputGetGamepadButtonDown != null &&
                    InputGetGamepadButtonUp != null &&
                    InputGetGamepadAxis != null &&
+                   InputEnableActionMap != null &&
+                   InputDisableActionMap != null &&
                    InputGetAction != null &&
                    InputGetActionDown != null &&
                    InputGetActionUp != null &&
                    InputGetAxis != null &&
                    InputGetActionVector != null &&
-                   InputEnableActionMap != null &&
-                   InputDisableActionMap != null &&
                    InputClearActionRebinds != null &&
                    TimeGetDeltaTime != null &&
                    TimeGetTime != null &&
@@ -480,6 +808,337 @@ namespace Crowny.ManagedHost.Interop
                    AudioSourcePlay != null &&
                    AudioSourcePause != null &&
                    AudioSourceStop != null &&
+                   AssetGetName != null &&
+                   AssetAcquire != null &&
+                   AssetRelease != null &&
+                   AssetDatabaseLoad != null &&
+                   AssetDatabaseLoadFromUuid != null &&
+                   AssetDatabaseGetPath != null &&
+                   AssetDatabaseIsValid != null &&
+                   AudioClipGetBitDepth != null &&
+                   AudioClipGetChannels != null &&
+                   AudioClipGetFrequency != null &&
+                   AudioClipGetSamples != null &&
+                   AudioClipGetLength != null &&
+                   AudioClipGetReadMode != null &&
+                   AudioClipGetFormat != null &&
+                   AudioClipGetIs3D != null &&
+                   TextureGetWidth != null &&
+                   TextureGetHeight != null &&
+                   AudioMixerSetActive != null &&
+                   AudioMixerGetBusVolume != null &&
+                   AudioMixerSetBusVolume != null &&
+                   AudioMixerIsBusMuted != null &&
+                   AudioMixerSetBusMuted != null &&
+                   MaterialSetFloat != null &&
+                   MaterialSetVector2 != null &&
+                   MaterialSetInt != null &&
+                   MaterialSetColor != null &&
+                   MaterialSetVector3 != null &&
+                   MaterialSetMatrix != null &&
+                   MaterialSetTexture != null &&
+                   MaterialHasAlphaModeOverride != null &&
+                   MaterialGetAlphaMode != null &&
+                   MaterialSetAlphaMode != null &&
+                   MaterialClearAlphaModeOverride != null &&
+                   PhysicsMaterial2DCreate != null &&
+                   PhysicsMaterial3DCreate != null &&
+                   Rigidbody3DAddForce != null &&
+                   Rigidbody3DAddForceAt != null &&
+                   Rigidbody3DAddTorque != null &&
+                   CompressionCompress != null &&
+                   CompressionDecompress != null &&
+                   FileDialogOpenFile != null &&
+                   FileDialogOpenFolder != null &&
+                   FileDialogSaveFile != null &&
+                   FileDialogSaveFolder != null &&
+                   FontHasCharacter != null &&
+                   FontGetIsValid != null &&
+                   FontGetGlyphCount != null &&
+                   FontGetTabWidth != null &&
+                   FontGetAtlasWidth != null &&
+                   FontGetAtlasHeight != null &&
+                   FontGetAtlasPixelRange != null &&
+                   FontGetFallbackCount != null &&
+                   FontHasGlyph != null &&
+                   FontGetCharacterInfo != null &&
+                   FontGetFallback != null &&
+                   FontAddFallback != null &&
+                   FontClearFallbacks != null &&
+                   FontGetSystemFontCount != null &&
+                   FontGetSystemFontPath != null &&
+                   FontGetSystemFontName != null &&
+                   AnimationClipGetLength != null &&
+                   AnimationClipGetSampleRate != null &&
+                   AnimationClipGetIsAdditive != null &&
+                   AnimationComponentPlay != null &&
+                   AnimationComponentPause != null &&
+                   AnimationComponentStop != null &&
+                   TextHitTest != null &&
+                   DebugWriteLog != null &&
+                   RandomInitialize != null &&
+                   RandomGetValue != null &&
+                   RandomGetRange != null &&
+                   RandomGetInsideUnitCircle != null &&
+                   RandomGetInsideUnitSphere != null &&
+                   NoiseGetPerlin2D != null &&
+                   LayerMaskGetName != null &&
+                   LayerMaskGetLayer != null &&
+                   SceneGetActive != null &&
+                   SceneGetExecutionState != null &&
+                   SceneGetLoadedCount != null &&
+                   SceneGetLoaded != null &&
+                   SceneLoad != null &&
+                   SceneUnload != null &&
+                   SceneReload != null &&
+                   SceneSetActive != null &&
+                   CameraGetFieldOfView != null &&
+                   CameraSetFieldOfView != null &&
+                   CameraGetProjection != null &&
+                   CameraSetProjection != null &&
+                   CameraGetNearClipPlane != null &&
+                   CameraSetNearClipPlane != null &&
+                   CameraGetFarClipPlane != null &&
+                   CameraSetFarClipPlane != null &&
+                   CameraGetOrthographicSize != null &&
+                   CameraSetOrthographicSize != null &&
+                   CameraGetAspectRatio != null &&
+                   CameraSetAspectRatio != null &&
+                   CameraGetBackgroundColor != null &&
+                   CameraSetBackgroundColor != null &&
+                   CameraGetViewportRectangle != null &&
+                   CameraSetViewportRectangle != null &&
+                   CameraGetHdr != null &&
+                   CameraSetHdr != null &&
+                   CameraGetMsaa != null &&
+                   CameraSetMsaa != null &&
+                   CameraGetOcclusionCulling != null &&
+                   CameraSetOcclusionCulling != null &&
+                   SpriteRendererGetTexture != null &&
+                   SpriteRendererSetTexture != null &&
+                   SpriteRendererGetColor != null &&
+                   SpriteRendererSetColor != null &&
+                   SpriteRendererGetSortingLayer != null &&
+                   SpriteRendererSetSortingLayer != null &&
+                   SpriteRendererGetOrderInLayer != null &&
+                   SpriteRendererSetOrderInLayer != null &&
+                   LightGetType != null &&
+                   LightSetType != null &&
+                   LightGetColor != null &&
+                   LightSetColor != null &&
+                   LightGetIntensity != null &&
+                   LightSetIntensity != null &&
+                   LightGetRange != null &&
+                   LightSetRange != null &&
+                   LightGetSpotInnerAngle != null &&
+                   LightSetSpotInnerAngle != null &&
+                   LightGetSpotOuterAngle != null &&
+                   LightSetSpotOuterAngle != null &&
+                   LightGetSourceRadius != null &&
+                   LightSetSourceRadius != null &&
+                   LightGetUseColorTemperature != null &&
+                   LightSetUseColorTemperature != null &&
+                   LightGetTemperature != null &&
+                   LightSetTemperature != null &&
+                   LightGetVisibilityLayers != null &&
+                   LightSetVisibilityLayers != null &&
+                   LightGetEnabled != null &&
+                   LightSetEnabled != null &&
+                   LightGetAffectDiffuse != null &&
+                   LightSetAffectDiffuse != null &&
+                   LightGetAffectSpecular != null &&
+                   LightSetAffectSpecular != null &&
+                   LightGetVolumetric != null &&
+                   LightSetVolumetric != null &&
+                   LightGetShadows != null &&
+                   LightSetShadows != null &&
+                   LightGetShadowBias != null &&
+                   LightSetShadowBias != null &&
+                   LightGetShadowNormalBias != null &&
+                   LightSetShadowNormalBias != null &&
+                   LightGetShadowNearPlane != null &&
+                   LightSetShadowNearPlane != null &&
+                   LightGetShadowImportance != null &&
+                   LightSetShadowImportance != null &&
+                   LightGetShadowResolution != null &&
+                   LightSetShadowResolution != null &&
+                   LightGetCacheStaticShadowCasters != null &&
+                   LightSetCacheStaticShadowCasters != null &&
+                   Physics2DGetBackend != null &&
+                   Physics2DGetIsSimulating != null &&
+                   Physics2DGetGravity != null &&
+                   Physics2DSetGravity != null &&
+                   Physics2DGetVelocityIterations != null &&
+                   Physics2DSetVelocityIterations != null &&
+                   Physics2DGetPositionIterations != null &&
+                   Physics2DSetPositionIterations != null &&
+                   Physics2DGetDefaultMaterial != null &&
+                   Physics2DSetDefaultMaterial != null &&
+                   Physics2DGetLayerName != null &&
+                   Physics2DSetLayerName != null &&
+                   Physics2DGetLayerMask != null &&
+                   Physics2DSetLayerMask != null &&
+                   Physics2DResolveEntity != null &&
+                   Physics2DRaycast != null &&
+                   Physics3DGetBackend != null &&
+                   Physics3DGetBackendName != null &&
+                   Physics3DGetIsSimulating != null &&
+                   Physics3DGetCapabilities != null &&
+                   Physics3DGetGravity != null &&
+                   Physics3DSetGravity != null &&
+                   Physics3DGetSubsteps != null &&
+                   Physics3DSetSubsteps != null &&
+                   Physics3DGetDefaultMaterial != null &&
+                   Physics3DSetDefaultMaterial != null &&
+                   Physics3DTrySetBackend != null &&
+                   Physics3DIsBackendAvailable != null &&
+                   Physics3DResolveEntity != null &&
+                   Physics3DRaycast != null &&
+                   Physics3DSweep != null &&
+                   Physics3DOverlap != null &&
+                   MeshGetVertexCount != null &&
+                   MeshGetIndexCount != null &&
+                   MeshCopyVertices != null &&
+                   MeshSetVertices != null &&
+                   MeshCopyNormals != null &&
+                   MeshSetNormals != null &&
+                   MeshCopyUvs != null &&
+                   MeshSetUvs != null &&
+                   MeshCopyColors != null &&
+                   MeshSetColors != null &&
+                   MeshCopyIndices != null &&
+                   MeshSetIndices != null &&
+                   MeshRecalculateBounds != null &&
+                   MeshRecalculateNormals != null &&
+                   MeshRecalculateTangents != null &&
+                   MeshUploadData != null &&
+                   MeshClear != null &&
+                   MeshGetBoundsMin != null &&
+                   MeshGetBoundsMax != null &&
+                   MeshSetVertexBufferParams != null &&
+                   MeshSetVertexBufferData != null &&
+                   MeshGetVertexBufferData != null &&
+                   MeshGetVertexStride != null &&
+                   MeshGetVertexAttributeCount != null &&
+                   MeshHasVertexAttribute != null &&
+                   MeshGetVertexAttribute != null &&
+                   MeshCreatePlane != null &&
+                   MeshCreateBox != null &&
+                   MeshCreateCube != null &&
+                   MeshCreateSphere != null &&
+                   MeshCreateCylinder != null &&
+                   MeshCreateCone != null &&
+                   MeshCreateCapsule != null &&
+                   MeshRendererGetMaterial != null &&
+                   MeshRendererSetMaterial != null &&
+                   MathMatrixDeterminant != null &&
+                   MathMatrixInverse != null &&
+                   MathMatrixAffineInverse != null &&
+                   MathLookAt != null &&
+                   AddScriptComponent != null &&
+                   RemoveScriptComponent != null &&
+                   MeshRendererGetMesh != null &&
+                   MeshRendererSetMesh != null &&
+                   MeshRendererGetMaterialCount != null &&
+                   MeshRendererSetMaterialCount != null &&
+                   Collider2DGetIsTrigger != null &&
+                   Collider2DSetIsTrigger != null &&
+                   Collider2DGetOffset != null &&
+                   Collider2DSetOffset != null &&
+                   Collider2DGetMaterial != null &&
+                   Collider2DSetMaterial != null &&
+                   BoxCollider2DGetSize != null &&
+                   BoxCollider2DSetSize != null &&
+                   CircleCollider2DGetRadius != null &&
+                   CircleCollider2DSetRadius != null &&
+                   Collider3DGetIsTrigger != null &&
+                   Collider3DSetIsTrigger != null &&
+                   Collider3DGetOffset != null &&
+                   Collider3DSetOffset != null &&
+                   Collider3DGetRotation != null &&
+                   Collider3DSetRotation != null &&
+                   Collider3DGetMaterial != null &&
+                   Collider3DSetMaterial != null &&
+                   Collider3DGetCollisionFilter != null &&
+                   Collider3DSetCollisionFilter != null &&
+                   BoxCollider3DGetSize != null &&
+                   BoxCollider3DSetSize != null &&
+                   SphereCollider3DGetRadius != null &&
+                   SphereCollider3DSetRadius != null &&
+                   CapsuleCollider3DGetRadius != null &&
+                   CapsuleCollider3DSetRadius != null &&
+                   CapsuleCollider3DGetHeight != null &&
+                   CapsuleCollider3DSetHeight != null &&
+                   Rigidbody3DGetBodyType != null &&
+                   Rigidbody3DSetBodyType != null &&
+                   Rigidbody3DGetMass != null &&
+                   Rigidbody3DSetMass != null &&
+                   Rigidbody3DGetAutoMass != null &&
+                   Rigidbody3DSetAutoMass != null &&
+                   Rigidbody3DGetGravityScale != null &&
+                   Rigidbody3DSetGravityScale != null &&
+                   Rigidbody3DGetLinearDamping != null &&
+                   Rigidbody3DSetLinearDamping != null &&
+                   Rigidbody3DGetAngularDamping != null &&
+                   Rigidbody3DSetAngularDamping != null &&
+                   Rigidbody3DGetCenterOfMass != null &&
+                   Rigidbody3DSetCenterOfMass != null &&
+                   Rigidbody3DGetAllowSleep != null &&
+                   Rigidbody3DSetAllowSleep != null &&
+                   Rigidbody3DGetStartAwake != null &&
+                   Rigidbody3DSetStartAwake != null &&
+                   Rigidbody3DGetContinuousCollision != null &&
+                   Rigidbody3DSetContinuousCollision != null &&
+                   Rigidbody3DGetConstraints != null &&
+                   Rigidbody3DSetConstraints != null &&
+                   Rigidbody3DGetCollisionFilter != null &&
+                   Rigidbody3DSetCollisionFilter != null &&
+                   Rigidbody3DGetLinearVelocity != null &&
+                   Rigidbody3DSetLinearVelocity != null &&
+                   Rigidbody3DGetAngularVelocity != null &&
+                   Rigidbody3DSetAngularVelocity != null &&
+                   Rigidbody3DGetAwake != null &&
+                   Rigidbody3DSetAwake != null &&
+                   Rigidbody3DGetBodyHandle != null &&
+                   PhysicsMaterial2DGetDensity != null &&
+                   PhysicsMaterial2DSetDensity != null &&
+                   PhysicsMaterial2DGetFriction != null &&
+                   PhysicsMaterial2DSetFriction != null &&
+                   PhysicsMaterial2DGetRestitution != null &&
+                   PhysicsMaterial2DSetRestitution != null &&
+                   PhysicsMaterial2DGetRestitutionThreshold != null &&
+                   PhysicsMaterial2DSetRestitutionThreshold != null &&
+                   PhysicsMaterial2DGetFrictionCombine != null &&
+                   PhysicsMaterial2DSetFrictionCombine != null &&
+                   PhysicsMaterial2DGetRestitutionCombine != null &&
+                   PhysicsMaterial2DSetRestitutionCombine != null &&
+                   PhysicsMaterial3DGetDensity != null &&
+                   PhysicsMaterial3DSetDensity != null &&
+                   PhysicsMaterial3DGetFriction != null &&
+                   PhysicsMaterial3DSetFriction != null &&
+                   PhysicsMaterial3DGetRestitution != null &&
+                   PhysicsMaterial3DSetRestitution != null &&
+                   PhysicsMaterial3DGetRestitutionThreshold != null &&
+                   PhysicsMaterial3DSetRestitutionThreshold != null &&
+                   PhysicsMaterial3DGetFrictionCombine != null &&
+                   PhysicsMaterial3DSetFrictionCombine != null &&
+                   PhysicsMaterial3DGetRestitutionCombine != null &&
+                   PhysicsMaterial3DSetRestitutionCombine != null &&
+                   AnimationComponentGetClip != null &&
+                   AnimationComponentSetClip != null &&
+                   AnimationComponentGetSpeed != null &&
+                   AnimationComponentSetSpeed != null &&
+                   AnimationComponentGetWrapMode != null &&
+                   AnimationComponentSetWrapMode != null &&
+                   AnimationComponentGetPlayOnAwake != null &&
+                   AnimationComponentSetPlayOnAwake != null &&
+                   AnimationComponentGetApplyRootMotion != null &&
+                   AnimationComponentSetApplyRootMotion != null &&
+                   AnimationComponentGetTime != null &&
+                   AnimationComponentSetTime != null &&
+                   AnimationComponentGetNormalizedTime != null &&
+                   AnimationComponentSetNormalizedTime != null &&
+                   AnimationComponentGetState != null &&
                    TextGetText != null &&
                    TextSetText != null &&
                    TextGetFont != null &&
@@ -530,8 +1189,6 @@ namespace Crowny.ManagedHost.Interop
                    TextSetLineSpacing != null &&
                    TextGetParagraphSpacing != null &&
                    TextSetParagraphSpacing != null &&
-                   TextGetTabWidth != null &&
-                   TextSetTabWidth != null &&
                    TextGetUseCustomDecorationColor != null &&
                    TextSetUseCustomDecorationColor != null &&
                    TextGetDecorationColor != null &&
@@ -544,27 +1201,19 @@ namespace Crowny.ManagedHost.Interop
                    TextSetStrikethroughOffset != null &&
                    TextGetUseKerning != null &&
                    TextSetUseKerning != null &&
+                   TextGetTabWidth != null &&
+                   TextSetTabWidth != null &&
                    TextGetSortingLayer != null &&
                    TextSetSortingLayer != null &&
                    TextGetOrderInLayer != null &&
-                   TextSetOrderInLayer != null &&
-                   TextHitTest != null &&
-                   FontGetIsValid != null &&
-                   FontGetGlyphCount != null &&
-                   FontGetTabWidth != null &&
-                   FontGetAtlasWidth != null &&
-                   FontGetAtlasHeight != null &&
-                   FontGetAtlasPixelRange != null &&
-                   FontHasGlyph != null &&
-                   FontGetCharacterInfo != null &&
-                   FontGetFallbackCount != null &&
-                   FontGetFallback != null &&
-                   FontAddFallback != null &&
-                   FontClearFallbacks != null &&
-                   MathMatrixDeterminant != null &&
-                   MathMatrixInverse != null &&
-                   MathMatrixAffineInverse != null &&
-                   MathLookAt != null;
+                   TextSetOrderInLayer != null;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct NativeMutableBlob
+    {
+        public byte* Data;
+        public ulong Length;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -580,6 +1229,7 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<NativeStringView, NativeStringView, NativeStringView, NativeUuid, NativeBlob, ulong*, NativeStatus> CreateScript;
         public delegate* unmanaged[Cdecl]<ulong, NativeStatus> DestroyScript;
         public delegate* unmanaged[Cdecl]<ulong, NativeEvent*, NativeStatus> Dispatch;
+        public delegate* unmanaged[Cdecl]<uint, NativeUuid, uint, NativeStatus> NotifySceneEvent;
         public delegate* unmanaged[Cdecl]<ulong, NativeBlobWriter*, NativeStatus> CaptureState;
         public delegate* unmanaged[Cdecl]<ulong, NativeBlob, NativeStatus> ApplyState;
         public delegate* unmanaged[Cdecl]<NativeBlobWriter*, NativeStatus> CollectDiagnostics;
@@ -587,7 +1237,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 9;
+        public const uint Version = 11;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

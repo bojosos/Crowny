@@ -1,5 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Crowny
@@ -131,47 +129,6 @@ namespace Crowny
             ClearFallbacksNative();
         }
 
-#if CROWNY_MONO
-        private bool GetIsValid() => Internal_GetIsValid(m_InternalPtr);
-        private uint GetGlyphCount() => Internal_GetGlyphCount(m_InternalPtr);
-        private uint GetTabWidth() => Internal_GetTabWidth(m_InternalPtr);
-        private uint GetAtlasWidth() => Internal_GetAtlasWidth(m_InternalPtr);
-        private uint GetAtlasHeight() => Internal_GetAtlasHeight(m_InternalPtr);
-        private float GetAtlasPixelRange() => Internal_GetAtlasPixelRange(m_InternalPtr);
-        private bool HasGlyphNative(uint codePoint) => Internal_HasGlyph(m_InternalPtr, codePoint);
-        private bool TryGetCharacterInfoNative(uint codePoint, bool useFallbacks, out CharacterInfo characterInfo) =>
-            Internal_GetCharacterInfo(m_InternalPtr, codePoint, useFallbacks, out characterInfo);
-        private uint GetFallbackCount() => Internal_GetFallbackCount(m_InternalPtr);
-        private Font GetFallbackNative(uint index) => Internal_GetFallback(m_InternalPtr, index);
-        private bool AddFallbackNative(Font font) => Internal_AddFallback(m_InternalPtr, font);
-        private void ClearFallbacksNative() => Internal_ClearFallbacks(m_InternalPtr);
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_GetIsValid(IntPtr thisptr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetGlyphCount(IntPtr thisptr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetTabWidth(IntPtr thisptr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetAtlasWidth(IntPtr thisptr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetAtlasHeight(IntPtr thisptr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern float Internal_GetAtlasPixelRange(IntPtr thisptr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_HasGlyph(IntPtr thisptr, uint codePoint);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_GetCharacterInfo(IntPtr thisptr, uint codePoint, bool useFallbacks,
-                                                              out CharacterInfo characterInfo);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetFallbackCount(IntPtr thisptr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Font Internal_GetFallback(IntPtr thisptr, uint index);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_AddFallback(IntPtr thisptr, Font font);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_ClearFallbacks(IntPtr thisptr);
-#else
         private bool GetIsValid() => ManagedRuntimeContext.FontGetIsValid(uuid);
         private uint GetGlyphCount() => ManagedRuntimeContext.FontGetGlyphCount(uuid);
         private uint GetTabWidth() => ManagedRuntimeContext.FontGetTabWidth(uuid);
@@ -190,6 +147,5 @@ namespace Crowny
         private bool AddFallbackNative(Font font) =>
             ManagedRuntimeContext.FontAddFallback(uuid, font.uuid);
         private void ClearFallbacksNative() => ManagedRuntimeContext.FontClearFallbacks(uuid);
-#endif
     }
 }

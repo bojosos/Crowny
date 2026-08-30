@@ -41,7 +41,6 @@ namespace Crowny
         MonoClass* SerializeObjectAttribute = nullptr;
         MonoClass* NotNullAttribute = nullptr;
         MonoClass* DontSerializeFieldAttribute = nullptr;
-        MonoClass* RequireComponentAttribute = nullptr;
         MonoClass* MultilineAttribute = nullptr;
         MonoClass* ColorPaletteAttribute = nullptr;
         MonoClass* ColorUsageAttribute = nullptr;

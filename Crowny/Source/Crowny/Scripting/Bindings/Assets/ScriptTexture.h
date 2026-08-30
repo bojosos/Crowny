@@ -13,7 +13,5 @@ namespace Crowny
         ScriptTexture(MonoObject* instance, const AssetHandle<Texture>& texture);
 
     private:
-        static uint32_t Internal_GetWidth(ScriptTexture* thisPtr);
-        static uint32_t Internal_GetHeight(ScriptTexture* thisPtr);
     };
 } // namespace Crowny

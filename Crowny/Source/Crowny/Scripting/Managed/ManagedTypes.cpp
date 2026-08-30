@@ -75,25 +75,40 @@ namespace Crowny
 
         switch (Kind)
         {
-        case ScriptValueKind::Null: return true;
-        case ScriptValueKind::Boolean: return BooleanValue == other.BooleanValue;
-        case ScriptValueKind::SignedInteger: return SignedValue == other.SignedValue;
-        case ScriptValueKind::UnsignedInteger: return UnsignedValue == other.UnsignedValue;
-        case ScriptValueKind::Float: return FloatingValue == other.FloatingValue;
-        case ScriptValueKind::String: return StringValue == other.StringValue;
-        case ScriptValueKind::Enum: return SignedValue == other.SignedValue;
+        case ScriptValueKind::Null:
+            return true;
+        case ScriptValueKind::Boolean:
+            return BooleanValue == other.BooleanValue;
+        case ScriptValueKind::SignedInteger:
+            return SignedValue == other.SignedValue;
+        case ScriptValueKind::UnsignedInteger:
+            return UnsignedValue == other.UnsignedValue;
+        case ScriptValueKind::Float:
+            return FloatingValue == other.FloatingValue;
+        case ScriptValueKind::Decimal:
+        case ScriptValueKind::String:
+            return StringValue == other.StringValue;
+        case ScriptValueKind::Enum:
+            return SignedValue == other.SignedValue;
         case ScriptValueKind::Vector2:
         case ScriptValueKind::Vector3:
         case ScriptValueKind::Vector4:
-        case ScriptValueKind::Quaternion: return VectorValue == other.VectorValue;
-        case ScriptValueKind::Matrix4: return MatricesEqual(MatrixValue, other.MatrixValue);
+        case ScriptValueKind::Color:
+        case ScriptValueKind::Quaternion:
+            return VectorValue == other.VectorValue;
+        case ScriptValueKind::Matrix4:
+            return MatricesEqual(MatrixValue, other.MatrixValue);
         case ScriptValueKind::Entity:
+        case ScriptValueKind::Component:
         case ScriptValueKind::Asset:
-        case ScriptValueKind::Uuid: return ReferenceValue == other.ReferenceValue;
+        case ScriptValueKind::Uuid:
+            return ReferenceValue == other.ReferenceValue;
         case ScriptValueKind::Array:
         case ScriptValueKind::List:
-        case ScriptValueKind::Dictionary: return Elements == other.Elements;
-        case ScriptValueKind::Object: return Members == other.Members;
+        case ScriptValueKind::Dictionary:
+            return Elements == other.Elements;
+        case ScriptValueKind::Object:
+            return Members == other.Members;
         }
         return false;
     }
@@ -110,8 +125,7 @@ namespace Crowny
     {
         const auto type = std::find_if(Types.begin(), Types.end(), [&](const ScriptTypeSchema& candidate) {
             return candidate.Identity == identity ||
-                   std::find(candidate.FormerIdentities.begin(), candidate.FormerIdentities.end(), identity) !=
-                     candidate.FormerIdentities.end();
+                   std::find(candidate.FormerIdentities.begin(), candidate.FormerIdentities.end(), identity) != candidate.FormerIdentities.end();
         });
         return type != Types.end() ? &*type : nullptr;
     }
@@ -122,26 +136,29 @@ namespace Crowny
     {
         ManagedOperationResult result;
         result.Succeeded = false;
-        result.Diagnostics.push_back(
-          { ManagedDiagnosticSeverity::Error, std::move(code), std::move(message), {}, backend, {}, {} });
+        result.Diagnostics.push_back({ ManagedDiagnosticSeverity::Error, std::move(code), std::move(message), {}, backend, {}, {} });
         return result;
     }
 
     bool ManagedOperationResult::HasDiagnosticCode(StringView code) const
     {
-        return std::any_of(Diagnostics.begin(), Diagnostics.end(),
-                           [&](const ManagedDiagnostic& diagnostic) { return diagnostic.Code == code; });
+        return std::any_of(Diagnostics.begin(), Diagnostics.end(), [&](const ManagedDiagnostic& diagnostic) { return diagnostic.Code == code; });
     }
 
     const char* ToString(ManagedBackendId backend)
     {
         switch (backend)
         {
-        case ManagedBackendId::Mono: return "Mono";
-        case ManagedBackendId::CoreCLR: return "CoreCLR";
-        case ManagedBackendId::DotNetWasm: return "DotNetWasm";
-        case ManagedBackendId::NativeAOT: return "NativeAOT";
-        case ManagedBackendId::GeneratedMetadata: return "GeneratedMetadata";
+        case ManagedBackendId::Mono:
+            return "Mono";
+        case ManagedBackendId::CoreCLR:
+            return "CoreCLR";
+        case ManagedBackendId::DotNetWasm:
+            return "DotNetWasm";
+        case ManagedBackendId::NativeAOT:
+            return "NativeAOT";
+        case ManagedBackendId::GeneratedMetadata:
+            return "GeneratedMetadata";
         }
         return "Unknown";
     }
@@ -150,10 +167,14 @@ namespace Crowny
     {
         switch (mode)
         {
-        case ManagedExecutionMode::Interpreter: return "Interpreter";
-        case ManagedExecutionMode::Jit: return "Jit";
-        case ManagedExecutionMode::ReadyToRun: return "ReadyToRun";
-        case ManagedExecutionMode::Aot: return "Aot";
+        case ManagedExecutionMode::Interpreter:
+            return "Interpreter";
+        case ManagedExecutionMode::Jit:
+            return "Jit";
+        case ManagedExecutionMode::ReadyToRun:
+            return "ReadyToRun";
+        case ManagedExecutionMode::Aot:
+            return "Aot";
         }
         return "Unknown";
     }
@@ -161,16 +182,16 @@ namespace Crowny
     ManagedOperationResult ValidateScriptCatalog(const ScriptCatalog& catalog, ManagedBackendId backend)
     {
         if (catalog.ManifestVersion == 0 || catalog.ManifestHash == 0)
-            return ManagedOperationResult::Failure("managed.catalog.manifest_invalid",
-                                                   "The script catalog has no manifest version or content hash.", backend);
+            return ManagedOperationResult::Failure("managed.catalog.manifest_invalid", "The script catalog has no manifest version or content hash.",
+                                                   backend);
 
         Set<uint64_t> typeIds;
         Set<String> identities;
         for (const ScriptTypeSchema& type : catalog.Types)
         {
             if (!type.Identity.IsValid() || type.StableId == 0 || !typeIds.insert(type.StableId).second)
-                return ManagedOperationResult::Failure("managed.catalog.type_invalid",
-                                                       "The script catalog contains an invalid or duplicate type.", backend);
+                return ManagedOperationResult::Failure("managed.catalog.type_invalid", "The script catalog contains an invalid or duplicate type.",
+                                                       backend);
 
             Vector<ScriptTypeIdentity> allIdentities = type.FormerIdentities;
             allIdentities.push_back(type.Identity);
@@ -186,8 +207,7 @@ namespace Crowny
             Set<String> fieldNames;
             for (const ScriptFieldSchema& field : type.Fields)
             {
-                if (field.StableId == 0 || field.Name.empty() || !fieldIds.insert(field.StableId).second ||
-                    !fieldNames.insert(field.Name).second)
+                if (field.StableId == 0 || field.Name.empty() || !fieldIds.insert(field.StableId).second || !fieldNames.insert(field.Name).second)
                     return ManagedOperationResult::Failure("managed.catalog.field_invalid",
                                                            "The script catalog contains an invalid or duplicate field.", backend);
                 for (const String& formerName : field.FormerNames)
@@ -203,16 +223,16 @@ namespace Crowny
 
     ScriptStateResult MigrateScriptState(const ScriptState& state, const ScriptTypeSchema& target, ManagedBackendId backend)
     {
-        const bool compatibleIdentity = !state.Identity.IsValid() || state.Identity == target.Identity ||
-                                        std::find(target.FormerIdentities.begin(), target.FormerIdentities.end(), state.Identity) !=
-                                          target.FormerIdentities.end();
+        const bool compatibleIdentity =
+          !state.Identity.IsValid() || state.Identity == target.Identity ||
+          std::find(target.FormerIdentities.begin(), target.FormerIdentities.end(), state.Identity) != target.FormerIdentities.end();
         if (!compatibleIdentity)
-            return { ManagedOperationResult::Failure("managed.script.state_identity_mismatch",
-                                                     "Script state belongs to an incompatible script type.", backend),
+            return { ManagedOperationResult::Failure("managed.script.state_identity_mismatch", "Script state belongs to an incompatible script type.",
+                                                     backend),
                      {} };
         if (state.Root.Kind != ScriptValueKind::Null && state.Root.Kind != ScriptValueKind::Object)
-            return { ManagedOperationResult::Failure("managed.script.state_root_invalid",
-                                                     "Script state must be represented by an object value.", backend),
+            return { ManagedOperationResult::Failure("managed.script.state_root_invalid", "Script state must be represented by an object value.",
+                                                     backend),
                      {} };
 
         ScriptState migrated;

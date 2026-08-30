@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
@@ -26,27 +25,27 @@ namespace Crowny
     /// <summary>A 3D rigid body controlled by the selected physics backend.</summary>
     public sealed class Rigidbody3D : Component
     {
-        public BodyType BodyType { get { return Internal_GetBodyType(m_InternalPtr); } set { Internal_SetBodyType(m_InternalPtr, value); } }
-        public float Mass { get { return Internal_GetMass(m_InternalPtr); } set { Internal_SetMass(m_InternalPtr, value); } }
-        public bool AutoMass { get { return Internal_GetAutoMass(m_InternalPtr); } set { Internal_SetAutoMass(m_InternalPtr, value); } }
-        public float GravityScale { get { return Internal_GetGravityScale(m_InternalPtr); } set { Internal_SetGravityScale(m_InternalPtr, value); } }
-        public float LinearDamping { get { return Internal_GetLinearDamping(m_InternalPtr); } set { Internal_SetLinearDamping(m_InternalPtr, value); } }
-        public float AngularDamping { get { return Internal_GetAngularDamping(m_InternalPtr); } set { Internal_SetAngularDamping(m_InternalPtr, value); } }
-        public Vector3 CenterOfMass { get { Internal_GetCenterOfMass(m_InternalPtr, out Vector3 value); return value; } set { Internal_SetCenterOfMass(m_InternalPtr, ref value); } }
-        public bool AllowSleep { get { return Internal_GetAllowSleep(m_InternalPtr); } set { Internal_SetAllowSleep(m_InternalPtr, value); } }
-        public bool StartAwake { get { return Internal_GetStartAwake(m_InternalPtr); } set { Internal_SetStartAwake(m_InternalPtr, value); } }
-        public bool ContinuousCollision { get { return Internal_GetContinuousCollision(m_InternalPtr); } set { Internal_SetContinuousCollision(m_InternalPtr, value); } }
-        public Rigidbody3DConstraints Constraints { get { return Internal_GetConstraints(m_InternalPtr); } set { Internal_SetConstraints(m_InternalPtr, value); } }
-        public Vector3 LinearVelocity { get { Internal_GetLinearVelocity(m_InternalPtr, out Vector3 value); return value; } set { Internal_SetLinearVelocity(m_InternalPtr, ref value); } }
-        public Vector3 AngularVelocity { get { Internal_GetAngularVelocity(m_InternalPtr, out Vector3 value); return value; } set { Internal_SetAngularVelocity(m_InternalPtr, ref value); } }
-        public bool Awake { get { return Internal_IsAwake(m_InternalPtr); } set { Internal_SetAwake(m_InternalPtr, value); } }
+        public BodyType BodyType { get { return (BodyType)ManagedRuntimeContext.Rigidbody3DGetBodyType(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetBodyType(EntityId, (int)value); } }
+        public float Mass { get { return ManagedRuntimeContext.Rigidbody3DGetMass(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetMass(EntityId, value); } }
+        public bool AutoMass { get { return ManagedRuntimeContext.Rigidbody3DGetAutoMass(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetAutoMass(EntityId, value); } }
+        public float GravityScale { get { return ManagedRuntimeContext.Rigidbody3DGetGravityScale(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetGravityScale(EntityId, value); } }
+        public float LinearDamping { get { return ManagedRuntimeContext.Rigidbody3DGetLinearDamping(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetLinearDamping(EntityId, value); } }
+        public float AngularDamping { get { return ManagedRuntimeContext.Rigidbody3DGetAngularDamping(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetAngularDamping(EntityId, value); } }
+        public Vector3 CenterOfMass { get { return ManagedRuntimeContext.Rigidbody3DGetCenterOfMass(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetCenterOfMass(EntityId, value); } }
+        public bool AllowSleep { get { return ManagedRuntimeContext.Rigidbody3DGetAllowSleep(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetAllowSleep(EntityId, value); } }
+        public bool StartAwake { get { return ManagedRuntimeContext.Rigidbody3DGetStartAwake(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetStartAwake(EntityId, value); } }
+        public bool ContinuousCollision { get { return ManagedRuntimeContext.Rigidbody3DGetContinuousCollision(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetContinuousCollision(EntityId, value); } }
+        public Rigidbody3DConstraints Constraints { get { return (Rigidbody3DConstraints)ManagedRuntimeContext.Rigidbody3DGetConstraints(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetConstraints(EntityId, (uint)value); } }
+        public Vector3 LinearVelocity { get { return ManagedRuntimeContext.Rigidbody3DGetLinearVelocity(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetLinearVelocity(EntityId, value); } }
+        public Vector3 AngularVelocity { get { return ManagedRuntimeContext.Rigidbody3DGetAngularVelocity(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetAngularVelocity(EntityId, value); } }
+        public bool Awake { get { return ManagedRuntimeContext.Rigidbody3DGetAwake(EntityId); } set { ManagedRuntimeContext.Rigidbody3DSetAwake(EntityId, value); } }
         /// <summary>Gets the runtime body handle used by query filters. Zero means no live body.</summary>
-        public ulong BodyHandle { get { return Internal_GetBodyHandle(m_InternalPtr); } }
+        public ulong BodyHandle { get { return ManagedRuntimeContext.Rigidbody3DGetBodyHandle(EntityId); } }
 
         public PhysicsFilter3D CollisionFilter
         {
-            get { Internal_GetFilter(m_InternalPtr, out PhysicsFilter3D value); return value; }
-            set { Internal_SetFilter(m_InternalPtr, ref value); }
+            get { return ManagedRuntimeContext.Rigidbody3DGetCollisionFilter(EntityId); }
+            set { ManagedRuntimeContext.Rigidbody3DSetCollisionFilter(EntityId, value); }
         }
 
         public uint Layer
@@ -70,19 +69,19 @@ namespace Crowny
         /// <summary>Applies force at the body's center of mass.</summary>
         public void AddForce(Vector3 force, ForceMode3D mode = ForceMode3D.Force)
         {
-            Internal_AddForce(m_InternalPtr, ref force, mode);
+            ManagedRuntimeContext.Rigidbody3DAddForce(EntityId, force, (int)mode);
         }
 
         /// <summary>Applies force at a world-space position.</summary>
         public void AddForceAtPosition(Vector3 force, Vector3 worldPosition, ForceMode3D mode = ForceMode3D.Force)
         {
-            Internal_AddForceAt(m_InternalPtr, ref force, ref worldPosition, mode);
+            ManagedRuntimeContext.Rigidbody3DAddForceAt(EntityId, force, worldPosition, (int)mode);
         }
 
         /// <summary>Applies torque around the body's center of mass.</summary>
         public void AddTorque(Vector3 torque, ForceMode3D mode = ForceMode3D.Force)
         {
-            Internal_AddTorque(m_InternalPtr, ref torque, mode);
+            ManagedRuntimeContext.Rigidbody3DAddTorque(EntityId, torque, (int)mode);
         }
 
         public void WakeUp() { Awake = true; }
@@ -107,39 +106,5 @@ namespace Crowny
         [Obsolete("Use CollisionMask instead.")] public uint collisionMask { get { return CollisionMask; } set { CollisionMask = value; } }
         [Obsolete("Use CollisionGroup instead.")] public int collisionGroup { get { return CollisionGroup; } set { CollisionGroup = value; } }
 
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern BodyType Internal_GetBodyType(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetBodyType(IntPtr body, BodyType value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetMass(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetMass(IntPtr body, float value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_GetAutoMass(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetAutoMass(IntPtr body, bool value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetGravityScale(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetGravityScale(IntPtr body, float value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetLinearDamping(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetLinearDamping(IntPtr body, float value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetAngularDamping(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetAngularDamping(IntPtr body, float value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetCenterOfMass(IntPtr body, out Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetCenterOfMass(IntPtr body, ref Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_GetAllowSleep(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetAllowSleep(IntPtr body, bool value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_GetStartAwake(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetStartAwake(IntPtr body, bool value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_GetContinuousCollision(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetContinuousCollision(IntPtr body, bool value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern Rigidbody3DConstraints Internal_GetConstraints(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetConstraints(IntPtr body, Rigidbody3DConstraints value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetFilter(IntPtr body, out PhysicsFilter3D value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetFilter(IntPtr body, ref PhysicsFilter3D value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetLinearVelocity(IntPtr body, out Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetLinearVelocity(IntPtr body, ref Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetAngularVelocity(IntPtr body, out Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetAngularVelocity(IntPtr body, ref Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_IsAwake(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetAwake(IntPtr body, bool value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern ulong Internal_GetBodyHandle(IntPtr body);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_AddForce(IntPtr body, ref Vector3 force, ForceMode3D mode);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_AddForceAt(IntPtr body, ref Vector3 force, ref Vector3 worldPosition, ForceMode3D mode);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_AddTorque(IntPtr body, ref Vector3 torque, ForceMode3D mode);
     }
 }

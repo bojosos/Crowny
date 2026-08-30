@@ -15,6 +15,24 @@ namespace Crowny
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    internal unsafe struct ManagedNativeBlob
+    {
+        internal byte* Data;
+        internal ulong Length;
+
+        internal ManagedNativeBlob(byte* data, ulong length) { Data = data; Length = length; }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal unsafe struct ManagedNativeMutableBlob
+    {
+        internal byte* Data;
+        internal ulong Length;
+
+        internal ManagedNativeMutableBlob(byte* data, ulong length) { Data = data; Length = length; }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct ManagedNativeUuid
     {
         internal fixed byte Bytes[16];
@@ -87,6 +105,14 @@ namespace Crowny
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativePhysicsFilter3D
+    {
+        internal uint Layer;
+        internal uint Mask;
+        internal int Group;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct ManagedNativeHostApi
     {
         internal uint Size;
@@ -136,13 +162,13 @@ namespace Crowny
         internal IntPtr InputGetGamepadButtonDown;
         internal IntPtr InputGetGamepadButtonUp;
         internal IntPtr InputGetGamepadAxis;
+        internal IntPtr InputEnableActionMap;
+        internal IntPtr InputDisableActionMap;
         internal IntPtr InputGetAction;
         internal IntPtr InputGetActionDown;
         internal IntPtr InputGetActionUp;
         internal IntPtr InputGetAxis;
         internal IntPtr InputGetActionVector;
-        internal IntPtr InputEnableActionMap;
-        internal IntPtr InputDisableActionMap;
         internal IntPtr InputClearActionRebinds;
         internal IntPtr TimeGetDeltaTime;
         internal IntPtr TimeGetTime;
@@ -209,6 +235,337 @@ namespace Crowny
         internal IntPtr AudioSourcePlay;
         internal IntPtr AudioSourcePause;
         internal IntPtr AudioSourceStop;
+        internal IntPtr AssetGetName;
+        internal IntPtr AssetAcquire;
+        internal IntPtr AssetRelease;
+        internal IntPtr AssetDatabaseLoad;
+        internal IntPtr AssetDatabaseLoadFromUuid;
+        internal IntPtr AssetDatabaseGetPath;
+        internal IntPtr AssetDatabaseIsValid;
+        internal IntPtr AudioClipGetBitDepth;
+        internal IntPtr AudioClipGetChannels;
+        internal IntPtr AudioClipGetFrequency;
+        internal IntPtr AudioClipGetSamples;
+        internal IntPtr AudioClipGetLength;
+        internal IntPtr AudioClipGetReadMode;
+        internal IntPtr AudioClipGetFormat;
+        internal IntPtr AudioClipGetIs3D;
+        internal IntPtr TextureGetWidth;
+        internal IntPtr TextureGetHeight;
+        internal IntPtr AudioMixerSetActive;
+        internal IntPtr AudioMixerGetBusVolume;
+        internal IntPtr AudioMixerSetBusVolume;
+        internal IntPtr AudioMixerIsBusMuted;
+        internal IntPtr AudioMixerSetBusMuted;
+        internal IntPtr MaterialSetFloat;
+        internal IntPtr MaterialSetVector2;
+        internal IntPtr MaterialSetInt;
+        internal IntPtr MaterialSetColor;
+        internal IntPtr MaterialSetVector3;
+        internal IntPtr MaterialSetMatrix;
+        internal IntPtr MaterialSetTexture;
+        internal IntPtr MaterialHasAlphaModeOverride;
+        internal IntPtr MaterialGetAlphaMode;
+        internal IntPtr MaterialSetAlphaMode;
+        internal IntPtr MaterialClearAlphaModeOverride;
+        internal IntPtr PhysicsMaterial2DCreate;
+        internal IntPtr PhysicsMaterial3DCreate;
+        internal IntPtr Rigidbody3DAddForce;
+        internal IntPtr Rigidbody3DAddForceAt;
+        internal IntPtr Rigidbody3DAddTorque;
+        internal IntPtr CompressionCompress;
+        internal IntPtr CompressionDecompress;
+        internal IntPtr FileDialogOpenFile;
+        internal IntPtr FileDialogOpenFolder;
+        internal IntPtr FileDialogSaveFile;
+        internal IntPtr FileDialogSaveFolder;
+        internal IntPtr FontHasCharacter;
+        internal IntPtr FontGetIsValid;
+        internal IntPtr FontGetGlyphCount;
+        internal IntPtr FontGetTabWidth;
+        internal IntPtr FontGetAtlasWidth;
+        internal IntPtr FontGetAtlasHeight;
+        internal IntPtr FontGetAtlasPixelRange;
+        internal IntPtr FontGetFallbackCount;
+        internal IntPtr FontHasGlyph;
+        internal IntPtr FontGetCharacterInfo;
+        internal IntPtr FontGetFallback;
+        internal IntPtr FontAddFallback;
+        internal IntPtr FontClearFallbacks;
+        internal IntPtr FontGetSystemFontCount;
+        internal IntPtr FontGetSystemFontPath;
+        internal IntPtr FontGetSystemFontName;
+        internal IntPtr AnimationClipGetLength;
+        internal IntPtr AnimationClipGetSampleRate;
+        internal IntPtr AnimationClipGetIsAdditive;
+        internal IntPtr AnimationComponentPlay;
+        internal IntPtr AnimationComponentPause;
+        internal IntPtr AnimationComponentStop;
+        internal IntPtr TextHitTest;
+        internal IntPtr DebugWriteLog;
+        internal IntPtr RandomInitialize;
+        internal IntPtr RandomGetValue;
+        internal IntPtr RandomGetRange;
+        internal IntPtr RandomGetInsideUnitCircle;
+        internal IntPtr RandomGetInsideUnitSphere;
+        internal IntPtr NoiseGetPerlin2D;
+        internal IntPtr LayerMaskGetName;
+        internal IntPtr LayerMaskGetLayer;
+        internal IntPtr SceneGetActive;
+        internal IntPtr SceneGetExecutionState;
+        internal IntPtr SceneGetLoadedCount;
+        internal IntPtr SceneGetLoaded;
+        internal IntPtr SceneLoad;
+        internal IntPtr SceneUnload;
+        internal IntPtr SceneReload;
+        internal IntPtr SceneSetActive;
+        internal IntPtr CameraGetFieldOfView;
+        internal IntPtr CameraSetFieldOfView;
+        internal IntPtr CameraGetProjection;
+        internal IntPtr CameraSetProjection;
+        internal IntPtr CameraGetNearClipPlane;
+        internal IntPtr CameraSetNearClipPlane;
+        internal IntPtr CameraGetFarClipPlane;
+        internal IntPtr CameraSetFarClipPlane;
+        internal IntPtr CameraGetOrthographicSize;
+        internal IntPtr CameraSetOrthographicSize;
+        internal IntPtr CameraGetAspectRatio;
+        internal IntPtr CameraSetAspectRatio;
+        internal IntPtr CameraGetBackgroundColor;
+        internal IntPtr CameraSetBackgroundColor;
+        internal IntPtr CameraGetViewportRectangle;
+        internal IntPtr CameraSetViewportRectangle;
+        internal IntPtr CameraGetHdr;
+        internal IntPtr CameraSetHdr;
+        internal IntPtr CameraGetMsaa;
+        internal IntPtr CameraSetMsaa;
+        internal IntPtr CameraGetOcclusionCulling;
+        internal IntPtr CameraSetOcclusionCulling;
+        internal IntPtr SpriteRendererGetTexture;
+        internal IntPtr SpriteRendererSetTexture;
+        internal IntPtr SpriteRendererGetColor;
+        internal IntPtr SpriteRendererSetColor;
+        internal IntPtr SpriteRendererGetSortingLayer;
+        internal IntPtr SpriteRendererSetSortingLayer;
+        internal IntPtr SpriteRendererGetOrderInLayer;
+        internal IntPtr SpriteRendererSetOrderInLayer;
+        internal IntPtr LightGetType;
+        internal IntPtr LightSetType;
+        internal IntPtr LightGetColor;
+        internal IntPtr LightSetColor;
+        internal IntPtr LightGetIntensity;
+        internal IntPtr LightSetIntensity;
+        internal IntPtr LightGetRange;
+        internal IntPtr LightSetRange;
+        internal IntPtr LightGetSpotInnerAngle;
+        internal IntPtr LightSetSpotInnerAngle;
+        internal IntPtr LightGetSpotOuterAngle;
+        internal IntPtr LightSetSpotOuterAngle;
+        internal IntPtr LightGetSourceRadius;
+        internal IntPtr LightSetSourceRadius;
+        internal IntPtr LightGetUseColorTemperature;
+        internal IntPtr LightSetUseColorTemperature;
+        internal IntPtr LightGetTemperature;
+        internal IntPtr LightSetTemperature;
+        internal IntPtr LightGetVisibilityLayers;
+        internal IntPtr LightSetVisibilityLayers;
+        internal IntPtr LightGetEnabled;
+        internal IntPtr LightSetEnabled;
+        internal IntPtr LightGetAffectDiffuse;
+        internal IntPtr LightSetAffectDiffuse;
+        internal IntPtr LightGetAffectSpecular;
+        internal IntPtr LightSetAffectSpecular;
+        internal IntPtr LightGetVolumetric;
+        internal IntPtr LightSetVolumetric;
+        internal IntPtr LightGetShadows;
+        internal IntPtr LightSetShadows;
+        internal IntPtr LightGetShadowBias;
+        internal IntPtr LightSetShadowBias;
+        internal IntPtr LightGetShadowNormalBias;
+        internal IntPtr LightSetShadowNormalBias;
+        internal IntPtr LightGetShadowNearPlane;
+        internal IntPtr LightSetShadowNearPlane;
+        internal IntPtr LightGetShadowImportance;
+        internal IntPtr LightSetShadowImportance;
+        internal IntPtr LightGetShadowResolution;
+        internal IntPtr LightSetShadowResolution;
+        internal IntPtr LightGetCacheStaticShadowCasters;
+        internal IntPtr LightSetCacheStaticShadowCasters;
+        internal IntPtr Physics2DGetBackend;
+        internal IntPtr Physics2DGetIsSimulating;
+        internal IntPtr Physics2DGetGravity;
+        internal IntPtr Physics2DSetGravity;
+        internal IntPtr Physics2DGetVelocityIterations;
+        internal IntPtr Physics2DSetVelocityIterations;
+        internal IntPtr Physics2DGetPositionIterations;
+        internal IntPtr Physics2DSetPositionIterations;
+        internal IntPtr Physics2DGetDefaultMaterial;
+        internal IntPtr Physics2DSetDefaultMaterial;
+        internal IntPtr Physics2DGetLayerName;
+        internal IntPtr Physics2DSetLayerName;
+        internal IntPtr Physics2DGetLayerMask;
+        internal IntPtr Physics2DSetLayerMask;
+        internal IntPtr Physics2DResolveEntity;
+        internal IntPtr Physics2DRaycast;
+        internal IntPtr Physics3DGetBackend;
+        internal IntPtr Physics3DGetBackendName;
+        internal IntPtr Physics3DGetIsSimulating;
+        internal IntPtr Physics3DGetCapabilities;
+        internal IntPtr Physics3DGetGravity;
+        internal IntPtr Physics3DSetGravity;
+        internal IntPtr Physics3DGetSubsteps;
+        internal IntPtr Physics3DSetSubsteps;
+        internal IntPtr Physics3DGetDefaultMaterial;
+        internal IntPtr Physics3DSetDefaultMaterial;
+        internal IntPtr Physics3DTrySetBackend;
+        internal IntPtr Physics3DIsBackendAvailable;
+        internal IntPtr Physics3DResolveEntity;
+        internal IntPtr Physics3DRaycast;
+        internal IntPtr Physics3DSweep;
+        internal IntPtr Physics3DOverlap;
+        internal IntPtr MeshGetVertexCount;
+        internal IntPtr MeshGetIndexCount;
+        internal IntPtr MeshCopyVertices;
+        internal IntPtr MeshSetVertices;
+        internal IntPtr MeshCopyNormals;
+        internal IntPtr MeshSetNormals;
+        internal IntPtr MeshCopyUvs;
+        internal IntPtr MeshSetUvs;
+        internal IntPtr MeshCopyColors;
+        internal IntPtr MeshSetColors;
+        internal IntPtr MeshCopyIndices;
+        internal IntPtr MeshSetIndices;
+        internal IntPtr MeshRecalculateBounds;
+        internal IntPtr MeshRecalculateNormals;
+        internal IntPtr MeshRecalculateTangents;
+        internal IntPtr MeshUploadData;
+        internal IntPtr MeshClear;
+        internal IntPtr MeshGetBoundsMin;
+        internal IntPtr MeshGetBoundsMax;
+        internal IntPtr MeshSetVertexBufferParams;
+        internal IntPtr MeshSetVertexBufferData;
+        internal IntPtr MeshGetVertexBufferData;
+        internal IntPtr MeshGetVertexStride;
+        internal IntPtr MeshGetVertexAttributeCount;
+        internal IntPtr MeshHasVertexAttribute;
+        internal IntPtr MeshGetVertexAttribute;
+        internal IntPtr MeshCreatePlane;
+        internal IntPtr MeshCreateBox;
+        internal IntPtr MeshCreateCube;
+        internal IntPtr MeshCreateSphere;
+        internal IntPtr MeshCreateCylinder;
+        internal IntPtr MeshCreateCone;
+        internal IntPtr MeshCreateCapsule;
+        internal IntPtr MeshRendererGetMaterial;
+        internal IntPtr MeshRendererSetMaterial;
+        internal IntPtr MathMatrixDeterminant;
+        internal IntPtr MathMatrixInverse;
+        internal IntPtr MathMatrixAffineInverse;
+        internal IntPtr MathLookAt;
+        internal IntPtr AddScriptComponent;
+        internal IntPtr RemoveScriptComponent;
+        internal IntPtr MeshRendererGetMesh;
+        internal IntPtr MeshRendererSetMesh;
+        internal IntPtr MeshRendererGetMaterialCount;
+        internal IntPtr MeshRendererSetMaterialCount;
+        internal IntPtr Collider2DGetIsTrigger;
+        internal IntPtr Collider2DSetIsTrigger;
+        internal IntPtr Collider2DGetOffset;
+        internal IntPtr Collider2DSetOffset;
+        internal IntPtr Collider2DGetMaterial;
+        internal IntPtr Collider2DSetMaterial;
+        internal IntPtr BoxCollider2DGetSize;
+        internal IntPtr BoxCollider2DSetSize;
+        internal IntPtr CircleCollider2DGetRadius;
+        internal IntPtr CircleCollider2DSetRadius;
+        internal IntPtr Collider3DGetIsTrigger;
+        internal IntPtr Collider3DSetIsTrigger;
+        internal IntPtr Collider3DGetOffset;
+        internal IntPtr Collider3DSetOffset;
+        internal IntPtr Collider3DGetRotation;
+        internal IntPtr Collider3DSetRotation;
+        internal IntPtr Collider3DGetMaterial;
+        internal IntPtr Collider3DSetMaterial;
+        internal IntPtr Collider3DGetCollisionFilter;
+        internal IntPtr Collider3DSetCollisionFilter;
+        internal IntPtr BoxCollider3DGetSize;
+        internal IntPtr BoxCollider3DSetSize;
+        internal IntPtr SphereCollider3DGetRadius;
+        internal IntPtr SphereCollider3DSetRadius;
+        internal IntPtr CapsuleCollider3DGetRadius;
+        internal IntPtr CapsuleCollider3DSetRadius;
+        internal IntPtr CapsuleCollider3DGetHeight;
+        internal IntPtr CapsuleCollider3DSetHeight;
+        internal IntPtr Rigidbody3DGetBodyType;
+        internal IntPtr Rigidbody3DSetBodyType;
+        internal IntPtr Rigidbody3DGetMass;
+        internal IntPtr Rigidbody3DSetMass;
+        internal IntPtr Rigidbody3DGetAutoMass;
+        internal IntPtr Rigidbody3DSetAutoMass;
+        internal IntPtr Rigidbody3DGetGravityScale;
+        internal IntPtr Rigidbody3DSetGravityScale;
+        internal IntPtr Rigidbody3DGetLinearDamping;
+        internal IntPtr Rigidbody3DSetLinearDamping;
+        internal IntPtr Rigidbody3DGetAngularDamping;
+        internal IntPtr Rigidbody3DSetAngularDamping;
+        internal IntPtr Rigidbody3DGetCenterOfMass;
+        internal IntPtr Rigidbody3DSetCenterOfMass;
+        internal IntPtr Rigidbody3DGetAllowSleep;
+        internal IntPtr Rigidbody3DSetAllowSleep;
+        internal IntPtr Rigidbody3DGetStartAwake;
+        internal IntPtr Rigidbody3DSetStartAwake;
+        internal IntPtr Rigidbody3DGetContinuousCollision;
+        internal IntPtr Rigidbody3DSetContinuousCollision;
+        internal IntPtr Rigidbody3DGetConstraints;
+        internal IntPtr Rigidbody3DSetConstraints;
+        internal IntPtr Rigidbody3DGetCollisionFilter;
+        internal IntPtr Rigidbody3DSetCollisionFilter;
+        internal IntPtr Rigidbody3DGetLinearVelocity;
+        internal IntPtr Rigidbody3DSetLinearVelocity;
+        internal IntPtr Rigidbody3DGetAngularVelocity;
+        internal IntPtr Rigidbody3DSetAngularVelocity;
+        internal IntPtr Rigidbody3DGetAwake;
+        internal IntPtr Rigidbody3DSetAwake;
+        internal IntPtr Rigidbody3DGetBodyHandle;
+        internal IntPtr PhysicsMaterial2DGetDensity;
+        internal IntPtr PhysicsMaterial2DSetDensity;
+        internal IntPtr PhysicsMaterial2DGetFriction;
+        internal IntPtr PhysicsMaterial2DSetFriction;
+        internal IntPtr PhysicsMaterial2DGetRestitution;
+        internal IntPtr PhysicsMaterial2DSetRestitution;
+        internal IntPtr PhysicsMaterial2DGetRestitutionThreshold;
+        internal IntPtr PhysicsMaterial2DSetRestitutionThreshold;
+        internal IntPtr PhysicsMaterial2DGetFrictionCombine;
+        internal IntPtr PhysicsMaterial2DSetFrictionCombine;
+        internal IntPtr PhysicsMaterial2DGetRestitutionCombine;
+        internal IntPtr PhysicsMaterial2DSetRestitutionCombine;
+        internal IntPtr PhysicsMaterial3DGetDensity;
+        internal IntPtr PhysicsMaterial3DSetDensity;
+        internal IntPtr PhysicsMaterial3DGetFriction;
+        internal IntPtr PhysicsMaterial3DSetFriction;
+        internal IntPtr PhysicsMaterial3DGetRestitution;
+        internal IntPtr PhysicsMaterial3DSetRestitution;
+        internal IntPtr PhysicsMaterial3DGetRestitutionThreshold;
+        internal IntPtr PhysicsMaterial3DSetRestitutionThreshold;
+        internal IntPtr PhysicsMaterial3DGetFrictionCombine;
+        internal IntPtr PhysicsMaterial3DSetFrictionCombine;
+        internal IntPtr PhysicsMaterial3DGetRestitutionCombine;
+        internal IntPtr PhysicsMaterial3DSetRestitutionCombine;
+        internal IntPtr AnimationComponentGetClip;
+        internal IntPtr AnimationComponentSetClip;
+        internal IntPtr AnimationComponentGetSpeed;
+        internal IntPtr AnimationComponentSetSpeed;
+        internal IntPtr AnimationComponentGetWrapMode;
+        internal IntPtr AnimationComponentSetWrapMode;
+        internal IntPtr AnimationComponentGetPlayOnAwake;
+        internal IntPtr AnimationComponentSetPlayOnAwake;
+        internal IntPtr AnimationComponentGetApplyRootMotion;
+        internal IntPtr AnimationComponentSetApplyRootMotion;
+        internal IntPtr AnimationComponentGetTime;
+        internal IntPtr AnimationComponentSetTime;
+        internal IntPtr AnimationComponentGetNormalizedTime;
+        internal IntPtr AnimationComponentSetNormalizedTime;
+        internal IntPtr AnimationComponentGetState;
         internal IntPtr TextGetText;
         internal IntPtr TextSetText;
         internal IntPtr TextGetFont;
@@ -259,8 +616,6 @@ namespace Crowny
         internal IntPtr TextSetLineSpacing;
         internal IntPtr TextGetParagraphSpacing;
         internal IntPtr TextSetParagraphSpacing;
-        internal IntPtr TextGetTabWidth;
-        internal IntPtr TextSetTabWidth;
         internal IntPtr TextGetUseCustomDecorationColor;
         internal IntPtr TextSetUseCustomDecorationColor;
         internal IntPtr TextGetDecorationColor;
@@ -273,27 +628,12 @@ namespace Crowny
         internal IntPtr TextSetStrikethroughOffset;
         internal IntPtr TextGetUseKerning;
         internal IntPtr TextSetUseKerning;
+        internal IntPtr TextGetTabWidth;
+        internal IntPtr TextSetTabWidth;
         internal IntPtr TextGetSortingLayer;
         internal IntPtr TextSetSortingLayer;
         internal IntPtr TextGetOrderInLayer;
         internal IntPtr TextSetOrderInLayer;
-        internal IntPtr TextHitTest;
-        internal IntPtr FontGetIsValid;
-        internal IntPtr FontGetGlyphCount;
-        internal IntPtr FontGetTabWidth;
-        internal IntPtr FontGetAtlasWidth;
-        internal IntPtr FontGetAtlasHeight;
-        internal IntPtr FontGetAtlasPixelRange;
-        internal IntPtr FontHasGlyph;
-        internal IntPtr FontGetCharacterInfo;
-        internal IntPtr FontGetFallbackCount;
-        internal IntPtr FontGetFallback;
-        internal IntPtr FontAddFallback;
-        internal IntPtr FontClearFallbacks;
-        internal IntPtr MathMatrixDeterminant;
-        internal IntPtr MathMatrixInverse;
-        internal IntPtr MathMatrixAffineInverse;
-        internal IntPtr MathLookAt;
     }
 
     internal static unsafe class ManagedHostTransport
@@ -312,7 +652,7 @@ namespace Crowny
                 api = value;
                 return;
             }
-            if (value.AbiVersion != 9 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
+            if (value.AbiVersion != 11 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
                 throw new InvalidOperationException("The native host uses an incompatible managed scripting ABI.");
             bool complete =
                 value.GetEntityName != IntPtr.Zero &&
@@ -358,13 +698,13 @@ namespace Crowny
                    value.InputGetGamepadButtonDown != IntPtr.Zero &&
                    value.InputGetGamepadButtonUp != IntPtr.Zero &&
                    value.InputGetGamepadAxis != IntPtr.Zero &&
+                   value.InputEnableActionMap != IntPtr.Zero &&
+                   value.InputDisableActionMap != IntPtr.Zero &&
                    value.InputGetAction != IntPtr.Zero &&
                    value.InputGetActionDown != IntPtr.Zero &&
                    value.InputGetActionUp != IntPtr.Zero &&
                    value.InputGetAxis != IntPtr.Zero &&
                    value.InputGetActionVector != IntPtr.Zero &&
-                   value.InputEnableActionMap != IntPtr.Zero &&
-                   value.InputDisableActionMap != IntPtr.Zero &&
                    value.InputClearActionRebinds != IntPtr.Zero &&
                    value.TimeGetDeltaTime != IntPtr.Zero &&
                    value.TimeGetTime != IntPtr.Zero &&
@@ -431,6 +771,337 @@ namespace Crowny
                    value.AudioSourcePlay != IntPtr.Zero &&
                    value.AudioSourcePause != IntPtr.Zero &&
                    value.AudioSourceStop != IntPtr.Zero &&
+                   value.AssetGetName != IntPtr.Zero &&
+                   value.AssetAcquire != IntPtr.Zero &&
+                   value.AssetRelease != IntPtr.Zero &&
+                   value.AssetDatabaseLoad != IntPtr.Zero &&
+                   value.AssetDatabaseLoadFromUuid != IntPtr.Zero &&
+                   value.AssetDatabaseGetPath != IntPtr.Zero &&
+                   value.AssetDatabaseIsValid != IntPtr.Zero &&
+                   value.AudioClipGetBitDepth != IntPtr.Zero &&
+                   value.AudioClipGetChannels != IntPtr.Zero &&
+                   value.AudioClipGetFrequency != IntPtr.Zero &&
+                   value.AudioClipGetSamples != IntPtr.Zero &&
+                   value.AudioClipGetLength != IntPtr.Zero &&
+                   value.AudioClipGetReadMode != IntPtr.Zero &&
+                   value.AudioClipGetFormat != IntPtr.Zero &&
+                   value.AudioClipGetIs3D != IntPtr.Zero &&
+                   value.TextureGetWidth != IntPtr.Zero &&
+                   value.TextureGetHeight != IntPtr.Zero &&
+                   value.AudioMixerSetActive != IntPtr.Zero &&
+                   value.AudioMixerGetBusVolume != IntPtr.Zero &&
+                   value.AudioMixerSetBusVolume != IntPtr.Zero &&
+                   value.AudioMixerIsBusMuted != IntPtr.Zero &&
+                   value.AudioMixerSetBusMuted != IntPtr.Zero &&
+                   value.MaterialSetFloat != IntPtr.Zero &&
+                   value.MaterialSetVector2 != IntPtr.Zero &&
+                   value.MaterialSetInt != IntPtr.Zero &&
+                   value.MaterialSetColor != IntPtr.Zero &&
+                   value.MaterialSetVector3 != IntPtr.Zero &&
+                   value.MaterialSetMatrix != IntPtr.Zero &&
+                   value.MaterialSetTexture != IntPtr.Zero &&
+                   value.MaterialHasAlphaModeOverride != IntPtr.Zero &&
+                   value.MaterialGetAlphaMode != IntPtr.Zero &&
+                   value.MaterialSetAlphaMode != IntPtr.Zero &&
+                   value.MaterialClearAlphaModeOverride != IntPtr.Zero &&
+                   value.PhysicsMaterial2DCreate != IntPtr.Zero &&
+                   value.PhysicsMaterial3DCreate != IntPtr.Zero &&
+                   value.Rigidbody3DAddForce != IntPtr.Zero &&
+                   value.Rigidbody3DAddForceAt != IntPtr.Zero &&
+                   value.Rigidbody3DAddTorque != IntPtr.Zero &&
+                   value.CompressionCompress != IntPtr.Zero &&
+                   value.CompressionDecompress != IntPtr.Zero &&
+                   value.FileDialogOpenFile != IntPtr.Zero &&
+                   value.FileDialogOpenFolder != IntPtr.Zero &&
+                   value.FileDialogSaveFile != IntPtr.Zero &&
+                   value.FileDialogSaveFolder != IntPtr.Zero &&
+                   value.FontHasCharacter != IntPtr.Zero &&
+                   value.FontGetIsValid != IntPtr.Zero &&
+                   value.FontGetGlyphCount != IntPtr.Zero &&
+                   value.FontGetTabWidth != IntPtr.Zero &&
+                   value.FontGetAtlasWidth != IntPtr.Zero &&
+                   value.FontGetAtlasHeight != IntPtr.Zero &&
+                   value.FontGetAtlasPixelRange != IntPtr.Zero &&
+                   value.FontGetFallbackCount != IntPtr.Zero &&
+                   value.FontHasGlyph != IntPtr.Zero &&
+                   value.FontGetCharacterInfo != IntPtr.Zero &&
+                   value.FontGetFallback != IntPtr.Zero &&
+                   value.FontAddFallback != IntPtr.Zero &&
+                   value.FontClearFallbacks != IntPtr.Zero &&
+                   value.FontGetSystemFontCount != IntPtr.Zero &&
+                   value.FontGetSystemFontPath != IntPtr.Zero &&
+                   value.FontGetSystemFontName != IntPtr.Zero &&
+                   value.AnimationClipGetLength != IntPtr.Zero &&
+                   value.AnimationClipGetSampleRate != IntPtr.Zero &&
+                   value.AnimationClipGetIsAdditive != IntPtr.Zero &&
+                   value.AnimationComponentPlay != IntPtr.Zero &&
+                   value.AnimationComponentPause != IntPtr.Zero &&
+                   value.AnimationComponentStop != IntPtr.Zero &&
+                   value.TextHitTest != IntPtr.Zero &&
+                   value.DebugWriteLog != IntPtr.Zero &&
+                   value.RandomInitialize != IntPtr.Zero &&
+                   value.RandomGetValue != IntPtr.Zero &&
+                   value.RandomGetRange != IntPtr.Zero &&
+                   value.RandomGetInsideUnitCircle != IntPtr.Zero &&
+                   value.RandomGetInsideUnitSphere != IntPtr.Zero &&
+                   value.NoiseGetPerlin2D != IntPtr.Zero &&
+                   value.LayerMaskGetName != IntPtr.Zero &&
+                   value.LayerMaskGetLayer != IntPtr.Zero &&
+                   value.SceneGetActive != IntPtr.Zero &&
+                   value.SceneGetExecutionState != IntPtr.Zero &&
+                   value.SceneGetLoadedCount != IntPtr.Zero &&
+                   value.SceneGetLoaded != IntPtr.Zero &&
+                   value.SceneLoad != IntPtr.Zero &&
+                   value.SceneUnload != IntPtr.Zero &&
+                   value.SceneReload != IntPtr.Zero &&
+                   value.SceneSetActive != IntPtr.Zero &&
+                   value.CameraGetFieldOfView != IntPtr.Zero &&
+                   value.CameraSetFieldOfView != IntPtr.Zero &&
+                   value.CameraGetProjection != IntPtr.Zero &&
+                   value.CameraSetProjection != IntPtr.Zero &&
+                   value.CameraGetNearClipPlane != IntPtr.Zero &&
+                   value.CameraSetNearClipPlane != IntPtr.Zero &&
+                   value.CameraGetFarClipPlane != IntPtr.Zero &&
+                   value.CameraSetFarClipPlane != IntPtr.Zero &&
+                   value.CameraGetOrthographicSize != IntPtr.Zero &&
+                   value.CameraSetOrthographicSize != IntPtr.Zero &&
+                   value.CameraGetAspectRatio != IntPtr.Zero &&
+                   value.CameraSetAspectRatio != IntPtr.Zero &&
+                   value.CameraGetBackgroundColor != IntPtr.Zero &&
+                   value.CameraSetBackgroundColor != IntPtr.Zero &&
+                   value.CameraGetViewportRectangle != IntPtr.Zero &&
+                   value.CameraSetViewportRectangle != IntPtr.Zero &&
+                   value.CameraGetHdr != IntPtr.Zero &&
+                   value.CameraSetHdr != IntPtr.Zero &&
+                   value.CameraGetMsaa != IntPtr.Zero &&
+                   value.CameraSetMsaa != IntPtr.Zero &&
+                   value.CameraGetOcclusionCulling != IntPtr.Zero &&
+                   value.CameraSetOcclusionCulling != IntPtr.Zero &&
+                   value.SpriteRendererGetTexture != IntPtr.Zero &&
+                   value.SpriteRendererSetTexture != IntPtr.Zero &&
+                   value.SpriteRendererGetColor != IntPtr.Zero &&
+                   value.SpriteRendererSetColor != IntPtr.Zero &&
+                   value.SpriteRendererGetSortingLayer != IntPtr.Zero &&
+                   value.SpriteRendererSetSortingLayer != IntPtr.Zero &&
+                   value.SpriteRendererGetOrderInLayer != IntPtr.Zero &&
+                   value.SpriteRendererSetOrderInLayer != IntPtr.Zero &&
+                   value.LightGetType != IntPtr.Zero &&
+                   value.LightSetType != IntPtr.Zero &&
+                   value.LightGetColor != IntPtr.Zero &&
+                   value.LightSetColor != IntPtr.Zero &&
+                   value.LightGetIntensity != IntPtr.Zero &&
+                   value.LightSetIntensity != IntPtr.Zero &&
+                   value.LightGetRange != IntPtr.Zero &&
+                   value.LightSetRange != IntPtr.Zero &&
+                   value.LightGetSpotInnerAngle != IntPtr.Zero &&
+                   value.LightSetSpotInnerAngle != IntPtr.Zero &&
+                   value.LightGetSpotOuterAngle != IntPtr.Zero &&
+                   value.LightSetSpotOuterAngle != IntPtr.Zero &&
+                   value.LightGetSourceRadius != IntPtr.Zero &&
+                   value.LightSetSourceRadius != IntPtr.Zero &&
+                   value.LightGetUseColorTemperature != IntPtr.Zero &&
+                   value.LightSetUseColorTemperature != IntPtr.Zero &&
+                   value.LightGetTemperature != IntPtr.Zero &&
+                   value.LightSetTemperature != IntPtr.Zero &&
+                   value.LightGetVisibilityLayers != IntPtr.Zero &&
+                   value.LightSetVisibilityLayers != IntPtr.Zero &&
+                   value.LightGetEnabled != IntPtr.Zero &&
+                   value.LightSetEnabled != IntPtr.Zero &&
+                   value.LightGetAffectDiffuse != IntPtr.Zero &&
+                   value.LightSetAffectDiffuse != IntPtr.Zero &&
+                   value.LightGetAffectSpecular != IntPtr.Zero &&
+                   value.LightSetAffectSpecular != IntPtr.Zero &&
+                   value.LightGetVolumetric != IntPtr.Zero &&
+                   value.LightSetVolumetric != IntPtr.Zero &&
+                   value.LightGetShadows != IntPtr.Zero &&
+                   value.LightSetShadows != IntPtr.Zero &&
+                   value.LightGetShadowBias != IntPtr.Zero &&
+                   value.LightSetShadowBias != IntPtr.Zero &&
+                   value.LightGetShadowNormalBias != IntPtr.Zero &&
+                   value.LightSetShadowNormalBias != IntPtr.Zero &&
+                   value.LightGetShadowNearPlane != IntPtr.Zero &&
+                   value.LightSetShadowNearPlane != IntPtr.Zero &&
+                   value.LightGetShadowImportance != IntPtr.Zero &&
+                   value.LightSetShadowImportance != IntPtr.Zero &&
+                   value.LightGetShadowResolution != IntPtr.Zero &&
+                   value.LightSetShadowResolution != IntPtr.Zero &&
+                   value.LightGetCacheStaticShadowCasters != IntPtr.Zero &&
+                   value.LightSetCacheStaticShadowCasters != IntPtr.Zero &&
+                   value.Physics2DGetBackend != IntPtr.Zero &&
+                   value.Physics2DGetIsSimulating != IntPtr.Zero &&
+                   value.Physics2DGetGravity != IntPtr.Zero &&
+                   value.Physics2DSetGravity != IntPtr.Zero &&
+                   value.Physics2DGetVelocityIterations != IntPtr.Zero &&
+                   value.Physics2DSetVelocityIterations != IntPtr.Zero &&
+                   value.Physics2DGetPositionIterations != IntPtr.Zero &&
+                   value.Physics2DSetPositionIterations != IntPtr.Zero &&
+                   value.Physics2DGetDefaultMaterial != IntPtr.Zero &&
+                   value.Physics2DSetDefaultMaterial != IntPtr.Zero &&
+                   value.Physics2DGetLayerName != IntPtr.Zero &&
+                   value.Physics2DSetLayerName != IntPtr.Zero &&
+                   value.Physics2DGetLayerMask != IntPtr.Zero &&
+                   value.Physics2DSetLayerMask != IntPtr.Zero &&
+                   value.Physics2DResolveEntity != IntPtr.Zero &&
+                   value.Physics2DRaycast != IntPtr.Zero &&
+                   value.Physics3DGetBackend != IntPtr.Zero &&
+                   value.Physics3DGetBackendName != IntPtr.Zero &&
+                   value.Physics3DGetIsSimulating != IntPtr.Zero &&
+                   value.Physics3DGetCapabilities != IntPtr.Zero &&
+                   value.Physics3DGetGravity != IntPtr.Zero &&
+                   value.Physics3DSetGravity != IntPtr.Zero &&
+                   value.Physics3DGetSubsteps != IntPtr.Zero &&
+                   value.Physics3DSetSubsteps != IntPtr.Zero &&
+                   value.Physics3DGetDefaultMaterial != IntPtr.Zero &&
+                   value.Physics3DSetDefaultMaterial != IntPtr.Zero &&
+                   value.Physics3DTrySetBackend != IntPtr.Zero &&
+                   value.Physics3DIsBackendAvailable != IntPtr.Zero &&
+                   value.Physics3DResolveEntity != IntPtr.Zero &&
+                   value.Physics3DRaycast != IntPtr.Zero &&
+                   value.Physics3DSweep != IntPtr.Zero &&
+                   value.Physics3DOverlap != IntPtr.Zero &&
+                   value.MeshGetVertexCount != IntPtr.Zero &&
+                   value.MeshGetIndexCount != IntPtr.Zero &&
+                   value.MeshCopyVertices != IntPtr.Zero &&
+                   value.MeshSetVertices != IntPtr.Zero &&
+                   value.MeshCopyNormals != IntPtr.Zero &&
+                   value.MeshSetNormals != IntPtr.Zero &&
+                   value.MeshCopyUvs != IntPtr.Zero &&
+                   value.MeshSetUvs != IntPtr.Zero &&
+                   value.MeshCopyColors != IntPtr.Zero &&
+                   value.MeshSetColors != IntPtr.Zero &&
+                   value.MeshCopyIndices != IntPtr.Zero &&
+                   value.MeshSetIndices != IntPtr.Zero &&
+                   value.MeshRecalculateBounds != IntPtr.Zero &&
+                   value.MeshRecalculateNormals != IntPtr.Zero &&
+                   value.MeshRecalculateTangents != IntPtr.Zero &&
+                   value.MeshUploadData != IntPtr.Zero &&
+                   value.MeshClear != IntPtr.Zero &&
+                   value.MeshGetBoundsMin != IntPtr.Zero &&
+                   value.MeshGetBoundsMax != IntPtr.Zero &&
+                   value.MeshSetVertexBufferParams != IntPtr.Zero &&
+                   value.MeshSetVertexBufferData != IntPtr.Zero &&
+                   value.MeshGetVertexBufferData != IntPtr.Zero &&
+                   value.MeshGetVertexStride != IntPtr.Zero &&
+                   value.MeshGetVertexAttributeCount != IntPtr.Zero &&
+                   value.MeshHasVertexAttribute != IntPtr.Zero &&
+                   value.MeshGetVertexAttribute != IntPtr.Zero &&
+                   value.MeshCreatePlane != IntPtr.Zero &&
+                   value.MeshCreateBox != IntPtr.Zero &&
+                   value.MeshCreateCube != IntPtr.Zero &&
+                   value.MeshCreateSphere != IntPtr.Zero &&
+                   value.MeshCreateCylinder != IntPtr.Zero &&
+                   value.MeshCreateCone != IntPtr.Zero &&
+                   value.MeshCreateCapsule != IntPtr.Zero &&
+                   value.MeshRendererGetMaterial != IntPtr.Zero &&
+                   value.MeshRendererSetMaterial != IntPtr.Zero &&
+                   value.MathMatrixDeterminant != IntPtr.Zero &&
+                   value.MathMatrixInverse != IntPtr.Zero &&
+                   value.MathMatrixAffineInverse != IntPtr.Zero &&
+                   value.MathLookAt != IntPtr.Zero &&
+                   value.AddScriptComponent != IntPtr.Zero &&
+                   value.RemoveScriptComponent != IntPtr.Zero &&
+                   value.MeshRendererGetMesh != IntPtr.Zero &&
+                   value.MeshRendererSetMesh != IntPtr.Zero &&
+                   value.MeshRendererGetMaterialCount != IntPtr.Zero &&
+                   value.MeshRendererSetMaterialCount != IntPtr.Zero &&
+                   value.Collider2DGetIsTrigger != IntPtr.Zero &&
+                   value.Collider2DSetIsTrigger != IntPtr.Zero &&
+                   value.Collider2DGetOffset != IntPtr.Zero &&
+                   value.Collider2DSetOffset != IntPtr.Zero &&
+                   value.Collider2DGetMaterial != IntPtr.Zero &&
+                   value.Collider2DSetMaterial != IntPtr.Zero &&
+                   value.BoxCollider2DGetSize != IntPtr.Zero &&
+                   value.BoxCollider2DSetSize != IntPtr.Zero &&
+                   value.CircleCollider2DGetRadius != IntPtr.Zero &&
+                   value.CircleCollider2DSetRadius != IntPtr.Zero &&
+                   value.Collider3DGetIsTrigger != IntPtr.Zero &&
+                   value.Collider3DSetIsTrigger != IntPtr.Zero &&
+                   value.Collider3DGetOffset != IntPtr.Zero &&
+                   value.Collider3DSetOffset != IntPtr.Zero &&
+                   value.Collider3DGetRotation != IntPtr.Zero &&
+                   value.Collider3DSetRotation != IntPtr.Zero &&
+                   value.Collider3DGetMaterial != IntPtr.Zero &&
+                   value.Collider3DSetMaterial != IntPtr.Zero &&
+                   value.Collider3DGetCollisionFilter != IntPtr.Zero &&
+                   value.Collider3DSetCollisionFilter != IntPtr.Zero &&
+                   value.BoxCollider3DGetSize != IntPtr.Zero &&
+                   value.BoxCollider3DSetSize != IntPtr.Zero &&
+                   value.SphereCollider3DGetRadius != IntPtr.Zero &&
+                   value.SphereCollider3DSetRadius != IntPtr.Zero &&
+                   value.CapsuleCollider3DGetRadius != IntPtr.Zero &&
+                   value.CapsuleCollider3DSetRadius != IntPtr.Zero &&
+                   value.CapsuleCollider3DGetHeight != IntPtr.Zero &&
+                   value.CapsuleCollider3DSetHeight != IntPtr.Zero &&
+                   value.Rigidbody3DGetBodyType != IntPtr.Zero &&
+                   value.Rigidbody3DSetBodyType != IntPtr.Zero &&
+                   value.Rigidbody3DGetMass != IntPtr.Zero &&
+                   value.Rigidbody3DSetMass != IntPtr.Zero &&
+                   value.Rigidbody3DGetAutoMass != IntPtr.Zero &&
+                   value.Rigidbody3DSetAutoMass != IntPtr.Zero &&
+                   value.Rigidbody3DGetGravityScale != IntPtr.Zero &&
+                   value.Rigidbody3DSetGravityScale != IntPtr.Zero &&
+                   value.Rigidbody3DGetLinearDamping != IntPtr.Zero &&
+                   value.Rigidbody3DSetLinearDamping != IntPtr.Zero &&
+                   value.Rigidbody3DGetAngularDamping != IntPtr.Zero &&
+                   value.Rigidbody3DSetAngularDamping != IntPtr.Zero &&
+                   value.Rigidbody3DGetCenterOfMass != IntPtr.Zero &&
+                   value.Rigidbody3DSetCenterOfMass != IntPtr.Zero &&
+                   value.Rigidbody3DGetAllowSleep != IntPtr.Zero &&
+                   value.Rigidbody3DSetAllowSleep != IntPtr.Zero &&
+                   value.Rigidbody3DGetStartAwake != IntPtr.Zero &&
+                   value.Rigidbody3DSetStartAwake != IntPtr.Zero &&
+                   value.Rigidbody3DGetContinuousCollision != IntPtr.Zero &&
+                   value.Rigidbody3DSetContinuousCollision != IntPtr.Zero &&
+                   value.Rigidbody3DGetConstraints != IntPtr.Zero &&
+                   value.Rigidbody3DSetConstraints != IntPtr.Zero &&
+                   value.Rigidbody3DGetCollisionFilter != IntPtr.Zero &&
+                   value.Rigidbody3DSetCollisionFilter != IntPtr.Zero &&
+                   value.Rigidbody3DGetLinearVelocity != IntPtr.Zero &&
+                   value.Rigidbody3DSetLinearVelocity != IntPtr.Zero &&
+                   value.Rigidbody3DGetAngularVelocity != IntPtr.Zero &&
+                   value.Rigidbody3DSetAngularVelocity != IntPtr.Zero &&
+                   value.Rigidbody3DGetAwake != IntPtr.Zero &&
+                   value.Rigidbody3DSetAwake != IntPtr.Zero &&
+                   value.Rigidbody3DGetBodyHandle != IntPtr.Zero &&
+                   value.PhysicsMaterial2DGetDensity != IntPtr.Zero &&
+                   value.PhysicsMaterial2DSetDensity != IntPtr.Zero &&
+                   value.PhysicsMaterial2DGetFriction != IntPtr.Zero &&
+                   value.PhysicsMaterial2DSetFriction != IntPtr.Zero &&
+                   value.PhysicsMaterial2DGetRestitution != IntPtr.Zero &&
+                   value.PhysicsMaterial2DSetRestitution != IntPtr.Zero &&
+                   value.PhysicsMaterial2DGetRestitutionThreshold != IntPtr.Zero &&
+                   value.PhysicsMaterial2DSetRestitutionThreshold != IntPtr.Zero &&
+                   value.PhysicsMaterial2DGetFrictionCombine != IntPtr.Zero &&
+                   value.PhysicsMaterial2DSetFrictionCombine != IntPtr.Zero &&
+                   value.PhysicsMaterial2DGetRestitutionCombine != IntPtr.Zero &&
+                   value.PhysicsMaterial2DSetRestitutionCombine != IntPtr.Zero &&
+                   value.PhysicsMaterial3DGetDensity != IntPtr.Zero &&
+                   value.PhysicsMaterial3DSetDensity != IntPtr.Zero &&
+                   value.PhysicsMaterial3DGetFriction != IntPtr.Zero &&
+                   value.PhysicsMaterial3DSetFriction != IntPtr.Zero &&
+                   value.PhysicsMaterial3DGetRestitution != IntPtr.Zero &&
+                   value.PhysicsMaterial3DSetRestitution != IntPtr.Zero &&
+                   value.PhysicsMaterial3DGetRestitutionThreshold != IntPtr.Zero &&
+                   value.PhysicsMaterial3DSetRestitutionThreshold != IntPtr.Zero &&
+                   value.PhysicsMaterial3DGetFrictionCombine != IntPtr.Zero &&
+                   value.PhysicsMaterial3DSetFrictionCombine != IntPtr.Zero &&
+                   value.PhysicsMaterial3DGetRestitutionCombine != IntPtr.Zero &&
+                   value.PhysicsMaterial3DSetRestitutionCombine != IntPtr.Zero &&
+                   value.AnimationComponentGetClip != IntPtr.Zero &&
+                   value.AnimationComponentSetClip != IntPtr.Zero &&
+                   value.AnimationComponentGetSpeed != IntPtr.Zero &&
+                   value.AnimationComponentSetSpeed != IntPtr.Zero &&
+                   value.AnimationComponentGetWrapMode != IntPtr.Zero &&
+                   value.AnimationComponentSetWrapMode != IntPtr.Zero &&
+                   value.AnimationComponentGetPlayOnAwake != IntPtr.Zero &&
+                   value.AnimationComponentSetPlayOnAwake != IntPtr.Zero &&
+                   value.AnimationComponentGetApplyRootMotion != IntPtr.Zero &&
+                   value.AnimationComponentSetApplyRootMotion != IntPtr.Zero &&
+                   value.AnimationComponentGetTime != IntPtr.Zero &&
+                   value.AnimationComponentSetTime != IntPtr.Zero &&
+                   value.AnimationComponentGetNormalizedTime != IntPtr.Zero &&
+                   value.AnimationComponentSetNormalizedTime != IntPtr.Zero &&
+                   value.AnimationComponentGetState != IntPtr.Zero &&
                    value.TextGetText != IntPtr.Zero &&
                    value.TextSetText != IntPtr.Zero &&
                    value.TextGetFont != IntPtr.Zero &&
@@ -481,8 +1152,6 @@ namespace Crowny
                    value.TextSetLineSpacing != IntPtr.Zero &&
                    value.TextGetParagraphSpacing != IntPtr.Zero &&
                    value.TextSetParagraphSpacing != IntPtr.Zero &&
-                   value.TextGetTabWidth != IntPtr.Zero &&
-                   value.TextSetTabWidth != IntPtr.Zero &&
                    value.TextGetUseCustomDecorationColor != IntPtr.Zero &&
                    value.TextSetUseCustomDecorationColor != IntPtr.Zero &&
                    value.TextGetDecorationColor != IntPtr.Zero &&
@@ -495,27 +1164,12 @@ namespace Crowny
                    value.TextSetStrikethroughOffset != IntPtr.Zero &&
                    value.TextGetUseKerning != IntPtr.Zero &&
                    value.TextSetUseKerning != IntPtr.Zero &&
+                   value.TextGetTabWidth != IntPtr.Zero &&
+                   value.TextSetTabWidth != IntPtr.Zero &&
                    value.TextGetSortingLayer != IntPtr.Zero &&
                    value.TextSetSortingLayer != IntPtr.Zero &&
                    value.TextGetOrderInLayer != IntPtr.Zero &&
-                   value.TextSetOrderInLayer != IntPtr.Zero &&
-                   value.TextHitTest != IntPtr.Zero &&
-                   value.FontGetIsValid != IntPtr.Zero &&
-                   value.FontGetGlyphCount != IntPtr.Zero &&
-                   value.FontGetTabWidth != IntPtr.Zero &&
-                   value.FontGetAtlasWidth != IntPtr.Zero &&
-                   value.FontGetAtlasHeight != IntPtr.Zero &&
-                   value.FontGetAtlasPixelRange != IntPtr.Zero &&
-                   value.FontHasGlyph != IntPtr.Zero &&
-                   value.FontGetCharacterInfo != IntPtr.Zero &&
-                   value.FontGetFallbackCount != IntPtr.Zero &&
-                   value.FontGetFallback != IntPtr.Zero &&
-                   value.FontAddFallback != IntPtr.Zero &&
-                   value.FontClearFallbacks != IntPtr.Zero &&
-                   value.MathMatrixDeterminant != IntPtr.Zero &&
-                   value.MathMatrixInverse != IntPtr.Zero &&
-                   value.MathMatrixAffineInverse != IntPtr.Zero &&
-                   value.MathLookAt != IntPtr.Zero;
+                   value.TextSetOrderInLayer != IntPtr.Zero;
             if (!complete)
                 throw new InvalidOperationException("The native host did not provide every managed binding.");
             GetEntityNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall0>(value.GetEntityName);
@@ -561,13 +1215,13 @@ namespace Crowny
             InputGetGamepadButtonDownCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall18>(value.InputGetGamepadButtonDown);
             InputGetGamepadButtonUpCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall18>(value.InputGetGamepadButtonUp);
             InputGetGamepadAxisCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall19>(value.InputGetGamepadAxis);
-            InputGetActionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall20>(value.InputGetAction);
-            InputGetActionDownCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall20>(value.InputGetActionDown);
-            InputGetActionUpCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall20>(value.InputGetActionUp);
-            InputGetAxisCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall21>(value.InputGetAxis);
-            InputGetActionVectorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall22>(value.InputGetActionVector);
-            InputEnableActionMapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall23>(value.InputEnableActionMap);
-            InputDisableActionMapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall23>(value.InputDisableActionMap);
+            InputEnableActionMapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall20>(value.InputEnableActionMap);
+            InputDisableActionMapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall20>(value.InputDisableActionMap);
+            InputGetActionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall21>(value.InputGetAction);
+            InputGetActionDownCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall21>(value.InputGetActionDown);
+            InputGetActionUpCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall21>(value.InputGetActionUp);
+            InputGetAxisCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall22>(value.InputGetAxis);
+            InputGetActionVectorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall23>(value.InputGetActionVector);
             InputClearActionRebindsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall24>(value.InputClearActionRebinds);
             TimeGetDeltaTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.TimeGetDeltaTime);
             TimeGetTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.TimeGetTime);
@@ -634,12 +1288,343 @@ namespace Crowny
             AudioSourcePlayCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AudioSourcePlay);
             AudioSourcePauseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AudioSourcePause);
             AudioSourceStopCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AudioSourceStop);
+            AssetGetNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall40>(value.AssetGetName);
+            AssetAcquireCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.AssetAcquire);
+            AssetReleaseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.AssetRelease);
+            AssetDatabaseLoadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.AssetDatabaseLoad);
+            AssetDatabaseLoadFromUuidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall43>(value.AssetDatabaseLoadFromUuid);
+            AssetDatabaseGetPathCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall40>(value.AssetDatabaseGetPath);
+            AssetDatabaseIsValidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.AssetDatabaseIsValid);
+            AudioClipGetBitDepthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.AudioClipGetBitDepth);
+            AudioClipGetChannelsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.AudioClipGetChannels);
+            AudioClipGetFrequencyCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.AudioClipGetFrequency);
+            AudioClipGetSamplesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.AudioClipGetSamples);
+            AudioClipGetLengthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.AudioClipGetLength);
+            AudioClipGetReadModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.AudioClipGetReadMode);
+            AudioClipGetFormatCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.AudioClipGetFormat);
+            AudioClipGetIs3DCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.AudioClipGetIs3D);
+            TextureGetWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.TextureGetWidth);
+            TextureGetHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.TextureGetHeight);
+            AudioMixerSetActiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.AudioMixerSetActive);
+            AudioMixerGetBusVolumeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall48>(value.AudioMixerGetBusVolume);
+            AudioMixerSetBusVolumeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall49>(value.AudioMixerSetBusVolume);
+            AudioMixerIsBusMutedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall50>(value.AudioMixerIsBusMuted);
+            AudioMixerSetBusMutedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall51>(value.AudioMixerSetBusMuted);
+            MaterialSetFloatCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall52>(value.MaterialSetFloat);
+            MaterialSetVector2Callback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall53>(value.MaterialSetVector2);
+            MaterialSetIntCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall54>(value.MaterialSetInt);
+            MaterialSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall55>(value.MaterialSetColor);
+            MaterialSetVector3Callback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall56>(value.MaterialSetVector3);
+            MaterialSetMatrixCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall57>(value.MaterialSetMatrix);
+            MaterialSetTextureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall58>(value.MaterialSetTexture);
+            MaterialHasAlphaModeOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.MaterialHasAlphaModeOverride);
+            MaterialGetAlphaModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.MaterialGetAlphaMode);
+            MaterialSetAlphaModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall59>(value.MaterialSetAlphaMode);
+            MaterialClearAlphaModeOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MaterialClearAlphaModeOverride);
+            PhysicsMaterial2DCreateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.PhysicsMaterial2DCreate);
+            PhysicsMaterial3DCreateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.PhysicsMaterial3DCreate);
+            Rigidbody3DAddForceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall61>(value.Rigidbody3DAddForce);
+            Rigidbody3DAddForceAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall62>(value.Rigidbody3DAddForceAt);
+            Rigidbody3DAddTorqueCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall63>(value.Rigidbody3DAddTorque);
+            CompressionCompressCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall64>(value.CompressionCompress);
+            CompressionDecompressCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall65>(value.CompressionDecompress);
+            FileDialogOpenFileCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall66>(value.FileDialogOpenFile);
+            FileDialogOpenFolderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall67>(value.FileDialogOpenFolder);
+            FileDialogSaveFileCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall68>(value.FileDialogSaveFile);
+            FileDialogSaveFolderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall69>(value.FileDialogSaveFolder);
+            FontHasCharacterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall70>(value.FontHasCharacter);
+            FontGetIsValidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall71>(value.FontGetIsValid);
+            FontGetGlyphCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetGlyphCount);
+            FontGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetTabWidth);
+            FontGetAtlasWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetAtlasWidth);
+            FontGetAtlasHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetAtlasHeight);
+            FontGetAtlasPixelRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall73>(value.FontGetAtlasPixelRange);
+            FontGetFallbackCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetFallbackCount);
+            FontHasGlyphCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall74>(value.FontHasGlyph);
+            FontGetCharacterInfoCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall75>(value.FontGetCharacterInfo);
+            FontGetFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall76>(value.FontGetFallback);
+            FontAddFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall77>(value.FontAddFallback);
+            FontClearFallbacksCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall78>(value.FontClearFallbacks);
+            FontGetSystemFontCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.FontGetSystemFontCount);
+            FontGetSystemFontPathCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall79>(value.FontGetSystemFontPath);
+            FontGetSystemFontNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall79>(value.FontGetSystemFontName);
+            AnimationClipGetLengthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.AnimationClipGetLength);
+            AnimationClipGetSampleRateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.AnimationClipGetSampleRate);
+            AnimationClipGetIsAdditiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.AnimationClipGetIsAdditive);
+            AnimationComponentPlayCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AnimationComponentPlay);
+            AnimationComponentPauseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AnimationComponentPause);
+            AnimationComponentStopCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AnimationComponentStop);
+            TextHitTestCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall80>(value.TextHitTest);
+            DebugWriteLogCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall81>(value.DebugWriteLog);
+            RandomInitializeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall82>(value.RandomInitialize);
+            RandomGetValueCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.RandomGetValue);
+            RandomGetRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall83>(value.RandomGetRange);
+            RandomGetInsideUnitCircleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall16>(value.RandomGetInsideUnitCircle);
+            RandomGetInsideUnitSphereCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall84>(value.RandomGetInsideUnitSphere);
+            NoiseGetPerlin2DCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall85>(value.NoiseGetPerlin2D);
+            LayerMaskGetNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall86>(value.LayerMaskGetName);
+            LayerMaskGetLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall87>(value.LayerMaskGetLayer);
+            SceneGetActiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.SceneGetActive);
+            SceneGetExecutionStateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall88>(value.SceneGetExecutionState);
+            SceneGetLoadedCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.SceneGetLoadedCount);
+            SceneGetLoadedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall89>(value.SceneGetLoaded);
+            SceneLoadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall90>(value.SceneLoad);
+            SceneUnloadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall91>(value.SceneUnload);
+            SceneReloadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall91>(value.SceneReload);
+            SceneSetActiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall91>(value.SceneSetActive);
+            CameraGetFieldOfViewCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CameraGetFieldOfView);
+            CameraSetFieldOfViewCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CameraSetFieldOfView);
+            CameraGetProjectionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.CameraGetProjection);
+            CameraSetProjectionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.CameraSetProjection);
+            CameraGetNearClipPlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CameraGetNearClipPlane);
+            CameraSetNearClipPlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CameraSetNearClipPlane);
+            CameraGetFarClipPlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CameraGetFarClipPlane);
+            CameraSetFarClipPlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CameraSetFarClipPlane);
+            CameraGetOrthographicSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CameraGetOrthographicSize);
+            CameraSetOrthographicSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CameraSetOrthographicSize);
+            CameraGetAspectRatioCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CameraGetAspectRatio);
+            CameraSetAspectRatioCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CameraSetAspectRatio);
+            CameraGetBackgroundColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.CameraGetBackgroundColor);
+            CameraSetBackgroundColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.CameraSetBackgroundColor);
+            CameraGetViewportRectangleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.CameraGetViewportRectangle);
+            CameraSetViewportRectangleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.CameraSetViewportRectangle);
+            CameraGetHdrCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.CameraGetHdr);
+            CameraSetHdrCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.CameraSetHdr);
+            CameraGetMsaaCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.CameraGetMsaa);
+            CameraSetMsaaCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.CameraSetMsaa);
+            CameraGetOcclusionCullingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.CameraGetOcclusionCulling);
+            CameraSetOcclusionCullingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.CameraSetOcclusionCulling);
+            SpriteRendererGetTextureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.SpriteRendererGetTexture);
+            SpriteRendererSetTextureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.SpriteRendererSetTexture);
+            SpriteRendererGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.SpriteRendererGetColor);
+            SpriteRendererSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.SpriteRendererSetColor);
+            SpriteRendererGetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.SpriteRendererGetSortingLayer);
+            SpriteRendererSetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.SpriteRendererSetSortingLayer);
+            SpriteRendererGetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.SpriteRendererGetOrderInLayer);
+            SpriteRendererSetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.SpriteRendererSetOrderInLayer);
+            LightGetTypeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.LightGetType);
+            LightSetTypeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.LightSetType);
+            LightGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.LightGetColor);
+            LightSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.LightSetColor);
+            LightGetIntensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetIntensity);
+            LightSetIntensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetIntensity);
+            LightGetRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetRange);
+            LightSetRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetRange);
+            LightGetSpotInnerAngleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetSpotInnerAngle);
+            LightSetSpotInnerAngleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetSpotInnerAngle);
+            LightGetSpotOuterAngleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetSpotOuterAngle);
+            LightSetSpotOuterAngleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetSpotOuterAngle);
+            LightGetSourceRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetSourceRadius);
+            LightSetSourceRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetSourceRadius);
+            LightGetUseColorTemperatureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.LightGetUseColorTemperature);
+            LightSetUseColorTemperatureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.LightSetUseColorTemperature);
+            LightGetTemperatureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetTemperature);
+            LightSetTemperatureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetTemperature);
+            LightGetVisibilityLayersCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.LightGetVisibilityLayers);
+            LightSetVisibilityLayersCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.LightSetVisibilityLayers);
+            LightGetEnabledCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.LightGetEnabled);
+            LightSetEnabledCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.LightSetEnabled);
+            LightGetAffectDiffuseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.LightGetAffectDiffuse);
+            LightSetAffectDiffuseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.LightSetAffectDiffuse);
+            LightGetAffectSpecularCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.LightGetAffectSpecular);
+            LightSetAffectSpecularCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.LightSetAffectSpecular);
+            LightGetVolumetricCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.LightGetVolumetric);
+            LightSetVolumetricCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.LightSetVolumetric);
+            LightGetShadowsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.LightGetShadows);
+            LightSetShadowsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.LightSetShadows);
+            LightGetShadowBiasCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetShadowBias);
+            LightSetShadowBiasCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetShadowBias);
+            LightGetShadowNormalBiasCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetShadowNormalBias);
+            LightSetShadowNormalBiasCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetShadowNormalBias);
+            LightGetShadowNearPlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetShadowNearPlane);
+            LightSetShadowNearPlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetShadowNearPlane);
+            LightGetShadowImportanceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetShadowImportance);
+            LightSetShadowImportanceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetShadowImportance);
+            LightGetShadowResolutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.LightGetShadowResolution);
+            LightSetShadowResolutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.LightSetShadowResolution);
+            LightGetCacheStaticShadowCastersCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.LightGetCacheStaticShadowCasters);
+            LightSetCacheStaticShadowCastersCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.LightSetCacheStaticShadowCasters);
+            Physics2DGetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall88>(value.Physics2DGetBackend);
+            Physics2DGetIsSimulatingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.Physics2DGetIsSimulating);
+            Physics2DGetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall16>(value.Physics2DGetGravity);
+            Physics2DSetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall95>(value.Physics2DSetGravity);
+            Physics2DGetVelocityIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.Physics2DGetVelocityIterations);
+            Physics2DSetVelocityIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall96>(value.Physics2DSetVelocityIterations);
+            Physics2DGetPositionIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.Physics2DGetPositionIterations);
+            Physics2DSetPositionIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall96>(value.Physics2DSetPositionIterations);
+            Physics2DGetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.Physics2DGetDefaultMaterial);
+            Physics2DSetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall97>(value.Physics2DSetDefaultMaterial);
+            Physics2DGetLayerNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall86>(value.Physics2DGetLayerName);
+            Physics2DSetLayerNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall98>(value.Physics2DSetLayerName);
+            Physics2DGetLayerMaskCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall99>(value.Physics2DGetLayerMask);
+            Physics2DSetLayerMaskCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall100>(value.Physics2DSetLayerMask);
+            Physics2DResolveEntityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall101>(value.Physics2DResolveEntity);
+            Physics2DRaycastCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall102>(value.Physics2DRaycast);
+            Physics3DGetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall88>(value.Physics3DGetBackend);
+            Physics3DGetBackendNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall103>(value.Physics3DGetBackendName);
+            Physics3DGetIsSimulatingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.Physics3DGetIsSimulating);
+            Physics3DGetCapabilitiesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall104>(value.Physics3DGetCapabilities);
+            Physics3DGetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall84>(value.Physics3DGetGravity);
+            Physics3DSetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall105>(value.Physics3DSetGravity);
+            Physics3DGetSubstepsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.Physics3DGetSubsteps);
+            Physics3DSetSubstepsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall96>(value.Physics3DSetSubsteps);
+            Physics3DGetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.Physics3DGetDefaultMaterial);
+            Physics3DSetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall97>(value.Physics3DSetDefaultMaterial);
+            Physics3DTrySetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall106>(value.Physics3DTrySetBackend);
+            Physics3DIsBackendAvailableCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall106>(value.Physics3DIsBackendAvailable);
+            Physics3DResolveEntityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall107>(value.Physics3DResolveEntity);
+            Physics3DRaycastCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall108>(value.Physics3DRaycast);
+            Physics3DSweepCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall109>(value.Physics3DSweep);
+            Physics3DOverlapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall110>(value.Physics3DOverlap);
+            MeshGetVertexCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.MeshGetVertexCount);
+            MeshGetIndexCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.MeshGetIndexCount);
+            MeshCopyVerticesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.MeshCopyVertices);
+            MeshSetVerticesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshSetVertices);
+            MeshCopyNormalsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.MeshCopyNormals);
+            MeshSetNormalsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshSetNormals);
+            MeshCopyUvsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall113>(value.MeshCopyUvs);
+            MeshSetUvsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall114>(value.MeshSetUvs);
+            MeshCopyColorsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.MeshCopyColors);
+            MeshSetColorsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshSetColors);
+            MeshCopyIndicesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.MeshCopyIndices);
+            MeshSetIndicesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshSetIndices);
+            MeshRecalculateBoundsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshRecalculateBounds);
+            MeshRecalculateNormalsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshRecalculateNormals);
+            MeshRecalculateTangentsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshRecalculateTangents);
+            MeshUploadDataCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshUploadData);
+            MeshClearCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshClear);
+            MeshGetBoundsMinCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall115>(value.MeshGetBoundsMin);
+            MeshGetBoundsMaxCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall115>(value.MeshGetBoundsMax);
+            MeshSetVertexBufferParamsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall116>(value.MeshSetVertexBufferParams);
+            MeshSetVertexBufferDataCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall117>(value.MeshSetVertexBufferData);
+            MeshGetVertexBufferDataCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall118>(value.MeshGetVertexBufferData);
+            MeshGetVertexStrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.MeshGetVertexStride);
+            MeshGetVertexAttributeCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.MeshGetVertexAttributeCount);
+            MeshHasVertexAttributeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall119>(value.MeshHasVertexAttribute);
+            MeshGetVertexAttributeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall120>(value.MeshGetVertexAttribute);
+            MeshCreatePlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall121>(value.MeshCreatePlane);
+            MeshCreateBoxCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall122>(value.MeshCreateBox);
+            MeshCreateCubeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall123>(value.MeshCreateCube);
+            MeshCreateSphereCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall124>(value.MeshCreateSphere);
+            MeshCreateCylinderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall125>(value.MeshCreateCylinder);
+            MeshCreateConeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall125>(value.MeshCreateCone);
+            MeshCreateCapsuleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall126>(value.MeshCreateCapsule);
+            MeshRendererGetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall127>(value.MeshRendererGetMaterial);
+            MeshRendererSetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall128>(value.MeshRendererSetMaterial);
+            MathMatrixDeterminantCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall129>(value.MathMatrixDeterminant);
+            MathMatrixInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall130>(value.MathMatrixInverse);
+            MathMatrixAffineInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall130>(value.MathMatrixAffineInverse);
+            MathLookAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall131>(value.MathLookAt);
+            AddScriptComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall132>(value.AddScriptComponent);
+            RemoveScriptComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall132>(value.RemoveScriptComponent);
+            MeshRendererGetMeshCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.MeshRendererGetMesh);
+            MeshRendererSetMeshCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.MeshRendererSetMesh);
+            MeshRendererGetMaterialCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.MeshRendererGetMaterialCount);
+            MeshRendererSetMaterialCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.MeshRendererSetMaterialCount);
+            Collider2DGetIsTriggerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Collider2DGetIsTrigger);
+            Collider2DSetIsTriggerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Collider2DSetIsTrigger);
+            Collider2DGetOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.Collider2DGetOffset);
+            Collider2DSetOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall33>(value.Collider2DSetOffset);
+            Collider2DGetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.Collider2DGetMaterial);
+            Collider2DSetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.Collider2DSetMaterial);
+            BoxCollider2DGetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.BoxCollider2DGetSize);
+            BoxCollider2DSetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall33>(value.BoxCollider2DSetSize);
+            CircleCollider2DGetRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CircleCollider2DGetRadius);
+            CircleCollider2DSetRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CircleCollider2DSetRadius);
+            Collider3DGetIsTriggerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Collider3DGetIsTrigger);
+            Collider3DSetIsTriggerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Collider3DSetIsTrigger);
+            Collider3DGetOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.Collider3DGetOffset);
+            Collider3DSetOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.Collider3DSetOffset);
+            Collider3DGetRotationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall10>(value.Collider3DGetRotation);
+            Collider3DSetRotationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall11>(value.Collider3DSetRotation);
+            Collider3DGetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.Collider3DGetMaterial);
+            Collider3DSetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.Collider3DSetMaterial);
+            Collider3DGetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall133>(value.Collider3DGetCollisionFilter);
+            Collider3DSetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall134>(value.Collider3DSetCollisionFilter);
+            BoxCollider3DGetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.BoxCollider3DGetSize);
+            BoxCollider3DSetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.BoxCollider3DSetSize);
+            SphereCollider3DGetRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.SphereCollider3DGetRadius);
+            SphereCollider3DSetRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.SphereCollider3DSetRadius);
+            CapsuleCollider3DGetRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CapsuleCollider3DGetRadius);
+            CapsuleCollider3DSetRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CapsuleCollider3DSetRadius);
+            CapsuleCollider3DGetHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CapsuleCollider3DGetHeight);
+            CapsuleCollider3DSetHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CapsuleCollider3DSetHeight);
+            Rigidbody3DGetBodyTypeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.Rigidbody3DGetBodyType);
+            Rigidbody3DSetBodyTypeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.Rigidbody3DSetBodyType);
+            Rigidbody3DGetMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody3DGetMass);
+            Rigidbody3DSetMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody3DSetMass);
+            Rigidbody3DGetAutoMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Rigidbody3DGetAutoMass);
+            Rigidbody3DSetAutoMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody3DSetAutoMass);
+            Rigidbody3DGetGravityScaleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody3DGetGravityScale);
+            Rigidbody3DSetGravityScaleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody3DSetGravityScale);
+            Rigidbody3DGetLinearDampingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody3DGetLinearDamping);
+            Rigidbody3DSetLinearDampingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody3DSetLinearDamping);
+            Rigidbody3DGetAngularDampingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.Rigidbody3DGetAngularDamping);
+            Rigidbody3DSetAngularDampingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.Rigidbody3DSetAngularDamping);
+            Rigidbody3DGetCenterOfMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.Rigidbody3DGetCenterOfMass);
+            Rigidbody3DSetCenterOfMassCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.Rigidbody3DSetCenterOfMass);
+            Rigidbody3DGetAllowSleepCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Rigidbody3DGetAllowSleep);
+            Rigidbody3DSetAllowSleepCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody3DSetAllowSleep);
+            Rigidbody3DGetStartAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Rigidbody3DGetStartAwake);
+            Rigidbody3DSetStartAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody3DSetStartAwake);
+            Rigidbody3DGetContinuousCollisionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Rigidbody3DGetContinuousCollision);
+            Rigidbody3DSetContinuousCollisionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody3DSetContinuousCollision);
+            Rigidbody3DGetConstraintsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.Rigidbody3DGetConstraints);
+            Rigidbody3DSetConstraintsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.Rigidbody3DSetConstraints);
+            Rigidbody3DGetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall133>(value.Rigidbody3DGetCollisionFilter);
+            Rigidbody3DSetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall134>(value.Rigidbody3DSetCollisionFilter);
+            Rigidbody3DGetLinearVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.Rigidbody3DGetLinearVelocity);
+            Rigidbody3DSetLinearVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.Rigidbody3DSetLinearVelocity);
+            Rigidbody3DGetAngularVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.Rigidbody3DGetAngularVelocity);
+            Rigidbody3DSetAngularVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.Rigidbody3DSetAngularVelocity);
+            Rigidbody3DGetAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Rigidbody3DGetAwake);
+            Rigidbody3DSetAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody3DSetAwake);
+            Rigidbody3DGetBodyHandleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall135>(value.Rigidbody3DGetBodyHandle);
+            PhysicsMaterial2DGetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial2DGetDensity);
+            PhysicsMaterial2DSetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial2DSetDensity);
+            PhysicsMaterial2DGetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial2DGetFriction);
+            PhysicsMaterial2DSetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial2DSetFriction);
+            PhysicsMaterial2DGetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial2DGetRestitution);
+            PhysicsMaterial2DSetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial2DSetRestitution);
+            PhysicsMaterial2DGetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial2DGetRestitutionThreshold);
+            PhysicsMaterial2DSetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial2DSetRestitutionThreshold);
+            PhysicsMaterial2DGetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.PhysicsMaterial2DGetFrictionCombine);
+            PhysicsMaterial2DSetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial2DSetFrictionCombine);
+            PhysicsMaterial2DGetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.PhysicsMaterial2DGetRestitutionCombine);
+            PhysicsMaterial2DSetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial2DSetRestitutionCombine);
+            PhysicsMaterial3DGetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial3DGetDensity);
+            PhysicsMaterial3DSetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial3DSetDensity);
+            PhysicsMaterial3DGetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial3DGetFriction);
+            PhysicsMaterial3DSetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial3DSetFriction);
+            PhysicsMaterial3DGetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial3DGetRestitution);
+            PhysicsMaterial3DSetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial3DSetRestitution);
+            PhysicsMaterial3DGetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial3DGetRestitutionThreshold);
+            PhysicsMaterial3DSetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial3DSetRestitutionThreshold);
+            PhysicsMaterial3DGetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.PhysicsMaterial3DGetFrictionCombine);
+            PhysicsMaterial3DSetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial3DSetFrictionCombine);
+            PhysicsMaterial3DGetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.PhysicsMaterial3DGetRestitutionCombine);
+            PhysicsMaterial3DSetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial3DSetRestitutionCombine);
+            AnimationComponentGetClipCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.AnimationComponentGetClip);
+            AnimationComponentSetClipCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.AnimationComponentSetClip);
+            AnimationComponentGetSpeedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AnimationComponentGetSpeed);
+            AnimationComponentSetSpeedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AnimationComponentSetSpeed);
+            AnimationComponentGetWrapModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.AnimationComponentGetWrapMode);
+            AnimationComponentSetWrapModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.AnimationComponentSetWrapMode);
+            AnimationComponentGetPlayOnAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.AnimationComponentGetPlayOnAwake);
+            AnimationComponentSetPlayOnAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.AnimationComponentSetPlayOnAwake);
+            AnimationComponentGetApplyRootMotionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.AnimationComponentGetApplyRootMotion);
+            AnimationComponentSetApplyRootMotionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.AnimationComponentSetApplyRootMotion);
+            AnimationComponentGetTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AnimationComponentGetTime);
+            AnimationComponentSetTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AnimationComponentSetTime);
+            AnimationComponentGetNormalizedTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AnimationComponentGetNormalizedTime);
+            AnimationComponentSetNormalizedTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AnimationComponentSetNormalizedTime);
+            AnimationComponentGetStateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.AnimationComponentGetState);
             TextGetTextCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall0>(value.TextGetText);
-            TextSetTextCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall40>(value.TextSetText);
+            TextSetTextCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall138>(value.TextSetText);
             TextGetFontCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.TextGetFont);
             TextSetFontCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.TextSetFont);
-            TextGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.TextGetColor);
-            TextSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.TextSetColor);
+            TextGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.TextGetColor);
+            TextSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextSetColor);
             TextGetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetSize);
             TextSetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetSize);
             TextGetAutoSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetAutoSize);
@@ -664,14 +1649,14 @@ namespace Crowny
             TextSetHorizontalAlignmentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetHorizontalAlignment);
             TextGetVerticalAlignmentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetVerticalAlignment);
             TextSetVerticalAlignmentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetVerticalAlignment);
-            TextGetFontStyleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.TextGetFontStyle);
-            TextSetFontStyleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.TextSetFontStyle);
-            TextGetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.TextGetOutlineColor);
-            TextSetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.TextSetOutlineColor);
+            TextGetFontStyleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetFontStyle);
+            TextSetFontStyleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetFontStyle);
+            TextGetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.TextGetOutlineColor);
+            TextSetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextSetOutlineColor);
             TextGetOutlineWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetOutlineWidth);
             TextSetOutlineWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetOutlineWidth);
-            TextGetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.TextGetShadowColor);
-            TextSetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.TextSetShadowColor);
+            TextGetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.TextGetShadowColor);
+            TextSetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextSetShadowColor);
             TextGetShadowOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.TextGetShadowOffset);
             TextSetShadowOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall33>(value.TextSetShadowOffset);
             TextGetShadowSoftnessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetShadowSoftness);
@@ -684,12 +1669,10 @@ namespace Crowny
             TextSetLineSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetLineSpacing);
             TextGetParagraphSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetParagraphSpacing);
             TextSetParagraphSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetParagraphSpacing);
-            TextGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.TextGetTabWidth);
-            TextSetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.TextSetTabWidth);
             TextGetUseCustomDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetUseCustomDecorationColor);
             TextSetUseCustomDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.TextSetUseCustomDecorationColor);
-            TextGetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.TextGetDecorationColor);
-            TextSetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall42>(value.TextSetDecorationColor);
+            TextGetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.TextGetDecorationColor);
+            TextSetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextSetDecorationColor);
             TextGetDecorationThicknessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetDecorationThickness);
             TextSetDecorationThicknessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetDecorationThickness);
             TextGetUnderlineOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetUnderlineOffset);
@@ -698,27 +1681,12 @@ namespace Crowny
             TextSetStrikethroughOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetStrikethroughOffset);
             TextGetUseKerningCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetUseKerning);
             TextSetUseKerningCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.TextSetUseKerning);
+            TextGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.TextGetTabWidth);
+            TextSetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.TextSetTabWidth);
             TextGetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetSortingLayer);
             TextSetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetSortingLayer);
             TextGetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetOrderInLayer);
             TextSetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetOrderInLayer);
-            TextHitTestCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall43>(value.TextHitTest);
-            FontGetIsValidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.FontGetIsValid);
-            FontGetGlyphCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetGlyphCount);
-            FontGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetTabWidth);
-            FontGetAtlasWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetAtlasWidth);
-            FontGetAtlasHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetAtlasHeight);
-            FontGetAtlasPixelRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.FontGetAtlasPixelRange);
-            FontHasGlyphCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.FontHasGlyph);
-            FontGetCharacterInfoCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall48>(value.FontGetCharacterInfo);
-            FontGetFallbackCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.FontGetFallbackCount);
-            FontGetFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall49>(value.FontGetFallback);
-            FontAddFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall50>(value.FontAddFallback);
-            FontClearFallbacksCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall51>(value.FontClearFallbacks);
-            MathMatrixDeterminantCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall52>(value.MathMatrixDeterminant);
-            MathMatrixInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall53>(value.MathMatrixInverse);
-            MathMatrixAffineInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall53>(value.MathMatrixAffineInverse);
-            MathLookAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall54>(value.MathLookAt);
             api = value;
         }
 
@@ -763,13 +1731,13 @@ namespace Crowny
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int ManagedHostCall19(void* context, uint gamepad, uint code, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall20(void* context, ManagedNativeStringView actionName, byte* result);
+        private delegate int ManagedHostCall20(void* context, ManagedNativeStringView mapName, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall21(void* context, ManagedNativeStringView actionName, float* result);
+        private delegate int ManagedHostCall21(void* context, ManagedNativeStringView actionName, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall22(void* context, ManagedNativeStringView actionName, ManagedNativeVec2* result);
+        private delegate int ManagedHostCall22(void* context, ManagedNativeStringView actionName, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall23(void* context, ManagedNativeStringView mapName, byte* result);
+        private delegate int ManagedHostCall23(void* context, ManagedNativeStringView actionName, ManagedNativeVec2* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int ManagedHostCall24(void* context);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -803,35 +1771,203 @@ namespace Crowny
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int ManagedHostCall39(void* context, ManagedNativeUuid entity, ManagedNativeUuid value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall40(void* context, ManagedNativeUuid entity, ManagedNativeStringView value);
+        private delegate int ManagedHostCall40(void* context, ManagedNativeUuid asset, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall41(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
+        private delegate int ManagedHostCall41(void* context, ManagedNativeUuid asset);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall42(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
+        private delegate int ManagedHostCall42(void* context, ManagedNativeStringView path, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall43(void* context, ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result);
+        private delegate int ManagedHostCall43(void* context, ManagedNativeUuid asset, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall44(void* context, ManagedNativeUuid font, byte* result);
+        private delegate int ManagedHostCall44(void* context, ManagedNativeUuid asset, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall45(void* context, ManagedNativeUuid font, uint* result);
+        private delegate int ManagedHostCall45(void* context, ManagedNativeUuid asset, int* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall46(void* context, ManagedNativeUuid font, float* result);
+        private delegate int ManagedHostCall46(void* context, ManagedNativeUuid asset, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall47(void* context, ManagedNativeUuid font, uint codePoint, byte* result);
+        private delegate int ManagedHostCall47(void* context, ManagedNativeUuid asset, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall48(void* context, ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result);
+        private delegate int ManagedHostCall48(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall49(void* context, ManagedNativeUuid font, uint index, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall49(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, float volume);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall50(void* context, ManagedNativeUuid font, ManagedNativeUuid value, byte* result);
+        private delegate int ManagedHostCall50(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall51(void* context, ManagedNativeUuid font);
+        private delegate int ManagedHostCall51(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, byte muted);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall52(void* context, ManagedNativeMatrix4* matrix, float* result);
+        private delegate int ManagedHostCall52(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, float value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall53(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
+        private delegate int ManagedHostCall53(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeVec2* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall54(void* context, ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result);
+        private delegate int ManagedHostCall54(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, int value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall55(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeVec4* value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall56(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeVec3* value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall57(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeMatrix4* value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall58(void* context, ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeUuid texture);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall59(void* context, ManagedNativeUuid asset, int alphaMode);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall60(void* context, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall61(void* context, ManagedNativeUuid entity, ManagedNativeVec3* force, int mode);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall62(void* context, ManagedNativeUuid entity, ManagedNativeVec3* force, ManagedNativeVec3* position, int mode);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall63(void* context, ManagedNativeUuid entity, ManagedNativeVec3* torque, int mode);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall64(void* context, ManagedNativeMutableBlob destination, ManagedNativeBlob source, int method, int level, ulong* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall65(void* context, ManagedNativeMutableBlob destination, ulong maximumDestinationSize, ManagedNativeBlob source, ulong sourceSize, int method, ulong* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall66(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView extensions, ManagedNativeStringView* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall67(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall68(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView defaultName, ManagedNativeStringView extensions, ManagedNativeStringView* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall69(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView defaultName, ManagedNativeStringView* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall70(void* context, ManagedNativeUuid asset, uint codePoint, byte* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall71(void* context, ManagedNativeUuid font, byte* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall72(void* context, ManagedNativeUuid font, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall73(void* context, ManagedNativeUuid font, float* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall74(void* context, ManagedNativeUuid font, uint codePoint, byte* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall75(void* context, ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall76(void* context, ManagedNativeUuid font, uint index, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall77(void* context, ManagedNativeUuid font, ManagedNativeUuid value, byte* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall78(void* context, ManagedNativeUuid font);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall79(void* context, uint index, ManagedNativeStringView* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall80(void* context, ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall81(void* context, int severity, ManagedNativeStringView message);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall82(void* context, int seed);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall83(void* context, float minimum, float maximum, float* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall84(void* context, ManagedNativeVec3* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall85(void* context, float x, float y, float* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall86(void* context, int layer, ManagedNativeStringView* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall87(void* context, ManagedNativeStringView name, int* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall88(void* context, int* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall89(void* context, uint index, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall90(void* context, ManagedNativeUuid scene, byte makeActive, int* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall91(void* context, ManagedNativeUuid scene, int* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall92(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall93(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall94(void* context, byte* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall95(void* context, ManagedNativeVec2* value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall96(void* context, uint value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall97(void* context, ManagedNativeUuid material);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall98(void* context, int layer, ManagedNativeStringView name);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall99(void* context, int layer, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall100(void* context, int layer, uint mask);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall101(void* context, uint runtimeId, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall102(void* context, ManagedNativeVec2* origin, ManagedNativeVec2* direction, float distance, uint layerMask, void* destination, uint capacity, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall103(void* context, ManagedNativeStringView* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall104(void* context, ulong* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall105(void* context, ManagedNativeVec3* value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall106(void* context, int value, byte* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall107(void* context, ulong runtimeId, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall108(void* context, ManagedNativeVec3* origin, ManagedNativeVec3* direction, float distance, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall109(void* context, int shapeType, ManagedNativeVec3* size, float radius, float height, ManagedNativeVec3* position, ManagedNativeQuaternion* rotation, ManagedNativeVec3* direction, float distance, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall110(void* context, int shapeType, ManagedNativeVec3* size, float radius, float height, ManagedNativeVec3* position, ManagedNativeQuaternion* rotation, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall111(void* context, ManagedNativeUuid asset, void* destination, uint capacity, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall112(void* context, ManagedNativeUuid asset, void* source, uint count);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall113(void* context, ManagedNativeUuid asset, uint channel, void* destination, uint capacity, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall114(void* context, ManagedNativeUuid asset, uint channel, void* source, uint count);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall115(void* context, ManagedNativeUuid asset, ManagedNativeVec3* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall116(void* context, ManagedNativeUuid asset, uint vertexCount, void* layout, uint layoutCount);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall117(void* context, ManagedNativeUuid asset, void* source, uint meshBufferStart, uint count, uint stride);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall118(void* context, ManagedNativeUuid asset, void* destination, uint capacity, uint stride, uint* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall119(void* context, ManagedNativeUuid asset, int attribute, byte* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall120(void* context, ManagedNativeUuid asset, int index, void* destination);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall121(void* context, float width, float height, uint subdivisionsX, uint subdivisionsY, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall122(void* context, ManagedNativeVec3* dimensions, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall123(void* context, float size, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall124(void* context, float radius, uint segments, uint rings, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall125(void* context, float radius, float height, uint segments, byte capped, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall126(void* context, float radius, float height, uint segments, uint hemisphereRings, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall127(void* context, ManagedNativeUuid entity, uint index, ManagedNativeUuid* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall128(void* context, ManagedNativeUuid entity, uint index, ManagedNativeUuid material);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall129(void* context, ManagedNativeMatrix4* matrix, float* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall130(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall131(void* context, ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall132(void* context, ManagedNativeUuid entity, ManagedNativeStringView assemblyName, ManagedNativeStringView namespaceName, ManagedNativeStringView typeName);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall133(void* context, ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall134(void* context, ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall135(void* context, ManagedNativeUuid entity, ulong* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall136(void* context, ManagedNativeUuid asset, float value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall137(void* context, ManagedNativeUuid asset, int value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall138(void* context, ManagedNativeUuid entity, ManagedNativeStringView value);
 
         private static ManagedHostCall0 GetEntityNameCallback;
         private static ManagedHostCall1 SetEntityNameCallback;
@@ -876,13 +2012,13 @@ namespace Crowny
         private static ManagedHostCall18 InputGetGamepadButtonDownCallback;
         private static ManagedHostCall18 InputGetGamepadButtonUpCallback;
         private static ManagedHostCall19 InputGetGamepadAxisCallback;
-        private static ManagedHostCall20 InputGetActionCallback;
-        private static ManagedHostCall20 InputGetActionDownCallback;
-        private static ManagedHostCall20 InputGetActionUpCallback;
-        private static ManagedHostCall21 InputGetAxisCallback;
-        private static ManagedHostCall22 InputGetActionVectorCallback;
-        private static ManagedHostCall23 InputEnableActionMapCallback;
-        private static ManagedHostCall23 InputDisableActionMapCallback;
+        private static ManagedHostCall20 InputEnableActionMapCallback;
+        private static ManagedHostCall20 InputDisableActionMapCallback;
+        private static ManagedHostCall21 InputGetActionCallback;
+        private static ManagedHostCall21 InputGetActionDownCallback;
+        private static ManagedHostCall21 InputGetActionUpCallback;
+        private static ManagedHostCall22 InputGetAxisCallback;
+        private static ManagedHostCall23 InputGetActionVectorCallback;
         private static ManagedHostCall24 InputClearActionRebindsCallback;
         private static ManagedHostCall15 TimeGetDeltaTimeCallback;
         private static ManagedHostCall15 TimeGetTimeCallback;
@@ -949,12 +2085,343 @@ namespace Crowny
         private static ManagedHostCall5 AudioSourcePlayCallback;
         private static ManagedHostCall5 AudioSourcePauseCallback;
         private static ManagedHostCall5 AudioSourceStopCallback;
+        private static ManagedHostCall40 AssetGetNameCallback;
+        private static ManagedHostCall41 AssetAcquireCallback;
+        private static ManagedHostCall41 AssetReleaseCallback;
+        private static ManagedHostCall42 AssetDatabaseLoadCallback;
+        private static ManagedHostCall43 AssetDatabaseLoadFromUuidCallback;
+        private static ManagedHostCall40 AssetDatabaseGetPathCallback;
+        private static ManagedHostCall44 AssetDatabaseIsValidCallback;
+        private static ManagedHostCall45 AudioClipGetBitDepthCallback;
+        private static ManagedHostCall45 AudioClipGetChannelsCallback;
+        private static ManagedHostCall45 AudioClipGetFrequencyCallback;
+        private static ManagedHostCall45 AudioClipGetSamplesCallback;
+        private static ManagedHostCall46 AudioClipGetLengthCallback;
+        private static ManagedHostCall45 AudioClipGetReadModeCallback;
+        private static ManagedHostCall45 AudioClipGetFormatCallback;
+        private static ManagedHostCall44 AudioClipGetIs3DCallback;
+        private static ManagedHostCall47 TextureGetWidthCallback;
+        private static ManagedHostCall47 TextureGetHeightCallback;
+        private static ManagedHostCall41 AudioMixerSetActiveCallback;
+        private static ManagedHostCall48 AudioMixerGetBusVolumeCallback;
+        private static ManagedHostCall49 AudioMixerSetBusVolumeCallback;
+        private static ManagedHostCall50 AudioMixerIsBusMutedCallback;
+        private static ManagedHostCall51 AudioMixerSetBusMutedCallback;
+        private static ManagedHostCall52 MaterialSetFloatCallback;
+        private static ManagedHostCall53 MaterialSetVector2Callback;
+        private static ManagedHostCall54 MaterialSetIntCallback;
+        private static ManagedHostCall55 MaterialSetColorCallback;
+        private static ManagedHostCall56 MaterialSetVector3Callback;
+        private static ManagedHostCall57 MaterialSetMatrixCallback;
+        private static ManagedHostCall58 MaterialSetTextureCallback;
+        private static ManagedHostCall44 MaterialHasAlphaModeOverrideCallback;
+        private static ManagedHostCall45 MaterialGetAlphaModeCallback;
+        private static ManagedHostCall59 MaterialSetAlphaModeCallback;
+        private static ManagedHostCall41 MaterialClearAlphaModeOverrideCallback;
+        private static ManagedHostCall60 PhysicsMaterial2DCreateCallback;
+        private static ManagedHostCall60 PhysicsMaterial3DCreateCallback;
+        private static ManagedHostCall61 Rigidbody3DAddForceCallback;
+        private static ManagedHostCall62 Rigidbody3DAddForceAtCallback;
+        private static ManagedHostCall63 Rigidbody3DAddTorqueCallback;
+        private static ManagedHostCall64 CompressionCompressCallback;
+        private static ManagedHostCall65 CompressionDecompressCallback;
+        private static ManagedHostCall66 FileDialogOpenFileCallback;
+        private static ManagedHostCall67 FileDialogOpenFolderCallback;
+        private static ManagedHostCall68 FileDialogSaveFileCallback;
+        private static ManagedHostCall69 FileDialogSaveFolderCallback;
+        private static ManagedHostCall70 FontHasCharacterCallback;
+        private static ManagedHostCall71 FontGetIsValidCallback;
+        private static ManagedHostCall72 FontGetGlyphCountCallback;
+        private static ManagedHostCall72 FontGetTabWidthCallback;
+        private static ManagedHostCall72 FontGetAtlasWidthCallback;
+        private static ManagedHostCall72 FontGetAtlasHeightCallback;
+        private static ManagedHostCall73 FontGetAtlasPixelRangeCallback;
+        private static ManagedHostCall72 FontGetFallbackCountCallback;
+        private static ManagedHostCall74 FontHasGlyphCallback;
+        private static ManagedHostCall75 FontGetCharacterInfoCallback;
+        private static ManagedHostCall76 FontGetFallbackCallback;
+        private static ManagedHostCall77 FontAddFallbackCallback;
+        private static ManagedHostCall78 FontClearFallbacksCallback;
+        private static ManagedHostCall25 FontGetSystemFontCountCallback;
+        private static ManagedHostCall79 FontGetSystemFontPathCallback;
+        private static ManagedHostCall79 FontGetSystemFontNameCallback;
+        private static ManagedHostCall46 AnimationClipGetLengthCallback;
+        private static ManagedHostCall46 AnimationClipGetSampleRateCallback;
+        private static ManagedHostCall44 AnimationClipGetIsAdditiveCallback;
+        private static ManagedHostCall5 AnimationComponentPlayCallback;
+        private static ManagedHostCall5 AnimationComponentPauseCallback;
+        private static ManagedHostCall5 AnimationComponentStopCallback;
+        private static ManagedHostCall80 TextHitTestCallback;
+        private static ManagedHostCall81 DebugWriteLogCallback;
+        private static ManagedHostCall82 RandomInitializeCallback;
+        private static ManagedHostCall15 RandomGetValueCallback;
+        private static ManagedHostCall83 RandomGetRangeCallback;
+        private static ManagedHostCall16 RandomGetInsideUnitCircleCallback;
+        private static ManagedHostCall84 RandomGetInsideUnitSphereCallback;
+        private static ManagedHostCall85 NoiseGetPerlin2DCallback;
+        private static ManagedHostCall86 LayerMaskGetNameCallback;
+        private static ManagedHostCall87 LayerMaskGetLayerCallback;
+        private static ManagedHostCall60 SceneGetActiveCallback;
+        private static ManagedHostCall88 SceneGetExecutionStateCallback;
+        private static ManagedHostCall25 SceneGetLoadedCountCallback;
+        private static ManagedHostCall89 SceneGetLoadedCallback;
+        private static ManagedHostCall90 SceneLoadCallback;
+        private static ManagedHostCall91 SceneUnloadCallback;
+        private static ManagedHostCall91 SceneReloadCallback;
+        private static ManagedHostCall91 SceneSetActiveCallback;
+        private static ManagedHostCall26 CameraGetFieldOfViewCallback;
+        private static ManagedHostCall27 CameraSetFieldOfViewCallback;
+        private static ManagedHostCall28 CameraGetProjectionCallback;
+        private static ManagedHostCall29 CameraSetProjectionCallback;
+        private static ManagedHostCall26 CameraGetNearClipPlaneCallback;
+        private static ManagedHostCall27 CameraSetNearClipPlaneCallback;
+        private static ManagedHostCall26 CameraGetFarClipPlaneCallback;
+        private static ManagedHostCall27 CameraSetFarClipPlaneCallback;
+        private static ManagedHostCall26 CameraGetOrthographicSizeCallback;
+        private static ManagedHostCall27 CameraSetOrthographicSizeCallback;
+        private static ManagedHostCall26 CameraGetAspectRatioCallback;
+        private static ManagedHostCall27 CameraSetAspectRatioCallback;
+        private static ManagedHostCall8 CameraGetBackgroundColorCallback;
+        private static ManagedHostCall9 CameraSetBackgroundColorCallback;
+        private static ManagedHostCall92 CameraGetViewportRectangleCallback;
+        private static ManagedHostCall93 CameraSetViewportRectangleCallback;
+        private static ManagedHostCall30 CameraGetHdrCallback;
+        private static ManagedHostCall31 CameraSetHdrCallback;
+        private static ManagedHostCall30 CameraGetMsaaCallback;
+        private static ManagedHostCall31 CameraSetMsaaCallback;
+        private static ManagedHostCall30 CameraGetOcclusionCullingCallback;
+        private static ManagedHostCall31 CameraSetOcclusionCullingCallback;
+        private static ManagedHostCall3 SpriteRendererGetTextureCallback;
+        private static ManagedHostCall39 SpriteRendererSetTextureCallback;
+        private static ManagedHostCall92 SpriteRendererGetColorCallback;
+        private static ManagedHostCall93 SpriteRendererSetColorCallback;
+        private static ManagedHostCall28 SpriteRendererGetSortingLayerCallback;
+        private static ManagedHostCall29 SpriteRendererSetSortingLayerCallback;
+        private static ManagedHostCall28 SpriteRendererGetOrderInLayerCallback;
+        private static ManagedHostCall29 SpriteRendererSetOrderInLayerCallback;
+        private static ManagedHostCall28 LightGetTypeCallback;
+        private static ManagedHostCall29 LightSetTypeCallback;
+        private static ManagedHostCall92 LightGetColorCallback;
+        private static ManagedHostCall93 LightSetColorCallback;
+        private static ManagedHostCall26 LightGetIntensityCallback;
+        private static ManagedHostCall27 LightSetIntensityCallback;
+        private static ManagedHostCall26 LightGetRangeCallback;
+        private static ManagedHostCall27 LightSetRangeCallback;
+        private static ManagedHostCall26 LightGetSpotInnerAngleCallback;
+        private static ManagedHostCall27 LightSetSpotInnerAngleCallback;
+        private static ManagedHostCall26 LightGetSpotOuterAngleCallback;
+        private static ManagedHostCall27 LightSetSpotOuterAngleCallback;
+        private static ManagedHostCall26 LightGetSourceRadiusCallback;
+        private static ManagedHostCall27 LightSetSourceRadiusCallback;
+        private static ManagedHostCall30 LightGetUseColorTemperatureCallback;
+        private static ManagedHostCall31 LightSetUseColorTemperatureCallback;
+        private static ManagedHostCall26 LightGetTemperatureCallback;
+        private static ManagedHostCall27 LightSetTemperatureCallback;
+        private static ManagedHostCall34 LightGetVisibilityLayersCallback;
+        private static ManagedHostCall35 LightSetVisibilityLayersCallback;
+        private static ManagedHostCall30 LightGetEnabledCallback;
+        private static ManagedHostCall31 LightSetEnabledCallback;
+        private static ManagedHostCall30 LightGetAffectDiffuseCallback;
+        private static ManagedHostCall31 LightSetAffectDiffuseCallback;
+        private static ManagedHostCall30 LightGetAffectSpecularCallback;
+        private static ManagedHostCall31 LightSetAffectSpecularCallback;
+        private static ManagedHostCall30 LightGetVolumetricCallback;
+        private static ManagedHostCall31 LightSetVolumetricCallback;
+        private static ManagedHostCall28 LightGetShadowsCallback;
+        private static ManagedHostCall29 LightSetShadowsCallback;
+        private static ManagedHostCall26 LightGetShadowBiasCallback;
+        private static ManagedHostCall27 LightSetShadowBiasCallback;
+        private static ManagedHostCall26 LightGetShadowNormalBiasCallback;
+        private static ManagedHostCall27 LightSetShadowNormalBiasCallback;
+        private static ManagedHostCall26 LightGetShadowNearPlaneCallback;
+        private static ManagedHostCall27 LightSetShadowNearPlaneCallback;
+        private static ManagedHostCall26 LightGetShadowImportanceCallback;
+        private static ManagedHostCall27 LightSetShadowImportanceCallback;
+        private static ManagedHostCall34 LightGetShadowResolutionCallback;
+        private static ManagedHostCall35 LightSetShadowResolutionCallback;
+        private static ManagedHostCall30 LightGetCacheStaticShadowCastersCallback;
+        private static ManagedHostCall31 LightSetCacheStaticShadowCastersCallback;
+        private static ManagedHostCall88 Physics2DGetBackendCallback;
+        private static ManagedHostCall94 Physics2DGetIsSimulatingCallback;
+        private static ManagedHostCall16 Physics2DGetGravityCallback;
+        private static ManagedHostCall95 Physics2DSetGravityCallback;
+        private static ManagedHostCall25 Physics2DGetVelocityIterationsCallback;
+        private static ManagedHostCall96 Physics2DSetVelocityIterationsCallback;
+        private static ManagedHostCall25 Physics2DGetPositionIterationsCallback;
+        private static ManagedHostCall96 Physics2DSetPositionIterationsCallback;
+        private static ManagedHostCall60 Physics2DGetDefaultMaterialCallback;
+        private static ManagedHostCall97 Physics2DSetDefaultMaterialCallback;
+        private static ManagedHostCall86 Physics2DGetLayerNameCallback;
+        private static ManagedHostCall98 Physics2DSetLayerNameCallback;
+        private static ManagedHostCall99 Physics2DGetLayerMaskCallback;
+        private static ManagedHostCall100 Physics2DSetLayerMaskCallback;
+        private static ManagedHostCall101 Physics2DResolveEntityCallback;
+        private static ManagedHostCall102 Physics2DRaycastCallback;
+        private static ManagedHostCall88 Physics3DGetBackendCallback;
+        private static ManagedHostCall103 Physics3DGetBackendNameCallback;
+        private static ManagedHostCall94 Physics3DGetIsSimulatingCallback;
+        private static ManagedHostCall104 Physics3DGetCapabilitiesCallback;
+        private static ManagedHostCall84 Physics3DGetGravityCallback;
+        private static ManagedHostCall105 Physics3DSetGravityCallback;
+        private static ManagedHostCall25 Physics3DGetSubstepsCallback;
+        private static ManagedHostCall96 Physics3DSetSubstepsCallback;
+        private static ManagedHostCall60 Physics3DGetDefaultMaterialCallback;
+        private static ManagedHostCall97 Physics3DSetDefaultMaterialCallback;
+        private static ManagedHostCall106 Physics3DTrySetBackendCallback;
+        private static ManagedHostCall106 Physics3DIsBackendAvailableCallback;
+        private static ManagedHostCall107 Physics3DResolveEntityCallback;
+        private static ManagedHostCall108 Physics3DRaycastCallback;
+        private static ManagedHostCall109 Physics3DSweepCallback;
+        private static ManagedHostCall110 Physics3DOverlapCallback;
+        private static ManagedHostCall47 MeshGetVertexCountCallback;
+        private static ManagedHostCall47 MeshGetIndexCountCallback;
+        private static ManagedHostCall111 MeshCopyVerticesCallback;
+        private static ManagedHostCall112 MeshSetVerticesCallback;
+        private static ManagedHostCall111 MeshCopyNormalsCallback;
+        private static ManagedHostCall112 MeshSetNormalsCallback;
+        private static ManagedHostCall113 MeshCopyUvsCallback;
+        private static ManagedHostCall114 MeshSetUvsCallback;
+        private static ManagedHostCall111 MeshCopyColorsCallback;
+        private static ManagedHostCall112 MeshSetColorsCallback;
+        private static ManagedHostCall111 MeshCopyIndicesCallback;
+        private static ManagedHostCall112 MeshSetIndicesCallback;
+        private static ManagedHostCall41 MeshRecalculateBoundsCallback;
+        private static ManagedHostCall41 MeshRecalculateNormalsCallback;
+        private static ManagedHostCall41 MeshRecalculateTangentsCallback;
+        private static ManagedHostCall41 MeshUploadDataCallback;
+        private static ManagedHostCall41 MeshClearCallback;
+        private static ManagedHostCall115 MeshGetBoundsMinCallback;
+        private static ManagedHostCall115 MeshGetBoundsMaxCallback;
+        private static ManagedHostCall116 MeshSetVertexBufferParamsCallback;
+        private static ManagedHostCall117 MeshSetVertexBufferDataCallback;
+        private static ManagedHostCall118 MeshGetVertexBufferDataCallback;
+        private static ManagedHostCall47 MeshGetVertexStrideCallback;
+        private static ManagedHostCall47 MeshGetVertexAttributeCountCallback;
+        private static ManagedHostCall119 MeshHasVertexAttributeCallback;
+        private static ManagedHostCall120 MeshGetVertexAttributeCallback;
+        private static ManagedHostCall121 MeshCreatePlaneCallback;
+        private static ManagedHostCall122 MeshCreateBoxCallback;
+        private static ManagedHostCall123 MeshCreateCubeCallback;
+        private static ManagedHostCall124 MeshCreateSphereCallback;
+        private static ManagedHostCall125 MeshCreateCylinderCallback;
+        private static ManagedHostCall125 MeshCreateConeCallback;
+        private static ManagedHostCall126 MeshCreateCapsuleCallback;
+        private static ManagedHostCall127 MeshRendererGetMaterialCallback;
+        private static ManagedHostCall128 MeshRendererSetMaterialCallback;
+        private static ManagedHostCall129 MathMatrixDeterminantCallback;
+        private static ManagedHostCall130 MathMatrixInverseCallback;
+        private static ManagedHostCall130 MathMatrixAffineInverseCallback;
+        private static ManagedHostCall131 MathLookAtCallback;
+        private static ManagedHostCall132 AddScriptComponentCallback;
+        private static ManagedHostCall132 RemoveScriptComponentCallback;
+        private static ManagedHostCall3 MeshRendererGetMeshCallback;
+        private static ManagedHostCall39 MeshRendererSetMeshCallback;
+        private static ManagedHostCall34 MeshRendererGetMaterialCountCallback;
+        private static ManagedHostCall35 MeshRendererSetMaterialCountCallback;
+        private static ManagedHostCall30 Collider2DGetIsTriggerCallback;
+        private static ManagedHostCall31 Collider2DSetIsTriggerCallback;
+        private static ManagedHostCall32 Collider2DGetOffsetCallback;
+        private static ManagedHostCall33 Collider2DSetOffsetCallback;
+        private static ManagedHostCall3 Collider2DGetMaterialCallback;
+        private static ManagedHostCall39 Collider2DSetMaterialCallback;
+        private static ManagedHostCall32 BoxCollider2DGetSizeCallback;
+        private static ManagedHostCall33 BoxCollider2DSetSizeCallback;
+        private static ManagedHostCall26 CircleCollider2DGetRadiusCallback;
+        private static ManagedHostCall27 CircleCollider2DSetRadiusCallback;
+        private static ManagedHostCall30 Collider3DGetIsTriggerCallback;
+        private static ManagedHostCall31 Collider3DSetIsTriggerCallback;
+        private static ManagedHostCall8 Collider3DGetOffsetCallback;
+        private static ManagedHostCall9 Collider3DSetOffsetCallback;
+        private static ManagedHostCall10 Collider3DGetRotationCallback;
+        private static ManagedHostCall11 Collider3DSetRotationCallback;
+        private static ManagedHostCall3 Collider3DGetMaterialCallback;
+        private static ManagedHostCall39 Collider3DSetMaterialCallback;
+        private static ManagedHostCall133 Collider3DGetCollisionFilterCallback;
+        private static ManagedHostCall134 Collider3DSetCollisionFilterCallback;
+        private static ManagedHostCall8 BoxCollider3DGetSizeCallback;
+        private static ManagedHostCall9 BoxCollider3DSetSizeCallback;
+        private static ManagedHostCall26 SphereCollider3DGetRadiusCallback;
+        private static ManagedHostCall27 SphereCollider3DSetRadiusCallback;
+        private static ManagedHostCall26 CapsuleCollider3DGetRadiusCallback;
+        private static ManagedHostCall27 CapsuleCollider3DSetRadiusCallback;
+        private static ManagedHostCall26 CapsuleCollider3DGetHeightCallback;
+        private static ManagedHostCall27 CapsuleCollider3DSetHeightCallback;
+        private static ManagedHostCall28 Rigidbody3DGetBodyTypeCallback;
+        private static ManagedHostCall29 Rigidbody3DSetBodyTypeCallback;
+        private static ManagedHostCall26 Rigidbody3DGetMassCallback;
+        private static ManagedHostCall27 Rigidbody3DSetMassCallback;
+        private static ManagedHostCall30 Rigidbody3DGetAutoMassCallback;
+        private static ManagedHostCall31 Rigidbody3DSetAutoMassCallback;
+        private static ManagedHostCall26 Rigidbody3DGetGravityScaleCallback;
+        private static ManagedHostCall27 Rigidbody3DSetGravityScaleCallback;
+        private static ManagedHostCall26 Rigidbody3DGetLinearDampingCallback;
+        private static ManagedHostCall27 Rigidbody3DSetLinearDampingCallback;
+        private static ManagedHostCall26 Rigidbody3DGetAngularDampingCallback;
+        private static ManagedHostCall27 Rigidbody3DSetAngularDampingCallback;
+        private static ManagedHostCall8 Rigidbody3DGetCenterOfMassCallback;
+        private static ManagedHostCall9 Rigidbody3DSetCenterOfMassCallback;
+        private static ManagedHostCall30 Rigidbody3DGetAllowSleepCallback;
+        private static ManagedHostCall31 Rigidbody3DSetAllowSleepCallback;
+        private static ManagedHostCall30 Rigidbody3DGetStartAwakeCallback;
+        private static ManagedHostCall31 Rigidbody3DSetStartAwakeCallback;
+        private static ManagedHostCall30 Rigidbody3DGetContinuousCollisionCallback;
+        private static ManagedHostCall31 Rigidbody3DSetContinuousCollisionCallback;
+        private static ManagedHostCall34 Rigidbody3DGetConstraintsCallback;
+        private static ManagedHostCall35 Rigidbody3DSetConstraintsCallback;
+        private static ManagedHostCall133 Rigidbody3DGetCollisionFilterCallback;
+        private static ManagedHostCall134 Rigidbody3DSetCollisionFilterCallback;
+        private static ManagedHostCall8 Rigidbody3DGetLinearVelocityCallback;
+        private static ManagedHostCall9 Rigidbody3DSetLinearVelocityCallback;
+        private static ManagedHostCall8 Rigidbody3DGetAngularVelocityCallback;
+        private static ManagedHostCall9 Rigidbody3DSetAngularVelocityCallback;
+        private static ManagedHostCall30 Rigidbody3DGetAwakeCallback;
+        private static ManagedHostCall31 Rigidbody3DSetAwakeCallback;
+        private static ManagedHostCall135 Rigidbody3DGetBodyHandleCallback;
+        private static ManagedHostCall46 PhysicsMaterial2DGetDensityCallback;
+        private static ManagedHostCall136 PhysicsMaterial2DSetDensityCallback;
+        private static ManagedHostCall46 PhysicsMaterial2DGetFrictionCallback;
+        private static ManagedHostCall136 PhysicsMaterial2DSetFrictionCallback;
+        private static ManagedHostCall46 PhysicsMaterial2DGetRestitutionCallback;
+        private static ManagedHostCall136 PhysicsMaterial2DSetRestitutionCallback;
+        private static ManagedHostCall46 PhysicsMaterial2DGetRestitutionThresholdCallback;
+        private static ManagedHostCall136 PhysicsMaterial2DSetRestitutionThresholdCallback;
+        private static ManagedHostCall45 PhysicsMaterial2DGetFrictionCombineCallback;
+        private static ManagedHostCall137 PhysicsMaterial2DSetFrictionCombineCallback;
+        private static ManagedHostCall45 PhysicsMaterial2DGetRestitutionCombineCallback;
+        private static ManagedHostCall137 PhysicsMaterial2DSetRestitutionCombineCallback;
+        private static ManagedHostCall46 PhysicsMaterial3DGetDensityCallback;
+        private static ManagedHostCall136 PhysicsMaterial3DSetDensityCallback;
+        private static ManagedHostCall46 PhysicsMaterial3DGetFrictionCallback;
+        private static ManagedHostCall136 PhysicsMaterial3DSetFrictionCallback;
+        private static ManagedHostCall46 PhysicsMaterial3DGetRestitutionCallback;
+        private static ManagedHostCall136 PhysicsMaterial3DSetRestitutionCallback;
+        private static ManagedHostCall46 PhysicsMaterial3DGetRestitutionThresholdCallback;
+        private static ManagedHostCall136 PhysicsMaterial3DSetRestitutionThresholdCallback;
+        private static ManagedHostCall45 PhysicsMaterial3DGetFrictionCombineCallback;
+        private static ManagedHostCall137 PhysicsMaterial3DSetFrictionCombineCallback;
+        private static ManagedHostCall45 PhysicsMaterial3DGetRestitutionCombineCallback;
+        private static ManagedHostCall137 PhysicsMaterial3DSetRestitutionCombineCallback;
+        private static ManagedHostCall3 AnimationComponentGetClipCallback;
+        private static ManagedHostCall39 AnimationComponentSetClipCallback;
+        private static ManagedHostCall26 AnimationComponentGetSpeedCallback;
+        private static ManagedHostCall27 AnimationComponentSetSpeedCallback;
+        private static ManagedHostCall28 AnimationComponentGetWrapModeCallback;
+        private static ManagedHostCall29 AnimationComponentSetWrapModeCallback;
+        private static ManagedHostCall30 AnimationComponentGetPlayOnAwakeCallback;
+        private static ManagedHostCall31 AnimationComponentSetPlayOnAwakeCallback;
+        private static ManagedHostCall30 AnimationComponentGetApplyRootMotionCallback;
+        private static ManagedHostCall31 AnimationComponentSetApplyRootMotionCallback;
+        private static ManagedHostCall26 AnimationComponentGetTimeCallback;
+        private static ManagedHostCall27 AnimationComponentSetTimeCallback;
+        private static ManagedHostCall26 AnimationComponentGetNormalizedTimeCallback;
+        private static ManagedHostCall27 AnimationComponentSetNormalizedTimeCallback;
+        private static ManagedHostCall28 AnimationComponentGetStateCallback;
         private static ManagedHostCall0 TextGetTextCallback;
-        private static ManagedHostCall40 TextSetTextCallback;
+        private static ManagedHostCall138 TextSetTextCallback;
         private static ManagedHostCall3 TextGetFontCallback;
         private static ManagedHostCall39 TextSetFontCallback;
-        private static ManagedHostCall41 TextGetColorCallback;
-        private static ManagedHostCall42 TextSetColorCallback;
+        private static ManagedHostCall92 TextGetColorCallback;
+        private static ManagedHostCall93 TextSetColorCallback;
         private static ManagedHostCall26 TextGetSizeCallback;
         private static ManagedHostCall27 TextSetSizeCallback;
         private static ManagedHostCall30 TextGetAutoSizeCallback;
@@ -979,14 +2446,14 @@ namespace Crowny
         private static ManagedHostCall29 TextSetHorizontalAlignmentCallback;
         private static ManagedHostCall28 TextGetVerticalAlignmentCallback;
         private static ManagedHostCall29 TextSetVerticalAlignmentCallback;
-        private static ManagedHostCall34 TextGetFontStyleCallback;
-        private static ManagedHostCall35 TextSetFontStyleCallback;
-        private static ManagedHostCall41 TextGetOutlineColorCallback;
-        private static ManagedHostCall42 TextSetOutlineColorCallback;
+        private static ManagedHostCall28 TextGetFontStyleCallback;
+        private static ManagedHostCall29 TextSetFontStyleCallback;
+        private static ManagedHostCall92 TextGetOutlineColorCallback;
+        private static ManagedHostCall93 TextSetOutlineColorCallback;
         private static ManagedHostCall26 TextGetOutlineWidthCallback;
         private static ManagedHostCall27 TextSetOutlineWidthCallback;
-        private static ManagedHostCall41 TextGetShadowColorCallback;
-        private static ManagedHostCall42 TextSetShadowColorCallback;
+        private static ManagedHostCall92 TextGetShadowColorCallback;
+        private static ManagedHostCall93 TextSetShadowColorCallback;
         private static ManagedHostCall32 TextGetShadowOffsetCallback;
         private static ManagedHostCall33 TextSetShadowOffsetCallback;
         private static ManagedHostCall26 TextGetShadowSoftnessCallback;
@@ -999,12 +2466,10 @@ namespace Crowny
         private static ManagedHostCall27 TextSetLineSpacingCallback;
         private static ManagedHostCall26 TextGetParagraphSpacingCallback;
         private static ManagedHostCall27 TextSetParagraphSpacingCallback;
-        private static ManagedHostCall34 TextGetTabWidthCallback;
-        private static ManagedHostCall35 TextSetTabWidthCallback;
         private static ManagedHostCall30 TextGetUseCustomDecorationColorCallback;
         private static ManagedHostCall31 TextSetUseCustomDecorationColorCallback;
-        private static ManagedHostCall41 TextGetDecorationColorCallback;
-        private static ManagedHostCall42 TextSetDecorationColorCallback;
+        private static ManagedHostCall92 TextGetDecorationColorCallback;
+        private static ManagedHostCall93 TextSetDecorationColorCallback;
         private static ManagedHostCall26 TextGetDecorationThicknessCallback;
         private static ManagedHostCall27 TextSetDecorationThicknessCallback;
         private static ManagedHostCall26 TextGetUnderlineOffsetCallback;
@@ -1013,27 +2478,12 @@ namespace Crowny
         private static ManagedHostCall27 TextSetStrikethroughOffsetCallback;
         private static ManagedHostCall30 TextGetUseKerningCallback;
         private static ManagedHostCall31 TextSetUseKerningCallback;
+        private static ManagedHostCall34 TextGetTabWidthCallback;
+        private static ManagedHostCall35 TextSetTabWidthCallback;
         private static ManagedHostCall28 TextGetSortingLayerCallback;
         private static ManagedHostCall29 TextSetSortingLayerCallback;
         private static ManagedHostCall28 TextGetOrderInLayerCallback;
         private static ManagedHostCall29 TextSetOrderInLayerCallback;
-        private static ManagedHostCall43 TextHitTestCallback;
-        private static ManagedHostCall44 FontGetIsValidCallback;
-        private static ManagedHostCall45 FontGetGlyphCountCallback;
-        private static ManagedHostCall45 FontGetTabWidthCallback;
-        private static ManagedHostCall45 FontGetAtlasWidthCallback;
-        private static ManagedHostCall45 FontGetAtlasHeightCallback;
-        private static ManagedHostCall46 FontGetAtlasPixelRangeCallback;
-        private static ManagedHostCall47 FontHasGlyphCallback;
-        private static ManagedHostCall48 FontGetCharacterInfoCallback;
-        private static ManagedHostCall45 FontGetFallbackCountCallback;
-        private static ManagedHostCall49 FontGetFallbackCallback;
-        private static ManagedHostCall50 FontAddFallbackCallback;
-        private static ManagedHostCall51 FontClearFallbacksCallback;
-        private static ManagedHostCall52 MathMatrixDeterminantCallback;
-        private static ManagedHostCall53 MathMatrixInverseCallback;
-        private static ManagedHostCall53 MathMatrixAffineInverseCallback;
-        private static ManagedHostCall54 MathLookAtCallback;
 
         internal static int GetEntityName(ManagedNativeUuid entity, ManagedNativeStringView* result) => GetEntityNameCallback(api.Context.ToPointer(), entity, result);
         internal static int SetEntityName(ManagedNativeUuid entity, ManagedNativeStringView name) => SetEntityNameCallback(api.Context.ToPointer(), entity, name);
@@ -1078,13 +2528,13 @@ namespace Crowny
         internal static int InputGetGamepadButtonDown(uint gamepad, uint code, byte* result) => InputGetGamepadButtonDownCallback(api.Context.ToPointer(), gamepad, code, result);
         internal static int InputGetGamepadButtonUp(uint gamepad, uint code, byte* result) => InputGetGamepadButtonUpCallback(api.Context.ToPointer(), gamepad, code, result);
         internal static int InputGetGamepadAxis(uint gamepad, uint code, float* result) => InputGetGamepadAxisCallback(api.Context.ToPointer(), gamepad, code, result);
+        internal static int InputEnableActionMap(ManagedNativeStringView mapName, byte* result) => InputEnableActionMapCallback(api.Context.ToPointer(), mapName, result);
+        internal static int InputDisableActionMap(ManagedNativeStringView mapName, byte* result) => InputDisableActionMapCallback(api.Context.ToPointer(), mapName, result);
         internal static int InputGetAction(ManagedNativeStringView actionName, byte* result) => InputGetActionCallback(api.Context.ToPointer(), actionName, result);
         internal static int InputGetActionDown(ManagedNativeStringView actionName, byte* result) => InputGetActionDownCallback(api.Context.ToPointer(), actionName, result);
         internal static int InputGetActionUp(ManagedNativeStringView actionName, byte* result) => InputGetActionUpCallback(api.Context.ToPointer(), actionName, result);
         internal static int InputGetAxis(ManagedNativeStringView actionName, float* result) => InputGetAxisCallback(api.Context.ToPointer(), actionName, result);
         internal static int InputGetActionVector(ManagedNativeStringView actionName, ManagedNativeVec2* result) => InputGetActionVectorCallback(api.Context.ToPointer(), actionName, result);
-        internal static int InputEnableActionMap(ManagedNativeStringView mapName, byte* result) => InputEnableActionMapCallback(api.Context.ToPointer(), mapName, result);
-        internal static int InputDisableActionMap(ManagedNativeStringView mapName, byte* result) => InputDisableActionMapCallback(api.Context.ToPointer(), mapName, result);
         internal static int InputClearActionRebinds() => InputClearActionRebindsCallback(api.Context.ToPointer());
         internal static int TimeGetDeltaTime(float* result) => TimeGetDeltaTimeCallback(api.Context.ToPointer(), result);
         internal static int TimeGetTime(float* result) => TimeGetTimeCallback(api.Context.ToPointer(), result);
@@ -1151,6 +2601,337 @@ namespace Crowny
         internal static int AudioSourcePlay(ManagedNativeUuid entity) => AudioSourcePlayCallback(api.Context.ToPointer(), entity);
         internal static int AudioSourcePause(ManagedNativeUuid entity) => AudioSourcePauseCallback(api.Context.ToPointer(), entity);
         internal static int AudioSourceStop(ManagedNativeUuid entity) => AudioSourceStopCallback(api.Context.ToPointer(), entity);
+        internal static int AssetGetName(ManagedNativeUuid asset, ManagedNativeStringView* result) => AssetGetNameCallback(api.Context.ToPointer(), asset, result);
+        internal static int AssetAcquire(ManagedNativeUuid asset) => AssetAcquireCallback(api.Context.ToPointer(), asset);
+        internal static int AssetRelease(ManagedNativeUuid asset) => AssetReleaseCallback(api.Context.ToPointer(), asset);
+        internal static int AssetDatabaseLoad(ManagedNativeStringView path, ManagedNativeUuid* result) => AssetDatabaseLoadCallback(api.Context.ToPointer(), path, result);
+        internal static int AssetDatabaseLoadFromUuid(ManagedNativeUuid asset, ManagedNativeUuid* result) => AssetDatabaseLoadFromUuidCallback(api.Context.ToPointer(), asset, result);
+        internal static int AssetDatabaseGetPath(ManagedNativeUuid asset, ManagedNativeStringView* result) => AssetDatabaseGetPathCallback(api.Context.ToPointer(), asset, result);
+        internal static int AssetDatabaseIsValid(ManagedNativeUuid asset, byte* result) => AssetDatabaseIsValidCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioClipGetBitDepth(ManagedNativeUuid asset, int* result) => AudioClipGetBitDepthCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioClipGetChannels(ManagedNativeUuid asset, int* result) => AudioClipGetChannelsCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioClipGetFrequency(ManagedNativeUuid asset, int* result) => AudioClipGetFrequencyCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioClipGetSamples(ManagedNativeUuid asset, int* result) => AudioClipGetSamplesCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioClipGetLength(ManagedNativeUuid asset, float* result) => AudioClipGetLengthCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioClipGetReadMode(ManagedNativeUuid asset, int* result) => AudioClipGetReadModeCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioClipGetFormat(ManagedNativeUuid asset, int* result) => AudioClipGetFormatCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioClipGetIs3D(ManagedNativeUuid asset, byte* result) => AudioClipGetIs3DCallback(api.Context.ToPointer(), asset, result);
+        internal static int TextureGetWidth(ManagedNativeUuid asset, uint* result) => TextureGetWidthCallback(api.Context.ToPointer(), asset, result);
+        internal static int TextureGetHeight(ManagedNativeUuid asset, uint* result) => TextureGetHeightCallback(api.Context.ToPointer(), asset, result);
+        internal static int AudioMixerSetActive(ManagedNativeUuid asset) => AudioMixerSetActiveCallback(api.Context.ToPointer(), asset);
+        internal static int AudioMixerGetBusVolume(ManagedNativeUuid asset, ManagedNativeStringView name, float* result) => AudioMixerGetBusVolumeCallback(api.Context.ToPointer(), asset, name, result);
+        internal static int AudioMixerSetBusVolume(ManagedNativeUuid asset, ManagedNativeStringView name, float volume) => AudioMixerSetBusVolumeCallback(api.Context.ToPointer(), asset, name, volume);
+        internal static int AudioMixerIsBusMuted(ManagedNativeUuid asset, ManagedNativeStringView name, byte* result) => AudioMixerIsBusMutedCallback(api.Context.ToPointer(), asset, name, result);
+        internal static int AudioMixerSetBusMuted(ManagedNativeUuid asset, ManagedNativeStringView name, byte muted) => AudioMixerSetBusMutedCallback(api.Context.ToPointer(), asset, name, muted);
+        internal static int MaterialSetFloat(ManagedNativeUuid asset, ManagedNativeStringView name, float value) => MaterialSetFloatCallback(api.Context.ToPointer(), asset, name, value);
+        internal static int MaterialSetVector2(ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeVec2* value) => MaterialSetVector2Callback(api.Context.ToPointer(), asset, name, value);
+        internal static int MaterialSetInt(ManagedNativeUuid asset, ManagedNativeStringView name, int value) => MaterialSetIntCallback(api.Context.ToPointer(), asset, name, value);
+        internal static int MaterialSetColor(ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeVec4* value) => MaterialSetColorCallback(api.Context.ToPointer(), asset, name, value);
+        internal static int MaterialSetVector3(ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeVec3* value) => MaterialSetVector3Callback(api.Context.ToPointer(), asset, name, value);
+        internal static int MaterialSetMatrix(ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeMatrix4* value) => MaterialSetMatrixCallback(api.Context.ToPointer(), asset, name, value);
+        internal static int MaterialSetTexture(ManagedNativeUuid asset, ManagedNativeStringView name, ManagedNativeUuid texture) => MaterialSetTextureCallback(api.Context.ToPointer(), asset, name, texture);
+        internal static int MaterialHasAlphaModeOverride(ManagedNativeUuid asset, byte* result) => MaterialHasAlphaModeOverrideCallback(api.Context.ToPointer(), asset, result);
+        internal static int MaterialGetAlphaMode(ManagedNativeUuid asset, int* result) => MaterialGetAlphaModeCallback(api.Context.ToPointer(), asset, result);
+        internal static int MaterialSetAlphaMode(ManagedNativeUuid asset, int alphaMode) => MaterialSetAlphaModeCallback(api.Context.ToPointer(), asset, alphaMode);
+        internal static int MaterialClearAlphaModeOverride(ManagedNativeUuid asset) => MaterialClearAlphaModeOverrideCallback(api.Context.ToPointer(), asset);
+        internal static int PhysicsMaterial2DCreate(ManagedNativeUuid* result) => PhysicsMaterial2DCreateCallback(api.Context.ToPointer(), result);
+        internal static int PhysicsMaterial3DCreate(ManagedNativeUuid* result) => PhysicsMaterial3DCreateCallback(api.Context.ToPointer(), result);
+        internal static int Rigidbody3DAddForce(ManagedNativeUuid entity, ManagedNativeVec3* force, int mode) => Rigidbody3DAddForceCallback(api.Context.ToPointer(), entity, force, mode);
+        internal static int Rigidbody3DAddForceAt(ManagedNativeUuid entity, ManagedNativeVec3* force, ManagedNativeVec3* position, int mode) => Rigidbody3DAddForceAtCallback(api.Context.ToPointer(), entity, force, position, mode);
+        internal static int Rigidbody3DAddTorque(ManagedNativeUuid entity, ManagedNativeVec3* torque, int mode) => Rigidbody3DAddTorqueCallback(api.Context.ToPointer(), entity, torque, mode);
+        internal static int CompressionCompress(ManagedNativeMutableBlob destination, ManagedNativeBlob source, int method, int level, ulong* result) => CompressionCompressCallback(api.Context.ToPointer(), destination, source, method, level, result);
+        internal static int CompressionDecompress(ManagedNativeMutableBlob destination, ulong maximumDestinationSize, ManagedNativeBlob source, ulong sourceSize, int method, ulong* result) => CompressionDecompressCallback(api.Context.ToPointer(), destination, maximumDestinationSize, source, sourceSize, method, result);
+        internal static int FileDialogOpenFile(ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView extensions, ManagedNativeStringView* result) => FileDialogOpenFileCallback(api.Context.ToPointer(), title, directory, extensions, result);
+        internal static int FileDialogOpenFolder(ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView* result) => FileDialogOpenFolderCallback(api.Context.ToPointer(), title, directory, result);
+        internal static int FileDialogSaveFile(ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView defaultName, ManagedNativeStringView extensions, ManagedNativeStringView* result) => FileDialogSaveFileCallback(api.Context.ToPointer(), title, directory, defaultName, extensions, result);
+        internal static int FileDialogSaveFolder(ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView defaultName, ManagedNativeStringView* result) => FileDialogSaveFolderCallback(api.Context.ToPointer(), title, directory, defaultName, result);
+        internal static int FontHasCharacter(ManagedNativeUuid asset, uint codePoint, byte* result) => FontHasCharacterCallback(api.Context.ToPointer(), asset, codePoint, result);
+        internal static int FontGetIsValid(ManagedNativeUuid font, byte* result) => FontGetIsValidCallback(api.Context.ToPointer(), font, result);
+        internal static int FontGetGlyphCount(ManagedNativeUuid font, uint* result) => FontGetGlyphCountCallback(api.Context.ToPointer(), font, result);
+        internal static int FontGetTabWidth(ManagedNativeUuid font, uint* result) => FontGetTabWidthCallback(api.Context.ToPointer(), font, result);
+        internal static int FontGetAtlasWidth(ManagedNativeUuid font, uint* result) => FontGetAtlasWidthCallback(api.Context.ToPointer(), font, result);
+        internal static int FontGetAtlasHeight(ManagedNativeUuid font, uint* result) => FontGetAtlasHeightCallback(api.Context.ToPointer(), font, result);
+        internal static int FontGetAtlasPixelRange(ManagedNativeUuid font, float* result) => FontGetAtlasPixelRangeCallback(api.Context.ToPointer(), font, result);
+        internal static int FontGetFallbackCount(ManagedNativeUuid font, uint* result) => FontGetFallbackCountCallback(api.Context.ToPointer(), font, result);
+        internal static int FontHasGlyph(ManagedNativeUuid font, uint codePoint, byte* result) => FontHasGlyphCallback(api.Context.ToPointer(), font, codePoint, result);
+        internal static int FontGetCharacterInfo(ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result) => FontGetCharacterInfoCallback(api.Context.ToPointer(), font, codePoint, useFallbacks, result);
+        internal static int FontGetFallback(ManagedNativeUuid font, uint index, ManagedNativeUuid* result) => FontGetFallbackCallback(api.Context.ToPointer(), font, index, result);
+        internal static int FontAddFallback(ManagedNativeUuid font, ManagedNativeUuid value, byte* result) => FontAddFallbackCallback(api.Context.ToPointer(), font, value, result);
+        internal static int FontClearFallbacks(ManagedNativeUuid font) => FontClearFallbacksCallback(api.Context.ToPointer(), font);
+        internal static int FontGetSystemFontCount(uint* result) => FontGetSystemFontCountCallback(api.Context.ToPointer(), result);
+        internal static int FontGetSystemFontPath(uint index, ManagedNativeStringView* result) => FontGetSystemFontPathCallback(api.Context.ToPointer(), index, result);
+        internal static int FontGetSystemFontName(uint index, ManagedNativeStringView* result) => FontGetSystemFontNameCallback(api.Context.ToPointer(), index, result);
+        internal static int AnimationClipGetLength(ManagedNativeUuid asset, float* result) => AnimationClipGetLengthCallback(api.Context.ToPointer(), asset, result);
+        internal static int AnimationClipGetSampleRate(ManagedNativeUuid asset, float* result) => AnimationClipGetSampleRateCallback(api.Context.ToPointer(), asset, result);
+        internal static int AnimationClipGetIsAdditive(ManagedNativeUuid asset, byte* result) => AnimationClipGetIsAdditiveCallback(api.Context.ToPointer(), asset, result);
+        internal static int AnimationComponentPlay(ManagedNativeUuid entity) => AnimationComponentPlayCallback(api.Context.ToPointer(), entity);
+        internal static int AnimationComponentPause(ManagedNativeUuid entity) => AnimationComponentPauseCallback(api.Context.ToPointer(), entity);
+        internal static int AnimationComponentStop(ManagedNativeUuid entity) => AnimationComponentStopCallback(api.Context.ToPointer(), entity);
+        internal static int TextHitTest(ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result) => TextHitTestCallback(api.Context.ToPointer(), entity, position, result);
+        internal static int DebugWriteLog(int severity, ManagedNativeStringView message) => DebugWriteLogCallback(api.Context.ToPointer(), severity, message);
+        internal static int RandomInitialize(int seed) => RandomInitializeCallback(api.Context.ToPointer(), seed);
+        internal static int RandomGetValue(float* result) => RandomGetValueCallback(api.Context.ToPointer(), result);
+        internal static int RandomGetRange(float minimum, float maximum, float* result) => RandomGetRangeCallback(api.Context.ToPointer(), minimum, maximum, result);
+        internal static int RandomGetInsideUnitCircle(ManagedNativeVec2* result) => RandomGetInsideUnitCircleCallback(api.Context.ToPointer(), result);
+        internal static int RandomGetInsideUnitSphere(ManagedNativeVec3* result) => RandomGetInsideUnitSphereCallback(api.Context.ToPointer(), result);
+        internal static int NoiseGetPerlin2D(float x, float y, float* result) => NoiseGetPerlin2DCallback(api.Context.ToPointer(), x, y, result);
+        internal static int LayerMaskGetName(int layer, ManagedNativeStringView* result) => LayerMaskGetNameCallback(api.Context.ToPointer(), layer, result);
+        internal static int LayerMaskGetLayer(ManagedNativeStringView name, int* result) => LayerMaskGetLayerCallback(api.Context.ToPointer(), name, result);
+        internal static int SceneGetActive(ManagedNativeUuid* result) => SceneGetActiveCallback(api.Context.ToPointer(), result);
+        internal static int SceneGetExecutionState(int* result) => SceneGetExecutionStateCallback(api.Context.ToPointer(), result);
+        internal static int SceneGetLoadedCount(uint* result) => SceneGetLoadedCountCallback(api.Context.ToPointer(), result);
+        internal static int SceneGetLoaded(uint index, ManagedNativeUuid* result) => SceneGetLoadedCallback(api.Context.ToPointer(), index, result);
+        internal static int SceneLoad(ManagedNativeUuid scene, byte makeActive, int* result) => SceneLoadCallback(api.Context.ToPointer(), scene, makeActive, result);
+        internal static int SceneUnload(ManagedNativeUuid scene, int* result) => SceneUnloadCallback(api.Context.ToPointer(), scene, result);
+        internal static int SceneReload(ManagedNativeUuid scene, int* result) => SceneReloadCallback(api.Context.ToPointer(), scene, result);
+        internal static int SceneSetActive(ManagedNativeUuid scene, int* result) => SceneSetActiveCallback(api.Context.ToPointer(), scene, result);
+        internal static int CameraGetFieldOfView(ManagedNativeUuid entity, float* result) => CameraGetFieldOfViewCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetFieldOfView(ManagedNativeUuid entity, float value) => CameraSetFieldOfViewCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetProjection(ManagedNativeUuid entity, int* result) => CameraGetProjectionCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetProjection(ManagedNativeUuid entity, int value) => CameraSetProjectionCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetNearClipPlane(ManagedNativeUuid entity, float* result) => CameraGetNearClipPlaneCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetNearClipPlane(ManagedNativeUuid entity, float value) => CameraSetNearClipPlaneCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetFarClipPlane(ManagedNativeUuid entity, float* result) => CameraGetFarClipPlaneCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetFarClipPlane(ManagedNativeUuid entity, float value) => CameraSetFarClipPlaneCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetOrthographicSize(ManagedNativeUuid entity, float* result) => CameraGetOrthographicSizeCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetOrthographicSize(ManagedNativeUuid entity, float value) => CameraSetOrthographicSizeCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetAspectRatio(ManagedNativeUuid entity, float* result) => CameraGetAspectRatioCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetAspectRatio(ManagedNativeUuid entity, float value) => CameraSetAspectRatioCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetBackgroundColor(ManagedNativeUuid entity, ManagedNativeVec3* result) => CameraGetBackgroundColorCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetBackgroundColor(ManagedNativeUuid entity, ManagedNativeVec3* value) => CameraSetBackgroundColorCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetViewportRectangle(ManagedNativeUuid entity, ManagedNativeVec4* result) => CameraGetViewportRectangleCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetViewportRectangle(ManagedNativeUuid entity, ManagedNativeVec4* value) => CameraSetViewportRectangleCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetHdr(ManagedNativeUuid entity, byte* result) => CameraGetHdrCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetHdr(ManagedNativeUuid entity, byte value) => CameraSetHdrCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetMsaa(ManagedNativeUuid entity, byte* result) => CameraGetMsaaCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetMsaa(ManagedNativeUuid entity, byte value) => CameraSetMsaaCallback(api.Context.ToPointer(), entity, value);
+        internal static int CameraGetOcclusionCulling(ManagedNativeUuid entity, byte* result) => CameraGetOcclusionCullingCallback(api.Context.ToPointer(), entity, result);
+        internal static int CameraSetOcclusionCulling(ManagedNativeUuid entity, byte value) => CameraSetOcclusionCullingCallback(api.Context.ToPointer(), entity, value);
+        internal static int SpriteRendererGetTexture(ManagedNativeUuid entity, ManagedNativeUuid* result) => SpriteRendererGetTextureCallback(api.Context.ToPointer(), entity, result);
+        internal static int SpriteRendererSetTexture(ManagedNativeUuid entity, ManagedNativeUuid value) => SpriteRendererSetTextureCallback(api.Context.ToPointer(), entity, value);
+        internal static int SpriteRendererGetColor(ManagedNativeUuid entity, ManagedNativeVec4* result) => SpriteRendererGetColorCallback(api.Context.ToPointer(), entity, result);
+        internal static int SpriteRendererSetColor(ManagedNativeUuid entity, ManagedNativeVec4* value) => SpriteRendererSetColorCallback(api.Context.ToPointer(), entity, value);
+        internal static int SpriteRendererGetSortingLayer(ManagedNativeUuid entity, int* result) => SpriteRendererGetSortingLayerCallback(api.Context.ToPointer(), entity, result);
+        internal static int SpriteRendererSetSortingLayer(ManagedNativeUuid entity, int value) => SpriteRendererSetSortingLayerCallback(api.Context.ToPointer(), entity, value);
+        internal static int SpriteRendererGetOrderInLayer(ManagedNativeUuid entity, int* result) => SpriteRendererGetOrderInLayerCallback(api.Context.ToPointer(), entity, result);
+        internal static int SpriteRendererSetOrderInLayer(ManagedNativeUuid entity, int value) => SpriteRendererSetOrderInLayerCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetType(ManagedNativeUuid entity, int* result) => LightGetTypeCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetType(ManagedNativeUuid entity, int value) => LightSetTypeCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetColor(ManagedNativeUuid entity, ManagedNativeVec4* result) => LightGetColorCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetColor(ManagedNativeUuid entity, ManagedNativeVec4* value) => LightSetColorCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetIntensity(ManagedNativeUuid entity, float* result) => LightGetIntensityCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetIntensity(ManagedNativeUuid entity, float value) => LightSetIntensityCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetRange(ManagedNativeUuid entity, float* result) => LightGetRangeCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetRange(ManagedNativeUuid entity, float value) => LightSetRangeCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetSpotInnerAngle(ManagedNativeUuid entity, float* result) => LightGetSpotInnerAngleCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetSpotInnerAngle(ManagedNativeUuid entity, float value) => LightSetSpotInnerAngleCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetSpotOuterAngle(ManagedNativeUuid entity, float* result) => LightGetSpotOuterAngleCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetSpotOuterAngle(ManagedNativeUuid entity, float value) => LightSetSpotOuterAngleCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetSourceRadius(ManagedNativeUuid entity, float* result) => LightGetSourceRadiusCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetSourceRadius(ManagedNativeUuid entity, float value) => LightSetSourceRadiusCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetUseColorTemperature(ManagedNativeUuid entity, byte* result) => LightGetUseColorTemperatureCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetUseColorTemperature(ManagedNativeUuid entity, byte value) => LightSetUseColorTemperatureCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetTemperature(ManagedNativeUuid entity, float* result) => LightGetTemperatureCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetTemperature(ManagedNativeUuid entity, float value) => LightSetTemperatureCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetVisibilityLayers(ManagedNativeUuid entity, uint* result) => LightGetVisibilityLayersCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetVisibilityLayers(ManagedNativeUuid entity, uint value) => LightSetVisibilityLayersCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetEnabled(ManagedNativeUuid entity, byte* result) => LightGetEnabledCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetEnabled(ManagedNativeUuid entity, byte value) => LightSetEnabledCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetAffectDiffuse(ManagedNativeUuid entity, byte* result) => LightGetAffectDiffuseCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetAffectDiffuse(ManagedNativeUuid entity, byte value) => LightSetAffectDiffuseCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetAffectSpecular(ManagedNativeUuid entity, byte* result) => LightGetAffectSpecularCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetAffectSpecular(ManagedNativeUuid entity, byte value) => LightSetAffectSpecularCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetVolumetric(ManagedNativeUuid entity, byte* result) => LightGetVolumetricCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetVolumetric(ManagedNativeUuid entity, byte value) => LightSetVolumetricCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetShadows(ManagedNativeUuid entity, int* result) => LightGetShadowsCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetShadows(ManagedNativeUuid entity, int value) => LightSetShadowsCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetShadowBias(ManagedNativeUuid entity, float* result) => LightGetShadowBiasCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetShadowBias(ManagedNativeUuid entity, float value) => LightSetShadowBiasCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetShadowNormalBias(ManagedNativeUuid entity, float* result) => LightGetShadowNormalBiasCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetShadowNormalBias(ManagedNativeUuid entity, float value) => LightSetShadowNormalBiasCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetShadowNearPlane(ManagedNativeUuid entity, float* result) => LightGetShadowNearPlaneCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetShadowNearPlane(ManagedNativeUuid entity, float value) => LightSetShadowNearPlaneCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetShadowImportance(ManagedNativeUuid entity, float* result) => LightGetShadowImportanceCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetShadowImportance(ManagedNativeUuid entity, float value) => LightSetShadowImportanceCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetShadowResolution(ManagedNativeUuid entity, uint* result) => LightGetShadowResolutionCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetShadowResolution(ManagedNativeUuid entity, uint value) => LightSetShadowResolutionCallback(api.Context.ToPointer(), entity, value);
+        internal static int LightGetCacheStaticShadowCasters(ManagedNativeUuid entity, byte* result) => LightGetCacheStaticShadowCastersCallback(api.Context.ToPointer(), entity, result);
+        internal static int LightSetCacheStaticShadowCasters(ManagedNativeUuid entity, byte value) => LightSetCacheStaticShadowCastersCallback(api.Context.ToPointer(), entity, value);
+        internal static int Physics2DGetBackend(int* result) => Physics2DGetBackendCallback(api.Context.ToPointer(), result);
+        internal static int Physics2DGetIsSimulating(byte* result) => Physics2DGetIsSimulatingCallback(api.Context.ToPointer(), result);
+        internal static int Physics2DGetGravity(ManagedNativeVec2* result) => Physics2DGetGravityCallback(api.Context.ToPointer(), result);
+        internal static int Physics2DSetGravity(ManagedNativeVec2* value) => Physics2DSetGravityCallback(api.Context.ToPointer(), value);
+        internal static int Physics2DGetVelocityIterations(uint* result) => Physics2DGetVelocityIterationsCallback(api.Context.ToPointer(), result);
+        internal static int Physics2DSetVelocityIterations(uint value) => Physics2DSetVelocityIterationsCallback(api.Context.ToPointer(), value);
+        internal static int Physics2DGetPositionIterations(uint* result) => Physics2DGetPositionIterationsCallback(api.Context.ToPointer(), result);
+        internal static int Physics2DSetPositionIterations(uint value) => Physics2DSetPositionIterationsCallback(api.Context.ToPointer(), value);
+        internal static int Physics2DGetDefaultMaterial(ManagedNativeUuid* result) => Physics2DGetDefaultMaterialCallback(api.Context.ToPointer(), result);
+        internal static int Physics2DSetDefaultMaterial(ManagedNativeUuid material) => Physics2DSetDefaultMaterialCallback(api.Context.ToPointer(), material);
+        internal static int Physics2DGetLayerName(int layer, ManagedNativeStringView* result) => Physics2DGetLayerNameCallback(api.Context.ToPointer(), layer, result);
+        internal static int Physics2DSetLayerName(int layer, ManagedNativeStringView name) => Physics2DSetLayerNameCallback(api.Context.ToPointer(), layer, name);
+        internal static int Physics2DGetLayerMask(int layer, uint* result) => Physics2DGetLayerMaskCallback(api.Context.ToPointer(), layer, result);
+        internal static int Physics2DSetLayerMask(int layer, uint mask) => Physics2DSetLayerMaskCallback(api.Context.ToPointer(), layer, mask);
+        internal static int Physics2DResolveEntity(uint runtimeId, ManagedNativeUuid* result) => Physics2DResolveEntityCallback(api.Context.ToPointer(), runtimeId, result);
+        internal static int Physics2DRaycast(ManagedNativeVec2* origin, ManagedNativeVec2* direction, float distance, uint layerMask, void* destination, uint capacity, uint* result) => Physics2DRaycastCallback(api.Context.ToPointer(), origin, direction, distance, layerMask, destination, capacity, result);
+        internal static int Physics3DGetBackend(int* result) => Physics3DGetBackendCallback(api.Context.ToPointer(), result);
+        internal static int Physics3DGetBackendName(ManagedNativeStringView* result) => Physics3DGetBackendNameCallback(api.Context.ToPointer(), result);
+        internal static int Physics3DGetIsSimulating(byte* result) => Physics3DGetIsSimulatingCallback(api.Context.ToPointer(), result);
+        internal static int Physics3DGetCapabilities(ulong* result) => Physics3DGetCapabilitiesCallback(api.Context.ToPointer(), result);
+        internal static int Physics3DGetGravity(ManagedNativeVec3* result) => Physics3DGetGravityCallback(api.Context.ToPointer(), result);
+        internal static int Physics3DSetGravity(ManagedNativeVec3* value) => Physics3DSetGravityCallback(api.Context.ToPointer(), value);
+        internal static int Physics3DGetSubsteps(uint* result) => Physics3DGetSubstepsCallback(api.Context.ToPointer(), result);
+        internal static int Physics3DSetSubsteps(uint value) => Physics3DSetSubstepsCallback(api.Context.ToPointer(), value);
+        internal static int Physics3DGetDefaultMaterial(ManagedNativeUuid* result) => Physics3DGetDefaultMaterialCallback(api.Context.ToPointer(), result);
+        internal static int Physics3DSetDefaultMaterial(ManagedNativeUuid material) => Physics3DSetDefaultMaterialCallback(api.Context.ToPointer(), material);
+        internal static int Physics3DTrySetBackend(int value, byte* result) => Physics3DTrySetBackendCallback(api.Context.ToPointer(), value, result);
+        internal static int Physics3DIsBackendAvailable(int value, byte* result) => Physics3DIsBackendAvailableCallback(api.Context.ToPointer(), value, result);
+        internal static int Physics3DResolveEntity(ulong runtimeId, ManagedNativeUuid* result) => Physics3DResolveEntityCallback(api.Context.ToPointer(), runtimeId, result);
+        internal static int Physics3DRaycast(ManagedNativeVec3* origin, ManagedNativeVec3* direction, float distance, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result) => Physics3DRaycastCallback(api.Context.ToPointer(), origin, direction, distance, layerMask, includeTriggers, ignoreBodyHandle, destination, capacity, result);
+        internal static int Physics3DSweep(int shapeType, ManagedNativeVec3* size, float radius, float height, ManagedNativeVec3* position, ManagedNativeQuaternion* rotation, ManagedNativeVec3* direction, float distance, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result) => Physics3DSweepCallback(api.Context.ToPointer(), shapeType, size, radius, height, position, rotation, direction, distance, layerMask, includeTriggers, ignoreBodyHandle, destination, capacity, result);
+        internal static int Physics3DOverlap(int shapeType, ManagedNativeVec3* size, float radius, float height, ManagedNativeVec3* position, ManagedNativeQuaternion* rotation, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result) => Physics3DOverlapCallback(api.Context.ToPointer(), shapeType, size, radius, height, position, rotation, layerMask, includeTriggers, ignoreBodyHandle, destination, capacity, result);
+        internal static int MeshGetVertexCount(ManagedNativeUuid asset, uint* result) => MeshGetVertexCountCallback(api.Context.ToPointer(), asset, result);
+        internal static int MeshGetIndexCount(ManagedNativeUuid asset, uint* result) => MeshGetIndexCountCallback(api.Context.ToPointer(), asset, result);
+        internal static int MeshCopyVertices(ManagedNativeUuid asset, void* destination, uint capacity, uint* result) => MeshCopyVerticesCallback(api.Context.ToPointer(), asset, destination, capacity, result);
+        internal static int MeshSetVertices(ManagedNativeUuid asset, void* source, uint count) => MeshSetVerticesCallback(api.Context.ToPointer(), asset, source, count);
+        internal static int MeshCopyNormals(ManagedNativeUuid asset, void* destination, uint capacity, uint* result) => MeshCopyNormalsCallback(api.Context.ToPointer(), asset, destination, capacity, result);
+        internal static int MeshSetNormals(ManagedNativeUuid asset, void* source, uint count) => MeshSetNormalsCallback(api.Context.ToPointer(), asset, source, count);
+        internal static int MeshCopyUvs(ManagedNativeUuid asset, uint channel, void* destination, uint capacity, uint* result) => MeshCopyUvsCallback(api.Context.ToPointer(), asset, channel, destination, capacity, result);
+        internal static int MeshSetUvs(ManagedNativeUuid asset, uint channel, void* source, uint count) => MeshSetUvsCallback(api.Context.ToPointer(), asset, channel, source, count);
+        internal static int MeshCopyColors(ManagedNativeUuid asset, void* destination, uint capacity, uint* result) => MeshCopyColorsCallback(api.Context.ToPointer(), asset, destination, capacity, result);
+        internal static int MeshSetColors(ManagedNativeUuid asset, void* source, uint count) => MeshSetColorsCallback(api.Context.ToPointer(), asset, source, count);
+        internal static int MeshCopyIndices(ManagedNativeUuid asset, void* destination, uint capacity, uint* result) => MeshCopyIndicesCallback(api.Context.ToPointer(), asset, destination, capacity, result);
+        internal static int MeshSetIndices(ManagedNativeUuid asset, void* source, uint count) => MeshSetIndicesCallback(api.Context.ToPointer(), asset, source, count);
+        internal static int MeshRecalculateBounds(ManagedNativeUuid asset) => MeshRecalculateBoundsCallback(api.Context.ToPointer(), asset);
+        internal static int MeshRecalculateNormals(ManagedNativeUuid asset) => MeshRecalculateNormalsCallback(api.Context.ToPointer(), asset);
+        internal static int MeshRecalculateTangents(ManagedNativeUuid asset) => MeshRecalculateTangentsCallback(api.Context.ToPointer(), asset);
+        internal static int MeshUploadData(ManagedNativeUuid asset) => MeshUploadDataCallback(api.Context.ToPointer(), asset);
+        internal static int MeshClear(ManagedNativeUuid asset) => MeshClearCallback(api.Context.ToPointer(), asset);
+        internal static int MeshGetBoundsMin(ManagedNativeUuid asset, ManagedNativeVec3* result) => MeshGetBoundsMinCallback(api.Context.ToPointer(), asset, result);
+        internal static int MeshGetBoundsMax(ManagedNativeUuid asset, ManagedNativeVec3* result) => MeshGetBoundsMaxCallback(api.Context.ToPointer(), asset, result);
+        internal static int MeshSetVertexBufferParams(ManagedNativeUuid asset, uint vertexCount, void* layout, uint layoutCount) => MeshSetVertexBufferParamsCallback(api.Context.ToPointer(), asset, vertexCount, layout, layoutCount);
+        internal static int MeshSetVertexBufferData(ManagedNativeUuid asset, void* source, uint meshBufferStart, uint count, uint stride) => MeshSetVertexBufferDataCallback(api.Context.ToPointer(), asset, source, meshBufferStart, count, stride);
+        internal static int MeshGetVertexBufferData(ManagedNativeUuid asset, void* destination, uint capacity, uint stride, uint* result) => MeshGetVertexBufferDataCallback(api.Context.ToPointer(), asset, destination, capacity, stride, result);
+        internal static int MeshGetVertexStride(ManagedNativeUuid asset, uint* result) => MeshGetVertexStrideCallback(api.Context.ToPointer(), asset, result);
+        internal static int MeshGetVertexAttributeCount(ManagedNativeUuid asset, uint* result) => MeshGetVertexAttributeCountCallback(api.Context.ToPointer(), asset, result);
+        internal static int MeshHasVertexAttribute(ManagedNativeUuid asset, int attribute, byte* result) => MeshHasVertexAttributeCallback(api.Context.ToPointer(), asset, attribute, result);
+        internal static int MeshGetVertexAttribute(ManagedNativeUuid asset, int index, void* destination) => MeshGetVertexAttributeCallback(api.Context.ToPointer(), asset, index, destination);
+        internal static int MeshCreatePlane(float width, float height, uint subdivisionsX, uint subdivisionsY, ManagedNativeUuid* result) => MeshCreatePlaneCallback(api.Context.ToPointer(), width, height, subdivisionsX, subdivisionsY, result);
+        internal static int MeshCreateBox(ManagedNativeVec3* dimensions, ManagedNativeUuid* result) => MeshCreateBoxCallback(api.Context.ToPointer(), dimensions, result);
+        internal static int MeshCreateCube(float size, ManagedNativeUuid* result) => MeshCreateCubeCallback(api.Context.ToPointer(), size, result);
+        internal static int MeshCreateSphere(float radius, uint segments, uint rings, ManagedNativeUuid* result) => MeshCreateSphereCallback(api.Context.ToPointer(), radius, segments, rings, result);
+        internal static int MeshCreateCylinder(float radius, float height, uint segments, byte capped, ManagedNativeUuid* result) => MeshCreateCylinderCallback(api.Context.ToPointer(), radius, height, segments, capped, result);
+        internal static int MeshCreateCone(float radius, float height, uint segments, byte capped, ManagedNativeUuid* result) => MeshCreateConeCallback(api.Context.ToPointer(), radius, height, segments, capped, result);
+        internal static int MeshCreateCapsule(float radius, float height, uint segments, uint hemisphereRings, ManagedNativeUuid* result) => MeshCreateCapsuleCallback(api.Context.ToPointer(), radius, height, segments, hemisphereRings, result);
+        internal static int MeshRendererGetMaterial(ManagedNativeUuid entity, uint index, ManagedNativeUuid* result) => MeshRendererGetMaterialCallback(api.Context.ToPointer(), entity, index, result);
+        internal static int MeshRendererSetMaterial(ManagedNativeUuid entity, uint index, ManagedNativeUuid material) => MeshRendererSetMaterialCallback(api.Context.ToPointer(), entity, index, material);
+        internal static int MathMatrixDeterminant(ManagedNativeMatrix4* matrix, float* result) => MathMatrixDeterminantCallback(api.Context.ToPointer(), matrix, result);
+        internal static int MathMatrixInverse(ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result) => MathMatrixInverseCallback(api.Context.ToPointer(), matrix, result);
+        internal static int MathMatrixAffineInverse(ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result) => MathMatrixAffineInverseCallback(api.Context.ToPointer(), matrix, result);
+        internal static int MathLookAt(ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result) => MathLookAtCallback(api.Context.ToPointer(), from, to, up, result);
+        internal static int AddScriptComponent(ManagedNativeUuid entity, ManagedNativeStringView assemblyName, ManagedNativeStringView namespaceName, ManagedNativeStringView typeName) => AddScriptComponentCallback(api.Context.ToPointer(), entity, assemblyName, namespaceName, typeName);
+        internal static int RemoveScriptComponent(ManagedNativeUuid entity, ManagedNativeStringView assemblyName, ManagedNativeStringView namespaceName, ManagedNativeStringView typeName) => RemoveScriptComponentCallback(api.Context.ToPointer(), entity, assemblyName, namespaceName, typeName);
+        internal static int MeshRendererGetMesh(ManagedNativeUuid entity, ManagedNativeUuid* result) => MeshRendererGetMeshCallback(api.Context.ToPointer(), entity, result);
+        internal static int MeshRendererSetMesh(ManagedNativeUuid entity, ManagedNativeUuid value) => MeshRendererSetMeshCallback(api.Context.ToPointer(), entity, value);
+        internal static int MeshRendererGetMaterialCount(ManagedNativeUuid entity, uint* result) => MeshRendererGetMaterialCountCallback(api.Context.ToPointer(), entity, result);
+        internal static int MeshRendererSetMaterialCount(ManagedNativeUuid entity, uint value) => MeshRendererSetMaterialCountCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider2DGetIsTrigger(ManagedNativeUuid entity, byte* result) => Collider2DGetIsTriggerCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider2DSetIsTrigger(ManagedNativeUuid entity, byte value) => Collider2DSetIsTriggerCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider2DGetOffset(ManagedNativeUuid entity, ManagedNativeVec2* result) => Collider2DGetOffsetCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider2DSetOffset(ManagedNativeUuid entity, ManagedNativeVec2* value) => Collider2DSetOffsetCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider2DGetMaterial(ManagedNativeUuid entity, ManagedNativeUuid* result) => Collider2DGetMaterialCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider2DSetMaterial(ManagedNativeUuid entity, ManagedNativeUuid value) => Collider2DSetMaterialCallback(api.Context.ToPointer(), entity, value);
+        internal static int BoxCollider2DGetSize(ManagedNativeUuid entity, ManagedNativeVec2* result) => BoxCollider2DGetSizeCallback(api.Context.ToPointer(), entity, result);
+        internal static int BoxCollider2DSetSize(ManagedNativeUuid entity, ManagedNativeVec2* value) => BoxCollider2DSetSizeCallback(api.Context.ToPointer(), entity, value);
+        internal static int CircleCollider2DGetRadius(ManagedNativeUuid entity, float* result) => CircleCollider2DGetRadiusCallback(api.Context.ToPointer(), entity, result);
+        internal static int CircleCollider2DSetRadius(ManagedNativeUuid entity, float value) => CircleCollider2DSetRadiusCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider3DGetIsTrigger(ManagedNativeUuid entity, byte* result) => Collider3DGetIsTriggerCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider3DSetIsTrigger(ManagedNativeUuid entity, byte value) => Collider3DSetIsTriggerCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider3DGetOffset(ManagedNativeUuid entity, ManagedNativeVec3* result) => Collider3DGetOffsetCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider3DSetOffset(ManagedNativeUuid entity, ManagedNativeVec3* value) => Collider3DSetOffsetCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider3DGetRotation(ManagedNativeUuid entity, ManagedNativeQuaternion* result) => Collider3DGetRotationCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider3DSetRotation(ManagedNativeUuid entity, ManagedNativeQuaternion* value) => Collider3DSetRotationCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider3DGetMaterial(ManagedNativeUuid entity, ManagedNativeUuid* result) => Collider3DGetMaterialCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider3DSetMaterial(ManagedNativeUuid entity, ManagedNativeUuid value) => Collider3DSetMaterialCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider3DGetCollisionFilter(ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* result) => Collider3DGetCollisionFilterCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider3DSetCollisionFilter(ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* value) => Collider3DSetCollisionFilterCallback(api.Context.ToPointer(), entity, value);
+        internal static int BoxCollider3DGetSize(ManagedNativeUuid entity, ManagedNativeVec3* result) => BoxCollider3DGetSizeCallback(api.Context.ToPointer(), entity, result);
+        internal static int BoxCollider3DSetSize(ManagedNativeUuid entity, ManagedNativeVec3* value) => BoxCollider3DSetSizeCallback(api.Context.ToPointer(), entity, value);
+        internal static int SphereCollider3DGetRadius(ManagedNativeUuid entity, float* result) => SphereCollider3DGetRadiusCallback(api.Context.ToPointer(), entity, result);
+        internal static int SphereCollider3DSetRadius(ManagedNativeUuid entity, float value) => SphereCollider3DSetRadiusCallback(api.Context.ToPointer(), entity, value);
+        internal static int CapsuleCollider3DGetRadius(ManagedNativeUuid entity, float* result) => CapsuleCollider3DGetRadiusCallback(api.Context.ToPointer(), entity, result);
+        internal static int CapsuleCollider3DSetRadius(ManagedNativeUuid entity, float value) => CapsuleCollider3DSetRadiusCallback(api.Context.ToPointer(), entity, value);
+        internal static int CapsuleCollider3DGetHeight(ManagedNativeUuid entity, float* result) => CapsuleCollider3DGetHeightCallback(api.Context.ToPointer(), entity, result);
+        internal static int CapsuleCollider3DSetHeight(ManagedNativeUuid entity, float value) => CapsuleCollider3DSetHeightCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetBodyType(ManagedNativeUuid entity, int* result) => Rigidbody3DGetBodyTypeCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetBodyType(ManagedNativeUuid entity, int value) => Rigidbody3DSetBodyTypeCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetMass(ManagedNativeUuid entity, float* result) => Rigidbody3DGetMassCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetMass(ManagedNativeUuid entity, float value) => Rigidbody3DSetMassCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetAutoMass(ManagedNativeUuid entity, byte* result) => Rigidbody3DGetAutoMassCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetAutoMass(ManagedNativeUuid entity, byte value) => Rigidbody3DSetAutoMassCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetGravityScale(ManagedNativeUuid entity, float* result) => Rigidbody3DGetGravityScaleCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetGravityScale(ManagedNativeUuid entity, float value) => Rigidbody3DSetGravityScaleCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetLinearDamping(ManagedNativeUuid entity, float* result) => Rigidbody3DGetLinearDampingCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetLinearDamping(ManagedNativeUuid entity, float value) => Rigidbody3DSetLinearDampingCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetAngularDamping(ManagedNativeUuid entity, float* result) => Rigidbody3DGetAngularDampingCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetAngularDamping(ManagedNativeUuid entity, float value) => Rigidbody3DSetAngularDampingCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetCenterOfMass(ManagedNativeUuid entity, ManagedNativeVec3* result) => Rigidbody3DGetCenterOfMassCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetCenterOfMass(ManagedNativeUuid entity, ManagedNativeVec3* value) => Rigidbody3DSetCenterOfMassCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetAllowSleep(ManagedNativeUuid entity, byte* result) => Rigidbody3DGetAllowSleepCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetAllowSleep(ManagedNativeUuid entity, byte value) => Rigidbody3DSetAllowSleepCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetStartAwake(ManagedNativeUuid entity, byte* result) => Rigidbody3DGetStartAwakeCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetStartAwake(ManagedNativeUuid entity, byte value) => Rigidbody3DSetStartAwakeCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetContinuousCollision(ManagedNativeUuid entity, byte* result) => Rigidbody3DGetContinuousCollisionCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetContinuousCollision(ManagedNativeUuid entity, byte value) => Rigidbody3DSetContinuousCollisionCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetConstraints(ManagedNativeUuid entity, uint* result) => Rigidbody3DGetConstraintsCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetConstraints(ManagedNativeUuid entity, uint value) => Rigidbody3DSetConstraintsCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetCollisionFilter(ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* result) => Rigidbody3DGetCollisionFilterCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetCollisionFilter(ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* value) => Rigidbody3DSetCollisionFilterCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetLinearVelocity(ManagedNativeUuid entity, ManagedNativeVec3* result) => Rigidbody3DGetLinearVelocityCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetLinearVelocity(ManagedNativeUuid entity, ManagedNativeVec3* value) => Rigidbody3DSetLinearVelocityCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetAngularVelocity(ManagedNativeUuid entity, ManagedNativeVec3* result) => Rigidbody3DGetAngularVelocityCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetAngularVelocity(ManagedNativeUuid entity, ManagedNativeVec3* value) => Rigidbody3DSetAngularVelocityCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetAwake(ManagedNativeUuid entity, byte* result) => Rigidbody3DGetAwakeCallback(api.Context.ToPointer(), entity, result);
+        internal static int Rigidbody3DSetAwake(ManagedNativeUuid entity, byte value) => Rigidbody3DSetAwakeCallback(api.Context.ToPointer(), entity, value);
+        internal static int Rigidbody3DGetBodyHandle(ManagedNativeUuid entity, ulong* result) => Rigidbody3DGetBodyHandleCallback(api.Context.ToPointer(), entity, result);
+        internal static int PhysicsMaterial2DGetDensity(ManagedNativeUuid asset, float* result) => PhysicsMaterial2DGetDensityCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial2DSetDensity(ManagedNativeUuid asset, float value) => PhysicsMaterial2DSetDensityCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial2DGetFriction(ManagedNativeUuid asset, float* result) => PhysicsMaterial2DGetFrictionCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial2DSetFriction(ManagedNativeUuid asset, float value) => PhysicsMaterial2DSetFrictionCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial2DGetRestitution(ManagedNativeUuid asset, float* result) => PhysicsMaterial2DGetRestitutionCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial2DSetRestitution(ManagedNativeUuid asset, float value) => PhysicsMaterial2DSetRestitutionCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial2DGetRestitutionThreshold(ManagedNativeUuid asset, float* result) => PhysicsMaterial2DGetRestitutionThresholdCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial2DSetRestitutionThreshold(ManagedNativeUuid asset, float value) => PhysicsMaterial2DSetRestitutionThresholdCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial2DGetFrictionCombine(ManagedNativeUuid asset, int* result) => PhysicsMaterial2DGetFrictionCombineCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial2DSetFrictionCombine(ManagedNativeUuid asset, int value) => PhysicsMaterial2DSetFrictionCombineCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial2DGetRestitutionCombine(ManagedNativeUuid asset, int* result) => PhysicsMaterial2DGetRestitutionCombineCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial2DSetRestitutionCombine(ManagedNativeUuid asset, int value) => PhysicsMaterial2DSetRestitutionCombineCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial3DGetDensity(ManagedNativeUuid asset, float* result) => PhysicsMaterial3DGetDensityCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial3DSetDensity(ManagedNativeUuid asset, float value) => PhysicsMaterial3DSetDensityCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial3DGetFriction(ManagedNativeUuid asset, float* result) => PhysicsMaterial3DGetFrictionCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial3DSetFriction(ManagedNativeUuid asset, float value) => PhysicsMaterial3DSetFrictionCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial3DGetRestitution(ManagedNativeUuid asset, float* result) => PhysicsMaterial3DGetRestitutionCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial3DSetRestitution(ManagedNativeUuid asset, float value) => PhysicsMaterial3DSetRestitutionCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial3DGetRestitutionThreshold(ManagedNativeUuid asset, float* result) => PhysicsMaterial3DGetRestitutionThresholdCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial3DSetRestitutionThreshold(ManagedNativeUuid asset, float value) => PhysicsMaterial3DSetRestitutionThresholdCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial3DGetFrictionCombine(ManagedNativeUuid asset, int* result) => PhysicsMaterial3DGetFrictionCombineCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial3DSetFrictionCombine(ManagedNativeUuid asset, int value) => PhysicsMaterial3DSetFrictionCombineCallback(api.Context.ToPointer(), asset, value);
+        internal static int PhysicsMaterial3DGetRestitutionCombine(ManagedNativeUuid asset, int* result) => PhysicsMaterial3DGetRestitutionCombineCallback(api.Context.ToPointer(), asset, result);
+        internal static int PhysicsMaterial3DSetRestitutionCombine(ManagedNativeUuid asset, int value) => PhysicsMaterial3DSetRestitutionCombineCallback(api.Context.ToPointer(), asset, value);
+        internal static int AnimationComponentGetClip(ManagedNativeUuid entity, ManagedNativeUuid* result) => AnimationComponentGetClipCallback(api.Context.ToPointer(), entity, result);
+        internal static int AnimationComponentSetClip(ManagedNativeUuid entity, ManagedNativeUuid value) => AnimationComponentSetClipCallback(api.Context.ToPointer(), entity, value);
+        internal static int AnimationComponentGetSpeed(ManagedNativeUuid entity, float* result) => AnimationComponentGetSpeedCallback(api.Context.ToPointer(), entity, result);
+        internal static int AnimationComponentSetSpeed(ManagedNativeUuid entity, float value) => AnimationComponentSetSpeedCallback(api.Context.ToPointer(), entity, value);
+        internal static int AnimationComponentGetWrapMode(ManagedNativeUuid entity, int* result) => AnimationComponentGetWrapModeCallback(api.Context.ToPointer(), entity, result);
+        internal static int AnimationComponentSetWrapMode(ManagedNativeUuid entity, int value) => AnimationComponentSetWrapModeCallback(api.Context.ToPointer(), entity, value);
+        internal static int AnimationComponentGetPlayOnAwake(ManagedNativeUuid entity, byte* result) => AnimationComponentGetPlayOnAwakeCallback(api.Context.ToPointer(), entity, result);
+        internal static int AnimationComponentSetPlayOnAwake(ManagedNativeUuid entity, byte value) => AnimationComponentSetPlayOnAwakeCallback(api.Context.ToPointer(), entity, value);
+        internal static int AnimationComponentGetApplyRootMotion(ManagedNativeUuid entity, byte* result) => AnimationComponentGetApplyRootMotionCallback(api.Context.ToPointer(), entity, result);
+        internal static int AnimationComponentSetApplyRootMotion(ManagedNativeUuid entity, byte value) => AnimationComponentSetApplyRootMotionCallback(api.Context.ToPointer(), entity, value);
+        internal static int AnimationComponentGetTime(ManagedNativeUuid entity, float* result) => AnimationComponentGetTimeCallback(api.Context.ToPointer(), entity, result);
+        internal static int AnimationComponentSetTime(ManagedNativeUuid entity, float value) => AnimationComponentSetTimeCallback(api.Context.ToPointer(), entity, value);
+        internal static int AnimationComponentGetNormalizedTime(ManagedNativeUuid entity, float* result) => AnimationComponentGetNormalizedTimeCallback(api.Context.ToPointer(), entity, result);
+        internal static int AnimationComponentSetNormalizedTime(ManagedNativeUuid entity, float value) => AnimationComponentSetNormalizedTimeCallback(api.Context.ToPointer(), entity, value);
+        internal static int AnimationComponentGetState(ManagedNativeUuid entity, int* result) => AnimationComponentGetStateCallback(api.Context.ToPointer(), entity, result);
         internal static int TextGetText(ManagedNativeUuid entity, ManagedNativeStringView* result) => TextGetTextCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetText(ManagedNativeUuid entity, ManagedNativeStringView value) => TextSetTextCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetFont(ManagedNativeUuid entity, ManagedNativeUuid* result) => TextGetFontCallback(api.Context.ToPointer(), entity, result);
@@ -1181,8 +2962,8 @@ namespace Crowny
         internal static int TextSetHorizontalAlignment(ManagedNativeUuid entity, int value) => TextSetHorizontalAlignmentCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetVerticalAlignment(ManagedNativeUuid entity, int* result) => TextGetVerticalAlignmentCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetVerticalAlignment(ManagedNativeUuid entity, int value) => TextSetVerticalAlignmentCallback(api.Context.ToPointer(), entity, value);
-        internal static int TextGetFontStyle(ManagedNativeUuid entity, uint* result) => TextGetFontStyleCallback(api.Context.ToPointer(), entity, result);
-        internal static int TextSetFontStyle(ManagedNativeUuid entity, uint value) => TextSetFontStyleCallback(api.Context.ToPointer(), entity, value);
+        internal static int TextGetFontStyle(ManagedNativeUuid entity, int* result) => TextGetFontStyleCallback(api.Context.ToPointer(), entity, result);
+        internal static int TextSetFontStyle(ManagedNativeUuid entity, int value) => TextSetFontStyleCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetOutlineColor(ManagedNativeUuid entity, ManagedNativeVec4* result) => TextGetOutlineColorCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetOutlineColor(ManagedNativeUuid entity, ManagedNativeVec4* value) => TextSetOutlineColorCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetOutlineWidth(ManagedNativeUuid entity, float* result) => TextGetOutlineWidthCallback(api.Context.ToPointer(), entity, result);
@@ -1201,8 +2982,6 @@ namespace Crowny
         internal static int TextSetLineSpacing(ManagedNativeUuid entity, float value) => TextSetLineSpacingCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetParagraphSpacing(ManagedNativeUuid entity, float* result) => TextGetParagraphSpacingCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetParagraphSpacing(ManagedNativeUuid entity, float value) => TextSetParagraphSpacingCallback(api.Context.ToPointer(), entity, value);
-        internal static int TextGetTabWidth(ManagedNativeUuid entity, uint* result) => TextGetTabWidthCallback(api.Context.ToPointer(), entity, result);
-        internal static int TextSetTabWidth(ManagedNativeUuid entity, uint value) => TextSetTabWidthCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetUseCustomDecorationColor(ManagedNativeUuid entity, byte* result) => TextGetUseCustomDecorationColorCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetUseCustomDecorationColor(ManagedNativeUuid entity, byte value) => TextSetUseCustomDecorationColorCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetDecorationColor(ManagedNativeUuid entity, ManagedNativeVec4* result) => TextGetDecorationColorCallback(api.Context.ToPointer(), entity, result);
@@ -1215,27 +2994,12 @@ namespace Crowny
         internal static int TextSetStrikethroughOffset(ManagedNativeUuid entity, float value) => TextSetStrikethroughOffsetCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetUseKerning(ManagedNativeUuid entity, byte* result) => TextGetUseKerningCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetUseKerning(ManagedNativeUuid entity, byte value) => TextSetUseKerningCallback(api.Context.ToPointer(), entity, value);
+        internal static int TextGetTabWidth(ManagedNativeUuid entity, uint* result) => TextGetTabWidthCallback(api.Context.ToPointer(), entity, result);
+        internal static int TextSetTabWidth(ManagedNativeUuid entity, uint value) => TextSetTabWidthCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetSortingLayer(ManagedNativeUuid entity, int* result) => TextGetSortingLayerCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetSortingLayer(ManagedNativeUuid entity, int value) => TextSetSortingLayerCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetOrderInLayer(ManagedNativeUuid entity, int* result) => TextGetOrderInLayerCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetOrderInLayer(ManagedNativeUuid entity, int value) => TextSetOrderInLayerCallback(api.Context.ToPointer(), entity, value);
-        internal static int TextHitTest(ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result) => TextHitTestCallback(api.Context.ToPointer(), entity, position, result);
-        internal static int FontGetIsValid(ManagedNativeUuid font, byte* result) => FontGetIsValidCallback(api.Context.ToPointer(), font, result);
-        internal static int FontGetGlyphCount(ManagedNativeUuid font, uint* result) => FontGetGlyphCountCallback(api.Context.ToPointer(), font, result);
-        internal static int FontGetTabWidth(ManagedNativeUuid font, uint* result) => FontGetTabWidthCallback(api.Context.ToPointer(), font, result);
-        internal static int FontGetAtlasWidth(ManagedNativeUuid font, uint* result) => FontGetAtlasWidthCallback(api.Context.ToPointer(), font, result);
-        internal static int FontGetAtlasHeight(ManagedNativeUuid font, uint* result) => FontGetAtlasHeightCallback(api.Context.ToPointer(), font, result);
-        internal static int FontGetAtlasPixelRange(ManagedNativeUuid font, float* result) => FontGetAtlasPixelRangeCallback(api.Context.ToPointer(), font, result);
-        internal static int FontHasGlyph(ManagedNativeUuid font, uint codePoint, byte* result) => FontHasGlyphCallback(api.Context.ToPointer(), font, codePoint, result);
-        internal static int FontGetCharacterInfo(ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result) => FontGetCharacterInfoCallback(api.Context.ToPointer(), font, codePoint, useFallbacks, result);
-        internal static int FontGetFallbackCount(ManagedNativeUuid font, uint* result) => FontGetFallbackCountCallback(api.Context.ToPointer(), font, result);
-        internal static int FontGetFallback(ManagedNativeUuid font, uint index, ManagedNativeUuid* result) => FontGetFallbackCallback(api.Context.ToPointer(), font, index, result);
-        internal static int FontAddFallback(ManagedNativeUuid font, ManagedNativeUuid value, byte* result) => FontAddFallbackCallback(api.Context.ToPointer(), font, value, result);
-        internal static int FontClearFallbacks(ManagedNativeUuid font) => FontClearFallbacksCallback(api.Context.ToPointer(), font);
-        internal static int MathMatrixDeterminant(ManagedNativeMatrix4* matrix, float* result) => MathMatrixDeterminantCallback(api.Context.ToPointer(), matrix, result);
-        internal static int MathMatrixInverse(ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result) => MathMatrixInverseCallback(api.Context.ToPointer(), matrix, result);
-        internal static int MathMatrixAffineInverse(ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result) => MathMatrixAffineInverseCallback(api.Context.ToPointer(), matrix, result);
-        internal static int MathLookAt(ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result) => MathLookAtCallback(api.Context.ToPointer(), from, to, up, result);
     }
 
     internal static unsafe partial class ManagedRuntimeContext
@@ -1243,7 +3007,7 @@ namespace Crowny
         internal static string GetEntityName(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeStringView result = default(ManagedNativeStringView);
+            ManagedNativeStringView result = default;
             EnsureStatus(ManagedHostTransport.GetEntityName(EncodeUuid(entity), &result), "GetEntityName");
             return DecodeString(result);
         }
@@ -1262,7 +3026,7 @@ namespace Crowny
         internal static UUID FindEntityByName(string name)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default(ManagedNativeUuid);
+            ManagedNativeUuid result = default;
             byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
             fixed (byte* nameBytes = encodedName)
             {
@@ -1275,7 +3039,7 @@ namespace Crowny
         internal static UUID GetEntityParent(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default(ManagedNativeUuid);
+            ManagedNativeUuid result = default;
             EnsureStatus(ManagedHostTransport.GetEntityParent(EncodeUuid(entity), &result), "GetEntityParent");
             return DecodeUuid(result);
         }
@@ -1295,7 +3059,7 @@ namespace Crowny
         internal static bool EntityHasComponent(UUID entity, string typeName)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             byte[] encodedTypeName = Encoding.UTF8.GetBytes(typeName ?? string.Empty);
             fixed (byte* typeNameBytes = encodedTypeName)
             {
@@ -1330,7 +3094,7 @@ namespace Crowny
         internal static Vector3 TransformGetPosition(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default(ManagedNativeVec3);
+            ManagedNativeVec3 result = default;
             EnsureStatus(ManagedHostTransport.TransformGetPosition(EncodeUuid(entity), &result), "TransformGetPosition");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1345,7 +3109,7 @@ namespace Crowny
         internal static Vector3 TransformGetLocalPosition(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default(ManagedNativeVec3);
+            ManagedNativeVec3 result = default;
             EnsureStatus(ManagedHostTransport.TransformGetLocalPosition(EncodeUuid(entity), &result), "TransformGetLocalPosition");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1360,7 +3124,7 @@ namespace Crowny
         internal static Vector3 TransformGetScale(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default(ManagedNativeVec3);
+            ManagedNativeVec3 result = default;
             EnsureStatus(ManagedHostTransport.TransformGetScale(EncodeUuid(entity), &result), "TransformGetScale");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1375,7 +3139,7 @@ namespace Crowny
         internal static Vector3 TransformGetLocalScale(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default(ManagedNativeVec3);
+            ManagedNativeVec3 result = default;
             EnsureStatus(ManagedHostTransport.TransformGetLocalScale(EncodeUuid(entity), &result), "TransformGetLocalScale");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1390,7 +3154,7 @@ namespace Crowny
         internal static Quaternion TransformGetRotation(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeQuaternion result = default(ManagedNativeQuaternion);
+            ManagedNativeQuaternion result = default;
             EnsureStatus(ManagedHostTransport.TransformGetRotation(EncodeUuid(entity), &result), "TransformGetRotation");
             return new Quaternion(result.X, result.Y, result.Z, result.W);
         }
@@ -1405,7 +3169,7 @@ namespace Crowny
         internal static Quaternion TransformGetLocalRotation(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeQuaternion result = default(ManagedNativeQuaternion);
+            ManagedNativeQuaternion result = default;
             EnsureStatus(ManagedHostTransport.TransformGetLocalRotation(EncodeUuid(entity), &result), "TransformGetLocalRotation");
             return new Quaternion(result.X, result.Y, result.Z, result.W);
         }
@@ -1420,7 +3184,7 @@ namespace Crowny
         internal static Matrix4 TransformGetLocalToWorldMatrix(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
+            ManagedNativeMatrix4 result = default;
             EnsureStatus(ManagedHostTransport.TransformGetLocalToWorldMatrix(EncodeUuid(entity), &result), "TransformGetLocalToWorldMatrix");
             return DecodeMatrix(result);
         }
@@ -1428,7 +3192,7 @@ namespace Crowny
         internal static Matrix4 TransformGetWorldToLocalMatrix(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
+            ManagedNativeMatrix4 result = default;
             EnsureStatus(ManagedHostTransport.TransformGetWorldToLocalMatrix(EncodeUuid(entity), &result), "TransformGetWorldToLocalMatrix");
             return DecodeMatrix(result);
         }
@@ -1436,7 +3200,7 @@ namespace Crowny
         internal static Vector3 TransformGetEulerAngles(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default(ManagedNativeVec3);
+            ManagedNativeVec3 result = default;
             EnsureStatus(ManagedHostTransport.TransformGetEulerAngles(EncodeUuid(entity), &result), "TransformGetEulerAngles");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1451,7 +3215,7 @@ namespace Crowny
         internal static Vector3 TransformGetLocalEulerAngles(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec3 result = default(ManagedNativeVec3);
+            ManagedNativeVec3 result = default;
             EnsureStatus(ManagedHostTransport.TransformGetLocalEulerAngles(EncodeUuid(entity), &result), "TransformGetLocalEulerAngles");
             return new Vector3(result.X, result.Y, result.Z);
         }
@@ -1466,7 +3230,7 @@ namespace Crowny
         internal static bool TransformIsDirty(UUID entity, int flag)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.TransformIsDirty(EncodeUuid(entity), flag, &result), "TransformIsDirty");
             return result != 0;
         }
@@ -1474,7 +3238,7 @@ namespace Crowny
         internal static bool InputGetKey(uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetKey(code, &result), "InputGetKey");
             return result != 0;
         }
@@ -1482,7 +3246,7 @@ namespace Crowny
         internal static bool InputGetKeyDown(uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetKeyDown(code, &result), "InputGetKeyDown");
             return result != 0;
         }
@@ -1490,7 +3254,7 @@ namespace Crowny
         internal static bool InputGetKeyUp(uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetKeyUp(code, &result), "InputGetKeyUp");
             return result != 0;
         }
@@ -1498,7 +3262,7 @@ namespace Crowny
         internal static bool InputGetMouseButton(uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetMouseButton(code, &result), "InputGetMouseButton");
             return result != 0;
         }
@@ -1506,7 +3270,7 @@ namespace Crowny
         internal static bool InputGetMouseButtonDown(uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetMouseButtonDown(code, &result), "InputGetMouseButtonDown");
             return result != 0;
         }
@@ -1514,7 +3278,7 @@ namespace Crowny
         internal static bool InputGetMouseButtonUp(uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetMouseButtonUp(code, &result), "InputGetMouseButtonUp");
             return result != 0;
         }
@@ -1522,7 +3286,7 @@ namespace Crowny
         internal static float InputGetMouseScrollX()
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.InputGetMouseScrollX(&result), "InputGetMouseScrollX");
             return result;
         }
@@ -1530,7 +3294,7 @@ namespace Crowny
         internal static float InputGetMouseScrollY()
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.InputGetMouseScrollY(&result), "InputGetMouseScrollY");
             return result;
         }
@@ -1538,7 +3302,7 @@ namespace Crowny
         internal static Vector2 InputGetMousePosition()
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default(ManagedNativeVec2);
+            ManagedNativeVec2 result = default;
             EnsureStatus(ManagedHostTransport.InputGetMousePosition(&result), "InputGetMousePosition");
             return new Vector2(result.X, result.Y);
         }
@@ -1546,7 +3310,7 @@ namespace Crowny
         internal static Vector2 InputGetMouseDelta()
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default(ManagedNativeVec2);
+            ManagedNativeVec2 result = default;
             EnsureStatus(ManagedHostTransport.InputGetMouseDelta(&result), "InputGetMouseDelta");
             return new Vector2(result.X, result.Y);
         }
@@ -1554,7 +3318,7 @@ namespace Crowny
         internal static bool InputIsGamepadConnected(uint gamepad)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputIsGamepadConnected(gamepad, &result), "InputIsGamepadConnected");
             return result != 0;
         }
@@ -1562,7 +3326,7 @@ namespace Crowny
         internal static bool InputGetGamepadButton(uint gamepad, uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetGamepadButton(gamepad, code, &result), "InputGetGamepadButton");
             return result != 0;
         }
@@ -1570,7 +3334,7 @@ namespace Crowny
         internal static bool InputGetGamepadButtonDown(uint gamepad, uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetGamepadButtonDown(gamepad, code, &result), "InputGetGamepadButtonDown");
             return result != 0;
         }
@@ -1578,7 +3342,7 @@ namespace Crowny
         internal static bool InputGetGamepadButtonUp(uint gamepad, uint code)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.InputGetGamepadButtonUp(gamepad, code, &result), "InputGetGamepadButtonUp");
             return result != 0;
         }
@@ -1586,80 +3350,15 @@ namespace Crowny
         internal static float InputGetGamepadAxis(uint gamepad, uint code)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.InputGetGamepadAxis(gamepad, code, &result), "InputGetGamepadAxis");
             return result;
-        }
-
-        internal static bool InputGetAction(string actionName)
-        {
-            EnsureHostBindings();
-            byte result = default(byte);
-            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
-            fixed (byte* actionNameBytes = encodedActionName)
-            {
-                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
-                EnsureStatus(ManagedHostTransport.InputGetAction(nativeActionName, &result), "InputGetAction");
-            }
-            return result != 0;
-        }
-
-        internal static bool InputGetActionDown(string actionName)
-        {
-            EnsureHostBindings();
-            byte result = default(byte);
-            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
-            fixed (byte* actionNameBytes = encodedActionName)
-            {
-                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
-                EnsureStatus(ManagedHostTransport.InputGetActionDown(nativeActionName, &result), "InputGetActionDown");
-            }
-            return result != 0;
-        }
-
-        internal static bool InputGetActionUp(string actionName)
-        {
-            EnsureHostBindings();
-            byte result = default(byte);
-            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
-            fixed (byte* actionNameBytes = encodedActionName)
-            {
-                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
-                EnsureStatus(ManagedHostTransport.InputGetActionUp(nativeActionName, &result), "InputGetActionUp");
-            }
-            return result != 0;
-        }
-
-        internal static float InputGetAxis(string actionName)
-        {
-            EnsureHostBindings();
-            float result = default(float);
-            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
-            fixed (byte* actionNameBytes = encodedActionName)
-            {
-                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
-                EnsureStatus(ManagedHostTransport.InputGetAxis(nativeActionName, &result), "InputGetAxis");
-            }
-            return result;
-        }
-
-        internal static Vector2 InputGetActionVector(string actionName)
-        {
-            EnsureHostBindings();
-            ManagedNativeVec2 result = default(ManagedNativeVec2);
-            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
-            fixed (byte* actionNameBytes = encodedActionName)
-            {
-                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
-                EnsureStatus(ManagedHostTransport.InputGetActionVector(nativeActionName, &result), "InputGetActionVector");
-            }
-            return new Vector2(result.X, result.Y);
         }
 
         internal static bool InputEnableActionMap(string mapName)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             byte[] encodedMapName = Encoding.UTF8.GetBytes(mapName ?? string.Empty);
             fixed (byte* mapNameBytes = encodedMapName)
             {
@@ -1672,7 +3371,7 @@ namespace Crowny
         internal static bool InputDisableActionMap(string mapName)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             byte[] encodedMapName = Encoding.UTF8.GetBytes(mapName ?? string.Empty);
             fixed (byte* mapNameBytes = encodedMapName)
             {
@@ -1680,6 +3379,71 @@ namespace Crowny
                 EnsureStatus(ManagedHostTransport.InputDisableActionMap(nativeMapName, &result), "InputDisableActionMap");
             }
             return result != 0;
+        }
+
+        internal static bool InputGetAction(string actionName)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetAction(nativeActionName, &result), "InputGetAction");
+            }
+            return result != 0;
+        }
+
+        internal static bool InputGetActionDown(string actionName)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetActionDown(nativeActionName, &result), "InputGetActionDown");
+            }
+            return result != 0;
+        }
+
+        internal static bool InputGetActionUp(string actionName)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetActionUp(nativeActionName, &result), "InputGetActionUp");
+            }
+            return result != 0;
+        }
+
+        internal static float InputGetAxis(string actionName)
+        {
+            EnsureHostBindings();
+            float result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetAxis(nativeActionName, &result), "InputGetAxis");
+            }
+            return result;
+        }
+
+        internal static Vector2 InputGetActionVector(string actionName)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 result = default;
+            byte[] encodedActionName = Encoding.UTF8.GetBytes(actionName ?? string.Empty);
+            fixed (byte* actionNameBytes = encodedActionName)
+            {
+                ManagedNativeStringView nativeActionName = new ManagedNativeStringView(actionNameBytes, (uint)encodedActionName.Length);
+                EnsureStatus(ManagedHostTransport.InputGetActionVector(nativeActionName, &result), "InputGetActionVector");
+            }
+            return new Vector2(result.X, result.Y);
         }
 
         internal static void InputClearActionRebinds()
@@ -1691,7 +3455,7 @@ namespace Crowny
         internal static float TimeGetDeltaTime()
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TimeGetDeltaTime(&result), "TimeGetDeltaTime");
             return result;
         }
@@ -1699,7 +3463,7 @@ namespace Crowny
         internal static float TimeGetTime()
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TimeGetTime(&result), "TimeGetTime");
             return result;
         }
@@ -1707,7 +3471,7 @@ namespace Crowny
         internal static float TimeGetFixedDeltaTime()
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TimeGetFixedDeltaTime(&result), "TimeGetFixedDeltaTime");
             return result;
         }
@@ -1715,7 +3479,7 @@ namespace Crowny
         internal static float TimeGetSmoothDeltaTime()
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TimeGetSmoothDeltaTime(&result), "TimeGetSmoothDeltaTime");
             return result;
         }
@@ -1723,7 +3487,7 @@ namespace Crowny
         internal static float TimeGetRealtimeSinceStartup()
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TimeGetRealtimeSinceStartup(&result), "TimeGetRealtimeSinceStartup");
             return result;
         }
@@ -1731,7 +3495,7 @@ namespace Crowny
         internal static uint TimeGetFrameCount()
         {
             EnsureHostBindings();
-            uint result = default(uint);
+            uint result = default;
             EnsureStatus(ManagedHostTransport.TimeGetFrameCount(&result), "TimeGetFrameCount");
             return result;
         }
@@ -1739,7 +3503,7 @@ namespace Crowny
         internal static float Rigidbody2DGetMass(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetMass(EncodeUuid(entity), &result), "Rigidbody2DGetMass");
             return result;
         }
@@ -1753,7 +3517,7 @@ namespace Crowny
         internal static int Rigidbody2DGetBodyType(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetBodyType(EncodeUuid(entity), &result), "Rigidbody2DGetBodyType");
             return result;
         }
@@ -1767,7 +3531,7 @@ namespace Crowny
         internal static int Rigidbody2DGetSleepMode(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetSleepMode(EncodeUuid(entity), &result), "Rigidbody2DGetSleepMode");
             return result;
         }
@@ -1781,7 +3545,7 @@ namespace Crowny
         internal static int Rigidbody2DGetCollisionDetectionMode(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetCollisionDetectionMode(EncodeUuid(entity), &result), "Rigidbody2DGetCollisionDetectionMode");
             return result;
         }
@@ -1795,7 +3559,7 @@ namespace Crowny
         internal static int Rigidbody2DGetInterpolation(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetInterpolation(EncodeUuid(entity), &result), "Rigidbody2DGetInterpolation");
             return result;
         }
@@ -1809,7 +3573,7 @@ namespace Crowny
         internal static bool Rigidbody2DGetAutoMass(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetAutoMass(EncodeUuid(entity), &result), "Rigidbody2DGetAutoMass");
             return result != 0;
         }
@@ -1823,7 +3587,7 @@ namespace Crowny
         internal static int Rigidbody2DGetLayer(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetLayer(EncodeUuid(entity), &result), "Rigidbody2DGetLayer");
             return result;
         }
@@ -1837,7 +3601,7 @@ namespace Crowny
         internal static float Rigidbody2DGetLinearDrag(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetLinearDrag(EncodeUuid(entity), &result), "Rigidbody2DGetLinearDrag");
             return result;
         }
@@ -1851,7 +3615,7 @@ namespace Crowny
         internal static float Rigidbody2DGetAngularDrag(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetAngularDrag(EncodeUuid(entity), &result), "Rigidbody2DGetAngularDrag");
             return result;
         }
@@ -1865,7 +3629,7 @@ namespace Crowny
         internal static float Rigidbody2DGetGravityScale(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetGravityScale(EncodeUuid(entity), &result), "Rigidbody2DGetGravityScale");
             return result;
         }
@@ -1879,7 +3643,7 @@ namespace Crowny
         internal static Vector2 Rigidbody2DGetCenterOfMass(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default(ManagedNativeVec2);
+            ManagedNativeVec2 result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetCenterOfMass(EncodeUuid(entity), &result), "Rigidbody2DGetCenterOfMass");
             return new Vector2(result.X, result.Y);
         }
@@ -1894,7 +3658,7 @@ namespace Crowny
         internal static float Rigidbody2DGetInertia(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetInertia(EncodeUuid(entity), &result), "Rigidbody2DGetInertia");
             return result;
         }
@@ -1908,7 +3672,7 @@ namespace Crowny
         internal static uint Rigidbody2DGetConstraints(UUID entity)
         {
             EnsureHostBindings();
-            uint result = default(uint);
+            uint result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetConstraints(EncodeUuid(entity), &result), "Rigidbody2DGetConstraints");
             return result;
         }
@@ -1922,7 +3686,7 @@ namespace Crowny
         internal static float Rigidbody2DGetRotation(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetRotation(EncodeUuid(entity), &result), "Rigidbody2DGetRotation");
             return result;
         }
@@ -1930,7 +3694,7 @@ namespace Crowny
         internal static Vector2 Rigidbody2DGetPosition(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default(ManagedNativeVec2);
+            ManagedNativeVec2 result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetPosition(EncodeUuid(entity), &result), "Rigidbody2DGetPosition");
             return new Vector2(result.X, result.Y);
         }
@@ -1938,7 +3702,7 @@ namespace Crowny
         internal static Vector2 Rigidbody2DGetLinearVelocity(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default(ManagedNativeVec2);
+            ManagedNativeVec2 result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetLinearVelocity(EncodeUuid(entity), &result), "Rigidbody2DGetLinearVelocity");
             return new Vector2(result.X, result.Y);
         }
@@ -1953,7 +3717,7 @@ namespace Crowny
         internal static float Rigidbody2DGetAngularVelocity(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetAngularVelocity(EncodeUuid(entity), &result), "Rigidbody2DGetAngularVelocity");
             return result;
         }
@@ -1967,7 +3731,7 @@ namespace Crowny
         internal static bool Rigidbody2DGetAwake(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.Rigidbody2DGetAwake(EncodeUuid(entity), &result), "Rigidbody2DGetAwake");
             return result != 0;
         }
@@ -2002,7 +3766,7 @@ namespace Crowny
         internal static float AudioSourceGetVolume(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetVolume(EncodeUuid(entity), &result), "AudioSourceGetVolume");
             return result;
         }
@@ -2016,7 +3780,7 @@ namespace Crowny
         internal static float AudioSourceGetPitch(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetPitch(EncodeUuid(entity), &result), "AudioSourceGetPitch");
             return result;
         }
@@ -2030,7 +3794,7 @@ namespace Crowny
         internal static float AudioSourceGetMinDistance(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetMinDistance(EncodeUuid(entity), &result), "AudioSourceGetMinDistance");
             return result;
         }
@@ -2044,7 +3808,7 @@ namespace Crowny
         internal static float AudioSourceGetMaxDistance(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetMaxDistance(EncodeUuid(entity), &result), "AudioSourceGetMaxDistance");
             return result;
         }
@@ -2058,7 +3822,7 @@ namespace Crowny
         internal static bool AudioSourceGetLoop(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetLoop(EncodeUuid(entity), &result), "AudioSourceGetLoop");
             return result != 0;
         }
@@ -2072,7 +3836,7 @@ namespace Crowny
         internal static bool AudioSourceGetMuted(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetMuted(EncodeUuid(entity), &result), "AudioSourceGetMuted");
             return result != 0;
         }
@@ -2086,7 +3850,7 @@ namespace Crowny
         internal static bool AudioSourceGetPlayOnAwake(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetPlayOnAwake(EncodeUuid(entity), &result), "AudioSourceGetPlayOnAwake");
             return result != 0;
         }
@@ -2100,7 +3864,7 @@ namespace Crowny
         internal static float AudioSourceGetTime(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetTime(EncodeUuid(entity), &result), "AudioSourceGetTime");
             return result;
         }
@@ -2114,7 +3878,7 @@ namespace Crowny
         internal static UUID AudioSourceGetClip(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default(ManagedNativeUuid);
+            ManagedNativeUuid result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetClip(EncodeUuid(entity), &result), "AudioSourceGetClip");
             return DecodeUuid(result);
         }
@@ -2128,7 +3892,7 @@ namespace Crowny
         internal static int AudioSourceGetState(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.AudioSourceGetState(EncodeUuid(entity), &result), "AudioSourceGetState");
             return result;
         }
@@ -2151,10 +3915,2618 @@ namespace Crowny
             EnsureStatus(ManagedHostTransport.AudioSourceStop(EncodeUuid(entity)), "AudioSourceStop");
         }
 
+        internal static string AssetGetName(UUID asset)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            EnsureStatus(ManagedHostTransport.AssetGetName(EncodeUuid(asset), &result), "AssetGetName");
+            return DecodeString(result);
+        }
+
+        internal static void AssetAcquire(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AssetAcquire(EncodeUuid(asset)), "AssetAcquire");
+        }
+
+        internal static void AssetRelease(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AssetRelease(EncodeUuid(asset)), "AssetRelease");
+        }
+
+        internal static UUID AssetDatabaseLoad(string path)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            byte[] encodedPath = Encoding.UTF8.GetBytes(path ?? string.Empty);
+            fixed (byte* pathBytes = encodedPath)
+            {
+                ManagedNativeStringView nativePath = new ManagedNativeStringView(pathBytes, (uint)encodedPath.Length);
+                EnsureStatus(ManagedHostTransport.AssetDatabaseLoad(nativePath, &result), "AssetDatabaseLoad");
+            }
+            return DecodeUuid(result);
+        }
+
+        internal static UUID AssetDatabaseLoadFromUuid(UUID asset)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.AssetDatabaseLoadFromUuid(EncodeUuid(asset), &result), "AssetDatabaseLoadFromUuid");
+            return DecodeUuid(result);
+        }
+
+        internal static string AssetDatabaseGetPath(UUID asset)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            EnsureStatus(ManagedHostTransport.AssetDatabaseGetPath(EncodeUuid(asset), &result), "AssetDatabaseGetPath");
+            return DecodeString(result);
+        }
+
+        internal static bool AssetDatabaseIsValid(UUID asset)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.AssetDatabaseIsValid(EncodeUuid(asset), &result), "AssetDatabaseIsValid");
+            return result != 0;
+        }
+
+        internal static int AudioClipGetBitDepth(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.AudioClipGetBitDepth(EncodeUuid(asset), &result), "AudioClipGetBitDepth");
+            return result;
+        }
+
+        internal static int AudioClipGetChannels(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.AudioClipGetChannels(EncodeUuid(asset), &result), "AudioClipGetChannels");
+            return result;
+        }
+
+        internal static int AudioClipGetFrequency(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.AudioClipGetFrequency(EncodeUuid(asset), &result), "AudioClipGetFrequency");
+            return result;
+        }
+
+        internal static int AudioClipGetSamples(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.AudioClipGetSamples(EncodeUuid(asset), &result), "AudioClipGetSamples");
+            return result;
+        }
+
+        internal static float AudioClipGetLength(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.AudioClipGetLength(EncodeUuid(asset), &result), "AudioClipGetLength");
+            return result;
+        }
+
+        internal static int AudioClipGetReadMode(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.AudioClipGetReadMode(EncodeUuid(asset), &result), "AudioClipGetReadMode");
+            return result;
+        }
+
+        internal static int AudioClipGetFormat(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.AudioClipGetFormat(EncodeUuid(asset), &result), "AudioClipGetFormat");
+            return result;
+        }
+
+        internal static bool AudioClipGetIs3D(UUID asset)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.AudioClipGetIs3D(EncodeUuid(asset), &result), "AudioClipGetIs3D");
+            return result != 0;
+        }
+
+        internal static uint TextureGetWidth(UUID asset)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.TextureGetWidth(EncodeUuid(asset), &result), "TextureGetWidth");
+            return result;
+        }
+
+        internal static uint TextureGetHeight(UUID asset)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.TextureGetHeight(EncodeUuid(asset), &result), "TextureGetHeight");
+            return result;
+        }
+
+        internal static void AudioMixerSetActive(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AudioMixerSetActive(EncodeUuid(asset)), "AudioMixerSetActive");
+        }
+
+        internal static float AudioMixerGetBusVolume(UUID asset, string name)
+        {
+            EnsureHostBindings();
+            float result = default;
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.AudioMixerGetBusVolume(EncodeUuid(asset), nativeName, &result), "AudioMixerGetBusVolume");
+            }
+            return result;
+        }
+
+        internal static void AudioMixerSetBusVolume(UUID asset, string name, float volume)
+        {
+            EnsureHostBindings();
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.AudioMixerSetBusVolume(EncodeUuid(asset), nativeName, volume), "AudioMixerSetBusVolume");
+            }
+        }
+
+        internal static bool AudioMixerIsBusMuted(UUID asset, string name)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.AudioMixerIsBusMuted(EncodeUuid(asset), nativeName, &result), "AudioMixerIsBusMuted");
+            }
+            return result != 0;
+        }
+
+        internal static void AudioMixerSetBusMuted(UUID asset, string name, bool muted)
+        {
+            EnsureHostBindings();
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.AudioMixerSetBusMuted(EncodeUuid(asset), nativeName, muted ? (byte)1 : (byte)0), "AudioMixerSetBusMuted");
+            }
+        }
+
+        internal static void MaterialSetFloat(UUID asset, string name, float value)
+        {
+            EnsureHostBindings();
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.MaterialSetFloat(EncodeUuid(asset), nativeName, value), "MaterialSetFloat");
+            }
+        }
+
+        internal static void MaterialSetVector2(UUID asset, string name, Vector2 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 nativeValue = new ManagedNativeVec2 { X = value.x, Y = value.y };
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.MaterialSetVector2(EncodeUuid(asset), nativeName, &nativeValue), "MaterialSetVector2");
+            }
+        }
+
+        internal static void MaterialSetInt(UUID asset, string name, int value)
+        {
+            EnsureHostBindings();
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.MaterialSetInt(EncodeUuid(asset), nativeName, value), "MaterialSetInt");
+            }
+        }
+
+        internal static void MaterialSetColor(UUID asset, string name, Color value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.r, Y = value.g, Z = value.b, W = value.a };
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.MaterialSetColor(EncodeUuid(asset), nativeName, &nativeValue), "MaterialSetColor");
+            }
+        }
+
+        internal static void MaterialSetVector3(UUID asset, string name, Vector3 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeValue = new ManagedNativeVec3 { X = value.x, Y = value.y, Z = value.z };
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.MaterialSetVector3(EncodeUuid(asset), nativeName, &nativeValue), "MaterialSetVector3");
+            }
+        }
+
+        internal static void MaterialSetMatrix(UUID asset, string name, Matrix4 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeMatrix4 nativeValue = EncodeMatrix(value);
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.MaterialSetMatrix(EncodeUuid(asset), nativeName, &nativeValue), "MaterialSetMatrix");
+            }
+        }
+
+        internal static void MaterialSetTexture(UUID asset, string name, UUID texture)
+        {
+            EnsureHostBindings();
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.MaterialSetTexture(EncodeUuid(asset), nativeName, EncodeUuid(texture)), "MaterialSetTexture");
+            }
+        }
+
+        internal static bool MaterialHasAlphaModeOverride(UUID asset)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.MaterialHasAlphaModeOverride(EncodeUuid(asset), &result), "MaterialHasAlphaModeOverride");
+            return result != 0;
+        }
+
+        internal static int MaterialGetAlphaMode(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.MaterialGetAlphaMode(EncodeUuid(asset), &result), "MaterialGetAlphaMode");
+            return result;
+        }
+
+        internal static void MaterialSetAlphaMode(UUID asset, int alphaMode)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MaterialSetAlphaMode(EncodeUuid(asset), alphaMode), "MaterialSetAlphaMode");
+        }
+
+        internal static void MaterialClearAlphaModeOverride(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MaterialClearAlphaModeOverride(EncodeUuid(asset)), "MaterialClearAlphaModeOverride");
+        }
+
+        internal static UUID PhysicsMaterial2DCreate()
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DCreate(&result), "PhysicsMaterial2DCreate");
+            return DecodeUuid(result);
+        }
+
+        internal static UUID PhysicsMaterial3DCreate()
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DCreate(&result), "PhysicsMaterial3DCreate");
+            return DecodeUuid(result);
+        }
+
+        internal static void Rigidbody3DAddForce(UUID entity, Vector3 force, int mode)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeForce = new ManagedNativeVec3 { X = force.x, Y = force.y, Z = force.z };
+            EnsureStatus(ManagedHostTransport.Rigidbody3DAddForce(EncodeUuid(entity), &nativeForce, mode), "Rigidbody3DAddForce");
+        }
+
+        internal static void Rigidbody3DAddForceAt(UUID entity, Vector3 force, Vector3 position, int mode)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeForce = new ManagedNativeVec3 { X = force.x, Y = force.y, Z = force.z };
+            ManagedNativeVec3 nativePosition = new ManagedNativeVec3 { X = position.x, Y = position.y, Z = position.z };
+            EnsureStatus(ManagedHostTransport.Rigidbody3DAddForceAt(EncodeUuid(entity), &nativeForce, &nativePosition, mode), "Rigidbody3DAddForceAt");
+        }
+
+        internal static void Rigidbody3DAddTorque(UUID entity, Vector3 torque, int mode)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeTorque = new ManagedNativeVec3 { X = torque.x, Y = torque.y, Z = torque.z };
+            EnsureStatus(ManagedHostTransport.Rigidbody3DAddTorque(EncodeUuid(entity), &nativeTorque, mode), "Rigidbody3DAddTorque");
+        }
+
+        internal static ulong CompressionCompress(byte[] destination, byte[] source, int method, int level)
+        {
+            EnsureHostBindings();
+            ulong result = default;
+            byte[] encodedDestination = destination ?? Array.Empty<byte>();
+            byte[] encodedSource = source ?? Array.Empty<byte>();
+            fixed (byte* destinationBytes = encodedDestination)
+            {
+                ManagedNativeMutableBlob nativeDestination = new ManagedNativeMutableBlob(destinationBytes, (ulong)encodedDestination.Length);
+                fixed (byte* sourceBytes = encodedSource)
+                {
+                    ManagedNativeBlob nativeSource = new ManagedNativeBlob(sourceBytes, (ulong)encodedSource.Length);
+                    EnsureStatus(ManagedHostTransport.CompressionCompress(nativeDestination, nativeSource, method, level, &result), "CompressionCompress");
+                }
+            }
+            return result;
+        }
+
+        internal static ulong CompressionDecompress(byte[] destination, ulong maximumDestinationSize, byte[] source, ulong sourceSize, int method)
+        {
+            EnsureHostBindings();
+            ulong result = default;
+            byte[] encodedDestination = destination ?? Array.Empty<byte>();
+            byte[] encodedSource = source ?? Array.Empty<byte>();
+            fixed (byte* destinationBytes = encodedDestination)
+            {
+                ManagedNativeMutableBlob nativeDestination = new ManagedNativeMutableBlob(destinationBytes, (ulong)encodedDestination.Length);
+                fixed (byte* sourceBytes = encodedSource)
+                {
+                    ManagedNativeBlob nativeSource = new ManagedNativeBlob(sourceBytes, (ulong)encodedSource.Length);
+                    EnsureStatus(ManagedHostTransport.CompressionDecompress(nativeDestination, maximumDestinationSize, nativeSource, sourceSize, method, &result), "CompressionDecompress");
+                }
+            }
+            return result;
+        }
+
+        internal static string FileDialogOpenFile(string title, string directory, string extensions)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            byte[] encodedTitle = Encoding.UTF8.GetBytes(title ?? string.Empty);
+            byte[] encodedDirectory = Encoding.UTF8.GetBytes(directory ?? string.Empty);
+            byte[] encodedExtensions = Encoding.UTF8.GetBytes(extensions ?? string.Empty);
+            fixed (byte* titleBytes = encodedTitle)
+            {
+                ManagedNativeStringView nativeTitle = new ManagedNativeStringView(titleBytes, (uint)encodedTitle.Length);
+                fixed (byte* directoryBytes = encodedDirectory)
+                {
+                    ManagedNativeStringView nativeDirectory = new ManagedNativeStringView(directoryBytes, (uint)encodedDirectory.Length);
+                    fixed (byte* extensionsBytes = encodedExtensions)
+                    {
+                        ManagedNativeStringView nativeExtensions = new ManagedNativeStringView(extensionsBytes, (uint)encodedExtensions.Length);
+                        EnsureStatus(ManagedHostTransport.FileDialogOpenFile(nativeTitle, nativeDirectory, nativeExtensions, &result), "FileDialogOpenFile");
+                    }
+                }
+            }
+            return DecodeOptionalString(result);
+        }
+
+        internal static string FileDialogOpenFolder(string title, string directory)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            byte[] encodedTitle = Encoding.UTF8.GetBytes(title ?? string.Empty);
+            byte[] encodedDirectory = Encoding.UTF8.GetBytes(directory ?? string.Empty);
+            fixed (byte* titleBytes = encodedTitle)
+            {
+                ManagedNativeStringView nativeTitle = new ManagedNativeStringView(titleBytes, (uint)encodedTitle.Length);
+                fixed (byte* directoryBytes = encodedDirectory)
+                {
+                    ManagedNativeStringView nativeDirectory = new ManagedNativeStringView(directoryBytes, (uint)encodedDirectory.Length);
+                    EnsureStatus(ManagedHostTransport.FileDialogOpenFolder(nativeTitle, nativeDirectory, &result), "FileDialogOpenFolder");
+                }
+            }
+            return DecodeOptionalString(result);
+        }
+
+        internal static string FileDialogSaveFile(string title, string directory, string defaultName, string extensions)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            byte[] encodedTitle = Encoding.UTF8.GetBytes(title ?? string.Empty);
+            byte[] encodedDirectory = Encoding.UTF8.GetBytes(directory ?? string.Empty);
+            byte[] encodedDefaultName = Encoding.UTF8.GetBytes(defaultName ?? string.Empty);
+            byte[] encodedExtensions = Encoding.UTF8.GetBytes(extensions ?? string.Empty);
+            fixed (byte* titleBytes = encodedTitle)
+            {
+                ManagedNativeStringView nativeTitle = new ManagedNativeStringView(titleBytes, (uint)encodedTitle.Length);
+                fixed (byte* directoryBytes = encodedDirectory)
+                {
+                    ManagedNativeStringView nativeDirectory = new ManagedNativeStringView(directoryBytes, (uint)encodedDirectory.Length);
+                    fixed (byte* defaultNameBytes = encodedDefaultName)
+                    {
+                        ManagedNativeStringView nativeDefaultName = new ManagedNativeStringView(defaultNameBytes, (uint)encodedDefaultName.Length);
+                        fixed (byte* extensionsBytes = encodedExtensions)
+                        {
+                            ManagedNativeStringView nativeExtensions = new ManagedNativeStringView(extensionsBytes, (uint)encodedExtensions.Length);
+                            EnsureStatus(ManagedHostTransport.FileDialogSaveFile(nativeTitle, nativeDirectory, nativeDefaultName, nativeExtensions, &result), "FileDialogSaveFile");
+                        }
+                    }
+                }
+            }
+            return DecodeOptionalString(result);
+        }
+
+        internal static string FileDialogSaveFolder(string title, string directory, string defaultName)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            byte[] encodedTitle = Encoding.UTF8.GetBytes(title ?? string.Empty);
+            byte[] encodedDirectory = Encoding.UTF8.GetBytes(directory ?? string.Empty);
+            byte[] encodedDefaultName = Encoding.UTF8.GetBytes(defaultName ?? string.Empty);
+            fixed (byte* titleBytes = encodedTitle)
+            {
+                ManagedNativeStringView nativeTitle = new ManagedNativeStringView(titleBytes, (uint)encodedTitle.Length);
+                fixed (byte* directoryBytes = encodedDirectory)
+                {
+                    ManagedNativeStringView nativeDirectory = new ManagedNativeStringView(directoryBytes, (uint)encodedDirectory.Length);
+                    fixed (byte* defaultNameBytes = encodedDefaultName)
+                    {
+                        ManagedNativeStringView nativeDefaultName = new ManagedNativeStringView(defaultNameBytes, (uint)encodedDefaultName.Length);
+                        EnsureStatus(ManagedHostTransport.FileDialogSaveFolder(nativeTitle, nativeDirectory, nativeDefaultName, &result), "FileDialogSaveFolder");
+                    }
+                }
+            }
+            return DecodeOptionalString(result);
+        }
+
+        internal static bool FontHasCharacter(UUID asset, uint codePoint)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.FontHasCharacter(EncodeUuid(asset), codePoint, &result), "FontHasCharacter");
+            return result != 0;
+        }
+
+        internal static bool FontGetIsValid(UUID font)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.FontGetIsValid(EncodeUuid(font), &result), "FontGetIsValid");
+            return result != 0;
+        }
+
+        internal static uint FontGetGlyphCount(UUID font)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.FontGetGlyphCount(EncodeUuid(font), &result), "FontGetGlyphCount");
+            return result;
+        }
+
+        internal static uint FontGetTabWidth(UUID font)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.FontGetTabWidth(EncodeUuid(font), &result), "FontGetTabWidth");
+            return result;
+        }
+
+        internal static uint FontGetAtlasWidth(UUID font)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.FontGetAtlasWidth(EncodeUuid(font), &result), "FontGetAtlasWidth");
+            return result;
+        }
+
+        internal static uint FontGetAtlasHeight(UUID font)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.FontGetAtlasHeight(EncodeUuid(font), &result), "FontGetAtlasHeight");
+            return result;
+        }
+
+        internal static float FontGetAtlasPixelRange(UUID font)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.FontGetAtlasPixelRange(EncodeUuid(font), &result), "FontGetAtlasPixelRange");
+            return result;
+        }
+
+        internal static uint FontGetFallbackCount(UUID font)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.FontGetFallbackCount(EncodeUuid(font), &result), "FontGetFallbackCount");
+            return result;
+        }
+
+        internal static bool FontHasGlyph(UUID font, uint codePoint)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.FontHasGlyph(EncodeUuid(font), codePoint, &result), "FontHasGlyph");
+            return result != 0;
+        }
+
+        internal static CharacterInfo FontGetCharacterInfo(UUID font, uint codePoint, bool useFallbacks)
+        {
+            EnsureHostBindings();
+            ManagedNativeFontCharacterInfo result = default;
+            EnsureStatus(ManagedHostTransport.FontGetCharacterInfo(EncodeUuid(font), codePoint, useFallbacks ? (byte)1 : (byte)0, &result), "FontGetCharacterInfo");
+            return DecodeFontCharacterInfo(result);
+        }
+
+        internal static UUID FontGetFallback(UUID font, uint index)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.FontGetFallback(EncodeUuid(font), index, &result), "FontGetFallback");
+            return DecodeUuid(result);
+        }
+
+        internal static bool FontAddFallback(UUID font, UUID value)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.FontAddFallback(EncodeUuid(font), EncodeUuid(value), &result), "FontAddFallback");
+            return result != 0;
+        }
+
+        internal static void FontClearFallbacks(UUID font)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.FontClearFallbacks(EncodeUuid(font)), "FontClearFallbacks");
+        }
+
+        internal static uint FontGetSystemFontCount()
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.FontGetSystemFontCount(&result), "FontGetSystemFontCount");
+            return result;
+        }
+
+        internal static string FontGetSystemFontPath(uint index)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            EnsureStatus(ManagedHostTransport.FontGetSystemFontPath(index, &result), "FontGetSystemFontPath");
+            return DecodeString(result);
+        }
+
+        internal static string FontGetSystemFontName(uint index)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            EnsureStatus(ManagedHostTransport.FontGetSystemFontName(index, &result), "FontGetSystemFontName");
+            return DecodeString(result);
+        }
+
+        internal static float AnimationClipGetLength(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.AnimationClipGetLength(EncodeUuid(asset), &result), "AnimationClipGetLength");
+            return result;
+        }
+
+        internal static float AnimationClipGetSampleRate(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.AnimationClipGetSampleRate(EncodeUuid(asset), &result), "AnimationClipGetSampleRate");
+            return result;
+        }
+
+        internal static bool AnimationClipGetIsAdditive(UUID asset)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.AnimationClipGetIsAdditive(EncodeUuid(asset), &result), "AnimationClipGetIsAdditive");
+            return result != 0;
+        }
+
+        internal static void AnimationComponentPlay(UUID entity)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentPlay(EncodeUuid(entity)), "AnimationComponentPlay");
+        }
+
+        internal static void AnimationComponentPause(UUID entity)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentPause(EncodeUuid(entity)), "AnimationComponentPause");
+        }
+
+        internal static void AnimationComponentStop(UUID entity)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentStop(EncodeUuid(entity)), "AnimationComponentStop");
+        }
+
+        internal static uint TextHitTest(UUID entity, Vector2 position)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 nativePosition = new ManagedNativeVec2 { X = position.x, Y = position.y };
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.TextHitTest(EncodeUuid(entity), &nativePosition, &result), "TextHitTest");
+            return result;
+        }
+
+        internal static void DebugWriteLog(int severity, string message)
+        {
+            EnsureHostBindings();
+            byte[] encodedMessage = Encoding.UTF8.GetBytes(message ?? string.Empty);
+            fixed (byte* messageBytes = encodedMessage)
+            {
+                ManagedNativeStringView nativeMessage = new ManagedNativeStringView(messageBytes, (uint)encodedMessage.Length);
+                EnsureStatus(ManagedHostTransport.DebugWriteLog(severity, nativeMessage), "DebugWriteLog");
+            }
+        }
+
+        internal static void RandomInitialize(int seed)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.RandomInitialize(seed), "RandomInitialize");
+        }
+
+        internal static float RandomGetValue()
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.RandomGetValue(&result), "RandomGetValue");
+            return result;
+        }
+
+        internal static float RandomGetRange(float minimum, float maximum)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.RandomGetRange(minimum, maximum, &result), "RandomGetRange");
+            return result;
+        }
+
+        internal static Vector2 RandomGetInsideUnitCircle()
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 result = default;
+            EnsureStatus(ManagedHostTransport.RandomGetInsideUnitCircle(&result), "RandomGetInsideUnitCircle");
+            return new Vector2(result.X, result.Y);
+        }
+
+        internal static Vector3 RandomGetInsideUnitSphere()
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.RandomGetInsideUnitSphere(&result), "RandomGetInsideUnitSphere");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static float NoiseGetPerlin2D(float x, float y)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.NoiseGetPerlin2D(x, y, &result), "NoiseGetPerlin2D");
+            return result;
+        }
+
+        internal static string LayerMaskGetName(int layer)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            EnsureStatus(ManagedHostTransport.LayerMaskGetName(layer, &result), "LayerMaskGetName");
+            return DecodeString(result);
+        }
+
+        internal static int LayerMaskGetLayer(string name)
+        {
+            EnsureHostBindings();
+            int result = default;
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.LayerMaskGetLayer(nativeName, &result), "LayerMaskGetLayer");
+            }
+            return result;
+        }
+
+        internal static UUID SceneGetActive()
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.SceneGetActive(&result), "SceneGetActive");
+            return DecodeUuid(result);
+        }
+
+        internal static int SceneGetExecutionState()
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.SceneGetExecutionState(&result), "SceneGetExecutionState");
+            return result;
+        }
+
+        internal static uint SceneGetLoadedCount()
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.SceneGetLoadedCount(&result), "SceneGetLoadedCount");
+            return result;
+        }
+
+        internal static UUID SceneGetLoaded(uint index)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.SceneGetLoaded(index, &result), "SceneGetLoaded");
+            return DecodeUuid(result);
+        }
+
+        internal static int SceneLoad(UUID scene, bool makeActive)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.SceneLoad(EncodeUuid(scene), makeActive ? (byte)1 : (byte)0, &result), "SceneLoad");
+            return result;
+        }
+
+        internal static int SceneUnload(UUID scene)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.SceneUnload(EncodeUuid(scene), &result), "SceneUnload");
+            return result;
+        }
+
+        internal static int SceneReload(UUID scene)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.SceneReload(EncodeUuid(scene), &result), "SceneReload");
+            return result;
+        }
+
+        internal static int SceneSetActive(UUID scene)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.SceneSetActive(EncodeUuid(scene), &result), "SceneSetActive");
+            return result;
+        }
+
+        internal static float CameraGetFieldOfView(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetFieldOfView(EncodeUuid(entity), &result), "CameraGetFieldOfView");
+            return result;
+        }
+
+        internal static void CameraSetFieldOfView(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetFieldOfView(EncodeUuid(entity), value), "CameraSetFieldOfView");
+        }
+
+        internal static int CameraGetProjection(UUID entity)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetProjection(EncodeUuid(entity), &result), "CameraGetProjection");
+            return result;
+        }
+
+        internal static void CameraSetProjection(UUID entity, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetProjection(EncodeUuid(entity), value), "CameraSetProjection");
+        }
+
+        internal static float CameraGetNearClipPlane(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetNearClipPlane(EncodeUuid(entity), &result), "CameraGetNearClipPlane");
+            return result;
+        }
+
+        internal static void CameraSetNearClipPlane(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetNearClipPlane(EncodeUuid(entity), value), "CameraSetNearClipPlane");
+        }
+
+        internal static float CameraGetFarClipPlane(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetFarClipPlane(EncodeUuid(entity), &result), "CameraGetFarClipPlane");
+            return result;
+        }
+
+        internal static void CameraSetFarClipPlane(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetFarClipPlane(EncodeUuid(entity), value), "CameraSetFarClipPlane");
+        }
+
+        internal static float CameraGetOrthographicSize(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetOrthographicSize(EncodeUuid(entity), &result), "CameraGetOrthographicSize");
+            return result;
+        }
+
+        internal static void CameraSetOrthographicSize(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetOrthographicSize(EncodeUuid(entity), value), "CameraSetOrthographicSize");
+        }
+
+        internal static float CameraGetAspectRatio(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetAspectRatio(EncodeUuid(entity), &result), "CameraGetAspectRatio");
+            return result;
+        }
+
+        internal static void CameraSetAspectRatio(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetAspectRatio(EncodeUuid(entity), value), "CameraSetAspectRatio");
+        }
+
+        internal static Vector3 CameraGetBackgroundColor(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetBackgroundColor(EncodeUuid(entity), &result), "CameraGetBackgroundColor");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static void CameraSetBackgroundColor(UUID entity, Vector3 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeValue = new ManagedNativeVec3 { X = value.x, Y = value.y, Z = value.z };
+            EnsureStatus(ManagedHostTransport.CameraSetBackgroundColor(EncodeUuid(entity), &nativeValue), "CameraSetBackgroundColor");
+        }
+
+        internal static Vector4 CameraGetViewportRectangle(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec4 result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetViewportRectangle(EncodeUuid(entity), &result), "CameraGetViewportRectangle");
+            return new Vector4(result.X, result.Y, result.Z, result.W);
+        }
+
+        internal static void CameraSetViewportRectangle(UUID entity, Vector4 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.x, Y = value.y, Z = value.z, W = value.w };
+            EnsureStatus(ManagedHostTransport.CameraSetViewportRectangle(EncodeUuid(entity), &nativeValue), "CameraSetViewportRectangle");
+        }
+
+        internal static bool CameraGetHdr(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetHdr(EncodeUuid(entity), &result), "CameraGetHdr");
+            return result != 0;
+        }
+
+        internal static void CameraSetHdr(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetHdr(EncodeUuid(entity), value ? (byte)1 : (byte)0), "CameraSetHdr");
+        }
+
+        internal static bool CameraGetMsaa(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetMsaa(EncodeUuid(entity), &result), "CameraGetMsaa");
+            return result != 0;
+        }
+
+        internal static void CameraSetMsaa(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetMsaa(EncodeUuid(entity), value ? (byte)1 : (byte)0), "CameraSetMsaa");
+        }
+
+        internal static bool CameraGetOcclusionCulling(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.CameraGetOcclusionCulling(EncodeUuid(entity), &result), "CameraGetOcclusionCulling");
+            return result != 0;
+        }
+
+        internal static void CameraSetOcclusionCulling(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CameraSetOcclusionCulling(EncodeUuid(entity), value ? (byte)1 : (byte)0), "CameraSetOcclusionCulling");
+        }
+
+        internal static UUID SpriteRendererGetTexture(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.SpriteRendererGetTexture(EncodeUuid(entity), &result), "SpriteRendererGetTexture");
+            return DecodeUuid(result);
+        }
+
+        internal static void SpriteRendererSetTexture(UUID entity, UUID value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.SpriteRendererSetTexture(EncodeUuid(entity), EncodeUuid(value)), "SpriteRendererSetTexture");
+        }
+
+        internal static Color SpriteRendererGetColor(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec4 result = default;
+            EnsureStatus(ManagedHostTransport.SpriteRendererGetColor(EncodeUuid(entity), &result), "SpriteRendererGetColor");
+            return new Color(result.X, result.Y, result.Z, result.W);
+        }
+
+        internal static void SpriteRendererSetColor(UUID entity, Color value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.r, Y = value.g, Z = value.b, W = value.a };
+            EnsureStatus(ManagedHostTransport.SpriteRendererSetColor(EncodeUuid(entity), &nativeValue), "SpriteRendererSetColor");
+        }
+
+        internal static int SpriteRendererGetSortingLayer(UUID entity)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.SpriteRendererGetSortingLayer(EncodeUuid(entity), &result), "SpriteRendererGetSortingLayer");
+            return result;
+        }
+
+        internal static void SpriteRendererSetSortingLayer(UUID entity, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.SpriteRendererSetSortingLayer(EncodeUuid(entity), value), "SpriteRendererSetSortingLayer");
+        }
+
+        internal static int SpriteRendererGetOrderInLayer(UUID entity)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.SpriteRendererGetOrderInLayer(EncodeUuid(entity), &result), "SpriteRendererGetOrderInLayer");
+            return result;
+        }
+
+        internal static void SpriteRendererSetOrderInLayer(UUID entity, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.SpriteRendererSetOrderInLayer(EncodeUuid(entity), value), "SpriteRendererSetOrderInLayer");
+        }
+
+        internal static int LightGetType(UUID entity)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.LightGetType(EncodeUuid(entity), &result), "LightGetType");
+            return result;
+        }
+
+        internal static void LightSetType(UUID entity, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetType(EncodeUuid(entity), value), "LightSetType");
+        }
+
+        internal static Color LightGetColor(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec4 result = default;
+            EnsureStatus(ManagedHostTransport.LightGetColor(EncodeUuid(entity), &result), "LightGetColor");
+            return new Color(result.X, result.Y, result.Z, result.W);
+        }
+
+        internal static void LightSetColor(UUID entity, Color value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec4 nativeValue = new ManagedNativeVec4 { X = value.r, Y = value.g, Z = value.b, W = value.a };
+            EnsureStatus(ManagedHostTransport.LightSetColor(EncodeUuid(entity), &nativeValue), "LightSetColor");
+        }
+
+        internal static float LightGetIntensity(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetIntensity(EncodeUuid(entity), &result), "LightGetIntensity");
+            return result;
+        }
+
+        internal static void LightSetIntensity(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetIntensity(EncodeUuid(entity), value), "LightSetIntensity");
+        }
+
+        internal static float LightGetRange(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetRange(EncodeUuid(entity), &result), "LightGetRange");
+            return result;
+        }
+
+        internal static void LightSetRange(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetRange(EncodeUuid(entity), value), "LightSetRange");
+        }
+
+        internal static float LightGetSpotInnerAngle(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetSpotInnerAngle(EncodeUuid(entity), &result), "LightGetSpotInnerAngle");
+            return result;
+        }
+
+        internal static void LightSetSpotInnerAngle(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetSpotInnerAngle(EncodeUuid(entity), value), "LightSetSpotInnerAngle");
+        }
+
+        internal static float LightGetSpotOuterAngle(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetSpotOuterAngle(EncodeUuid(entity), &result), "LightGetSpotOuterAngle");
+            return result;
+        }
+
+        internal static void LightSetSpotOuterAngle(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetSpotOuterAngle(EncodeUuid(entity), value), "LightSetSpotOuterAngle");
+        }
+
+        internal static float LightGetSourceRadius(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetSourceRadius(EncodeUuid(entity), &result), "LightGetSourceRadius");
+            return result;
+        }
+
+        internal static void LightSetSourceRadius(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetSourceRadius(EncodeUuid(entity), value), "LightSetSourceRadius");
+        }
+
+        internal static bool LightGetUseColorTemperature(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.LightGetUseColorTemperature(EncodeUuid(entity), &result), "LightGetUseColorTemperature");
+            return result != 0;
+        }
+
+        internal static void LightSetUseColorTemperature(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetUseColorTemperature(EncodeUuid(entity), value ? (byte)1 : (byte)0), "LightSetUseColorTemperature");
+        }
+
+        internal static float LightGetTemperature(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetTemperature(EncodeUuid(entity), &result), "LightGetTemperature");
+            return result;
+        }
+
+        internal static void LightSetTemperature(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetTemperature(EncodeUuid(entity), value), "LightSetTemperature");
+        }
+
+        internal static uint LightGetVisibilityLayers(UUID entity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.LightGetVisibilityLayers(EncodeUuid(entity), &result), "LightGetVisibilityLayers");
+            return result;
+        }
+
+        internal static void LightSetVisibilityLayers(UUID entity, uint value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetVisibilityLayers(EncodeUuid(entity), value), "LightSetVisibilityLayers");
+        }
+
+        internal static bool LightGetEnabled(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.LightGetEnabled(EncodeUuid(entity), &result), "LightGetEnabled");
+            return result != 0;
+        }
+
+        internal static void LightSetEnabled(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetEnabled(EncodeUuid(entity), value ? (byte)1 : (byte)0), "LightSetEnabled");
+        }
+
+        internal static bool LightGetAffectDiffuse(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.LightGetAffectDiffuse(EncodeUuid(entity), &result), "LightGetAffectDiffuse");
+            return result != 0;
+        }
+
+        internal static void LightSetAffectDiffuse(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetAffectDiffuse(EncodeUuid(entity), value ? (byte)1 : (byte)0), "LightSetAffectDiffuse");
+        }
+
+        internal static bool LightGetAffectSpecular(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.LightGetAffectSpecular(EncodeUuid(entity), &result), "LightGetAffectSpecular");
+            return result != 0;
+        }
+
+        internal static void LightSetAffectSpecular(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetAffectSpecular(EncodeUuid(entity), value ? (byte)1 : (byte)0), "LightSetAffectSpecular");
+        }
+
+        internal static bool LightGetVolumetric(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.LightGetVolumetric(EncodeUuid(entity), &result), "LightGetVolumetric");
+            return result != 0;
+        }
+
+        internal static void LightSetVolumetric(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetVolumetric(EncodeUuid(entity), value ? (byte)1 : (byte)0), "LightSetVolumetric");
+        }
+
+        internal static int LightGetShadows(UUID entity)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.LightGetShadows(EncodeUuid(entity), &result), "LightGetShadows");
+            return result;
+        }
+
+        internal static void LightSetShadows(UUID entity, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetShadows(EncodeUuid(entity), value), "LightSetShadows");
+        }
+
+        internal static float LightGetShadowBias(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetShadowBias(EncodeUuid(entity), &result), "LightGetShadowBias");
+            return result;
+        }
+
+        internal static void LightSetShadowBias(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetShadowBias(EncodeUuid(entity), value), "LightSetShadowBias");
+        }
+
+        internal static float LightGetShadowNormalBias(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetShadowNormalBias(EncodeUuid(entity), &result), "LightGetShadowNormalBias");
+            return result;
+        }
+
+        internal static void LightSetShadowNormalBias(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetShadowNormalBias(EncodeUuid(entity), value), "LightSetShadowNormalBias");
+        }
+
+        internal static float LightGetShadowNearPlane(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetShadowNearPlane(EncodeUuid(entity), &result), "LightGetShadowNearPlane");
+            return result;
+        }
+
+        internal static void LightSetShadowNearPlane(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetShadowNearPlane(EncodeUuid(entity), value), "LightSetShadowNearPlane");
+        }
+
+        internal static float LightGetShadowImportance(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.LightGetShadowImportance(EncodeUuid(entity), &result), "LightGetShadowImportance");
+            return result;
+        }
+
+        internal static void LightSetShadowImportance(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetShadowImportance(EncodeUuid(entity), value), "LightSetShadowImportance");
+        }
+
+        internal static uint LightGetShadowResolution(UUID entity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.LightGetShadowResolution(EncodeUuid(entity), &result), "LightGetShadowResolution");
+            return result;
+        }
+
+        internal static void LightSetShadowResolution(UUID entity, uint value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetShadowResolution(EncodeUuid(entity), value), "LightSetShadowResolution");
+        }
+
+        internal static bool LightGetCacheStaticShadowCasters(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.LightGetCacheStaticShadowCasters(EncodeUuid(entity), &result), "LightGetCacheStaticShadowCasters");
+            return result != 0;
+        }
+
+        internal static void LightSetCacheStaticShadowCasters(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.LightSetCacheStaticShadowCasters(EncodeUuid(entity), value ? (byte)1 : (byte)0), "LightSetCacheStaticShadowCasters");
+        }
+
+        internal static int Physics2DGetBackend()
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DGetBackend(&result), "Physics2DGetBackend");
+            return result;
+        }
+
+        internal static bool Physics2DGetIsSimulating()
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DGetIsSimulating(&result), "Physics2DGetIsSimulating");
+            return result != 0;
+        }
+
+        internal static Vector2 Physics2DGetGravity()
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DGetGravity(&result), "Physics2DGetGravity");
+            return new Vector2(result.X, result.Y);
+        }
+
+        internal static void Physics2DSetGravity(Vector2 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 nativeValue = new ManagedNativeVec2 { X = value.x, Y = value.y };
+            EnsureStatus(ManagedHostTransport.Physics2DSetGravity(&nativeValue), "Physics2DSetGravity");
+        }
+
+        internal static uint Physics2DGetVelocityIterations()
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DGetVelocityIterations(&result), "Physics2DGetVelocityIterations");
+            return result;
+        }
+
+        internal static void Physics2DSetVelocityIterations(uint value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Physics2DSetVelocityIterations(value), "Physics2DSetVelocityIterations");
+        }
+
+        internal static uint Physics2DGetPositionIterations()
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DGetPositionIterations(&result), "Physics2DGetPositionIterations");
+            return result;
+        }
+
+        internal static void Physics2DSetPositionIterations(uint value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Physics2DSetPositionIterations(value), "Physics2DSetPositionIterations");
+        }
+
+        internal static UUID Physics2DGetDefaultMaterial()
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DGetDefaultMaterial(&result), "Physics2DGetDefaultMaterial");
+            return DecodeUuid(result);
+        }
+
+        internal static void Physics2DSetDefaultMaterial(UUID material)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Physics2DSetDefaultMaterial(EncodeUuid(material)), "Physics2DSetDefaultMaterial");
+        }
+
+        internal static string Physics2DGetLayerName(int layer)
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DGetLayerName(layer, &result), "Physics2DGetLayerName");
+            return DecodeString(result);
+        }
+
+        internal static void Physics2DSetLayerName(int layer, string name)
+        {
+            EnsureHostBindings();
+            byte[] encodedName = Encoding.UTF8.GetBytes(name ?? string.Empty);
+            fixed (byte* nameBytes = encodedName)
+            {
+                ManagedNativeStringView nativeName = new ManagedNativeStringView(nameBytes, (uint)encodedName.Length);
+                EnsureStatus(ManagedHostTransport.Physics2DSetLayerName(layer, nativeName), "Physics2DSetLayerName");
+            }
+        }
+
+        internal static uint Physics2DGetLayerMask(int layer)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DGetLayerMask(layer, &result), "Physics2DGetLayerMask");
+            return result;
+        }
+
+        internal static void Physics2DSetLayerMask(int layer, uint mask)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Physics2DSetLayerMask(layer, mask), "Physics2DSetLayerMask");
+        }
+
+        internal static UUID Physics2DResolveEntity(uint runtimeId)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DResolveEntity(runtimeId, &result), "Physics2DResolveEntity");
+            return DecodeUuid(result);
+        }
+
+        internal static uint Physics2DRaycast(Vector2 origin, Vector2 direction, float distance, uint layerMask, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 nativeOrigin = new ManagedNativeVec2 { X = origin.x, Y = origin.y };
+            ManagedNativeVec2 nativeDirection = new ManagedNativeVec2 { X = direction.x, Y = direction.y };
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Physics2DRaycast(&nativeOrigin, &nativeDirection, distance, layerMask, destination.ToPointer(), capacity, &result), "Physics2DRaycast");
+            return result;
+        }
+
+        internal static int Physics3DGetBackend()
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DGetBackend(&result), "Physics3DGetBackend");
+            return result;
+        }
+
+        internal static string Physics3DGetBackendName()
+        {
+            EnsureHostBindings();
+            ManagedNativeStringView result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DGetBackendName(&result), "Physics3DGetBackendName");
+            return DecodeString(result);
+        }
+
+        internal static bool Physics3DGetIsSimulating()
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DGetIsSimulating(&result), "Physics3DGetIsSimulating");
+            return result != 0;
+        }
+
+        internal static ulong Physics3DGetCapabilities()
+        {
+            EnsureHostBindings();
+            ulong result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DGetCapabilities(&result), "Physics3DGetCapabilities");
+            return result;
+        }
+
+        internal static Vector3 Physics3DGetGravity()
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DGetGravity(&result), "Physics3DGetGravity");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static void Physics3DSetGravity(Vector3 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeValue = new ManagedNativeVec3 { X = value.x, Y = value.y, Z = value.z };
+            EnsureStatus(ManagedHostTransport.Physics3DSetGravity(&nativeValue), "Physics3DSetGravity");
+        }
+
+        internal static uint Physics3DGetSubsteps()
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DGetSubsteps(&result), "Physics3DGetSubsteps");
+            return result;
+        }
+
+        internal static void Physics3DSetSubsteps(uint value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Physics3DSetSubsteps(value), "Physics3DSetSubsteps");
+        }
+
+        internal static UUID Physics3DGetDefaultMaterial()
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DGetDefaultMaterial(&result), "Physics3DGetDefaultMaterial");
+            return DecodeUuid(result);
+        }
+
+        internal static void Physics3DSetDefaultMaterial(UUID material)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Physics3DSetDefaultMaterial(EncodeUuid(material)), "Physics3DSetDefaultMaterial");
+        }
+
+        internal static bool Physics3DTrySetBackend(int value)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DTrySetBackend(value, &result), "Physics3DTrySetBackend");
+            return result != 0;
+        }
+
+        internal static bool Physics3DIsBackendAvailable(int value)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DIsBackendAvailable(value, &result), "Physics3DIsBackendAvailable");
+            return result != 0;
+        }
+
+        internal static UUID Physics3DResolveEntity(ulong runtimeId)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DResolveEntity(runtimeId, &result), "Physics3DResolveEntity");
+            return DecodeUuid(result);
+        }
+
+        internal static uint Physics3DRaycast(Vector3 origin, Vector3 direction, float distance, uint layerMask, bool includeTriggers, ulong ignoreBodyHandle, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeOrigin = new ManagedNativeVec3 { X = origin.x, Y = origin.y, Z = origin.z };
+            ManagedNativeVec3 nativeDirection = new ManagedNativeVec3 { X = direction.x, Y = direction.y, Z = direction.z };
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DRaycast(&nativeOrigin, &nativeDirection, distance, layerMask, includeTriggers ? (byte)1 : (byte)0, ignoreBodyHandle, destination.ToPointer(), capacity, &result), "Physics3DRaycast");
+            return result;
+        }
+
+        internal static uint Physics3DSweep(int shapeType, Vector3 size, float radius, float height, Vector3 position, Quaternion rotation, Vector3 direction, float distance, uint layerMask, bool includeTriggers, ulong ignoreBodyHandle, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeSize = new ManagedNativeVec3 { X = size.x, Y = size.y, Z = size.z };
+            ManagedNativeVec3 nativePosition = new ManagedNativeVec3 { X = position.x, Y = position.y, Z = position.z };
+            ManagedNativeQuaternion nativeRotation = new ManagedNativeQuaternion { X = rotation.x, Y = rotation.y, Z = rotation.z, W = rotation.w };
+            ManagedNativeVec3 nativeDirection = new ManagedNativeVec3 { X = direction.x, Y = direction.y, Z = direction.z };
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DSweep(shapeType, &nativeSize, radius, height, &nativePosition, &nativeRotation, &nativeDirection, distance, layerMask, includeTriggers ? (byte)1 : (byte)0, ignoreBodyHandle, destination.ToPointer(), capacity, &result), "Physics3DSweep");
+            return result;
+        }
+
+        internal static uint Physics3DOverlap(int shapeType, Vector3 size, float radius, float height, Vector3 position, Quaternion rotation, uint layerMask, bool includeTriggers, ulong ignoreBodyHandle, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeSize = new ManagedNativeVec3 { X = size.x, Y = size.y, Z = size.z };
+            ManagedNativeVec3 nativePosition = new ManagedNativeVec3 { X = position.x, Y = position.y, Z = position.z };
+            ManagedNativeQuaternion nativeRotation = new ManagedNativeQuaternion { X = rotation.x, Y = rotation.y, Z = rotation.z, W = rotation.w };
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Physics3DOverlap(shapeType, &nativeSize, radius, height, &nativePosition, &nativeRotation, layerMask, includeTriggers ? (byte)1 : (byte)0, ignoreBodyHandle, destination.ToPointer(), capacity, &result), "Physics3DOverlap");
+            return result;
+        }
+
+        internal static uint MeshGetVertexCount(UUID asset)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshGetVertexCount(EncodeUuid(asset), &result), "MeshGetVertexCount");
+            return result;
+        }
+
+        internal static uint MeshGetIndexCount(UUID asset)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshGetIndexCount(EncodeUuid(asset), &result), "MeshGetIndexCount");
+            return result;
+        }
+
+        internal static uint MeshCopyVertices(UUID asset, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshCopyVertices(EncodeUuid(asset), destination.ToPointer(), capacity, &result), "MeshCopyVertices");
+            return result;
+        }
+
+        internal static void MeshSetVertices(UUID asset, IntPtr source, uint count)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshSetVertices(EncodeUuid(asset), source.ToPointer(), count), "MeshSetVertices");
+        }
+
+        internal static uint MeshCopyNormals(UUID asset, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshCopyNormals(EncodeUuid(asset), destination.ToPointer(), capacity, &result), "MeshCopyNormals");
+            return result;
+        }
+
+        internal static void MeshSetNormals(UUID asset, IntPtr source, uint count)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshSetNormals(EncodeUuid(asset), source.ToPointer(), count), "MeshSetNormals");
+        }
+
+        internal static uint MeshCopyUvs(UUID asset, uint channel, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshCopyUvs(EncodeUuid(asset), channel, destination.ToPointer(), capacity, &result), "MeshCopyUvs");
+            return result;
+        }
+
+        internal static void MeshSetUvs(UUID asset, uint channel, IntPtr source, uint count)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshSetUvs(EncodeUuid(asset), channel, source.ToPointer(), count), "MeshSetUvs");
+        }
+
+        internal static uint MeshCopyColors(UUID asset, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshCopyColors(EncodeUuid(asset), destination.ToPointer(), capacity, &result), "MeshCopyColors");
+            return result;
+        }
+
+        internal static void MeshSetColors(UUID asset, IntPtr source, uint count)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshSetColors(EncodeUuid(asset), source.ToPointer(), count), "MeshSetColors");
+        }
+
+        internal static uint MeshCopyIndices(UUID asset, IntPtr destination, uint capacity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshCopyIndices(EncodeUuid(asset), destination.ToPointer(), capacity, &result), "MeshCopyIndices");
+            return result;
+        }
+
+        internal static void MeshSetIndices(UUID asset, IntPtr source, uint count)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshSetIndices(EncodeUuid(asset), source.ToPointer(), count), "MeshSetIndices");
+        }
+
+        internal static void MeshRecalculateBounds(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshRecalculateBounds(EncodeUuid(asset)), "MeshRecalculateBounds");
+        }
+
+        internal static void MeshRecalculateNormals(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshRecalculateNormals(EncodeUuid(asset)), "MeshRecalculateNormals");
+        }
+
+        internal static void MeshRecalculateTangents(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshRecalculateTangents(EncodeUuid(asset)), "MeshRecalculateTangents");
+        }
+
+        internal static void MeshUploadData(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshUploadData(EncodeUuid(asset)), "MeshUploadData");
+        }
+
+        internal static void MeshClear(UUID asset)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshClear(EncodeUuid(asset)), "MeshClear");
+        }
+
+        internal static Vector3 MeshGetBoundsMin(UUID asset)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.MeshGetBoundsMin(EncodeUuid(asset), &result), "MeshGetBoundsMin");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static Vector3 MeshGetBoundsMax(UUID asset)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.MeshGetBoundsMax(EncodeUuid(asset), &result), "MeshGetBoundsMax");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static void MeshSetVertexBufferParams(UUID asset, uint vertexCount, IntPtr layout, uint layoutCount)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshSetVertexBufferParams(EncodeUuid(asset), vertexCount, layout.ToPointer(), layoutCount), "MeshSetVertexBufferParams");
+        }
+
+        internal static void MeshSetVertexBufferData(UUID asset, IntPtr source, uint meshBufferStart, uint count, uint stride)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshSetVertexBufferData(EncodeUuid(asset), source.ToPointer(), meshBufferStart, count, stride), "MeshSetVertexBufferData");
+        }
+
+        internal static uint MeshGetVertexBufferData(UUID asset, IntPtr destination, uint capacity, uint stride)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshGetVertexBufferData(EncodeUuid(asset), destination.ToPointer(), capacity, stride, &result), "MeshGetVertexBufferData");
+            return result;
+        }
+
+        internal static uint MeshGetVertexStride(UUID asset)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshGetVertexStride(EncodeUuid(asset), &result), "MeshGetVertexStride");
+            return result;
+        }
+
+        internal static uint MeshGetVertexAttributeCount(UUID asset)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshGetVertexAttributeCount(EncodeUuid(asset), &result), "MeshGetVertexAttributeCount");
+            return result;
+        }
+
+        internal static bool MeshHasVertexAttribute(UUID asset, int attribute)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.MeshHasVertexAttribute(EncodeUuid(asset), attribute, &result), "MeshHasVertexAttribute");
+            return result != 0;
+        }
+
+        internal static void MeshGetVertexAttribute(UUID asset, int index, IntPtr destination)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshGetVertexAttribute(EncodeUuid(asset), index, destination.ToPointer()), "MeshGetVertexAttribute");
+        }
+
+        internal static UUID MeshCreatePlane(float width, float height, uint subdivisionsX, uint subdivisionsY)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshCreatePlane(width, height, subdivisionsX, subdivisionsY, &result), "MeshCreatePlane");
+            return DecodeUuid(result);
+        }
+
+        internal static UUID MeshCreateBox(Vector3 dimensions)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeDimensions = new ManagedNativeVec3 { X = dimensions.x, Y = dimensions.y, Z = dimensions.z };
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshCreateBox(&nativeDimensions, &result), "MeshCreateBox");
+            return DecodeUuid(result);
+        }
+
+        internal static UUID MeshCreateCube(float size)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshCreateCube(size, &result), "MeshCreateCube");
+            return DecodeUuid(result);
+        }
+
+        internal static UUID MeshCreateSphere(float radius, uint segments, uint rings)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshCreateSphere(radius, segments, rings, &result), "MeshCreateSphere");
+            return DecodeUuid(result);
+        }
+
+        internal static UUID MeshCreateCylinder(float radius, float height, uint segments, bool capped)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshCreateCylinder(radius, height, segments, capped ? (byte)1 : (byte)0, &result), "MeshCreateCylinder");
+            return DecodeUuid(result);
+        }
+
+        internal static UUID MeshCreateCone(float radius, float height, uint segments, bool capped)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshCreateCone(radius, height, segments, capped ? (byte)1 : (byte)0, &result), "MeshCreateCone");
+            return DecodeUuid(result);
+        }
+
+        internal static UUID MeshCreateCapsule(float radius, float height, uint segments, uint hemisphereRings)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshCreateCapsule(radius, height, segments, hemisphereRings, &result), "MeshCreateCapsule");
+            return DecodeUuid(result);
+        }
+
+        internal static UUID MeshRendererGetMaterial(UUID entity, uint index)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshRendererGetMaterial(EncodeUuid(entity), index, &result), "MeshRendererGetMaterial");
+            return DecodeUuid(result);
+        }
+
+        internal static void MeshRendererSetMaterial(UUID entity, uint index, UUID material)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshRendererSetMaterial(EncodeUuid(entity), index, EncodeUuid(material)), "MeshRendererSetMaterial");
+        }
+
+        internal static float MathMatrixDeterminant(Matrix4 matrix)
+        {
+            EnsureHostBindings();
+            ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
+            float result = default;
+            EnsureStatus(ManagedHostTransport.MathMatrixDeterminant(&nativeMatrix, &result), "MathMatrixDeterminant");
+            return result;
+        }
+
+        internal static Matrix4 MathMatrixInverse(Matrix4 matrix)
+        {
+            EnsureHostBindings();
+            ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
+            ManagedNativeMatrix4 result = default;
+            EnsureStatus(ManagedHostTransport.MathMatrixInverse(&nativeMatrix, &result), "MathMatrixInverse");
+            return DecodeMatrix(result);
+        }
+
+        internal static Matrix4 MathMatrixAffineInverse(Matrix4 matrix)
+        {
+            EnsureHostBindings();
+            ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
+            ManagedNativeMatrix4 result = default;
+            EnsureStatus(ManagedHostTransport.MathMatrixAffineInverse(&nativeMatrix, &result), "MathMatrixAffineInverse");
+            return DecodeMatrix(result);
+        }
+
+        internal static Matrix4 MathLookAt(Vector3 from, Vector3 to, Vector3 up)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeFrom = new ManagedNativeVec3 { X = from.x, Y = from.y, Z = from.z };
+            ManagedNativeVec3 nativeTo = new ManagedNativeVec3 { X = to.x, Y = to.y, Z = to.z };
+            ManagedNativeVec3 nativeUp = new ManagedNativeVec3 { X = up.x, Y = up.y, Z = up.z };
+            ManagedNativeMatrix4 result = default;
+            EnsureStatus(ManagedHostTransport.MathLookAt(&nativeFrom, &nativeTo, &nativeUp, &result), "MathLookAt");
+            return DecodeMatrix(result);
+        }
+
+        internal static void AddScriptComponent(UUID entity, string assemblyName, string namespaceName, string typeName)
+        {
+            EnsureHostBindings();
+            byte[] encodedAssemblyName = Encoding.UTF8.GetBytes(assemblyName ?? string.Empty);
+            byte[] encodedNamespaceName = Encoding.UTF8.GetBytes(namespaceName ?? string.Empty);
+            byte[] encodedTypeName = Encoding.UTF8.GetBytes(typeName ?? string.Empty);
+            fixed (byte* assemblyNameBytes = encodedAssemblyName)
+            {
+                ManagedNativeStringView nativeAssemblyName = new ManagedNativeStringView(assemblyNameBytes, (uint)encodedAssemblyName.Length);
+                fixed (byte* namespaceNameBytes = encodedNamespaceName)
+                {
+                    ManagedNativeStringView nativeNamespaceName = new ManagedNativeStringView(namespaceNameBytes, (uint)encodedNamespaceName.Length);
+                    fixed (byte* typeNameBytes = encodedTypeName)
+                    {
+                        ManagedNativeStringView nativeTypeName = new ManagedNativeStringView(typeNameBytes, (uint)encodedTypeName.Length);
+                        EnsureStatus(ManagedHostTransport.AddScriptComponent(EncodeUuid(entity), nativeAssemblyName, nativeNamespaceName, nativeTypeName), "AddScriptComponent");
+                    }
+                }
+            }
+        }
+
+        internal static void RemoveScriptComponent(UUID entity, string assemblyName, string namespaceName, string typeName)
+        {
+            EnsureHostBindings();
+            byte[] encodedAssemblyName = Encoding.UTF8.GetBytes(assemblyName ?? string.Empty);
+            byte[] encodedNamespaceName = Encoding.UTF8.GetBytes(namespaceName ?? string.Empty);
+            byte[] encodedTypeName = Encoding.UTF8.GetBytes(typeName ?? string.Empty);
+            fixed (byte* assemblyNameBytes = encodedAssemblyName)
+            {
+                ManagedNativeStringView nativeAssemblyName = new ManagedNativeStringView(assemblyNameBytes, (uint)encodedAssemblyName.Length);
+                fixed (byte* namespaceNameBytes = encodedNamespaceName)
+                {
+                    ManagedNativeStringView nativeNamespaceName = new ManagedNativeStringView(namespaceNameBytes, (uint)encodedNamespaceName.Length);
+                    fixed (byte* typeNameBytes = encodedTypeName)
+                    {
+                        ManagedNativeStringView nativeTypeName = new ManagedNativeStringView(typeNameBytes, (uint)encodedTypeName.Length);
+                        EnsureStatus(ManagedHostTransport.RemoveScriptComponent(EncodeUuid(entity), nativeAssemblyName, nativeNamespaceName, nativeTypeName), "RemoveScriptComponent");
+                    }
+                }
+            }
+        }
+
+        internal static UUID MeshRendererGetMesh(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.MeshRendererGetMesh(EncodeUuid(entity), &result), "MeshRendererGetMesh");
+            return DecodeUuid(result);
+        }
+
+        internal static void MeshRendererSetMesh(UUID entity, UUID value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshRendererSetMesh(EncodeUuid(entity), EncodeUuid(value)), "MeshRendererSetMesh");
+        }
+
+        internal static uint MeshRendererGetMaterialCount(UUID entity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.MeshRendererGetMaterialCount(EncodeUuid(entity), &result), "MeshRendererGetMaterialCount");
+            return result;
+        }
+
+        internal static void MeshRendererSetMaterialCount(UUID entity, uint value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.MeshRendererSetMaterialCount(EncodeUuid(entity), value), "MeshRendererSetMaterialCount");
+        }
+
+        internal static bool Collider2DGetIsTrigger(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Collider2DGetIsTrigger(EncodeUuid(entity), &result), "Collider2DGetIsTrigger");
+            return result != 0;
+        }
+
+        internal static void Collider2DSetIsTrigger(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Collider2DSetIsTrigger(EncodeUuid(entity), value ? (byte)1 : (byte)0), "Collider2DSetIsTrigger");
+        }
+
+        internal static Vector2 Collider2DGetOffset(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 result = default;
+            EnsureStatus(ManagedHostTransport.Collider2DGetOffset(EncodeUuid(entity), &result), "Collider2DGetOffset");
+            return new Vector2(result.X, result.Y);
+        }
+
+        internal static void Collider2DSetOffset(UUID entity, Vector2 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 nativeValue = new ManagedNativeVec2 { X = value.x, Y = value.y };
+            EnsureStatus(ManagedHostTransport.Collider2DSetOffset(EncodeUuid(entity), &nativeValue), "Collider2DSetOffset");
+        }
+
+        internal static UUID Collider2DGetMaterial(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.Collider2DGetMaterial(EncodeUuid(entity), &result), "Collider2DGetMaterial");
+            return DecodeUuid(result);
+        }
+
+        internal static void Collider2DSetMaterial(UUID entity, UUID value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Collider2DSetMaterial(EncodeUuid(entity), EncodeUuid(value)), "Collider2DSetMaterial");
+        }
+
+        internal static Vector2 BoxCollider2DGetSize(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 result = default;
+            EnsureStatus(ManagedHostTransport.BoxCollider2DGetSize(EncodeUuid(entity), &result), "BoxCollider2DGetSize");
+            return new Vector2(result.X, result.Y);
+        }
+
+        internal static void BoxCollider2DSetSize(UUID entity, Vector2 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec2 nativeValue = new ManagedNativeVec2 { X = value.x, Y = value.y };
+            EnsureStatus(ManagedHostTransport.BoxCollider2DSetSize(EncodeUuid(entity), &nativeValue), "BoxCollider2DSetSize");
+        }
+
+        internal static float CircleCollider2DGetRadius(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.CircleCollider2DGetRadius(EncodeUuid(entity), &result), "CircleCollider2DGetRadius");
+            return result;
+        }
+
+        internal static void CircleCollider2DSetRadius(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CircleCollider2DSetRadius(EncodeUuid(entity), value), "CircleCollider2DSetRadius");
+        }
+
+        internal static bool Collider3DGetIsTrigger(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Collider3DGetIsTrigger(EncodeUuid(entity), &result), "Collider3DGetIsTrigger");
+            return result != 0;
+        }
+
+        internal static void Collider3DSetIsTrigger(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Collider3DSetIsTrigger(EncodeUuid(entity), value ? (byte)1 : (byte)0), "Collider3DSetIsTrigger");
+        }
+
+        internal static Vector3 Collider3DGetOffset(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.Collider3DGetOffset(EncodeUuid(entity), &result), "Collider3DGetOffset");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static void Collider3DSetOffset(UUID entity, Vector3 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeValue = new ManagedNativeVec3 { X = value.x, Y = value.y, Z = value.z };
+            EnsureStatus(ManagedHostTransport.Collider3DSetOffset(EncodeUuid(entity), &nativeValue), "Collider3DSetOffset");
+        }
+
+        internal static Quaternion Collider3DGetRotation(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeQuaternion result = default;
+            EnsureStatus(ManagedHostTransport.Collider3DGetRotation(EncodeUuid(entity), &result), "Collider3DGetRotation");
+            return new Quaternion(result.X, result.Y, result.Z, result.W);
+        }
+
+        internal static void Collider3DSetRotation(UUID entity, Quaternion value)
+        {
+            EnsureHostBindings();
+            ManagedNativeQuaternion nativeValue = new ManagedNativeQuaternion { X = value.x, Y = value.y, Z = value.z, W = value.w };
+            EnsureStatus(ManagedHostTransport.Collider3DSetRotation(EncodeUuid(entity), &nativeValue), "Collider3DSetRotation");
+        }
+
+        internal static UUID Collider3DGetMaterial(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.Collider3DGetMaterial(EncodeUuid(entity), &result), "Collider3DGetMaterial");
+            return DecodeUuid(result);
+        }
+
+        internal static void Collider3DSetMaterial(UUID entity, UUID value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Collider3DSetMaterial(EncodeUuid(entity), EncodeUuid(value)), "Collider3DSetMaterial");
+        }
+
+        internal static PhysicsFilter3D Collider3DGetCollisionFilter(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativePhysicsFilter3D result = default;
+            EnsureStatus(ManagedHostTransport.Collider3DGetCollisionFilter(EncodeUuid(entity), &result), "Collider3DGetCollisionFilter");
+            return new PhysicsFilter3D(result.Layer, result.Mask, result.Group);
+        }
+
+        internal static void Collider3DSetCollisionFilter(UUID entity, PhysicsFilter3D value)
+        {
+            EnsureHostBindings();
+            ManagedNativePhysicsFilter3D nativeValue = new ManagedNativePhysicsFilter3D { Layer = value.Layer, Mask = value.Mask, Group = value.Group };
+            EnsureStatus(ManagedHostTransport.Collider3DSetCollisionFilter(EncodeUuid(entity), &nativeValue), "Collider3DSetCollisionFilter");
+        }
+
+        internal static Vector3 BoxCollider3DGetSize(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.BoxCollider3DGetSize(EncodeUuid(entity), &result), "BoxCollider3DGetSize");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static void BoxCollider3DSetSize(UUID entity, Vector3 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeValue = new ManagedNativeVec3 { X = value.x, Y = value.y, Z = value.z };
+            EnsureStatus(ManagedHostTransport.BoxCollider3DSetSize(EncodeUuid(entity), &nativeValue), "BoxCollider3DSetSize");
+        }
+
+        internal static float SphereCollider3DGetRadius(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.SphereCollider3DGetRadius(EncodeUuid(entity), &result), "SphereCollider3DGetRadius");
+            return result;
+        }
+
+        internal static void SphereCollider3DSetRadius(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.SphereCollider3DSetRadius(EncodeUuid(entity), value), "SphereCollider3DSetRadius");
+        }
+
+        internal static float CapsuleCollider3DGetRadius(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.CapsuleCollider3DGetRadius(EncodeUuid(entity), &result), "CapsuleCollider3DGetRadius");
+            return result;
+        }
+
+        internal static void CapsuleCollider3DSetRadius(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CapsuleCollider3DSetRadius(EncodeUuid(entity), value), "CapsuleCollider3DSetRadius");
+        }
+
+        internal static float CapsuleCollider3DGetHeight(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.CapsuleCollider3DGetHeight(EncodeUuid(entity), &result), "CapsuleCollider3DGetHeight");
+            return result;
+        }
+
+        internal static void CapsuleCollider3DSetHeight(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.CapsuleCollider3DSetHeight(EncodeUuid(entity), value), "CapsuleCollider3DSetHeight");
+        }
+
+        internal static int Rigidbody3DGetBodyType(UUID entity)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetBodyType(EncodeUuid(entity), &result), "Rigidbody3DGetBodyType");
+            return result;
+        }
+
+        internal static void Rigidbody3DSetBodyType(UUID entity, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetBodyType(EncodeUuid(entity), value), "Rigidbody3DSetBodyType");
+        }
+
+        internal static float Rigidbody3DGetMass(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetMass(EncodeUuid(entity), &result), "Rigidbody3DGetMass");
+            return result;
+        }
+
+        internal static void Rigidbody3DSetMass(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetMass(EncodeUuid(entity), value), "Rigidbody3DSetMass");
+        }
+
+        internal static bool Rigidbody3DGetAutoMass(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetAutoMass(EncodeUuid(entity), &result), "Rigidbody3DGetAutoMass");
+            return result != 0;
+        }
+
+        internal static void Rigidbody3DSetAutoMass(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetAutoMass(EncodeUuid(entity), value ? (byte)1 : (byte)0), "Rigidbody3DSetAutoMass");
+        }
+
+        internal static float Rigidbody3DGetGravityScale(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetGravityScale(EncodeUuid(entity), &result), "Rigidbody3DGetGravityScale");
+            return result;
+        }
+
+        internal static void Rigidbody3DSetGravityScale(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetGravityScale(EncodeUuid(entity), value), "Rigidbody3DSetGravityScale");
+        }
+
+        internal static float Rigidbody3DGetLinearDamping(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetLinearDamping(EncodeUuid(entity), &result), "Rigidbody3DGetLinearDamping");
+            return result;
+        }
+
+        internal static void Rigidbody3DSetLinearDamping(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetLinearDamping(EncodeUuid(entity), value), "Rigidbody3DSetLinearDamping");
+        }
+
+        internal static float Rigidbody3DGetAngularDamping(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetAngularDamping(EncodeUuid(entity), &result), "Rigidbody3DGetAngularDamping");
+            return result;
+        }
+
+        internal static void Rigidbody3DSetAngularDamping(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetAngularDamping(EncodeUuid(entity), value), "Rigidbody3DSetAngularDamping");
+        }
+
+        internal static Vector3 Rigidbody3DGetCenterOfMass(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetCenterOfMass(EncodeUuid(entity), &result), "Rigidbody3DGetCenterOfMass");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static void Rigidbody3DSetCenterOfMass(UUID entity, Vector3 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeValue = new ManagedNativeVec3 { X = value.x, Y = value.y, Z = value.z };
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetCenterOfMass(EncodeUuid(entity), &nativeValue), "Rigidbody3DSetCenterOfMass");
+        }
+
+        internal static bool Rigidbody3DGetAllowSleep(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetAllowSleep(EncodeUuid(entity), &result), "Rigidbody3DGetAllowSleep");
+            return result != 0;
+        }
+
+        internal static void Rigidbody3DSetAllowSleep(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetAllowSleep(EncodeUuid(entity), value ? (byte)1 : (byte)0), "Rigidbody3DSetAllowSleep");
+        }
+
+        internal static bool Rigidbody3DGetStartAwake(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetStartAwake(EncodeUuid(entity), &result), "Rigidbody3DGetStartAwake");
+            return result != 0;
+        }
+
+        internal static void Rigidbody3DSetStartAwake(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetStartAwake(EncodeUuid(entity), value ? (byte)1 : (byte)0), "Rigidbody3DSetStartAwake");
+        }
+
+        internal static bool Rigidbody3DGetContinuousCollision(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetContinuousCollision(EncodeUuid(entity), &result), "Rigidbody3DGetContinuousCollision");
+            return result != 0;
+        }
+
+        internal static void Rigidbody3DSetContinuousCollision(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetContinuousCollision(EncodeUuid(entity), value ? (byte)1 : (byte)0), "Rigidbody3DSetContinuousCollision");
+        }
+
+        internal static uint Rigidbody3DGetConstraints(UUID entity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetConstraints(EncodeUuid(entity), &result), "Rigidbody3DGetConstraints");
+            return result;
+        }
+
+        internal static void Rigidbody3DSetConstraints(UUID entity, uint value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetConstraints(EncodeUuid(entity), value), "Rigidbody3DSetConstraints");
+        }
+
+        internal static PhysicsFilter3D Rigidbody3DGetCollisionFilter(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativePhysicsFilter3D result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetCollisionFilter(EncodeUuid(entity), &result), "Rigidbody3DGetCollisionFilter");
+            return new PhysicsFilter3D(result.Layer, result.Mask, result.Group);
+        }
+
+        internal static void Rigidbody3DSetCollisionFilter(UUID entity, PhysicsFilter3D value)
+        {
+            EnsureHostBindings();
+            ManagedNativePhysicsFilter3D nativeValue = new ManagedNativePhysicsFilter3D { Layer = value.Layer, Mask = value.Mask, Group = value.Group };
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetCollisionFilter(EncodeUuid(entity), &nativeValue), "Rigidbody3DSetCollisionFilter");
+        }
+
+        internal static Vector3 Rigidbody3DGetLinearVelocity(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetLinearVelocity(EncodeUuid(entity), &result), "Rigidbody3DGetLinearVelocity");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static void Rigidbody3DSetLinearVelocity(UUID entity, Vector3 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeValue = new ManagedNativeVec3 { X = value.x, Y = value.y, Z = value.z };
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetLinearVelocity(EncodeUuid(entity), &nativeValue), "Rigidbody3DSetLinearVelocity");
+        }
+
+        internal static Vector3 Rigidbody3DGetAngularVelocity(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetAngularVelocity(EncodeUuid(entity), &result), "Rigidbody3DGetAngularVelocity");
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        internal static void Rigidbody3DSetAngularVelocity(UUID entity, Vector3 value)
+        {
+            EnsureHostBindings();
+            ManagedNativeVec3 nativeValue = new ManagedNativeVec3 { X = value.x, Y = value.y, Z = value.z };
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetAngularVelocity(EncodeUuid(entity), &nativeValue), "Rigidbody3DSetAngularVelocity");
+        }
+
+        internal static bool Rigidbody3DGetAwake(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetAwake(EncodeUuid(entity), &result), "Rigidbody3DGetAwake");
+            return result != 0;
+        }
+
+        internal static void Rigidbody3DSetAwake(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.Rigidbody3DSetAwake(EncodeUuid(entity), value ? (byte)1 : (byte)0), "Rigidbody3DSetAwake");
+        }
+
+        internal static ulong Rigidbody3DGetBodyHandle(UUID entity)
+        {
+            EnsureHostBindings();
+            ulong result = default;
+            EnsureStatus(ManagedHostTransport.Rigidbody3DGetBodyHandle(EncodeUuid(entity), &result), "Rigidbody3DGetBodyHandle");
+            return result;
+        }
+
+        internal static float PhysicsMaterial2DGetDensity(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DGetDensity(EncodeUuid(asset), &result), "PhysicsMaterial2DGetDensity");
+            return result;
+        }
+
+        internal static void PhysicsMaterial2DSetDensity(UUID asset, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DSetDensity(EncodeUuid(asset), value), "PhysicsMaterial2DSetDensity");
+        }
+
+        internal static float PhysicsMaterial2DGetFriction(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DGetFriction(EncodeUuid(asset), &result), "PhysicsMaterial2DGetFriction");
+            return result;
+        }
+
+        internal static void PhysicsMaterial2DSetFriction(UUID asset, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DSetFriction(EncodeUuid(asset), value), "PhysicsMaterial2DSetFriction");
+        }
+
+        internal static float PhysicsMaterial2DGetRestitution(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DGetRestitution(EncodeUuid(asset), &result), "PhysicsMaterial2DGetRestitution");
+            return result;
+        }
+
+        internal static void PhysicsMaterial2DSetRestitution(UUID asset, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DSetRestitution(EncodeUuid(asset), value), "PhysicsMaterial2DSetRestitution");
+        }
+
+        internal static float PhysicsMaterial2DGetRestitutionThreshold(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DGetRestitutionThreshold(EncodeUuid(asset), &result), "PhysicsMaterial2DGetRestitutionThreshold");
+            return result;
+        }
+
+        internal static void PhysicsMaterial2DSetRestitutionThreshold(UUID asset, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DSetRestitutionThreshold(EncodeUuid(asset), value), "PhysicsMaterial2DSetRestitutionThreshold");
+        }
+
+        internal static int PhysicsMaterial2DGetFrictionCombine(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DGetFrictionCombine(EncodeUuid(asset), &result), "PhysicsMaterial2DGetFrictionCombine");
+            return result;
+        }
+
+        internal static void PhysicsMaterial2DSetFrictionCombine(UUID asset, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DSetFrictionCombine(EncodeUuid(asset), value), "PhysicsMaterial2DSetFrictionCombine");
+        }
+
+        internal static int PhysicsMaterial2DGetRestitutionCombine(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DGetRestitutionCombine(EncodeUuid(asset), &result), "PhysicsMaterial2DGetRestitutionCombine");
+            return result;
+        }
+
+        internal static void PhysicsMaterial2DSetRestitutionCombine(UUID asset, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial2DSetRestitutionCombine(EncodeUuid(asset), value), "PhysicsMaterial2DSetRestitutionCombine");
+        }
+
+        internal static float PhysicsMaterial3DGetDensity(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DGetDensity(EncodeUuid(asset), &result), "PhysicsMaterial3DGetDensity");
+            return result;
+        }
+
+        internal static void PhysicsMaterial3DSetDensity(UUID asset, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DSetDensity(EncodeUuid(asset), value), "PhysicsMaterial3DSetDensity");
+        }
+
+        internal static float PhysicsMaterial3DGetFriction(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DGetFriction(EncodeUuid(asset), &result), "PhysicsMaterial3DGetFriction");
+            return result;
+        }
+
+        internal static void PhysicsMaterial3DSetFriction(UUID asset, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DSetFriction(EncodeUuid(asset), value), "PhysicsMaterial3DSetFriction");
+        }
+
+        internal static float PhysicsMaterial3DGetRestitution(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DGetRestitution(EncodeUuid(asset), &result), "PhysicsMaterial3DGetRestitution");
+            return result;
+        }
+
+        internal static void PhysicsMaterial3DSetRestitution(UUID asset, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DSetRestitution(EncodeUuid(asset), value), "PhysicsMaterial3DSetRestitution");
+        }
+
+        internal static float PhysicsMaterial3DGetRestitutionThreshold(UUID asset)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DGetRestitutionThreshold(EncodeUuid(asset), &result), "PhysicsMaterial3DGetRestitutionThreshold");
+            return result;
+        }
+
+        internal static void PhysicsMaterial3DSetRestitutionThreshold(UUID asset, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DSetRestitutionThreshold(EncodeUuid(asset), value), "PhysicsMaterial3DSetRestitutionThreshold");
+        }
+
+        internal static int PhysicsMaterial3DGetFrictionCombine(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DGetFrictionCombine(EncodeUuid(asset), &result), "PhysicsMaterial3DGetFrictionCombine");
+            return result;
+        }
+
+        internal static void PhysicsMaterial3DSetFrictionCombine(UUID asset, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DSetFrictionCombine(EncodeUuid(asset), value), "PhysicsMaterial3DSetFrictionCombine");
+        }
+
+        internal static int PhysicsMaterial3DGetRestitutionCombine(UUID asset)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DGetRestitutionCombine(EncodeUuid(asset), &result), "PhysicsMaterial3DGetRestitutionCombine");
+            return result;
+        }
+
+        internal static void PhysicsMaterial3DSetRestitutionCombine(UUID asset, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.PhysicsMaterial3DSetRestitutionCombine(EncodeUuid(asset), value), "PhysicsMaterial3DSetRestitutionCombine");
+        }
+
+        internal static UUID AnimationComponentGetClip(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativeUuid result = default;
+            EnsureStatus(ManagedHostTransport.AnimationComponentGetClip(EncodeUuid(entity), &result), "AnimationComponentGetClip");
+            return DecodeUuid(result);
+        }
+
+        internal static void AnimationComponentSetClip(UUID entity, UUID value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentSetClip(EncodeUuid(entity), EncodeUuid(value)), "AnimationComponentSetClip");
+        }
+
+        internal static float AnimationComponentGetSpeed(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.AnimationComponentGetSpeed(EncodeUuid(entity), &result), "AnimationComponentGetSpeed");
+            return result;
+        }
+
+        internal static void AnimationComponentSetSpeed(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentSetSpeed(EncodeUuid(entity), value), "AnimationComponentSetSpeed");
+        }
+
+        internal static int AnimationComponentGetWrapMode(UUID entity)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.AnimationComponentGetWrapMode(EncodeUuid(entity), &result), "AnimationComponentGetWrapMode");
+            return result;
+        }
+
+        internal static void AnimationComponentSetWrapMode(UUID entity, int value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentSetWrapMode(EncodeUuid(entity), value), "AnimationComponentSetWrapMode");
+        }
+
+        internal static bool AnimationComponentGetPlayOnAwake(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.AnimationComponentGetPlayOnAwake(EncodeUuid(entity), &result), "AnimationComponentGetPlayOnAwake");
+            return result != 0;
+        }
+
+        internal static void AnimationComponentSetPlayOnAwake(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentSetPlayOnAwake(EncodeUuid(entity), value ? (byte)1 : (byte)0), "AnimationComponentSetPlayOnAwake");
+        }
+
+        internal static bool AnimationComponentGetApplyRootMotion(UUID entity)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.AnimationComponentGetApplyRootMotion(EncodeUuid(entity), &result), "AnimationComponentGetApplyRootMotion");
+            return result != 0;
+        }
+
+        internal static void AnimationComponentSetApplyRootMotion(UUID entity, bool value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentSetApplyRootMotion(EncodeUuid(entity), value ? (byte)1 : (byte)0), "AnimationComponentSetApplyRootMotion");
+        }
+
+        internal static float AnimationComponentGetTime(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.AnimationComponentGetTime(EncodeUuid(entity), &result), "AnimationComponentGetTime");
+            return result;
+        }
+
+        internal static void AnimationComponentSetTime(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentSetTime(EncodeUuid(entity), value), "AnimationComponentSetTime");
+        }
+
+        internal static float AnimationComponentGetNormalizedTime(UUID entity)
+        {
+            EnsureHostBindings();
+            float result = default;
+            EnsureStatus(ManagedHostTransport.AnimationComponentGetNormalizedTime(EncodeUuid(entity), &result), "AnimationComponentGetNormalizedTime");
+            return result;
+        }
+
+        internal static void AnimationComponentSetNormalizedTime(UUID entity, float value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.AnimationComponentSetNormalizedTime(EncodeUuid(entity), value), "AnimationComponentSetNormalizedTime");
+        }
+
+        internal static int AnimationComponentGetState(UUID entity)
+        {
+            EnsureHostBindings();
+            int result = default;
+            EnsureStatus(ManagedHostTransport.AnimationComponentGetState(EncodeUuid(entity), &result), "AnimationComponentGetState");
+            return result;
+        }
+
         internal static string TextGetText(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeStringView result = default(ManagedNativeStringView);
+            ManagedNativeStringView result = default;
             EnsureStatus(ManagedHostTransport.TextGetText(EncodeUuid(entity), &result), "TextGetText");
             return DecodeString(result);
         }
@@ -2173,7 +6545,7 @@ namespace Crowny
         internal static UUID TextGetFont(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeUuid result = default(ManagedNativeUuid);
+            ManagedNativeUuid result = default;
             EnsureStatus(ManagedHostTransport.TextGetFont(EncodeUuid(entity), &result), "TextGetFont");
             return DecodeUuid(result);
         }
@@ -2187,7 +6559,7 @@ namespace Crowny
         internal static Color TextGetColor(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 result = default(ManagedNativeVec4);
+            ManagedNativeVec4 result = default;
             EnsureStatus(ManagedHostTransport.TextGetColor(EncodeUuid(entity), &result), "TextGetColor");
             return new Color(result.X, result.Y, result.Z, result.W);
         }
@@ -2202,7 +6574,7 @@ namespace Crowny
         internal static float TextGetSize(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetSize(EncodeUuid(entity), &result), "TextGetSize");
             return result;
         }
@@ -2216,7 +6588,7 @@ namespace Crowny
         internal static bool TextGetAutoSize(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.TextGetAutoSize(EncodeUuid(entity), &result), "TextGetAutoSize");
             return result != 0;
         }
@@ -2230,7 +6602,7 @@ namespace Crowny
         internal static float TextGetAutoSizeMin(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetAutoSizeMin(EncodeUuid(entity), &result), "TextGetAutoSizeMin");
             return result;
         }
@@ -2244,7 +6616,7 @@ namespace Crowny
         internal static float TextGetAutoSizeMax(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetAutoSizeMax(EncodeUuid(entity), &result), "TextGetAutoSizeMax");
             return result;
         }
@@ -2258,7 +6630,7 @@ namespace Crowny
         internal static Vector2 TextGetLayoutSize(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default(ManagedNativeVec2);
+            ManagedNativeVec2 result = default;
             EnsureStatus(ManagedHostTransport.TextGetLayoutSize(EncodeUuid(entity), &result), "TextGetLayoutSize");
             return new Vector2(result.X, result.Y);
         }
@@ -2273,7 +6645,7 @@ namespace Crowny
         internal static bool TextGetWrapping(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.TextGetWrapping(EncodeUuid(entity), &result), "TextGetWrapping");
             return result != 0;
         }
@@ -2287,7 +6659,7 @@ namespace Crowny
         internal static int TextGetWrapMode(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.TextGetWrapMode(EncodeUuid(entity), &result), "TextGetWrapMode");
             return result;
         }
@@ -2301,7 +6673,7 @@ namespace Crowny
         internal static int TextGetOverflow(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.TextGetOverflow(EncodeUuid(entity), &result), "TextGetOverflow");
             return result;
         }
@@ -2315,7 +6687,7 @@ namespace Crowny
         internal static bool TextGetClipToBounds(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.TextGetClipToBounds(EncodeUuid(entity), &result), "TextGetClipToBounds");
             return result != 0;
         }
@@ -2329,7 +6701,7 @@ namespace Crowny
         internal static uint TextGetMaxLines(UUID entity)
         {
             EnsureHostBindings();
-            uint result = default(uint);
+            uint result = default;
             EnsureStatus(ManagedHostTransport.TextGetMaxLines(EncodeUuid(entity), &result), "TextGetMaxLines");
             return result;
         }
@@ -2343,7 +6715,7 @@ namespace Crowny
         internal static int TextGetHorizontalAlignment(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.TextGetHorizontalAlignment(EncodeUuid(entity), &result), "TextGetHorizontalAlignment");
             return result;
         }
@@ -2357,7 +6729,7 @@ namespace Crowny
         internal static int TextGetVerticalAlignment(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.TextGetVerticalAlignment(EncodeUuid(entity), &result), "TextGetVerticalAlignment");
             return result;
         }
@@ -2368,15 +6740,15 @@ namespace Crowny
             EnsureStatus(ManagedHostTransport.TextSetVerticalAlignment(EncodeUuid(entity), value), "TextSetVerticalAlignment");
         }
 
-        internal static uint TextGetFontStyle(UUID entity)
+        internal static int TextGetFontStyle(UUID entity)
         {
             EnsureHostBindings();
-            uint result = default(uint);
+            int result = default;
             EnsureStatus(ManagedHostTransport.TextGetFontStyle(EncodeUuid(entity), &result), "TextGetFontStyle");
             return result;
         }
 
-        internal static void TextSetFontStyle(UUID entity, uint value)
+        internal static void TextSetFontStyle(UUID entity, int value)
         {
             EnsureHostBindings();
             EnsureStatus(ManagedHostTransport.TextSetFontStyle(EncodeUuid(entity), value), "TextSetFontStyle");
@@ -2385,7 +6757,7 @@ namespace Crowny
         internal static Color TextGetOutlineColor(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 result = default(ManagedNativeVec4);
+            ManagedNativeVec4 result = default;
             EnsureStatus(ManagedHostTransport.TextGetOutlineColor(EncodeUuid(entity), &result), "TextGetOutlineColor");
             return new Color(result.X, result.Y, result.Z, result.W);
         }
@@ -2400,7 +6772,7 @@ namespace Crowny
         internal static float TextGetOutlineWidth(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetOutlineWidth(EncodeUuid(entity), &result), "TextGetOutlineWidth");
             return result;
         }
@@ -2414,7 +6786,7 @@ namespace Crowny
         internal static Color TextGetShadowColor(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 result = default(ManagedNativeVec4);
+            ManagedNativeVec4 result = default;
             EnsureStatus(ManagedHostTransport.TextGetShadowColor(EncodeUuid(entity), &result), "TextGetShadowColor");
             return new Color(result.X, result.Y, result.Z, result.W);
         }
@@ -2429,7 +6801,7 @@ namespace Crowny
         internal static Vector2 TextGetShadowOffset(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec2 result = default(ManagedNativeVec2);
+            ManagedNativeVec2 result = default;
             EnsureStatus(ManagedHostTransport.TextGetShadowOffset(EncodeUuid(entity), &result), "TextGetShadowOffset");
             return new Vector2(result.X, result.Y);
         }
@@ -2444,7 +6816,7 @@ namespace Crowny
         internal static float TextGetShadowSoftness(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetShadowSoftness(EncodeUuid(entity), &result), "TextGetShadowSoftness");
             return result;
         }
@@ -2458,7 +6830,7 @@ namespace Crowny
         internal static float TextGetCharacterSpacing(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetCharacterSpacing(EncodeUuid(entity), &result), "TextGetCharacterSpacing");
             return result;
         }
@@ -2472,7 +6844,7 @@ namespace Crowny
         internal static float TextGetWordSpacing(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetWordSpacing(EncodeUuid(entity), &result), "TextGetWordSpacing");
             return result;
         }
@@ -2486,7 +6858,7 @@ namespace Crowny
         internal static float TextGetLineSpacing(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetLineSpacing(EncodeUuid(entity), &result), "TextGetLineSpacing");
             return result;
         }
@@ -2500,7 +6872,7 @@ namespace Crowny
         internal static float TextGetParagraphSpacing(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetParagraphSpacing(EncodeUuid(entity), &result), "TextGetParagraphSpacing");
             return result;
         }
@@ -2511,24 +6883,10 @@ namespace Crowny
             EnsureStatus(ManagedHostTransport.TextSetParagraphSpacing(EncodeUuid(entity), value), "TextSetParagraphSpacing");
         }
 
-        internal static uint TextGetTabWidth(UUID entity)
-        {
-            EnsureHostBindings();
-            uint result = default(uint);
-            EnsureStatus(ManagedHostTransport.TextGetTabWidth(EncodeUuid(entity), &result), "TextGetTabWidth");
-            return result;
-        }
-
-        internal static void TextSetTabWidth(UUID entity, uint value)
-        {
-            EnsureHostBindings();
-            EnsureStatus(ManagedHostTransport.TextSetTabWidth(EncodeUuid(entity), value), "TextSetTabWidth");
-        }
-
         internal static bool TextGetUseCustomDecorationColor(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.TextGetUseCustomDecorationColor(EncodeUuid(entity), &result), "TextGetUseCustomDecorationColor");
             return result != 0;
         }
@@ -2542,7 +6900,7 @@ namespace Crowny
         internal static Color TextGetDecorationColor(UUID entity)
         {
             EnsureHostBindings();
-            ManagedNativeVec4 result = default(ManagedNativeVec4);
+            ManagedNativeVec4 result = default;
             EnsureStatus(ManagedHostTransport.TextGetDecorationColor(EncodeUuid(entity), &result), "TextGetDecorationColor");
             return new Color(result.X, result.Y, result.Z, result.W);
         }
@@ -2557,7 +6915,7 @@ namespace Crowny
         internal static float TextGetDecorationThickness(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetDecorationThickness(EncodeUuid(entity), &result), "TextGetDecorationThickness");
             return result;
         }
@@ -2571,7 +6929,7 @@ namespace Crowny
         internal static float TextGetUnderlineOffset(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetUnderlineOffset(EncodeUuid(entity), &result), "TextGetUnderlineOffset");
             return result;
         }
@@ -2585,7 +6943,7 @@ namespace Crowny
         internal static float TextGetStrikethroughOffset(UUID entity)
         {
             EnsureHostBindings();
-            float result = default(float);
+            float result = default;
             EnsureStatus(ManagedHostTransport.TextGetStrikethroughOffset(EncodeUuid(entity), &result), "TextGetStrikethroughOffset");
             return result;
         }
@@ -2599,7 +6957,7 @@ namespace Crowny
         internal static bool TextGetUseKerning(UUID entity)
         {
             EnsureHostBindings();
-            byte result = default(byte);
+            byte result = default;
             EnsureStatus(ManagedHostTransport.TextGetUseKerning(EncodeUuid(entity), &result), "TextGetUseKerning");
             return result != 0;
         }
@@ -2610,10 +6968,24 @@ namespace Crowny
             EnsureStatus(ManagedHostTransport.TextSetUseKerning(EncodeUuid(entity), value ? (byte)1 : (byte)0), "TextSetUseKerning");
         }
 
+        internal static uint TextGetTabWidth(UUID entity)
+        {
+            EnsureHostBindings();
+            uint result = default;
+            EnsureStatus(ManagedHostTransport.TextGetTabWidth(EncodeUuid(entity), &result), "TextGetTabWidth");
+            return result;
+        }
+
+        internal static void TextSetTabWidth(UUID entity, uint value)
+        {
+            EnsureHostBindings();
+            EnsureStatus(ManagedHostTransport.TextSetTabWidth(EncodeUuid(entity), value), "TextSetTabWidth");
+        }
+
         internal static int TextGetSortingLayer(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.TextGetSortingLayer(EncodeUuid(entity), &result), "TextGetSortingLayer");
             return result;
         }
@@ -2627,7 +6999,7 @@ namespace Crowny
         internal static int TextGetOrderInLayer(UUID entity)
         {
             EnsureHostBindings();
-            int result = default(int);
+            int result = default;
             EnsureStatus(ManagedHostTransport.TextGetOrderInLayer(EncodeUuid(entity), &result), "TextGetOrderInLayer");
             return result;
         }
@@ -2636,147 +7008,6 @@ namespace Crowny
         {
             EnsureHostBindings();
             EnsureStatus(ManagedHostTransport.TextSetOrderInLayer(EncodeUuid(entity), value), "TextSetOrderInLayer");
-        }
-
-        internal static uint TextHitTest(UUID entity, Vector2 position)
-        {
-            EnsureHostBindings();
-            ManagedNativeVec2 nativePosition = new ManagedNativeVec2 { X = position.x, Y = position.y };
-            uint result = default(uint);
-            EnsureStatus(ManagedHostTransport.TextHitTest(EncodeUuid(entity), &nativePosition, &result), "TextHitTest");
-            return result;
-        }
-
-        internal static bool FontGetIsValid(UUID font)
-        {
-            EnsureHostBindings();
-            byte result = default(byte);
-            EnsureStatus(ManagedHostTransport.FontGetIsValid(EncodeUuid(font), &result), "FontGetIsValid");
-            return result != 0;
-        }
-
-        internal static uint FontGetGlyphCount(UUID font)
-        {
-            EnsureHostBindings();
-            uint result = default(uint);
-            EnsureStatus(ManagedHostTransport.FontGetGlyphCount(EncodeUuid(font), &result), "FontGetGlyphCount");
-            return result;
-        }
-
-        internal static uint FontGetTabWidth(UUID font)
-        {
-            EnsureHostBindings();
-            uint result = default(uint);
-            EnsureStatus(ManagedHostTransport.FontGetTabWidth(EncodeUuid(font), &result), "FontGetTabWidth");
-            return result;
-        }
-
-        internal static uint FontGetAtlasWidth(UUID font)
-        {
-            EnsureHostBindings();
-            uint result = default(uint);
-            EnsureStatus(ManagedHostTransport.FontGetAtlasWidth(EncodeUuid(font), &result), "FontGetAtlasWidth");
-            return result;
-        }
-
-        internal static uint FontGetAtlasHeight(UUID font)
-        {
-            EnsureHostBindings();
-            uint result = default(uint);
-            EnsureStatus(ManagedHostTransport.FontGetAtlasHeight(EncodeUuid(font), &result), "FontGetAtlasHeight");
-            return result;
-        }
-
-        internal static float FontGetAtlasPixelRange(UUID font)
-        {
-            EnsureHostBindings();
-            float result = default(float);
-            EnsureStatus(ManagedHostTransport.FontGetAtlasPixelRange(EncodeUuid(font), &result), "FontGetAtlasPixelRange");
-            return result;
-        }
-
-        internal static bool FontHasGlyph(UUID font, uint codePoint)
-        {
-            EnsureHostBindings();
-            byte result = default(byte);
-            EnsureStatus(ManagedHostTransport.FontHasGlyph(EncodeUuid(font), codePoint, &result), "FontHasGlyph");
-            return result != 0;
-        }
-
-        internal static CharacterInfo FontGetCharacterInfo(UUID font, uint codePoint, bool useFallbacks)
-        {
-            EnsureHostBindings();
-            ManagedNativeFontCharacterInfo result = default(ManagedNativeFontCharacterInfo);
-            EnsureStatus(ManagedHostTransport.FontGetCharacterInfo(EncodeUuid(font), codePoint, useFallbacks ? (byte)1 : (byte)0, &result), "FontGetCharacterInfo");
-            return DecodeFontCharacterInfo(result);
-        }
-
-        internal static uint FontGetFallbackCount(UUID font)
-        {
-            EnsureHostBindings();
-            uint result = default(uint);
-            EnsureStatus(ManagedHostTransport.FontGetFallbackCount(EncodeUuid(font), &result), "FontGetFallbackCount");
-            return result;
-        }
-
-        internal static UUID FontGetFallback(UUID font, uint index)
-        {
-            EnsureHostBindings();
-            ManagedNativeUuid result = default(ManagedNativeUuid);
-            EnsureStatus(ManagedHostTransport.FontGetFallback(EncodeUuid(font), index, &result), "FontGetFallback");
-            return DecodeUuid(result);
-        }
-
-        internal static bool FontAddFallback(UUID font, UUID value)
-        {
-            EnsureHostBindings();
-            byte result = default(byte);
-            EnsureStatus(ManagedHostTransport.FontAddFallback(EncodeUuid(font), EncodeUuid(value), &result), "FontAddFallback");
-            return result != 0;
-        }
-
-        internal static void FontClearFallbacks(UUID font)
-        {
-            EnsureHostBindings();
-            EnsureStatus(ManagedHostTransport.FontClearFallbacks(EncodeUuid(font)), "FontClearFallbacks");
-        }
-
-        internal static float MathMatrixDeterminant(Matrix4 matrix)
-        {
-            EnsureHostBindings();
-            ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
-            float result = default(float);
-            EnsureStatus(ManagedHostTransport.MathMatrixDeterminant(&nativeMatrix, &result), "MathMatrixDeterminant");
-            return result;
-        }
-
-        internal static Matrix4 MathMatrixInverse(Matrix4 matrix)
-        {
-            EnsureHostBindings();
-            ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
-            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
-            EnsureStatus(ManagedHostTransport.MathMatrixInverse(&nativeMatrix, &result), "MathMatrixInverse");
-            return DecodeMatrix(result);
-        }
-
-        internal static Matrix4 MathMatrixAffineInverse(Matrix4 matrix)
-        {
-            EnsureHostBindings();
-            ManagedNativeMatrix4 nativeMatrix = EncodeMatrix(matrix);
-            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
-            EnsureStatus(ManagedHostTransport.MathMatrixAffineInverse(&nativeMatrix, &result), "MathMatrixAffineInverse");
-            return DecodeMatrix(result);
-        }
-
-        internal static Matrix4 MathLookAt(Vector3 from, Vector3 to, Vector3 up)
-        {
-            EnsureHostBindings();
-            ManagedNativeVec3 nativeFrom = new ManagedNativeVec3 { X = from.x, Y = from.y, Z = from.z };
-            ManagedNativeVec3 nativeTo = new ManagedNativeVec3 { X = to.x, Y = to.y, Z = to.z };
-            ManagedNativeVec3 nativeUp = new ManagedNativeVec3 { X = up.x, Y = up.y, Z = up.z };
-            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
-            EnsureStatus(ManagedHostTransport.MathLookAt(&nativeFrom, &nativeTo, &nativeUp, &result), "MathLookAt");
-            return DecodeMatrix(result);
         }
     }
 }

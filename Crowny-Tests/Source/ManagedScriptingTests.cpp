@@ -1,6 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Ecs/Components.h"
+#include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedAbiValidation.h"
+#include "Crowny/Scripting/Managed/Interop/ManagedHostBindings.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedJson.h"
 #include "Crowny/Scripting/Managed/ManagedBackendSelection.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
@@ -42,6 +46,31 @@ namespace
         }
         return description;
     }
+
+    class ScopedActiveScene
+    {
+    public:
+        explicit ScopedActiveScene(const Ref<Scene>& scene) : m_OwnsManager(!SceneManager::IsStartedUp())
+        {
+            if (m_OwnsManager)
+                SceneManager::StartUp();
+            else
+                m_PreviousScene = SceneManager::Get().GetActiveScene();
+            SceneManager::Get().SetActiveScene(scene);
+        }
+
+        ~ScopedActiveScene()
+        {
+            if (m_OwnsManager)
+                SceneManager::Shutdown();
+            else
+                SceneManager::Get().SetActiveScene(m_PreviousScene);
+        }
+
+    private:
+        bool m_OwnsManager;
+        Ref<Scene> m_PreviousScene;
+    };
 
     ScriptCatalog MakeCatalog()
     {
@@ -156,7 +185,7 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
 {
-    CHECK(CW_MANAGED_ABI_VERSION == 9);
+    CHECK(CW_MANAGED_ABI_VERSION == 11);
 
     cw_managed_program_api api{};
     api.size = sizeof(api);
@@ -166,12 +195,19 @@ TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scri
     CHECK(result.HasDiagnosticCode("managed.abi.version_mismatch"));
 }
 
-TEST_CASE("Managed font ABI exposes stable glyph and fallback data", "[Scripting][Managed][Contract][Font]")
+TEST_CASE("Managed host ABI exposes complete typed bindings and stable font data", "[Scripting][Managed][Contract][Font]")
 {
-    CHECK(CW_MANAGED_BINDING_TEXT_HIT_TEST == 268);
-    CHECK(CW_MANAGED_BINDING_FONT_GET_IS_VALID == 300);
-    CHECK(CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO == 307);
-    CHECK(CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS == 311);
+    cw_managed_host_api api{};
+    PopulateManagedHostBindings(api);
+    size_t missingBindings = 0;
+#define CW_COUNT_MISSING_BINDING(functionName, fieldName) missingBindings += api.fieldName == nullptr ? 1u : 0u;
+    CW_MANAGED_HOST_FUNCTION_LIST(CW_COUNT_MISSING_BINDING)
+#undef CW_COUNT_MISSING_BINDING
+    CHECK(missingBindings == 0);
+    CHECK(api.text_hit_test != nullptr);
+    CHECK(api.font_get_is_valid != nullptr);
+    CHECK(api.font_get_character_info != nullptr);
+    CHECK(api.font_clear_fallbacks != nullptr);
     CHECK(sizeof(cw_managed_font_character_info) == 112);
     CHECK(offsetof(cw_managed_font_character_info, source_font) == 0);
     CHECK(offsetof(cw_managed_font_character_info, advance) == 32);
@@ -218,14 +254,26 @@ TEST_CASE("CoreCLR adapter loads a published private package", "[Scripting][Mana
     INFO(runtimeDiagnostics);
     REQUIRE_FALSE(scripting.GetScriptCatalog().Types.empty());
 
+    const ScriptCatalog& catalog = scripting.GetScriptCatalog();
+    const auto probe = std::find_if(catalog.Types.begin(), catalog.Types.end(), [](const ScriptTypeSchema& type) {
+        return type.Identity == ScriptTypeIdentity{ "GameAssembly", "Sandbox", "CoreClrIntegrationProbe" };
+    });
+    REQUIRE(probe != catalog.Types.end());
+
+    const UUID entityId("11111111-2222-3333-4444-555555555555");
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    ScopedActiveScene activeScene(scene);
+    const Entity entity = scene->CreateEntityWithUuid(entityId, "CoreCLR integration host");
+
     ScriptCreateRequest request;
-    request.Identity = scripting.GetScriptCatalog().Types.front().Identity;
-    request.Entity = UUID("11111111-2222-3333-4444-555555555555");
+    request.Identity = probe->Identity;
+    request.Entity = entityId;
     request.InitialState.Identity = request.Identity;
     request.InitialState.Root = ScriptValue::Object({}, request.Identity);
     const ScriptCreateResult created = scripting.CreateScript(request);
     INFO(DescribeDiagnostics(created.Result));
     REQUIRE(created.Result.Succeeded);
+    CHECK(entity.HasComponent<CameraComponent>());
 
     const ScriptStateResult beforeReload = scripting.CaptureState(created.Handle);
     INFO(DescribeDiagnostics(beforeReload.Result));

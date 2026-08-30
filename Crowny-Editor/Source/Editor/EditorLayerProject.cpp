@@ -47,15 +47,6 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
-#include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
-#include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
-#include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
-#include "Crowny/Scripting/Bindings/ScriptInput.h"
-#include "Crowny/Scripting/Bindings/ScriptRandom.h"
-#include "Crowny/Scripting/Bindings/Utils/ScriptCompression.h"
-#include "Crowny/Scripting/Bindings/Utils/ScriptJSON.h"
-#include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
 #include "Crowny/Renderer/Font.h"
 
 #include "Build/BuildManager.h"

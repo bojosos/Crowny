@@ -1,6 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
-
 namespace Crowny
 {
     /// <summary>Behavior used when playback crosses a clip boundary.</summary>
@@ -25,99 +22,62 @@ namespace Crowny
         /// <summary>Clip evaluated by this component.</summary>
         public AnimationClip clip
         {
-            get { return Internal_GetClip(m_InternalPtr); }
-            set { Internal_SetClip(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.CreateAsset<AnimationClip>(ManagedRuntimeContext.AnimationComponentGetClip(EntityId)); }
+            set { ManagedRuntimeContext.AnimationComponentSetClip(EntityId, value != null ? value.uuid : UUID.Empty); }
         }
 
         /// <summary>Playback rate multiplier. Negative values play in reverse.</summary>
         public float speed
         {
-            get { return Internal_GetSpeed(m_InternalPtr); }
-            set { Internal_SetSpeed(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.AnimationComponentGetSpeed(EntityId); }
+            set { ManagedRuntimeContext.AnimationComponentSetSpeed(EntityId, value); }
         }
 
         /// <summary>Behavior used when playback crosses a clip boundary.</summary>
         public AnimationWrapMode wrapMode
         {
-            get { return Internal_GetWrapMode(m_InternalPtr); }
-            set { Internal_SetWrapMode(m_InternalPtr, value); }
+            get { return (AnimationWrapMode)ManagedRuntimeContext.AnimationComponentGetWrapMode(EntityId); }
+            set { ManagedRuntimeContext.AnimationComponentSetWrapMode(EntityId, (int)value); }
         }
 
         /// <summary>Whether a new runtime player begins in the playing state.</summary>
         public bool playOnAwake
         {
-            get { return Internal_GetPlayOnAwake(m_InternalPtr); }
-            set { Internal_SetPlayOnAwake(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.AnimationComponentGetPlayOnAwake(EntityId); }
+            set { ManagedRuntimeContext.AnimationComponentSetPlayOnAwake(EntityId, value); }
         }
 
         /// <summary>Whether evaluated root-motion deltas are applied to the entity transform.</summary>
         public bool applyRootMotion
         {
-            get { return Internal_GetApplyRootMotion(m_InternalPtr); }
-            set { Internal_SetApplyRootMotion(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.AnimationComponentGetApplyRootMotion(EntityId); }
+            set { ManagedRuntimeContext.AnimationComponentSetApplyRootMotion(EntityId, value); }
         }
 
         /// <summary>Current raw playback time in seconds.</summary>
         public float time
         {
-            get { return Internal_GetTime(m_InternalPtr); }
-            set { Internal_SetTime(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.AnimationComponentGetTime(EntityId); }
+            set { ManagedRuntimeContext.AnimationComponentSetTime(EntityId, value); }
         }
 
         /// <summary>Raw playback time divided by clip length. Looping values are not clamped.</summary>
         public float normalizedTime
         {
-            get { return Internal_GetNormalizedTime(m_InternalPtr); }
-            set { Internal_SetNormalizedTime(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.AnimationComponentGetNormalizedTime(EntityId); }
+            set { ManagedRuntimeContext.AnimationComponentSetNormalizedTime(EntityId, value); }
         }
 
         /// <summary>Current playback state.</summary>
-        public AnimationPlaybackState state => Internal_GetState(m_InternalPtr);
+        public AnimationPlaybackState state => (AnimationPlaybackState)ManagedRuntimeContext.AnimationComponentGetState(EntityId);
 
         /// <summary>Starts the assigned clip from the beginning.</summary>
-        public void Play() { Internal_Play(m_InternalPtr); }
+        public void Play() { ManagedRuntimeContext.AnimationComponentPlay(EntityId); }
 
         /// <summary>Pauses playback without changing its time.</summary>
-        public void Pause() { Internal_Pause(m_InternalPtr); }
+        public void Pause() { ManagedRuntimeContext.AnimationComponentPause(EntityId); }
 
         /// <summary>Stops playback and resets its time.</summary>
-        public void Stop() { Internal_Stop(m_InternalPtr); }
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern AnimationClip Internal_GetClip(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetClip(IntPtr thisPtr, AnimationClip clip);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern float Internal_GetSpeed(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetSpeed(IntPtr thisPtr, float speed);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern AnimationWrapMode Internal_GetWrapMode(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetWrapMode(IntPtr thisPtr, AnimationWrapMode wrapMode);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_GetPlayOnAwake(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetPlayOnAwake(IntPtr thisPtr, bool playOnAwake);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_GetApplyRootMotion(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetApplyRootMotion(IntPtr thisPtr, bool applyRootMotion);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern float Internal_GetTime(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetTime(IntPtr thisPtr, float time);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern float Internal_GetNormalizedTime(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetNormalizedTime(IntPtr thisPtr, float normalizedTime);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern AnimationPlaybackState Internal_GetState(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_Play(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_Pause(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_Stop(IntPtr thisPtr);
+        public void Stop() { ManagedRuntimeContext.AnimationComponentStop(EntityId); }
     }
 }

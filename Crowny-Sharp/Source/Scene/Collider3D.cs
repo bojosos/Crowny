@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Crowny
@@ -91,32 +90,32 @@ namespace Crowny
     {
         public bool IsTrigger
         {
-            get { return Internal_IsTrigger(m_InternalPtr); }
-            set { Internal_SetTrigger(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.Collider3DGetIsTrigger(EntityId); }
+            set { ManagedRuntimeContext.Collider3DSetIsTrigger(EntityId, value); }
         }
 
         public Vector3 Offset
         {
-            get { Internal_GetOffset(m_InternalPtr, out Vector3 value); return value; }
-            set { Internal_SetOffset(m_InternalPtr, ref value); }
+            get { return ManagedRuntimeContext.Collider3DGetOffset(EntityId); }
+            set { ManagedRuntimeContext.Collider3DSetOffset(EntityId, value); }
         }
 
         public Quaternion Rotation
         {
-            get { Internal_GetRotation(m_InternalPtr, out Quaternion value); return value; }
-            set { Internal_SetRotation(m_InternalPtr, ref value); }
+            get { return ManagedRuntimeContext.Collider3DGetRotation(EntityId); }
+            set { ManagedRuntimeContext.Collider3DSetRotation(EntityId, value); }
         }
 
         public PhysicsMaterial3D Material
         {
-            get { return Internal_GetMaterial(m_InternalPtr); }
-            set { Internal_SetMaterial(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.CreateAsset<PhysicsMaterial3D>(ManagedRuntimeContext.Collider3DGetMaterial(EntityId)); }
+            set { ManagedRuntimeContext.Collider3DSetMaterial(EntityId, value != null ? value.uuid : UUID.Empty); }
         }
 
         public PhysicsFilter3D CollisionFilter
         {
-            get { Internal_GetFilter(m_InternalPtr, out PhysicsFilter3D value); return value; }
-            set { Internal_SetFilter(m_InternalPtr, ref value); }
+            get { return ManagedRuntimeContext.Collider3DGetCollisionFilter(EntityId); }
+            set { ManagedRuntimeContext.Collider3DSetCollisionFilter(EntityId, value); }
         }
 
         public uint Layer
@@ -154,16 +153,6 @@ namespace Crowny
         [Obsolete("Use CollisionGroup instead.")]
         public int collisionGroup { get { return CollisionGroup; } set { CollisionGroup = value; } }
 
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_IsTrigger(IntPtr collider);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetTrigger(IntPtr collider, bool value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetOffset(IntPtr collider, out Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetOffset(IntPtr collider, ref Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetRotation(IntPtr collider, out Quaternion value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRotation(IntPtr collider, ref Quaternion value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsMaterial3D Internal_GetMaterial(IntPtr collider);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetMaterial(IntPtr collider, PhysicsMaterial3D value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetFilter(IntPtr collider, out PhysicsFilter3D value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetFilter(IntPtr collider, ref PhysicsFilter3D value);
     }
 
     /// <summary>A box-shaped 3D collider.</summary>
@@ -171,15 +160,13 @@ namespace Crowny
     {
         public Vector3 Size
         {
-            get { Internal_GetSize(m_InternalPtr, out Vector3 value); return value; }
-            set { Internal_SetSize(m_InternalPtr, ref value); }
+            get { return ManagedRuntimeContext.BoxCollider3DGetSize(EntityId); }
+            set { ManagedRuntimeContext.BoxCollider3DSetSize(EntityId, value); }
         }
 
         [Obsolete("Use Size instead.")]
         public Vector3 size { get { return Size; } set { Size = value; } }
 
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetSize(IntPtr collider, out Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetSize(IntPtr collider, ref Vector3 value);
     }
 
     /// <summary>A sphere-shaped 3D collider.</summary>
@@ -187,15 +174,13 @@ namespace Crowny
     {
         public float Radius
         {
-            get { return Internal_GetRadius(m_InternalPtr); }
-            set { Internal_SetRadius(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.SphereCollider3DGetRadius(EntityId); }
+            set { ManagedRuntimeContext.SphereCollider3DSetRadius(EntityId, value); }
         }
 
         [Obsolete("Use Radius instead.")]
         public float radius { get { return Radius; } set { Radius = value; } }
 
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetRadius(IntPtr collider);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRadius(IntPtr collider, float value);
     }
 
     /// <summary>A capsule-shaped 3D collider.</summary>
@@ -203,14 +188,14 @@ namespace Crowny
     {
         public float Radius
         {
-            get { return Internal_GetRadius(m_InternalPtr); }
-            set { Internal_SetRadius(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.CapsuleCollider3DGetRadius(EntityId); }
+            set { ManagedRuntimeContext.CapsuleCollider3DSetRadius(EntityId, value); }
         }
 
         public float Height
         {
-            get { return Internal_GetHeight(m_InternalPtr); }
-            set { Internal_SetHeight(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.CapsuleCollider3DGetHeight(EntityId); }
+            set { ManagedRuntimeContext.CapsuleCollider3DSetHeight(EntityId, value); }
         }
 
         [Obsolete("Use Radius instead.")]
@@ -218,9 +203,5 @@ namespace Crowny
         [Obsolete("Use Height instead.")]
         public float height { get { return Height; } set { Height = value; } }
 
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetRadius(IntPtr collider);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRadius(IntPtr collider, float value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetHeight(IntPtr collider);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetHeight(IntPtr collider, float value);
     }
 }

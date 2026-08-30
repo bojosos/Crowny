@@ -39,40 +39,6 @@ namespace Crowny
 
     private:
         static ShaderDataType DescriptorToShaderDataType(ScriptVertexAttributeFormat format, int32_t dimension);
-
-        static uint32_t Internal_GetVertexCount(ScriptMesh* thisPtr);
-        static uint32_t Internal_GetIndexCount(ScriptMesh* thisPtr);
-        static void Internal_GetVertices(ScriptMesh* thisPtr, MonoArray** outArray);
-        static void Internal_SetVertices(ScriptMesh* thisPtr, MonoArray* array);
-        static void Internal_GetNormals(ScriptMesh* thisPtr, MonoArray** outArray);
-        static void Internal_SetNormals(ScriptMesh* thisPtr, MonoArray* array);
-        static void Internal_GetUVs(ScriptMesh* thisPtr, uint32_t channel, MonoArray** outArray);
-        static void Internal_SetUVs(ScriptMesh* thisPtr, uint32_t channel, MonoArray* array);
-        static void Internal_GetColors(ScriptMesh* thisPtr, MonoArray** outArray);
-        static void Internal_SetColors(ScriptMesh* thisPtr, MonoArray* array);
-        static void Internal_GetIndices(ScriptMesh* thisPtr, MonoArray** outArray);
-        static void Internal_SetIndices(ScriptMesh* thisPtr, MonoArray* array);
-        static void Internal_RecalculateBounds(ScriptMesh* thisPtr);
-        static void Internal_RecalculateNormals(ScriptMesh* thisPtr);
-        static void Internal_RecalculateTangents(ScriptMesh* thisPtr);
-        static void Internal_UploadMeshData(ScriptMesh* thisPtr);
-        static void Internal_Clear(ScriptMesh* thisPtr);
-        static void Internal_GetBoundsMin(ScriptMesh* thisPtr, glm::vec3* outMin);
-        static void Internal_GetBoundsMax(ScriptMesh* thisPtr, glm::vec3* outMax);
-        static void Internal_SetVertexBufferParams(ScriptMesh* thisPtr, uint32_t vertexCount, MonoArray* layout);
-        static void Internal_SetVertexBufferData(ScriptMesh* thisPtr, void* data, uint32_t meshBufferStart, uint32_t count, uint32_t stride);
-        static void Internal_GetVertexBufferData(ScriptMesh* thisPtr, void* outData, uint32_t count, uint32_t stride);
-        static uint32_t Internal_GetVertexStride(ScriptMesh* thisPtr);
-        static uint32_t Internal_GetVertexAttributeCount(ScriptMesh* thisPtr);
-        static bool Internal_HasVertexAttribute(ScriptMesh* thisPtr, VertexAttribute attr);
-        static void Internal_GetVertexAttribute(ScriptMesh* thisPtr, int32_t index, ScriptVertexAttributeDescriptor* outDesc);
-        static MonoObject* Internal_CreatePlane(float width, float height, uint32_t subdivisionsX, uint32_t subdivisionsY);
-        static MonoObject* Internal_CreateBox(glm::vec3* dimensions);
-        static MonoObject* Internal_CreateCube(float size);
-        static MonoObject* Internal_CreateSphere(float radius, uint32_t segments, uint32_t rings);
-        static MonoObject* Internal_CreateCylinder(float radius, float height, uint32_t segments, bool capped);
-        static MonoObject* Internal_CreateCone(float radius, float height, uint32_t segments, bool capped);
-        static MonoObject* Internal_CreateCapsule(float radius, float height, uint32_t segments, uint32_t hemisphereRings);
     };
 
 } // namespace Crowny

@@ -10,9 +10,8 @@ namespace Crowny
 #if CROWNY_MONO
 		~ScriptObject()
 		{
-			if (m_InternalPtr == IntPtr.Zero)
-				Debug.Error("Bad bad bad");
-			Internal_ManagedInstanceDeleted(m_InternalPtr);
+			if (m_InternalPtr != IntPtr.Zero)
+				Internal_ManagedInstanceDeleted(m_InternalPtr);
 		}
 
 		[MethodImpl(MethodImplOptions.InternalCall)]

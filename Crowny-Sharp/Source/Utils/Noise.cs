@@ -1,6 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
-
 namespace Crowny
 {
     public static class Noise
@@ -19,7 +16,6 @@ namespace Crowny
         /// <param name="x">The X coordinate to sample at.</param>
         /// <param name="y">The Y coordinate to sample at.</param>
         /// <returns>A pseudo-random value in the range (0, 1).</returns>
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        public extern static float PerlinNoise(float x, float y);
+        public static float PerlinNoise(float x, float y) => ManagedRuntimeContext.NoiseGetPerlin2D(x, y);
     }
 }

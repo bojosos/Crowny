@@ -3,14 +3,14 @@
   <assembly fullname="CrownySharp">
     <type fullname="Crowny.UUID" preserve="all" />
     <type fullname="Crowny.Asset" preserve="all" />
-    <type fullname="Crowny.Font" preserve="all" />
-    <type fullname="Crowny.CharacterInfo" preserve="all" />
     <type fullname="Crowny.Entity" preserve="all" />
     <type fullname="Crowny.Component" preserve="all" />
     <type fullname="Crowny.EntityBehaviour" preserve="all" />
     <type fullname="Crowny.Collision2D" preserve="all" />
     <type fullname="Crowny.Collision3D" preserve="all" />
     <type fullname="Crowny.ContactPoint3D" preserve="all" />
+    <type fullname="Crowny.CharacterInfo" preserve="all" />
+    <type fullname="Crowny.Font" preserve="all" />
     <type fullname="Crowny.Vector2" preserve="all" />
     <type fullname="Crowny.Vector3" preserve="all" />
     <type fullname="Crowny.Vector4" preserve="all" />

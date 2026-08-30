@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Managed/ManagedComponentTypes.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 
 #include "Crowny/Scripting/Mono/MonoArray.h"
@@ -14,11 +15,12 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptCamera.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptLight.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptMeshComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTransform.h"
 
+#include "Crowny/Scripting/Bindings/Scene/ScriptAnimation.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioListener.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptAnimation.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider2D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider3D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody.h"
@@ -26,9 +28,9 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptSpriteRenderer.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptText.h"
 
+#include "Crowny/Scripting/Bindings/Assets/ScriptAnimationClip.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioMixer.h"
-#include "Crowny/Scripting/Bindings/Assets/ScriptAnimationClip.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMaterial.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
@@ -102,7 +104,6 @@ namespace Crowny
         LOAD_CW_ATTR(RunInEditor);
         LOAD_CW_ATTR(SerializeObject);
         LOAD_CW_ATTR(DontSerializeField);
-        LOAD_CW_ATTR(RequireComponent);
         LOAD_CW_ATTR(Dropdown);
         LOAD_CW_ATTR(Label);
         LOAD_CW_ATTR(Filepath);
@@ -462,26 +463,9 @@ namespace Crowny
 
     void ScriptInfoManager::RegisterComponents()
     {
-        RegisterComponent<AnimationComponent, ScriptAnimation>();
-        RegisterComponent<TransformComponent, ScriptTransform>();
-        RegisterComponent<CameraComponent, ScriptCamera>();
-        RegisterComponent<LightComponent, ScriptLight>();
-        // RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>(); // This should not be needed with the new
-        // component system
-        RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
-        RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
-        RegisterComponent<Rigidbody2DComponent, ScriptRigidbody2D>();
-        RegisterComponent<Rigidbody3DComponent, ScriptRigidbody3D>();
-
-        RegisterComponent<Collider2D, ScriptCollider2D>();
-        RegisterComponent<CircleCollider2DComponent, ScriptCircleCollider2D>();
-        RegisterComponent<BoxCollider2DComponent, ScriptBoxCollider2D>();
-        RegisterComponent<Collider3D, ScriptCollider3D>();
-        RegisterComponent<BoxCollider3DComponent, ScriptBoxCollider3D>();
-        RegisterComponent<SphereCollider3DComponent, ScriptSphereCollider3D>();
-        RegisterComponent<CapsuleCollider3DComponent, ScriptCapsuleCollider3D>();
-        RegisterComponent<SpriteRendererComponent, ScriptSpriteRenderer>();
-        RegisterComponent<TextComponent, ScriptText>();
+#define CW_REGISTER_COMPONENT(managedName, nativeType, scriptType) RegisterComponent<nativeType, scriptType>();
+        CW_MANAGED_COMPONENT_TYPES(CW_REGISTER_COMPONENT)
+#undef CW_REGISTER_COMPONENT
     }
 
     Ref<SerializableTypeInfo> ScriptInfoManager::GetTypeInfo(MonoClass* monoClass)

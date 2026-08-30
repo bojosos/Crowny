@@ -1,69 +1,65 @@
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
     public class MeshRenderer : Component
     {
-        /// <summary>
-        /// The material that is used for rendering this mesh.
-        /// </summary>
+        /// <summary>The mesh rendered by this component.</summary>
         public Mesh mesh
         {
-            get { return Internal_GetMesh(m_InternalPtr); }
-            set { Internal_SetMesh(m_InternalPtr, value); }
+            get { return ManagedRuntimeContext.CreateAsset<Mesh>(ManagedRuntimeContext.MeshRendererGetMesh(EntityId)); }
+            set { ManagedRuntimeContext.MeshRendererSetMesh(EntityId, value != null ? value.uuid : UUID.Empty); }
         }
 
-        /// <summary>
-        /// The first material that is used for rendering this mesh.
-        /// </summary>
+        /// <summary>The default material used by this component.</summary>
         public Material material
         {
-            get { return Internal_GetMaterial(m_InternalPtr, 0); }
-            set { Internal_SetMaterial(m_InternalPtr, 0, value); }
+            get { return GetMaterial(0); }
+            set { SetMaterial(0, value); }
         }
 
-        /// <summary>
-        /// The list of all materials used for the sub-meshes in the component.
-        /// </summary>
+        /// <summary>The materials used for the component's sub-meshes.</summary>
         public Material[] materials
         {
-            get { return Internal_GetMaterials(m_InternalPtr); }
-            set { Internal_SetMaterials(m_InternalPtr, value); }
+            get
+            {
+                uint count = ManagedRuntimeContext.MeshRendererGetMaterialCount(EntityId);
+                Material[] result = new Material[checked((int)count)];
+                for (uint index = 0; index < count; ++index)
+                    result[index] = ManagedRuntimeContext.CreateAsset<Material>(
+                        ManagedRuntimeContext.MeshRendererGetMaterial(EntityId, index));
+                return result;
+            }
+            set
+            {
+                if (value == null)
+                    throw new ArgumentNullException("value");
+                ManagedRuntimeContext.MeshRendererSetMaterialCount(EntityId, checked((uint)value.Length));
+                for (uint index = 0; index < (uint)value.Length; ++index)
+                {
+                    Material current = value[index];
+                    ManagedRuntimeContext.MeshRendererSetMaterial(EntityId, index,
+                        current != null ? current.uuid : UUID.Empty);
+                }
+            }
         }
 
-        /// <summary>
-        /// Sets the material for a sub-mesh at an index.
-        /// </summary>
-        /// <param name="idx">The index of the mateiral to set.</param>
-        /// <param name="material">The material to use.</param>
+        /// <summary>Sets the material for one sub-mesh.</summary>
         public void SetMaterial(int idx, Material material)
         {
-            Internal_SetMaterial(m_InternalPtr, idx, material);
+            if (idx < 0)
+                throw new ArgumentOutOfRangeException("idx");
+            ManagedRuntimeContext.MeshRendererSetMaterial(EntityId, checked((uint)idx),
+                material != null ? material.uuid : UUID.Empty);
         }
 
-        /// <summary>
-        /// Retrieves the material used for rendering the sub-mesh at index idx.
-        /// </summary>
-        /// <param name="idx">The index of the mateiral to get.</param>
-        /// <returns>The retrieved material or null if index is out of bounds.</returns>
+        /// <summary>Gets a sub-mesh material, falling back to the default material when needed.</summary>
         public Material GetMaterial(int idx)
         {
-            return Internal_GetMaterial(m_InternalPtr, idx);
+            if (idx < 0)
+                throw new ArgumentOutOfRangeException("idx");
+            return ManagedRuntimeContext.CreateAsset<Material>(
+                ManagedRuntimeContext.MeshRendererGetMaterial(EntityId, checked((uint)idx)));
         }
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Mesh Internal_GetMesh(IntPtr parent);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetMesh(IntPtr parent, Mesh mesh);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Material Internal_GetMaterial(IntPtr parent, int idx);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetMaterial(IntPtr parent, int idx, Material material);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Material[] Internal_GetMaterials(IntPtr parent);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetMaterials(IntPtr parent, Material[] material);
-
     }
 }

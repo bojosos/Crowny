@@ -44,14 +44,21 @@ NATIVE_TYPES = {
     "f32": "float",
     "i32": "int32_t",
     "u32": "uint32_t",
+    "u64": "uint64_t",
     "uuid": "cw_managed_uuid",
     "font_character_info": "cw_managed_font_character_info",
     "string": "cw_managed_string_view",
+    "optionalString": "cw_managed_string_view",
     "vec2": "cw_managed_vec2",
     "vec3": "cw_managed_vec3",
     "vec4": "cw_managed_vec4",
+    "color": "cw_managed_vec4",
     "quat": "cw_managed_quat",
     "mat4": "cw_managed_mat4",
+    "physicsFilter3D": "cw_managed_physics_filter3d",
+    "bytes": "cw_managed_blob",
+    "mutableBytes": "cw_managed_mutable_blob",
+    "pointer": "void*",
 }
 
 HOST_CS_TYPES = {
@@ -59,14 +66,21 @@ HOST_CS_TYPES = {
     "f32": "float",
     "i32": "int",
     "u32": "uint",
+    "u64": "ulong",
     "uuid": "NativeUuid",
     "font_character_info": "NativeFontCharacterInfo",
     "string": "NativeStringView",
+    "optionalString": "NativeStringView",
     "vec2": "NativeVec2",
     "vec3": "NativeVec3",
     "vec4": "NativeVec4",
+    "color": "NativeVec4",
     "quat": "NativeQuaternion",
     "mat4": "NativeMatrix4",
+    "physicsFilter3D": "NativePhysicsFilter3D",
+    "bytes": "NativeBlob",
+    "mutableBytes": "NativeMutableBlob",
+    "pointer": "void*",
 }
 
 SHARP_CS_TYPES = {
@@ -74,14 +88,21 @@ SHARP_CS_TYPES = {
     "f32": "float",
     "i32": "int",
     "u32": "uint",
+    "u64": "ulong",
     "uuid": "ManagedNativeUuid",
     "font_character_info": "ManagedNativeFontCharacterInfo",
     "string": "ManagedNativeStringView",
+    "optionalString": "ManagedNativeStringView",
     "vec2": "ManagedNativeVec2",
     "vec3": "ManagedNativeVec3",
     "vec4": "ManagedNativeVec4",
+    "color": "ManagedNativeVec4",
     "quat": "ManagedNativeQuaternion",
     "mat4": "ManagedNativeMatrix4",
+    "physicsFilter3D": "ManagedNativePhysicsFilter3D",
+    "bytes": "ManagedNativeBlob",
+    "mutableBytes": "ManagedNativeMutableBlob",
+    "pointer": "void*",
 }
 
 SHARP_API_TYPES = {
@@ -89,27 +110,51 @@ SHARP_API_TYPES = {
     "f32": "float",
     "i32": "int",
     "u32": "uint",
+    "u64": "ulong",
     "uuid": "UUID",
     "font_character_info": "CharacterInfo",
     "string": "string",
+    "optionalString": "string",
     "vec2": "Vector2",
     "vec3": "Vector3",
-    "vec4": "Color",
+    "vec4": "Vector4",
+    "color": "Color",
     "quat": "Quaternion",
     "mat4": "Matrix4",
+    "physicsFilter3D": "PhysicsFilter3D",
+    "bytes": "byte[]",
+    "mutableBytes": "byte[]",
+    "pointer": "IntPtr",
 }
 
-POINTER_INPUT_TYPES = {"vec2", "vec3", "vec4", "quat", "mat4"}
+POINTER_INPUT_TYPES = {"vec2", "vec3", "vec4", "color", "quat", "mat4", "physicsFilter3D"}
 
-SHARP_BASE_HOST_FUNCTIONS = {
-    "GetEntityName": {"parameters": [{"name": "entity", "type": "uuid"}], "result": "string"},
-    "SetEntityName": {"parameters": [{"name": "entity", "type": "uuid"}, {"name": "name", "type": "string"}]},
-    "FindEntityByName": {"parameters": [{"name": "name", "type": "string"}], "result": "uuid"},
-    "GetEntityParent": {"parameters": [{"name": "entity", "type": "uuid"}], "result": "uuid"},
-    "SetEntityParent": {"parameters": [{"name": "entity", "type": "uuid"}, {"name": "parent", "type": "uuid"}]},
-    "DestroyEntity": {"parameters": [{"name": "entity", "type": "uuid"}]},
-}
 
+def expand_host_functions(manifest: dict) -> dict:
+    functions = dict(manifest.get("hostFunctions", {}))
+    for module_name, module in manifest.get("hostProperties", {}).items():
+        receiver = module["receiver"]
+        prefix = module.get("prefix", module_name)
+        for property_name, property_spec in module["properties"].items():
+            if isinstance(property_spec, str):
+                property_type = property_spec
+                access = "readWrite"
+            else:
+                property_type = property_spec["type"]
+                access = property_spec.get("access", "readWrite")
+            if access not in {"read", "write", "readWrite"}:
+                raise ValueError(f"invalid access for {module_name}.{property_name}: {access}")
+            if access != "write":
+                name = f"{prefix}Get{property_name}"
+                if name in functions:
+                    raise ValueError(f"duplicate host function: {name}")
+                functions[name] = {"parameters": [receiver], "result": property_type}
+            if access != "read":
+                name = f"{prefix}Set{property_name}"
+                if name in functions:
+                    raise ValueError(f"duplicate host function: {name}")
+                functions[name] = {"parameters": [receiver, {"name": "value", "type": property_type}]}
+    return functions
 
 def native_host_function_typedefs(functions: dict) -> str:
     lines: list[str] = []
@@ -247,31 +292,39 @@ def sharp_native_parameter(parameter: dict) -> tuple[list[str], str]:
     parameter_type = parameter["type"]
     if parameter_type == "bool":
         return [], f"{name} ? (byte)1 : (byte)0"
-    if parameter_type in {"f32", "i32", "u32"}:
+    if parameter_type in {"f32", "i32", "u32", "u64"}:
         return [], name
+    if parameter_type == "pointer":
+        return [], f"{name}.ToPointer()"
     if parameter_type == "uuid":
         return [], f"EncodeUuid({name})"
     if parameter_type == "string":
+        return [], native_name
+    if parameter_type in {"bytes", "mutableBytes"}:
         return [], native_name
     if parameter_type == "vec2":
         return [f"            ManagedNativeVec2 {native_name} = new ManagedNativeVec2 {{ X = {name}.x, Y = {name}.y }};"], f"&{native_name}"
     if parameter_type == "vec3":
         return [f"            ManagedNativeVec3 {native_name} = new ManagedNativeVec3 {{ X = {name}.x, Y = {name}.y, Z = {name}.z }};"], f"&{native_name}"
     if parameter_type == "vec4":
+        return [f"            ManagedNativeVec4 {native_name} = new ManagedNativeVec4 {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
+    if parameter_type == "color":
         return [f"            ManagedNativeVec4 {native_name} = new ManagedNativeVec4 {{ X = {name}.r, Y = {name}.g, Z = {name}.b, W = {name}.a }};"], f"&{native_name}"
     if parameter_type == "quat":
         return [f"            ManagedNativeQuaternion {native_name} = new ManagedNativeQuaternion {{ X = {name}.x, Y = {name}.y, Z = {name}.z, W = {name}.w }};"], f"&{native_name}"
     if parameter_type == "mat4":
         return [f"            ManagedNativeMatrix4 {native_name} = EncodeMatrix({name});"], f"&{native_name}"
+    if parameter_type == "physicsFilter3D":
+        return [f"            ManagedNativePhysicsFilter3D {native_name} = new ManagedNativePhysicsFilter3D {{ Layer = {name}.Layer, Mask = {name}.Mask, Group = {name}.Group }};"], f"&{native_name}"
     raise ValueError(f"unsupported managed parameter type: {parameter_type}")
 
 
 def sharp_result_declaration(result_type: str) -> tuple[str, str]:
     native_type = SHARP_CS_TYPES[result_type]
-    declaration = f"            {native_type} result = default({native_type});"
+    declaration = f"            {native_type} result = default;"
     if result_type == "bool":
         return declaration, "result != 0"
-    if result_type in {"f32", "i32", "u32"}:
+    if result_type in {"f32", "i32", "u32", "u64"}:
         return declaration, "result"
     if result_type == "uuid":
         return declaration, "DecodeUuid(result)"
@@ -282,13 +335,21 @@ def sharp_result_declaration(result_type: str) -> tuple[str, str]:
     if result_type == "vec3":
         return declaration, "new Vector3(result.X, result.Y, result.Z)"
     if result_type == "vec4":
+        return declaration, "new Vector4(result.X, result.Y, result.Z, result.W)"
+    if result_type == "color":
         return declaration, "new Color(result.X, result.Y, result.Z, result.W)"
     if result_type == "quat":
         return declaration, "new Quaternion(result.X, result.Y, result.Z, result.W)"
     if result_type == "mat4":
         return declaration, "DecodeMatrix(result)"
+    if result_type == "physicsFilter3D":
+        return declaration, "new PhysicsFilter3D(result.Layer, result.Mask, result.Group)"
     if result_type == "string":
         return declaration, "DecodeString(result)"
+    if result_type == "optionalString":
+        return declaration, "DecodeOptionalString(result)"
+    if result_type == "bytes":
+        return declaration, "DecodeBytes(result)"
     raise ValueError(f"unsupported managed result type: {result_type}")
 
 
@@ -315,25 +376,33 @@ def sharp_cs_function_wrappers(functions: dict) -> str:
             body.append(declaration)
             call_arguments.append("&result")
 
-        string_parameters = [value for value in parameters if value["type"] == "string"]
-        for parameter in string_parameters:
+        view_parameters = [value for value in parameters if value["type"] in {"string", "bytes", "mutableBytes"}]
+        for parameter in view_parameters:
             name = parameter["name"]
             title = f"{name[0].upper()}{name[1:]}"
-            body.append(f"            byte[] encoded{title} = Encoding.UTF8.GetBytes({name} ?? string.Empty);")
+            if parameter["type"] == "string":
+                body.append(f"            byte[] encoded{title} = Encoding.UTF8.GetBytes({name} ?? string.Empty);")
+            else:
+                body.append(f"            byte[] encoded{title} = {name} ?? Array.Empty<byte>();")
         indent = "            "
-        for parameter in string_parameters:
+        for parameter in view_parameters:
             name = parameter["name"]
             title = f"{name[0].upper()}{name[1:]}"
             body.append(f"{indent}fixed (byte* {name}Bytes = encoded{title})")
             body.append(f"{indent}{{")
             indent += "    "
-            body.append(
-                f"{indent}ManagedNativeStringView native{title} = new ManagedNativeStringView({name}Bytes, (uint)encoded{title}.Length);"
-            )
+            if parameter["type"] == "string":
+                body.append(
+                    f"{indent}ManagedNativeStringView native{title} = new ManagedNativeStringView({name}Bytes, (uint)encoded{title}.Length);"
+                )
+            elif parameter["type"] == "bytes":
+                body.append(f"{indent}ManagedNativeBlob native{title} = new ManagedNativeBlob({name}Bytes, (ulong)encoded{title}.Length);")
+            else:
+                body.append(f"{indent}ManagedNativeMutableBlob native{title} = new ManagedNativeMutableBlob({name}Bytes, (ulong)encoded{title}.Length);")
 
         arguments = ", ".join(call_arguments)
         body.append(f"{indent}EnsureStatus(ManagedHostTransport.{function_name}({arguments}), \"{function_name}\");")
-        for _ in reversed(string_parameters):
+        for _ in reversed(view_parameters):
             indent = indent[:-4]
             body.append(f"{indent}}}")
         if result_expression:
@@ -345,6 +414,7 @@ def sharp_cs_function_wrappers(functions: dict) -> str:
 
 def generate_native_abi(manifest: dict) -> str:
     entry_type, entry_method = manifest["managedEntryPoint"].split("::", 1)
+    functions = expand_host_functions(manifest)
     return f"""#pragma once
 // <auto-generated />
 
@@ -380,13 +450,6 @@ enum cw_managed_event_kind
 {native_enum_members(manifest['eventKinds'], 'CW_MANAGED_EVENT_')}
 }};
 
-/* Compatibility IDs for the CoreCLR adapter while it forwards typed calls
- * through its existing dispatcher. New managed code uses the typed host API. */
-enum cw_managed_host_binding
-{{
-{native_enum_members(manifest['hostBindings'], 'CW_MANAGED_BINDING_')}
-}};
-
 typedef struct cw_managed_string_view
 {{
     const uint8_t* data;
@@ -398,6 +461,12 @@ typedef struct cw_managed_blob
     const uint8_t* data;
     uint64_t length;
 }} cw_managed_blob;
+
+typedef struct cw_managed_mutable_blob
+{{
+    uint8_t* data;
+    uint64_t length;
+}} cw_managed_mutable_blob;
 
 typedef struct cw_managed_uuid
 {{
@@ -459,6 +528,13 @@ typedef struct cw_managed_mat4
     float values[16];
 }} cw_managed_mat4;
 
+typedef struct cw_managed_physics_filter3d
+{{
+    uint32_t layer;
+    uint32_t mask;
+    int32_t group;
+}} cw_managed_physics_filter3d;
+
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_write_blob_fn)(void* context, const uint8_t* data, uint64_t length);
 
 typedef struct cw_managed_blob_writer
@@ -488,18 +564,7 @@ typedef struct cw_managed_event
 
 typedef void(CW_MANAGED_CALL* cw_managed_log_fn)(void* context, uint32_t severity, cw_managed_string_view code,
                                                  cw_managed_string_view message, cw_managed_string_view stack);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_name_fn)(void* context, cw_managed_uuid entity,
-                                                                         cw_managed_string_view* name);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_name_fn)(void* context, cw_managed_uuid entity,
-                                                                         cw_managed_string_view name);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_find_entity_by_name_fn)(void* context, cw_managed_string_view name,
-                                                                             cw_managed_uuid* entity);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_parent_fn)(void* context, cw_managed_uuid entity,
-                                                                           cw_managed_uuid* parent);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_parent_fn)(void* context, cw_managed_uuid entity,
-                                                                           cw_managed_uuid parent);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_entity_fn)(void* context, cw_managed_uuid entity);
-{native_host_function_typedefs(manifest['hostFunctions'])}
+{native_host_function_typedefs(functions)}
 
 typedef struct cw_managed_host_api
 {{
@@ -507,17 +572,11 @@ typedef struct cw_managed_host_api
     uint32_t abi_version;
     void* context;
     cw_managed_log_fn log;
-    cw_managed_get_entity_name_fn get_entity_name;
-    cw_managed_set_entity_name_fn set_entity_name;
-    cw_managed_find_entity_by_name_fn find_entity_by_name;
-    cw_managed_get_entity_parent_fn get_entity_parent;
-    cw_managed_set_entity_parent_fn set_entity_parent;
-    cw_managed_destroy_entity_fn destroy_entity;
-{native_host_function_fields(manifest['hostFunctions'])}
+{native_host_function_fields(functions)}
 }} cw_managed_host_api;
 
 #define CW_MANAGED_HOST_FUNCTION_LIST(X) {LINE_CONTINUATION}
-{native_host_function_list(manifest['hostFunctions'])}
+{native_host_function_list(functions)}
 
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_initialize_fn)(const cw_managed_host_api* host);
 typedef void(CW_MANAGED_CALL* cw_managed_shutdown_fn)(void);
@@ -532,6 +591,9 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_create_script_fn)(cw_manag
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_script_fn)(cw_managed_instance instance);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_dispatch_fn)(cw_managed_instance instance,
                                                                   const cw_managed_event* event_data);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_notify_scene_event_fn)(uint32_t event_type,
+                                                                            cw_managed_uuid scene,
+                                                                            uint32_t execution_state);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capture_state_fn)(cw_managed_instance instance,
                                                                        cw_managed_blob_writer* output);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_apply_state_fn)(cw_managed_instance instance, cw_managed_blob state);
@@ -549,6 +611,7 @@ typedef struct cw_managed_program_api
     cw_managed_create_script_fn create_script;
     cw_managed_destroy_script_fn destroy_script;
     cw_managed_dispatch_fn dispatch;
+    cw_managed_notify_scene_event_fn notify_scene_event;
     cw_managed_capture_state_fn capture_state;
     cw_managed_apply_state_fn apply_state;
     cw_managed_collect_diagnostics_fn collect_diagnostics;
@@ -566,12 +629,14 @@ static_assert(sizeof(cw_managed_vec3) == 12, "Managed Vector3 ABI layout changed
 static_assert(sizeof(cw_managed_vec4) == 16, "Managed Vector4 ABI layout changed.");
 static_assert(sizeof(cw_managed_quat) == 16, "Managed quaternion ABI layout changed.");
 static_assert(sizeof(cw_managed_mat4) == 64, "Managed Matrix4 ABI layout changed.");
+static_assert(sizeof(cw_managed_physics_filter3d) == 12, "Managed PhysicsFilter3D ABI layout changed.");
 static_assert(sizeof(cw_managed_contact_point) == 32, "Managed contact ABI layout changed.");
 #endif
 """
 
 
 def generate_abi(manifest: dict) -> str:
+    functions = expand_host_functions(manifest)
     return f"""// <auto-generated />
 using System;
 using System.Runtime.CompilerServices;
@@ -680,6 +745,14 @@ namespace Crowny.ManagedHost.Interop
     }}
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct NativePhysicsFilter3D
+    {{
+        public uint Layer;
+        public uint Mask;
+        public int Group;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct NativeBlobWriter
     {{
         public uint Size;
@@ -718,15 +791,16 @@ namespace Crowny.ManagedHost.Interop
         public uint AbiVersion;
         public void* Context;
         public delegate* unmanaged[Cdecl]<void*, uint, NativeStringView, NativeStringView, NativeStringView, void> Log;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView*, NativeStatus> GetEntityName;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStatus> SetEntityName;
-        public delegate* unmanaged[Cdecl]<void*, NativeStringView, NativeUuid*, NativeStatus> FindEntityByName;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> GetEntityParent;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SetEntityParent;
-        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> DestroyEntity;
-{host_cs_function_fields(manifest['hostFunctions'])}
+{host_cs_function_fields(functions)}
 
-{host_cs_function_validation(manifest['hostFunctions'])}
+{host_cs_function_validation(functions)}
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct NativeMutableBlob
+    {{
+        public byte* Data;
+        public ulong Length;
     }}
 
     [StructLayout(LayoutKind.Sequential)]
@@ -742,6 +816,7 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<NativeStringView, NativeStringView, NativeStringView, NativeUuid, NativeBlob, ulong*, NativeStatus> CreateScript;
         public delegate* unmanaged[Cdecl]<ulong, NativeStatus> DestroyScript;
         public delegate* unmanaged[Cdecl]<ulong, NativeEvent*, NativeStatus> Dispatch;
+        public delegate* unmanaged[Cdecl]<uint, NativeUuid, uint, NativeStatus> NotifySceneEvent;
         public delegate* unmanaged[Cdecl]<ulong, NativeBlobWriter*, NativeStatus> CaptureState;
         public delegate* unmanaged[Cdecl]<ulong, NativeBlob, NativeStatus> ApplyState;
         public delegate* unmanaged[Cdecl]<NativeBlobWriter*, NativeStatus> CollectDiagnostics;
@@ -775,7 +850,7 @@ namespace Crowny.ManagedHost
 
 
 def generate_typed_host_api(manifest: dict) -> str:
-    functions = {**SHARP_BASE_HOST_FUNCTIONS, **manifest["hostFunctions"]}
+    functions = expand_host_functions(manifest)
     return f"""// <auto-generated />
 using System;
 using System.Runtime.InteropServices;
@@ -790,6 +865,24 @@ namespace Crowny
         internal uint Length;
 
         internal ManagedNativeStringView(byte* data, uint length) {{ Data = data; Length = length; }}
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal unsafe struct ManagedNativeBlob
+    {{
+        internal byte* Data;
+        internal ulong Length;
+
+        internal ManagedNativeBlob(byte* data, ulong length) {{ Data = data; Length = length; }}
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal unsafe struct ManagedNativeMutableBlob
+    {{
+        internal byte* Data;
+        internal ulong Length;
+
+        internal ManagedNativeMutableBlob(byte* data, ulong length) {{ Data = data; Length = length; }}
     }}
 
     [StructLayout(LayoutKind.Sequential)]
@@ -862,6 +955,14 @@ namespace Crowny
     internal unsafe struct ManagedNativeMatrix4
     {{
         internal fixed float Values[16];
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativePhysicsFilter3D
+    {{
+        internal uint Layer;
+        internal uint Mask;
+        internal int Group;
     }}
 
     [StructLayout(LayoutKind.Sequential)]

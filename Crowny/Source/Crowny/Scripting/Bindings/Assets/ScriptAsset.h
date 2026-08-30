@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Assets/AssetHandle.h"
+#include "Crowny/Scripting/Backends/Mono/MonoObjectIdentity.h"
 #include "Crowny/Scripting/ScriptObject.h"
 
 namespace Crowny
@@ -50,6 +51,8 @@ namespace Crowny
         TScriptAsset(MonoObject* instance, const AssetHandle<AssetType>& asset) : ScriptObject<ScriptClass, BaseType>(instance), m_Asset(asset)
         {
             this->SetManagedInstance(instance);
+            if (!MonoObjectIdentity::SetAsset(instance, asset.GetUUID()))
+                CW_ENGINE_ERROR("Could not bind the managed asset identity.");
         }
 
         virtual ~TScriptAsset() = default;
@@ -58,6 +61,8 @@ namespace Crowny
         {
             MonoObject* managedInstance = ScriptClass::MetaData.ScriptClass->CreateInstance(construct);
             this->SetManagedInstance(managedInstance);
+            if (!MonoObjectIdentity::SetAsset(managedInstance, m_Asset.GetUUID()))
+                CW_ENGINE_ERROR("Could not restore the managed asset identity.");
             return managedInstance;
         }
 
@@ -85,8 +90,6 @@ namespace Crowny
         ScriptAsset(MonoObject* instance);
 
     private:
-        static MonoString* Internal_GetName(const ScriptAssetBase* nativeInstance);
-        static void Internal_GetUUID(const ScriptAssetBase* nativeInstance, UUID* uuid);
     };
 
 } // namespace Crowny

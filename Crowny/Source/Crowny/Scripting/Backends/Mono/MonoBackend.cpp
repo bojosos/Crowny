@@ -1,20 +1,22 @@
 #include "cwpch.h"
 
-#include "Crowny/Scripting/Backends/Mono/MonoBackend.h"
-
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Scene/SceneManager.h"
-#include "Crowny/Scripting/Bindings/ScriptBindings.h"
+#include "Crowny/Scripting/Backends/Mono/MonoBackend.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptSceneManager.h"
+#include "Crowny/Scripting/Bindings/ScriptBindings.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedHostBindings.h"
+#include "Crowny/Scripting/Managed/Interop/ManagedJson.h"
 #include "Crowny/Scripting/Managed/LegacyScriptState.h"
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoClass.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/Mono/MonoMethod.h"
+#include "Crowny/Scripting/Mono/MonoUtils.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
@@ -38,56 +40,39 @@ namespace Crowny
             return artifact == program.Artifacts.end() ? nullptr : &*artifact;
         }
 
-        uint64_t StableHash(StringView value)
-        {
-            constexpr uint64_t OFFSET = 14695981039346656037ull;
-            constexpr uint64_t PRIME = 1099511628211ull;
-            uint64_t hash = OFFSET;
-            for (const uint8_t byte : value)
-                hash = (hash ^ byte) * PRIME;
-            return hash == 0 ? 1 : hash;
-        }
-
-        ScriptTypeIdentity GetTypeIdentity(const Ref<SerializableTypeInfo>& typeInfo)
-        {
-            if (typeInfo == nullptr)
-                return {};
-            if (typeInfo->GetType() == SerializableType::Enum)
-            {
-                const auto info = StaticRefCast<SerializableTypeInfoEnum>(typeInfo);
-                return { info->m_AssemblyName, info->m_TypeNamespace, info->m_TypeName };
-            }
-            if (typeInfo->GetType() == SerializableType::Object)
-            {
-                const auto info = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
-                return { info->m_AssemblyName, info->m_TypeNamespace, info->m_TypeName };
-            }
-            return {};
-        }
-
         ScriptValueKind GetPrimitiveKind(ScriptPrimitiveType type)
         {
             switch (type)
             {
-            case ScriptPrimitiveType::Bool: return ScriptValueKind::Boolean;
+            case ScriptPrimitiveType::Bool:
+                return ScriptValueKind::Boolean;
             case ScriptPrimitiveType::Char:
-            case ScriptPrimitiveType::String: return ScriptValueKind::String;
+            case ScriptPrimitiveType::String:
+                return ScriptValueKind::String;
             case ScriptPrimitiveType::I8:
             case ScriptPrimitiveType::I16:
             case ScriptPrimitiveType::I32:
-            case ScriptPrimitiveType::I64: return ScriptValueKind::SignedInteger;
+            case ScriptPrimitiveType::I64:
+                return ScriptValueKind::SignedInteger;
             case ScriptPrimitiveType::U8:
             case ScriptPrimitiveType::U16:
             case ScriptPrimitiveType::U32:
-            case ScriptPrimitiveType::U64: return ScriptValueKind::UnsignedInteger;
+            case ScriptPrimitiveType::U64:
+                return ScriptValueKind::UnsignedInteger;
             case ScriptPrimitiveType::Float:
-            case ScriptPrimitiveType::Double: return ScriptValueKind::Float;
-            case ScriptPrimitiveType::Vector2: return ScriptValueKind::Vector2;
-            case ScriptPrimitiveType::Vector3: return ScriptValueKind::Vector3;
+            case ScriptPrimitiveType::Double:
+                return ScriptValueKind::Float;
+            case ScriptPrimitiveType::Vector2:
+                return ScriptValueKind::Vector2;
+            case ScriptPrimitiveType::Vector3:
+                return ScriptValueKind::Vector3;
             case ScriptPrimitiveType::Vector4:
-            case ScriptPrimitiveType::Color: return ScriptValueKind::Vector4;
-            case ScriptPrimitiveType::Matrix4: return ScriptValueKind::Matrix4;
-            case ScriptPrimitiveType::Count: return ScriptValueKind::Null;
+            case ScriptPrimitiveType::Color:
+                return ScriptValueKind::Vector4;
+            case ScriptPrimitiveType::Matrix4:
+                return ScriptValueKind::Matrix4;
+            case ScriptPrimitiveType::Count:
+                return ScriptValueKind::Null;
             }
             return ScriptValueKind::Null;
         }
@@ -100,144 +85,22 @@ namespace Crowny
             {
             case SerializableType::Primitive:
                 return GetPrimitiveKind(StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo)->m_Type);
-            case SerializableType::Enum: return ScriptValueKind::Enum;
-            case SerializableType::Entity: return ScriptValueKind::Entity;
-            case SerializableType::Asset: return ScriptValueKind::Asset;
-            case SerializableType::Object: return ScriptValueKind::Object;
-            case SerializableType::Array: return ScriptValueKind::Array;
-            case SerializableType::List: return ScriptValueKind::List;
-            case SerializableType::Dictionary: return ScriptValueKind::Dictionary;
+            case SerializableType::Enum:
+                return ScriptValueKind::Enum;
+            case SerializableType::Entity:
+                return ScriptValueKind::Entity;
+            case SerializableType::Asset:
+                return ScriptValueKind::Asset;
+            case SerializableType::Object:
+                return ScriptValueKind::Object;
+            case SerializableType::Array:
+                return ScriptValueKind::Array;
+            case SerializableType::List:
+                return ScriptValueKind::List;
+            case SerializableType::Dictionary:
+                return ScriptValueKind::Dictionary;
             }
             return ScriptValueKind::Null;
-        }
-
-        void AppendFields(const Ref<SerializableObjectInfo>& objectInfo, Vector<ScriptFieldSchema>& fields)
-        {
-            if (objectInfo == nullptr)
-                return;
-            AppendFields(objectInfo->m_BaseClass, fields);
-            Vector<Ref<SerializableMemberInfo>> members;
-            members.reserve(objectInfo->m_Fields.size());
-            for (const auto& [id, member] : objectInfo->m_Fields)
-                members.push_back(member);
-            std::sort(members.begin(), members.end(), [](const auto& left, const auto& right) {
-                return std::tie(left->m_ParentTypeId, left->m_FieldId, left->m_Name) <
-                       std::tie(right->m_ParentTypeId, right->m_FieldId, right->m_Name);
-            });
-            for (const Ref<SerializableMemberInfo>& member : members)
-            {
-                if (!member->IsSerializable())
-                    continue;
-                const ScriptValueKind valueKind = GetValueKind(member->m_TypeInfo);
-                if (valueKind == ScriptValueKind::Null || valueKind == ScriptValueKind::Dictionary)
-                    continue;
-                ScriptFieldSchema field;
-                field.StableId = member->m_FieldId != 0 ? member->m_FieldId : StableHash(member->m_Name);
-                field.Name = member->m_Name;
-                field.ValueKind = valueKind;
-                field.Flags = MonoBackendDetail::GetSchemaFieldFlags(member);
-                field.DeclaredType = GetTypeIdentity(member->m_TypeInfo);
-                if (member->m_TypeInfo->GetType() == SerializableType::Array)
-                    field.ElementKind = GetValueKind(StaticRefCast<SerializableTypeInfoArray>(member->m_TypeInfo)->m_ElementType);
-                else if (member->m_TypeInfo->GetType() == SerializableType::List)
-                    field.ElementKind = GetValueKind(StaticRefCast<SerializableTypeInfoList>(member->m_TypeInfo)->m_ElementType);
-                fields.push_back(std::move(field));
-            }
-        }
-
-        bool HasMethod(MonoClass* type, StringView name, uint32_t parameterCount)
-        {
-            for (MonoClass* current = type; current != nullptr; current = current->GetBaseClass())
-            {
-                if (current->GetMethod(name, parameterCount) != nullptr)
-                    return true;
-                if (current == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour)
-                    break;
-            }
-            return false;
-        }
-
-        Vector<ScriptEventKind> GetEvents(MonoClass* type)
-        {
-            struct EventMethod
-            {
-                ScriptEventKind Kind;
-                const char* Name;
-                uint32_t Parameters;
-            };
-            static constexpr EventMethod METHODS[] = {
-                { ScriptEventKind::Start, "Start", 0 },
-                { ScriptEventKind::Update, "Update", 0 },
-                { ScriptEventKind::Destroy, "Destroy", 0 },
-                { ScriptEventKind::CollisionEnter2D, "OnCollisionEnter2D", 1 },
-                { ScriptEventKind::CollisionStay2D, "OnCollisionStay2D", 1 },
-                { ScriptEventKind::CollisionExit2D, "OnCollisionExit2D", 1 },
-                { ScriptEventKind::TriggerEnter2D, "OnTriggerEnter2D", 1 },
-                { ScriptEventKind::TriggerStay2D, "OnTriggerStay2D", 1 },
-                { ScriptEventKind::TriggerExit2D, "OnTriggerExit2D", 1 },
-                { ScriptEventKind::CollisionEnter3D, "OnCollisionEnter3D", 1 },
-                { ScriptEventKind::CollisionStay3D, "OnCollisionStay3D", 1 },
-                { ScriptEventKind::CollisionExit3D, "OnCollisionExit3D", 1 },
-                { ScriptEventKind::TriggerEnter3D, "OnTriggerEnter3D", 1 },
-                { ScriptEventKind::TriggerStay3D, "OnTriggerStay3D", 1 },
-                { ScriptEventKind::TriggerExit3D, "OnTriggerExit3D", 1 },
-            };
-            Vector<ScriptEventKind> events;
-            for (const EventMethod& method : METHODS)
-            {
-                if (HasMethod(type, method.Name, method.Parameters))
-                    events.push_back(method.Kind);
-            }
-            return events;
-        }
-
-        ScriptCatalog BuildCatalog()
-        {
-            ScriptCatalog catalog;
-            catalog.ManifestVersion = 1;
-            for (const auto& [name, type] : ScriptInfoManager::Get().GetEntityBehaviours())
-            {
-                if (type == nullptr || type == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour)
-                    continue;
-                MonoAssembly* assembly = MonoManager::Get().FindAssembly(type->GetInternalPtr());
-                if (assembly == nullptr)
-                    continue;
-                Ref<SerializableObjectInfo> objectInfo;
-                if (!ScriptInfoManager::Get().GetSerializableObjectInfo(assembly->GetName(), type->GetNamespace(), type->GetName(), objectInfo))
-                    continue;
-                ScriptTypeSchema schema;
-                schema.Identity = { assembly->GetName(), objectInfo->m_TypeInfo->m_TypeNamespace, objectInfo->m_TypeInfo->m_TypeName };
-                schema.StableId = objectInfo->m_TypeInfo->m_TypeId != 0 ? objectInfo->m_TypeInfo->m_TypeId
-                                                                        : StableHash(schema.Identity.Assembly + ":" + schema.Identity.GetFullName());
-                if (objectInfo->m_BaseClass != nullptr && objectInfo->m_BaseClass->m_TypeInfo != nullptr)
-                {
-                    const auto& base = objectInfo->m_BaseClass->m_TypeInfo;
-                    schema.BaseType = { base->m_AssemblyName, base->m_TypeNamespace, base->m_TypeName };
-                }
-                AppendFields(objectInfo, schema.Fields);
-                schema.Events = GetEvents(type);
-                MonoClass* runInEditor = ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute;
-                if (runInEditor != nullptr && type->HasAttribute(runInEditor))
-                    schema.Flags = schema.Flags | ScriptTypeFlags::RunInEditor;
-                catalog.Types.push_back(std::move(schema));
-            }
-            std::sort(catalog.Types.begin(), catalog.Types.end(), [](const ScriptTypeSchema& left, const ScriptTypeSchema& right) {
-                return std::tie(left.Identity.Assembly, left.Identity.Namespace, left.Identity.TypeName) <
-                       std::tie(right.Identity.Assembly, right.Identity.Namespace, right.Identity.TypeName);
-            });
-            uint64_t hash = 14695981039346656037ull;
-            for (const ScriptTypeSchema& type : catalog.Types)
-            {
-                hash ^= StableHash(type.Identity.Assembly + ":" + type.Identity.GetFullName());
-                hash *= 1099511628211ull;
-                for (const ScriptFieldSchema& field : type.Fields)
-                {
-                    hash ^= field.StableId;
-                    hash *= 1099511628211ull;
-                }
-            }
-            catalog.ManifestHash = hash;
-            return catalog;
         }
 
         ScriptValue ReadLegacyValue(const Ref<SerializableFieldData>& data, const Ref<SerializableTypeInfo>& typeInfo);
@@ -271,19 +134,30 @@ namespace Crowny
         {
             switch (type)
             {
-            case ScriptPrimitiveType::Bool: return ScriptValue::Boolean(StaticRefCast<SerializableFieldBool>(data)->Value);
+            case ScriptPrimitiveType::Bool:
+                return ScriptValue::Boolean(StaticRefCast<SerializableFieldBool>(data)->Value);
             case ScriptPrimitiveType::Char:
                 return ScriptValue::Text(String(1, StaticRefCast<SerializableFieldChar>(data)->Value));
-            case ScriptPrimitiveType::I8: return ScriptValue::Signed(StaticRefCast<SerializableFieldI8>(data)->Value);
-            case ScriptPrimitiveType::U8: return ScriptValue::Unsigned(StaticRefCast<SerializableFieldU8>(data)->Value);
-            case ScriptPrimitiveType::I16: return ScriptValue::Signed(StaticRefCast<SerializableFieldI16>(data)->Value);
-            case ScriptPrimitiveType::U16: return ScriptValue::Unsigned(StaticRefCast<SerializableFieldU16>(data)->Value);
-            case ScriptPrimitiveType::I32: return ScriptValue::Signed(StaticRefCast<SerializableFieldI32>(data)->Value);
-            case ScriptPrimitiveType::U32: return ScriptValue::Unsigned(StaticRefCast<SerializableFieldU32>(data)->Value);
-            case ScriptPrimitiveType::I64: return ScriptValue::Signed(StaticRefCast<SerializableFieldI64>(data)->Value);
-            case ScriptPrimitiveType::U64: return ScriptValue::Unsigned(StaticRefCast<SerializableFieldU64>(data)->Value);
-            case ScriptPrimitiveType::Float: return ScriptValue::Float(StaticRefCast<SerializableFieldFloat>(data)->Value);
-            case ScriptPrimitiveType::Double: return ScriptValue::Float(StaticRefCast<SerializableFieldDouble>(data)->Value);
+            case ScriptPrimitiveType::I8:
+                return ScriptValue::Signed(StaticRefCast<SerializableFieldI8>(data)->Value);
+            case ScriptPrimitiveType::U8:
+                return ScriptValue::Unsigned(StaticRefCast<SerializableFieldU8>(data)->Value);
+            case ScriptPrimitiveType::I16:
+                return ScriptValue::Signed(StaticRefCast<SerializableFieldI16>(data)->Value);
+            case ScriptPrimitiveType::U16:
+                return ScriptValue::Unsigned(StaticRefCast<SerializableFieldU16>(data)->Value);
+            case ScriptPrimitiveType::I32:
+                return ScriptValue::Signed(StaticRefCast<SerializableFieldI32>(data)->Value);
+            case ScriptPrimitiveType::U32:
+                return ScriptValue::Unsigned(StaticRefCast<SerializableFieldU32>(data)->Value);
+            case ScriptPrimitiveType::I64:
+                return ScriptValue::Signed(StaticRefCast<SerializableFieldI64>(data)->Value);
+            case ScriptPrimitiveType::U64:
+                return ScriptValue::Unsigned(StaticRefCast<SerializableFieldU64>(data)->Value);
+            case ScriptPrimitiveType::Float:
+                return ScriptValue::Float(StaticRefCast<SerializableFieldFloat>(data)->Value);
+            case ScriptPrimitiveType::Double:
+                return ScriptValue::Float(StaticRefCast<SerializableFieldDouble>(data)->Value);
             case ScriptPrimitiveType::String: {
                 const auto field = StaticRefCast<SerializableFieldString>(data);
                 return field->Null ? ScriptValue::Null() : ScriptValue::Text(field->Value);
@@ -309,7 +183,7 @@ namespace Crowny
             }
             case ScriptPrimitiveType::Color: {
                 ScriptValue result;
-                result.Kind = ScriptValueKind::Vector4;
+                result.Kind = ScriptValueKind::Color;
                 result.VectorValue = StaticRefCast<SerializableFieldColor>(data)->Value;
                 return result;
             }
@@ -319,7 +193,8 @@ namespace Crowny
                 result.MatrixValue = StaticRefCast<SerializableFieldMatrix4>(data)->Value;
                 return result;
             }
-            case ScriptPrimitiveType::Count: return ScriptValue::Null();
+            case ScriptPrimitiveType::Count:
+                return ScriptValue::Null();
             }
             return ScriptValue::Null();
         }
@@ -370,9 +245,8 @@ namespace Crowny
             case SerializableType::Array:
             case SerializableType::List: {
                 const bool array = typeInfo->GetType() == SerializableType::Array;
-                const Ref<SerializableTypeInfo> elementType =
-                  array ? StaticRefCast<SerializableTypeInfoArray>(typeInfo)->m_ElementType
-                        : StaticRefCast<SerializableTypeInfoList>(typeInfo)->m_ElementType;
+                const Ref<SerializableTypeInfo> elementType = array ? StaticRefCast<SerializableTypeInfoArray>(typeInfo)->m_ElementType
+                                                                    : StaticRefCast<SerializableTypeInfoList>(typeInfo)->m_ElementType;
                 Vector<Ref<SerializableFieldData>> values;
                 bool isNull = true;
                 if (array)
@@ -396,148 +270,10 @@ namespace Crowny
                     result.Elements.push_back(ReadLegacyValue(value, elementType));
                 return result;
             }
-            case SerializableType::Dictionary: return ScriptValue::Null();
+            case SerializableType::Dictionary:
+                return ScriptValue::Null();
             }
             return ScriptValue::Null();
-        }
-
-        template <typename T, typename Value> Ref<SerializableFieldData> MakeField(Value value)
-        {
-            Ref<T> field = CreateRef<T>();
-            field->Value = static_cast<decltype(field->Value)>(value);
-            return field;
-        }
-
-        Ref<SerializableFieldData> WriteLegacyValue(const ScriptValue& value, const Ref<SerializableTypeInfo>& typeInfo);
-
-        Ref<SerializableObject> WriteLegacyObject(const ScriptValue& value, const Ref<SerializableObjectInfo>& objectInfo)
-        {
-            if (value.Kind == ScriptValueKind::Null)
-                return nullptr;
-            if (value.Kind != ScriptValueKind::Object || objectInfo == nullptr)
-                return nullptr;
-            Ref<SerializableObject> object = CreateRef<SerializableObject>(objectInfo);
-            for (Ref<SerializableObjectInfo> type = objectInfo; type != nullptr; type = type->m_BaseClass)
-            {
-                for (const auto& [id, member] : type->m_Fields)
-                {
-                    if (!member->IsSerializable())
-                        continue;
-                    const auto source = value.Members.find(member->m_Name);
-                    if (source == value.Members.end())
-                        continue;
-                    Ref<SerializableFieldData> field = WriteLegacyValue(source->second, member->m_TypeInfo);
-                    if (field != nullptr)
-                        object->SetFieldData(member, field);
-                }
-            }
-            return object;
-        }
-
-        Ref<SerializableFieldData> WriteLegacyPrimitive(const ScriptValue& value, ScriptPrimitiveType type)
-        {
-            switch (type)
-            {
-            case ScriptPrimitiveType::Bool: return MakeField<SerializableFieldBool>(value.BooleanValue);
-            case ScriptPrimitiveType::Char:
-                return MakeField<SerializableFieldChar>(value.StringValue.empty() ? '\0' : value.StringValue.front());
-            case ScriptPrimitiveType::I8: return MakeField<SerializableFieldI8>(value.SignedValue);
-            case ScriptPrimitiveType::U8: return MakeField<SerializableFieldU8>(value.UnsignedValue);
-            case ScriptPrimitiveType::I16: return MakeField<SerializableFieldI16>(value.SignedValue);
-            case ScriptPrimitiveType::U16: return MakeField<SerializableFieldU16>(value.UnsignedValue);
-            case ScriptPrimitiveType::I32: return MakeField<SerializableFieldI32>(value.SignedValue);
-            case ScriptPrimitiveType::U32: return MakeField<SerializableFieldU32>(value.UnsignedValue);
-            case ScriptPrimitiveType::I64: return MakeField<SerializableFieldI64>(value.SignedValue);
-            case ScriptPrimitiveType::U64: return MakeField<SerializableFieldU64>(value.UnsignedValue);
-            case ScriptPrimitiveType::Float: return MakeField<SerializableFieldFloat>(value.FloatingValue);
-            case ScriptPrimitiveType::Double: return MakeField<SerializableFieldDouble>(value.FloatingValue);
-            case ScriptPrimitiveType::String: {
-                Ref<SerializableFieldString> field = CreateRef<SerializableFieldString>();
-                field->Null = value.Kind == ScriptValueKind::Null;
-                field->Value = value.StringValue;
-                return field;
-            }
-            case ScriptPrimitiveType::Vector2: {
-                Ref<SerializableFieldVector2> field = CreateRef<SerializableFieldVector2>();
-                field->Value = glm::vec2(value.VectorValue);
-                return field;
-            }
-            case ScriptPrimitiveType::Vector3: {
-                Ref<SerializableFieldVector3> field = CreateRef<SerializableFieldVector3>();
-                field->Value = glm::vec3(value.VectorValue);
-                return field;
-            }
-            case ScriptPrimitiveType::Vector4: return MakeField<SerializableFieldVector4>(value.VectorValue);
-            case ScriptPrimitiveType::Color: return MakeField<SerializableFieldColor>(value.VectorValue);
-            case ScriptPrimitiveType::Matrix4: return MakeField<SerializableFieldMatrix4>(value.MatrixValue);
-            case ScriptPrimitiveType::Count: return nullptr;
-            }
-            return nullptr;
-        }
-
-        Ref<SerializableFieldData> WriteLegacyValue(const ScriptValue& value, const Ref<SerializableTypeInfo>& typeInfo)
-        {
-            if (typeInfo == nullptr)
-                return nullptr;
-            switch (typeInfo->GetType())
-            {
-            case SerializableType::Primitive:
-                return WriteLegacyPrimitive(value, StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo)->m_Type);
-            case SerializableType::Enum: {
-                const auto info = StaticRefCast<SerializableTypeInfoEnum>(typeInfo);
-                ScriptValue underlying = value;
-                if (GetPrimitiveKind(info->m_UnderlyingType) == ScriptValueKind::UnsignedInteger)
-                    underlying.UnsignedValue = static_cast<uint64_t>(value.SignedValue);
-                return WriteLegacyPrimitive(underlying, info->m_UnderlyingType);
-            }
-            case SerializableType::Entity: {
-                Ref<SerializableFieldEntity> field = CreateRef<SerializableFieldEntity>();
-                Scene* scene = SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene().get() : nullptr;
-                if (scene != nullptr && value.ReferenceValue != UUID::EMPTY)
-                    field->Value = scene->TryGetEntityFromUuid(value.ReferenceValue);
-                return field;
-            }
-            case SerializableType::Asset: {
-                Ref<SerializableFieldAsset> field = CreateRef<SerializableFieldAsset>();
-                if (AssetManager::TryGet() != nullptr && value.ReferenceValue != UUID::EMPTY)
-                    field->Value = AssetManager::TryGet()->GetAssetHandle(value.ReferenceValue);
-                return field;
-            }
-            case SerializableType::Object: {
-                Ref<SerializableFieldObject> field = CreateRef<SerializableFieldObject>();
-                const auto objectType = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
-                Ref<SerializableObjectInfo> objectInfo;
-                if (ScriptInfoManager::IsStartedUp())
-                    ScriptInfoManager::Get().GetSerializableObjectInfo(*objectType, objectInfo);
-                field->Value = WriteLegacyObject(value, objectInfo);
-                field->AllowNull = !objectType->m_ValueType;
-                return field;
-            }
-            case SerializableType::Array:
-            case SerializableType::List: {
-                const bool array = typeInfo->GetType() == SerializableType::Array;
-                const Ref<SerializableTypeInfo> elementType =
-                  array ? StaticRefCast<SerializableTypeInfoArray>(typeInfo)->m_ElementType
-                        : StaticRefCast<SerializableTypeInfoList>(typeInfo)->m_ElementType;
-                if (array)
-                {
-                    Ref<SerializableFieldArray> field = CreateRef<SerializableFieldArray>();
-                    field->ElementType = elementType;
-                    field->Null = value.Kind == ScriptValueKind::Null;
-                    for (const ScriptValue& element : value.Elements)
-                        field->Values.push_back(WriteLegacyValue(element, elementType));
-                    return field;
-                }
-                Ref<SerializableFieldList> field = CreateRef<SerializableFieldList>();
-                field->ElementType = elementType;
-                field->Null = value.Kind == ScriptValueKind::Null;
-                for (const ScriptValue& element : value.Elements)
-                    field->Values.push_back(WriteLegacyValue(element, elementType));
-                return field;
-            }
-            case SerializableType::Dictionary: return nullptr;
-            }
-            return nullptr;
         }
 
         Entity ResolveEntity(const UUID& uuid)
@@ -546,6 +282,23 @@ namespace Crowny
                 return {};
             const Ref<Scene>& scene = SceneManager::TryGet()->GetActiveScene();
             return scene != nullptr ? scene->TryGetEntityFromUuid(uuid) : Entity{};
+        }
+
+        MonoObject* ResolveMonoScriptComponent(UUID* entityId, MonoReflectionType* reflectionType)
+        {
+            if (entityId == nullptr || reflectionType == nullptr)
+                return nullptr;
+            const Entity entity = ResolveEntity(*entityId);
+            if (!entity || !entity.HasComponent<MonoScriptComponent>())
+                return nullptr;
+            ::MonoClass* requestedClass = MonoUtils::GetClass(reflectionType);
+            for (MonoScript& script : entity.GetComponent<MonoScriptComponent>().Scripts)
+            {
+                MonoClass* candidateClass = script.GetManagedClass();
+                if (candidateClass != nullptr && MonoUtils::IsSubClassOf(candidateClass->GetInternalPtr(), requestedClass))
+                    return script.GetManagedInstance();
+            }
+            return nullptr;
         }
 
         MonoScript* FindScript(const UUID& entityId, uint64_t runtimeInstanceId, const ScriptTypeIdentity* identity = nullptr)
@@ -559,16 +312,6 @@ namespace Crowny
             const auto script = std::find_if(component.Scripts.begin(), component.Scripts.end(),
                                              [&](MonoScript& candidate) { return identity != nullptr && candidate.GetTypeIdentity() == *identity; });
             return script == component.Scripts.end() ? nullptr : &*script;
-        }
-
-        Ref<SerializableObjectInfo> ResolveObjectInfo(MonoScript& script, const PersistedScriptState& persisted)
-        {
-            Ref<SerializableObjectInfo> objectInfo = script.GetObjectInfo();
-            if (objectInfo == nullptr)
-                ScriptInfoManager::Get().GetSerializableObjectInfo(script.GetAssemblyName(), script.GetNamespace(), script.GetTypeName(), objectInfo);
-            if (objectInfo == nullptr && persisted.Fields != nullptr)
-                objectInfo = persisted.Fields->GetObjectInfo();
-            return objectInfo;
         }
 
         ManagedOperationResult Failure(String code, String message)
@@ -587,8 +330,8 @@ namespace Crowny
                     return Failure("managed.mono.already_started", "Another Mono managed backend is already running.");
                 if (!MonoManager::IsStartedUp())
                 {
-                    const MonoRuntimePaths paths = config.RuntimeRoot.empty() ? ResolveMonoRuntimePaths(Path("."))
-                                                                               : ResolveMonoRuntimePaths(Vector<Path>{ config.RuntimeRoot });
+                    const MonoRuntimePaths paths =
+                      config.RuntimeRoot.empty() ? ResolveMonoRuntimePaths(Path(".")) : ResolveMonoRuntimePaths(Vector<Path>{ config.RuntimeRoot });
                     if (!paths.HasRuntime())
                         return Failure("managed.mono.runtime_missing", "Mono requires a complete runtime root.");
                     MonoManager::StartUp(paths.LibraryDirectory, paths.EtcDirectory, config.EnableDebugging ? MONO_DEBUG_PORT : 0);
@@ -596,6 +339,10 @@ namespace Crowny
                 }
                 m_Config = config;
                 m_HostApi = {};
+                m_CaptureManagedCatalog = nullptr;
+                m_CaptureManagedState = nullptr;
+                m_PrepareManagedScript = nullptr;
+                m_TryApplyManagedState = nullptr;
                 m_HostApi.size = sizeof(m_HostApi);
                 m_HostApi.abi_version = CW_MANAGED_ABI_VERSION;
                 m_HostApi.context = this;
@@ -613,9 +360,14 @@ namespace Crowny
                 m_Catalog = {};
                 m_CurrentProgram = {};
                 m_ProgramLoaded = false;
+                ReleaseManagedHostBindings(this);
                 if (g_MonoHostApi == &m_HostApi)
                     g_MonoHostApi = nullptr;
                 m_HostApi = {};
+                m_CaptureManagedCatalog = nullptr;
+                m_CaptureManagedState = nullptr;
+                m_PrepareManagedScript = nullptr;
+                m_TryApplyManagedState = nullptr;
                 if (m_OwnsScriptAssets)
                     ScriptAssetManager::Shutdown();
                 if (m_OwnsScriptObjects)
@@ -661,7 +413,9 @@ namespace Crowny
                 ManagedOperationResult loaded = LoadAssemblies(program);
                 if (!loaded.Succeeded)
                     return loaded;
-                m_Catalog = BuildCatalog();
+                ManagedOperationResult captured = CaptureCatalog(m_Catalog);
+                if (!captured.Succeeded)
+                    return captured;
                 if (ManagedOperationResult valid = ValidateScriptCatalog(m_Catalog, ManagedBackendId::Mono); !valid.Succeeded)
                     return valid;
                 m_CurrentProgram = program;
@@ -679,12 +433,32 @@ namespace Crowny
                 if (!replacement.Succeeded())
                 {
                     ManagedBackendReloadResult failure = MonoBackendDetail::BuildAssemblyRefreshFailure(replacement);
+                    if (replacement.Status == AssemblyRefreshStatus::PreviousDomainRestored)
+                    {
+                        ScriptCatalog restoredCatalog;
+                        ManagedOperationResult restored = BindCurrentEngineAssembly();
+                        if (restored.Succeeded)
+                            restored = CaptureCatalog(restoredCatalog);
+                        if (restored.Succeeded)
+                            restored = ValidateScriptCatalog(restoredCatalog, ManagedBackendId::Mono);
+                        if (restored.Succeeded)
+                        {
+                            m_Catalog = std::move(restoredCatalog);
+                            restored = RestoreSnapshots(snapshots, m_Catalog);
+                        }
+                        if (!restored.Succeeded)
+                            failure = MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(failure.Result), true, restored);
+                    }
                     if (failure.ProgramInvalidated)
                         InvalidateProgram();
                     return failure;
                 }
-                ScriptCatalog replacementCatalog = BuildCatalog();
-                ManagedOperationResult valid = ValidateScriptCatalog(replacementCatalog, ManagedBackendId::Mono);
+                ScriptCatalog replacementCatalog;
+                ManagedOperationResult valid = BindCurrentEngineAssembly();
+                if (valid.Succeeded)
+                    valid = CaptureCatalog(replacementCatalog);
+                if (valid.Succeeded)
+                    valid = ValidateScriptCatalog(replacementCatalog, ManagedBackendId::Mono);
                 if (valid.Succeeded)
                     valid = RestoreSnapshots(snapshots, replacementCatalog);
                 if (!valid.Succeeded)
@@ -698,18 +472,24 @@ namespace Crowny
                             InvalidateProgram();
                         return failure;
                     }
-                    else
+                    ScriptCatalog restoredCatalog;
+                    ManagedOperationResult stateRestoration = BindCurrentEngineAssembly();
+                    if (stateRestoration.Succeeded)
+                        stateRestoration = CaptureCatalog(restoredCatalog);
+                    if (stateRestoration.Succeeded)
+                        stateRestoration = ValidateScriptCatalog(restoredCatalog, ManagedBackendId::Mono);
+                    if (stateRestoration.Succeeded)
                     {
-                        m_Catalog = BuildCatalog();
-                        ManagedOperationResult stateRestoration = RestoreSnapshots(snapshots, m_Catalog);
-                        if (!stateRestoration.Succeeded)
-                        {
-                            ManagedBackendReloadResult failure =
-                              MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), true, stateRestoration);
-                            if (failure.ProgramInvalidated)
-                                InvalidateProgram();
-                            return failure;
-                        }
+                        m_Catalog = std::move(restoredCatalog);
+                        stateRestoration = RestoreSnapshots(snapshots, m_Catalog);
+                    }
+                    if (!stateRestoration.Succeeded)
+                    {
+                        ManagedBackendReloadResult failure =
+                          MonoBackendDetail::AddReloadRollbackDiagnostics(std::move(valid), true, stateRestoration);
+                        if (failure.ProgramInvalidated)
+                            InvalidateProgram();
+                        return failure;
                     }
                     return { std::move(valid), {} };
                 }
@@ -779,6 +559,19 @@ namespace Crowny
                     rollbackCreate();
                     return { Failure("managed.mono.create_failed", "Mono could not create the managed script instance."), 0 };
                 }
+                if (m_PrepareManagedScript == nullptr)
+                {
+                    rollbackCreate();
+                    return { Failure("managed.mono.lifecycle_bridge_missing", "CrownySharp does not expose the shared script lifecycle."), 0 };
+                }
+                void* preparationParameters[1] = { script->GetManagedInstance() };
+                MonoString* preparationError = reinterpret_cast<MonoString*>(m_PrepareManagedScript->Invoke(nullptr, preparationParameters));
+                if (preparationError != nullptr)
+                {
+                    const String message = MonoUtils::FromMonoString(preparationError);
+                    rollbackCreate();
+                    return { Failure("managed.mono.require_component_failed", message), 0 };
+                }
                 Instance instance;
                 instance.Entity = request.Entity;
                 instance.RuntimeInstanceId = runtimeInstanceId;
@@ -825,9 +618,15 @@ namespace Crowny
                 Entity other = ResolveEntity(event.OtherEntity);
                 switch (event.Kind)
                 {
-                case ScriptEventKind::Start: script->OnStart(); break;
-                case ScriptEventKind::Update: script->OnUpdate(); break;
-                case ScriptEventKind::Destroy: script->OnDestroy(); break;
+                case ScriptEventKind::Start:
+                    script->OnStart();
+                    break;
+                case ScriptEventKind::Update:
+                    script->OnUpdate();
+                    break;
+                case ScriptEventKind::Destroy:
+                    script->OnDestroy();
+                    break;
                 case ScriptEventKind::CollisionEnter2D:
                 case ScriptEventKind::CollisionStay2D:
                 case ScriptEventKind::CollisionExit2D: {
@@ -843,9 +642,15 @@ namespace Crowny
                         script->OnCollisionExit2D(collision);
                     break;
                 }
-                case ScriptEventKind::TriggerEnter2D: script->OnTriggerEnter2D(other); break;
-                case ScriptEventKind::TriggerStay2D: script->OnTriggerStay2D(other); break;
-                case ScriptEventKind::TriggerExit2D: script->OnTriggerExit2D(other); break;
+                case ScriptEventKind::TriggerEnter2D:
+                    script->OnTriggerEnter2D(other);
+                    break;
+                case ScriptEventKind::TriggerStay2D:
+                    script->OnTriggerStay2D(other);
+                    break;
+                case ScriptEventKind::TriggerExit2D:
+                    script->OnTriggerExit2D(other);
+                    break;
                 case ScriptEventKind::CollisionEnter3D:
                 case ScriptEventKind::CollisionStay3D:
                 case ScriptEventKind::CollisionExit3D: {
@@ -861,9 +666,15 @@ namespace Crowny
                         script->OnCollisionExit3D(collision);
                     break;
                 }
-                case ScriptEventKind::TriggerEnter3D: script->OnTriggerEnter3D(other); break;
-                case ScriptEventKind::TriggerStay3D: script->OnTriggerStay3D(other); break;
-                case ScriptEventKind::TriggerExit3D: script->OnTriggerExit3D(other); break;
+                case ScriptEventKind::TriggerEnter3D:
+                    script->OnTriggerEnter3D(other);
+                    break;
+                case ScriptEventKind::TriggerStay3D:
+                    script->OnTriggerStay3D(other);
+                    break;
+                case ScriptEventKind::TriggerExit3D:
+                    script->OnTriggerExit3D(other);
+                    break;
                 }
                 return ManagedOperationResult::Success();
             }
@@ -874,15 +685,19 @@ namespace Crowny
                 if (instance == m_Instances.end())
                     return { StaleHandle(), {} };
                 MonoScript* script = FindScript(instance->second.Entity, instance->second.RuntimeInstanceId);
-                if (script == nullptr)
+                if (script == nullptr || script->GetManagedInstance() == nullptr)
                     return { StaleHandle(), {} };
-                const PersistedScriptState persisted = script->CapturePersistedState();
-                const Ref<SerializableObjectInfo> objectInfo = ResolveObjectInfo(*script, persisted);
-                if (persisted.Fields == nullptr || objectInfo == nullptr)
-                    return { Failure("managed.mono.state_unavailable", "Mono could not capture the script's reflected state."), {} };
+                if (m_CaptureManagedState == nullptr)
+                    return { Failure("managed.mono.state_bridge_missing", "CrownySharp does not expose the shared managed state codec."), {} };
+                void* parameters[1] = { script->GetManagedInstance() };
+                MonoString* encoded = reinterpret_cast<MonoString*>(m_CaptureManagedState->Invoke(nullptr, parameters));
+                if (encoded == nullptr)
+                    return { Failure("managed.mono.state_capture_failed", "The shared managed state codec could not capture the Mono script."), {} };
                 ScriptState state;
-                state.Identity = script->GetTypeIdentity();
-                state.Root = ReadLegacyObject(persisted.Fields, objectInfo);
+                const ScriptTypeSchema* schema = m_Catalog.FindType(script->GetTypeIdentity());
+                ManagedOperationResult parsed = ParseManagedStateJson(MonoUtils::FromMonoString(encoded), state, ManagedBackendId::Mono, schema);
+                if (!parsed.Succeeded)
+                    return { std::move(parsed), {} };
                 state.OrphanedMembers = instance->second.OrphanedMembers;
                 return { ManagedOperationResult::Success(), std::move(state) };
             }
@@ -967,10 +782,9 @@ namespace Crowny
                     MonoAssembly* loadedEngine = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
                     if (loadedEngine == nullptr || !loadedEngine->IsLoaded())
                         loadedEngine = &MonoManager::Get().LoadAssembly(engine->Filepath, CROWNY_ASSEMBLY);
-                    MonoClass* runtimeContext = loadedEngine->GetClass(CROWNY_NS, "ManagedRuntimeContext");
-                    if (runtimeContext == nullptr)
-                        return Failure("managed.mono.host_api_missing", "CrownySharp does not contain the managed runtime context.");
-                    runtimeContext->AddInternalCall("Internal_GetNativeHostApi", reinterpret_cast<const void*>(&GetMonoHostApi));
+                    ManagedOperationResult bound = BindEngineAssembly(*loadedEngine);
+                    if (!bound.Succeeded)
+                        return bound;
                     ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
                     if (game != nullptr && fs::is_regular_file(game->Filepath))
                     {
@@ -1000,8 +814,17 @@ namespace Crowny
             AssemblyRefreshResult RefreshAssemblies(const ManagedProgramDefinition& program)
             {
                 const Vector<AssemblyRefreshInfo> assemblies = GetRefreshAssemblies(program);
-                return assemblies.empty() ? AssemblyRefreshResult{ AssemblyRefreshStatus::CurrentDomainKept }
-                                          : ScriptObjectManager::Get().RefreshAssemblies(assemblies);
+                if (assemblies.empty())
+                    return { AssemblyRefreshStatus::CurrentDomainKept };
+                return ScriptObjectManager::Get().RefreshAssemblies(assemblies);
+            }
+
+            ManagedOperationResult BindCurrentEngineAssembly()
+            {
+                MonoAssembly* engine = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+                if (engine == nullptr || !engine->IsLoaded())
+                    return Failure("managed.mono.engine_assembly_missing", "Mono did not load the CrownySharp engine assembly.");
+                return BindEngineAssembly(*engine);
             }
 
             ManagedOperationResult RestoreSnapshots(const Vector<ManagedBackendReloadInstance>& snapshots, const ScriptCatalog& catalog)
@@ -1032,16 +855,69 @@ namespace Crowny
             {
                 if (state.Identity != script.GetTypeIdentity())
                     return Failure("managed.mono.state_identity_mismatch", "The script state identity does not match the Mono script type.");
-                const PersistedScriptState previous = script.CapturePersistedState();
-                Ref<SerializableObjectInfo> objectInfo = ResolveObjectInfo(script, previous);
-                if (objectInfo == nullptr)
-                    return Failure("managed.mono.state_schema_missing", "Mono reflection metadata for the script state is unavailable.");
-                Ref<SerializableObject> fields = WriteLegacyObject(state.Root, objectInfo);
-                if (fields == nullptr || !script.ApplyPersistedState({ state.Identity, fields, state }))
+                if (script.GetManagedInstance() == nullptr)
+                    return Failure("managed.mono.state_instance_missing", "The Mono script instance is no longer live.");
+                if (m_TryApplyManagedState == nullptr)
+                    return Failure("managed.mono.state_bridge_missing", "CrownySharp does not expose the shared managed state codec.");
+                MonoString* encoded = MonoUtils::ToMonoString(WriteManagedStateJson(state));
+                void* parameters[2] = { script.GetManagedInstance(), encoded };
+                MonoString* error = reinterpret_cast<MonoString*>(m_TryApplyManagedState->Invoke(nullptr, parameters));
+                if (error != nullptr)
+                    return Failure("managed.mono.state_apply_failed", MonoUtils::FromMonoString(error));
+                return ManagedOperationResult::Success();
+            }
+
+            ManagedOperationResult CaptureCatalog(ScriptCatalog& catalog)
+            {
+                MonoAssembly* game = MonoManager::Get().GetAssembly(GAME_ASSEMBLY);
+                if (game == nullptr || !game->IsLoaded())
                 {
-                    script.ApplyPersistedState(previous);
-                    return Failure("managed.mono.state_apply_failed", "Mono could not apply the script state.");
+                    catalog = {};
+                    catalog.ManifestVersion = 1;
+                    return ManagedOperationResult::Success();
                 }
+                if (m_CaptureManagedCatalog == nullptr)
+                    return Failure("managed.mono.catalog_bridge_missing", "CrownySharp does not expose the shared script catalog codec.");
+                MonoString* assemblyName = MonoUtils::ToMonoString(GAME_ASSEMBLY);
+                void* parameters[1] = { assemblyName };
+                MonoString* encoded = reinterpret_cast<MonoString*>(m_CaptureManagedCatalog->Invoke(nullptr, parameters));
+                if (encoded == nullptr)
+                    return Failure("managed.mono.catalog_capture_failed", "The shared script catalog codec could not inspect the Mono program.");
+                return ParseManagedCatalogJson(MonoUtils::FromMonoString(encoded), catalog, ManagedBackendId::Mono);
+            }
+
+            ManagedOperationResult BindEngineAssembly(MonoAssembly& engine)
+            {
+                MonoClass* runtimeContext = engine.GetClass(CROWNY_NS, "ManagedRuntimeContext");
+                if (runtimeContext == nullptr)
+                    return Failure("managed.mono.host_api_missing", "CrownySharp does not contain the managed runtime context.");
+                runtimeContext->AddInternalCall("Internal_GetNativeHostApi", reinterpret_cast<const void*>(&GetMonoHostApi));
+                MonoClass* runtimeAdapter = engine.GetClass(CROWNY_NS, "ManagedRuntimeAdapter");
+                if (runtimeAdapter == nullptr)
+                    return Failure("managed.mono.runtime_adapter_missing", "CrownySharp does not contain the Mono runtime adapter.");
+                runtimeAdapter->AddInternalCall("Internal_ResolveScriptComponent", reinterpret_cast<const void*>(&ResolveMonoScriptComponent));
+
+                MonoClass* stateCodec = engine.GetClass(CROWNY_NS, "ManagedStateCodec");
+                if (stateCodec == nullptr)
+                    return Failure("managed.mono.state_bridge_missing", "CrownySharp does not contain the shared managed state codec.");
+                m_CaptureManagedState = stateCodec->GetMethod("Capture", 1);
+                m_TryApplyManagedState = stateCodec->GetMethod("TryApply", 2);
+                if (m_CaptureManagedState == nullptr || m_TryApplyManagedState == nullptr)
+                    return Failure("managed.mono.state_bridge_invalid", "CrownySharp's shared managed state codec has an incompatible surface.");
+
+                MonoClass* catalogCodec = engine.GetClass(CROWNY_NS, "ManagedScriptCatalog");
+                if (catalogCodec == nullptr)
+                    return Failure("managed.mono.catalog_bridge_missing", "CrownySharp does not contain the shared script catalog codec.");
+                m_CaptureManagedCatalog = catalogCodec->GetMethod("CaptureLoadedAssembly", 1);
+                if (m_CaptureManagedCatalog == nullptr)
+                    return Failure("managed.mono.catalog_bridge_invalid", "CrownySharp's shared script catalog codec has an incompatible surface.");
+
+                MonoClass* lifecycle = engine.GetClass(CROWNY_NS, "ManagedScriptLifecycle");
+                if (lifecycle == nullptr)
+                    return Failure("managed.mono.lifecycle_bridge_missing", "CrownySharp does not contain the shared script lifecycle.");
+                m_PrepareManagedScript = lifecycle->GetMethod("TryPrepare", 1);
+                if (m_PrepareManagedScript == nullptr)
+                    return Failure("managed.mono.lifecycle_bridge_invalid", "CrownySharp's shared script lifecycle has an incompatible surface.");
                 return ManagedOperationResult::Success();
             }
 
@@ -1067,16 +943,17 @@ namespace Crowny
                 m_ProgramLoaded = false;
             }
 
-            ManagedOperationResult StaleHandle() const
-            {
-                return Failure("managed.mono.stale_handle", "The Mono script handle is stale.");
-            }
+            ManagedOperationResult StaleHandle() const { return Failure("managed.mono.stale_handle", "The Mono script handle is stale."); }
 
             ManagedScriptingConfig m_Config;
             ManagedProgramDefinition m_CurrentProgram;
             ScriptCatalog m_Catalog;
             cw_managed_host_api m_HostApi{};
             Map<uint64_t, Instance> m_Instances;
+            MonoMethod* m_CaptureManagedCatalog = nullptr;
+            MonoMethod* m_CaptureManagedState = nullptr;
+            MonoMethod* m_PrepareManagedScript = nullptr;
+            MonoMethod* m_TryApplyManagedState = nullptr;
             uint64_t m_NextHandle = 1;
             bool m_Started = false;
             bool m_ProgramLoaded = false;
@@ -1162,7 +1039,8 @@ namespace Crowny
                                               "Mono could not load the replacement assemblies or restore the previous domain.",
                                               ManagedBackendId::Mono),
               false, ManagedOperationResult::Success());
-        case AssemblyRefreshStatus::ReplacementLoaded: break;
+        case AssemblyRefreshStatus::ReplacementLoaded:
+            break;
         }
         return { ManagedOperationResult::Failure("managed.mono.reload_failed", "Mono reload failed unexpectedly.", ManagedBackendId::Mono),
                  {},
@@ -1170,7 +1048,7 @@ namespace Crowny
     }
 
     ManagedBackendReloadResult MonoBackendDetail::AddReloadRollbackDiagnostics(ManagedOperationResult failure, bool assembliesRestored,
-                                                                                const ManagedOperationResult& stateRestoration)
+                                                                               const ManagedOperationResult& stateRestoration)
     {
         failure.Succeeded = false;
         const bool programInvalidated = !assembliesRestored || !stateRestoration.Succeeded;

@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
@@ -22,12 +21,6 @@ namespace Crowny
 
     public static class Compression
     {
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static ulong Internal_Compress(byte[] dst, byte[] src, CompressionMethod method, FastLZLevel level);
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static ulong Internal_Decompress(byte[] dst, int maxDstSize, byte[] src, int srcSize, CompressionMethod method);
-
         /// <summary>
         /// Returns the destination size required for worst-case compression.
         /// </summary>
@@ -60,7 +53,7 @@ namespace Crowny
             if (dst.Length < MaxCompressedSize(src.Length, method))
                 throw new ArgumentException("The destination is too small for the worst-case compressed data.", nameof(dst));
 
-            ulong result = Internal_Compress(dst, src, method, level);
+            ulong result = ManagedRuntimeContext.CompressionCompress(dst, src, (int)method, (int)level);
             ThrowIfFailed(result, "Compression failed.");
             return result;
         }
@@ -96,7 +89,7 @@ namespace Crowny
             if (srcSize < 0 || srcSize > src.Length)
                 throw new ArgumentOutOfRangeException(nameof(srcSize));
 
-            ulong result = Internal_Decompress(dst, maxDstSize, src, srcSize, method);
+            ulong result = ManagedRuntimeContext.CompressionDecompress(dst, (ulong)maxDstSize, src, (ulong)srcSize, (int)method);
             ThrowIfFailed(result, "The compressed data is invalid or the destination is too small.");
             return result;
         }

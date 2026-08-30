@@ -14,6 +14,12 @@ namespace Crowny
 {
     namespace
     {
+        TextLayoutScratch& GetQueryScratch()
+        {
+            thread_local TextLayoutScratch scratch;
+            return scratch;
+        }
+
         constexpr size_t INVALID_TEXT_INDEX = std::numeric_limits<size_t>::max();
 
         bool IsTextWhitespace(char32_t codePoint)
@@ -855,5 +861,23 @@ namespace Crowny
         result.LineIndex = closest->LineIndex;
         result.Valid = true;
         return result;
+    }
+
+    TextHitTestResult TextLayout::HitTest(const TextComponent& component, const Font& font, const glm::vec2& position)
+    {
+        TextLayoutScratch& scratch = GetQueryScratch();
+        return HitTest(Build(component, font, scratch), position);
+    }
+
+    TextHitTestResult TextLayout::HitTestPrepared(const TextComponent& component, const TextLayoutFontData& fontData,
+                                                  std::span<const TextLayoutToken> tokens, size_t sourceByteLength, const glm::vec2& position)
+    {
+        TextLayoutScratch& scratch = GetQueryScratch();
+        scratch.Reset();
+        scratch.Reserve(tokens.size());
+        scratch.SourceByteLength = sourceByteLength;
+        for (const TextLayoutToken& token : tokens)
+            scratch.Tokens.Acquire() = token;
+        return HitTest(BuildPrepared(component, fontData, scratch), position);
     }
 } // namespace Crowny

@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 9u
+#define CW_MANAGED_ABI_VERSION 11u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -56,205 +56,6 @@ enum cw_managed_event_kind
     CW_MANAGED_EVENT_TRIGGER_EXIT_3_D = 14,
 };
 
-/* Compatibility IDs for the CoreCLR adapter while it forwards typed calls
- * through its existing dispatcher. New managed code uses the typed host API. */
-enum cw_managed_host_binding
-{
-    CW_MANAGED_BINDING_ENTITY_HAS_COMPONENT = 1,
-    CW_MANAGED_BINDING_ENTITY_ADD_COMPONENT = 2,
-    CW_MANAGED_BINDING_ENTITY_REMOVE_COMPONENT = 3,
-    CW_MANAGED_BINDING_TRANSFORM_GET_POSITION = 10,
-    CW_MANAGED_BINDING_TRANSFORM_SET_POSITION = 11,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_POSITION = 12,
-    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_POSITION = 13,
-    CW_MANAGED_BINDING_TRANSFORM_GET_SCALE = 14,
-    CW_MANAGED_BINDING_TRANSFORM_SET_SCALE = 15,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_SCALE = 16,
-    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_SCALE = 17,
-    CW_MANAGED_BINDING_TRANSFORM_GET_ROTATION = 18,
-    CW_MANAGED_BINDING_TRANSFORM_SET_ROTATION = 19,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_ROTATION = 20,
-    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_ROTATION = 21,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_TO_WORLD_MATRIX = 22,
-    CW_MANAGED_BINDING_TRANSFORM_GET_WORLD_TO_LOCAL_MATRIX = 23,
-    CW_MANAGED_BINDING_TRANSFORM_GET_EULER_ANGLES = 24,
-    CW_MANAGED_BINDING_TRANSFORM_SET_EULER_ANGLES = 25,
-    CW_MANAGED_BINDING_TRANSFORM_GET_LOCAL_EULER_ANGLES = 26,
-    CW_MANAGED_BINDING_TRANSFORM_SET_LOCAL_EULER_ANGLES = 27,
-    CW_MANAGED_BINDING_INPUT_GET_KEY = 30,
-    CW_MANAGED_BINDING_INPUT_GET_KEY_DOWN = 31,
-    CW_MANAGED_BINDING_INPUT_GET_KEY_UP = 32,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON = 33,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_DOWN = 34,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_BUTTON_UP = 35,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_X = 36,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_SCROLL_Y = 37,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_POSITION = 38,
-    CW_MANAGED_BINDING_INPUT_GET_MOUSE_DELTA = 39,
-    CW_MANAGED_BINDING_TIME_GET_TIME = 40,
-    CW_MANAGED_BINDING_TIME_GET_FIXED_DELTA_TIME = 41,
-    CW_MANAGED_BINDING_TIME_GET_SMOOTH_DELTA_TIME = 42,
-    CW_MANAGED_BINDING_TIME_GET_REALTIME_SINCE_STARTUP = 43,
-    CW_MANAGED_BINDING_TIME_GET_FRAME_COUNT = 44,
-    CW_MANAGED_BINDING_INPUT_IS_GAMEPAD_CONNECTED = 45,
-    CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON = 46,
-    CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON_DOWN = 47,
-    CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_BUTTON_UP = 48,
-    CW_MANAGED_BINDING_INPUT_GET_GAMEPAD_AXIS = 49,
-    CW_MANAGED_BINDING_INPUT_GET_ACTION = 150,
-    CW_MANAGED_BINDING_INPUT_GET_ACTION_DOWN = 151,
-    CW_MANAGED_BINDING_INPUT_GET_ACTION_UP = 152,
-    CW_MANAGED_BINDING_INPUT_GET_AXIS = 153,
-    CW_MANAGED_BINDING_INPUT_GET_ACTION_VECTOR = 154,
-    CW_MANAGED_BINDING_INPUT_ENABLE_ACTION_MAP = 155,
-    CW_MANAGED_BINDING_INPUT_DISABLE_ACTION_MAP = 156,
-    CW_MANAGED_BINDING_INPUT_CLEAR_ACTION_REBINDS = 157,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_MASS = 50,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_MASS = 51,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_BODY_TYPE = 52,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_BODY_TYPE = 53,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_SLEEP_MODE = 54,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_SLEEP_MODE = 55,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_COLLISION_DETECTION_MODE = 56,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_COLLISION_DETECTION_MODE = 57,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INTERPOLATION = 58,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INTERPOLATION = 59,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AUTO_MASS = 60,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AUTO_MASS = 61,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LAYER = 62,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LAYER = 63,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_DRAG = 64,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_DRAG = 65,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_DRAG = 66,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_DRAG = 67,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_GRAVITY_SCALE = 68,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_GRAVITY_SCALE = 69,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CENTER_OF_MASS = 70,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CENTER_OF_MASS = 71,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_INERTIA = 72,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_INERTIA = 73,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_CONSTRAINTS = 74,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_CONSTRAINTS = 75,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ROTATION = 76,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_POSITION = 77,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_LINEAR_VELOCITY = 78,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_LINEAR_VELOCITY = 79,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_ANGULAR_VELOCITY = 80,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_ANGULAR_VELOCITY = 81,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DGET_AWAKE = 82,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DSET_AWAKE = 83,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE = 84,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DADD_FORCE_AT_POSITION = 85,
-    CW_MANAGED_BINDING_RIGIDBODY_2_DADD_TORQUE = 86,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_VOLUME = 100,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_VOLUME = 101,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PITCH = 102,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PITCH = 103,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MIN_DISTANCE = 104,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MIN_DISTANCE = 105,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MAX_DISTANCE = 106,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MAX_DISTANCE = 107,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_LOOP = 108,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_LOOP = 109,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_MUTED = 110,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_MUTED = 111,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_PLAY_ON_AWAKE = 112,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_PLAY_ON_AWAKE = 113,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_TIME = 114,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_TIME = 115,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_CLIP = 116,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_SET_CLIP = 117,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_GET_STATE = 118,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_PLAY = 119,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_PAUSE = 120,
-    CW_MANAGED_BINDING_AUDIO_SOURCE_STOP = 121,
-    CW_MANAGED_BINDING_TEXT_GET_TEXT = 200,
-    CW_MANAGED_BINDING_TEXT_SET_TEXT = 201,
-    CW_MANAGED_BINDING_TEXT_GET_FONT = 202,
-    CW_MANAGED_BINDING_TEXT_SET_FONT = 203,
-    CW_MANAGED_BINDING_TEXT_GET_COLOR = 204,
-    CW_MANAGED_BINDING_TEXT_SET_COLOR = 205,
-    CW_MANAGED_BINDING_TEXT_GET_SIZE = 206,
-    CW_MANAGED_BINDING_TEXT_SET_SIZE = 207,
-    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE = 208,
-    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE = 209,
-    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE_MIN = 210,
-    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE_MIN = 211,
-    CW_MANAGED_BINDING_TEXT_GET_AUTO_SIZE_MAX = 212,
-    CW_MANAGED_BINDING_TEXT_SET_AUTO_SIZE_MAX = 213,
-    CW_MANAGED_BINDING_TEXT_GET_LAYOUT_SIZE = 214,
-    CW_MANAGED_BINDING_TEXT_SET_LAYOUT_SIZE = 215,
-    CW_MANAGED_BINDING_TEXT_GET_WRAPPING = 216,
-    CW_MANAGED_BINDING_TEXT_SET_WRAPPING = 217,
-    CW_MANAGED_BINDING_TEXT_GET_WRAP_MODE = 218,
-    CW_MANAGED_BINDING_TEXT_SET_WRAP_MODE = 219,
-    CW_MANAGED_BINDING_TEXT_GET_OVERFLOW = 220,
-    CW_MANAGED_BINDING_TEXT_SET_OVERFLOW = 221,
-    CW_MANAGED_BINDING_TEXT_GET_CLIP_TO_BOUNDS = 222,
-    CW_MANAGED_BINDING_TEXT_SET_CLIP_TO_BOUNDS = 223,
-    CW_MANAGED_BINDING_TEXT_GET_MAX_LINES = 224,
-    CW_MANAGED_BINDING_TEXT_SET_MAX_LINES = 225,
-    CW_MANAGED_BINDING_TEXT_GET_HORIZONTAL_ALIGNMENT = 226,
-    CW_MANAGED_BINDING_TEXT_SET_HORIZONTAL_ALIGNMENT = 227,
-    CW_MANAGED_BINDING_TEXT_GET_VERTICAL_ALIGNMENT = 228,
-    CW_MANAGED_BINDING_TEXT_SET_VERTICAL_ALIGNMENT = 229,
-    CW_MANAGED_BINDING_TEXT_GET_FONT_STYLE = 230,
-    CW_MANAGED_BINDING_TEXT_SET_FONT_STYLE = 231,
-    CW_MANAGED_BINDING_TEXT_GET_OUTLINE_COLOR = 232,
-    CW_MANAGED_BINDING_TEXT_SET_OUTLINE_COLOR = 233,
-    CW_MANAGED_BINDING_TEXT_GET_OUTLINE_WIDTH = 234,
-    CW_MANAGED_BINDING_TEXT_SET_OUTLINE_WIDTH = 235,
-    CW_MANAGED_BINDING_TEXT_GET_SHADOW_COLOR = 236,
-    CW_MANAGED_BINDING_TEXT_SET_SHADOW_COLOR = 237,
-    CW_MANAGED_BINDING_TEXT_GET_SHADOW_OFFSET = 238,
-    CW_MANAGED_BINDING_TEXT_SET_SHADOW_OFFSET = 239,
-    CW_MANAGED_BINDING_TEXT_GET_SHADOW_SOFTNESS = 240,
-    CW_MANAGED_BINDING_TEXT_SET_SHADOW_SOFTNESS = 241,
-    CW_MANAGED_BINDING_TEXT_GET_CHARACTER_SPACING = 242,
-    CW_MANAGED_BINDING_TEXT_SET_CHARACTER_SPACING = 243,
-    CW_MANAGED_BINDING_TEXT_GET_WORD_SPACING = 244,
-    CW_MANAGED_BINDING_TEXT_SET_WORD_SPACING = 245,
-    CW_MANAGED_BINDING_TEXT_GET_LINE_SPACING = 246,
-    CW_MANAGED_BINDING_TEXT_SET_LINE_SPACING = 247,
-    CW_MANAGED_BINDING_TEXT_GET_PARAGRAPH_SPACING = 248,
-    CW_MANAGED_BINDING_TEXT_SET_PARAGRAPH_SPACING = 249,
-    CW_MANAGED_BINDING_TEXT_GET_TAB_WIDTH = 250,
-    CW_MANAGED_BINDING_TEXT_SET_TAB_WIDTH = 251,
-    CW_MANAGED_BINDING_TEXT_GET_USE_CUSTOM_DECORATION_COLOR = 252,
-    CW_MANAGED_BINDING_TEXT_SET_USE_CUSTOM_DECORATION_COLOR = 253,
-    CW_MANAGED_BINDING_TEXT_GET_DECORATION_COLOR = 254,
-    CW_MANAGED_BINDING_TEXT_SET_DECORATION_COLOR = 255,
-    CW_MANAGED_BINDING_TEXT_GET_DECORATION_THICKNESS = 256,
-    CW_MANAGED_BINDING_TEXT_SET_DECORATION_THICKNESS = 257,
-    CW_MANAGED_BINDING_TEXT_GET_UNDERLINE_OFFSET = 258,
-    CW_MANAGED_BINDING_TEXT_SET_UNDERLINE_OFFSET = 259,
-    CW_MANAGED_BINDING_TEXT_GET_STRIKETHROUGH_OFFSET = 260,
-    CW_MANAGED_BINDING_TEXT_SET_STRIKETHROUGH_OFFSET = 261,
-    CW_MANAGED_BINDING_TEXT_GET_USE_KERNING = 262,
-    CW_MANAGED_BINDING_TEXT_SET_USE_KERNING = 263,
-    CW_MANAGED_BINDING_TEXT_GET_SORTING_LAYER = 264,
-    CW_MANAGED_BINDING_TEXT_SET_SORTING_LAYER = 265,
-    CW_MANAGED_BINDING_TEXT_GET_ORDER_IN_LAYER = 266,
-    CW_MANAGED_BINDING_TEXT_SET_ORDER_IN_LAYER = 267,
-    CW_MANAGED_BINDING_TEXT_HIT_TEST = 268,
-    CW_MANAGED_BINDING_FONT_GET_IS_VALID = 300,
-    CW_MANAGED_BINDING_FONT_GET_GLYPH_COUNT = 301,
-    CW_MANAGED_BINDING_FONT_GET_TAB_WIDTH = 302,
-    CW_MANAGED_BINDING_FONT_GET_ATLAS_WIDTH = 303,
-    CW_MANAGED_BINDING_FONT_GET_ATLAS_HEIGHT = 304,
-    CW_MANAGED_BINDING_FONT_GET_ATLAS_PIXEL_RANGE = 305,
-    CW_MANAGED_BINDING_FONT_HAS_GLYPH = 306,
-    CW_MANAGED_BINDING_FONT_GET_CHARACTER_INFO = 307,
-    CW_MANAGED_BINDING_FONT_GET_FALLBACK_COUNT = 308,
-    CW_MANAGED_BINDING_FONT_GET_FALLBACK = 309,
-    CW_MANAGED_BINDING_FONT_ADD_FALLBACK = 310,
-    CW_MANAGED_BINDING_FONT_CLEAR_FALLBACKS = 311,
-    CW_MANAGED_BINDING_MATH_MATRIX_DETERMINANT = 130,
-    CW_MANAGED_BINDING_MATH_MATRIX_INVERSE = 131,
-    CW_MANAGED_BINDING_MATH_MATRIX_AFFINE_INVERSE = 132,
-    CW_MANAGED_BINDING_MATH_LOOK_AT = 133,
-};
-
 typedef struct cw_managed_string_view
 {
     const uint8_t* data;
@@ -266,6 +67,12 @@ typedef struct cw_managed_blob
     const uint8_t* data;
     uint64_t length;
 } cw_managed_blob;
+
+typedef struct cw_managed_mutable_blob
+{
+    uint8_t* data;
+    uint64_t length;
+} cw_managed_mutable_blob;
 
 typedef struct cw_managed_uuid
 {
@@ -327,6 +134,13 @@ typedef struct cw_managed_mat4
     float values[16];
 } cw_managed_mat4;
 
+typedef struct cw_managed_physics_filter3d
+{
+    uint32_t layer;
+    uint32_t mask;
+    int32_t group;
+} cw_managed_physics_filter3d;
+
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_write_blob_fn)(void* context, const uint8_t* data, uint64_t length);
 
 typedef struct cw_managed_blob_writer
@@ -356,16 +170,11 @@ typedef struct cw_managed_event
 
 typedef void(CW_MANAGED_CALL* cw_managed_log_fn)(void* context, uint32_t severity, cw_managed_string_view code,
                                                  cw_managed_string_view message, cw_managed_string_view stack);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_name_fn)(void* context, cw_managed_uuid entity,
-                                                                         cw_managed_string_view* name);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_name_fn)(void* context, cw_managed_uuid entity,
-                                                                         cw_managed_string_view name);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_find_entity_by_name_fn)(void* context, cw_managed_string_view name,
-                                                                             cw_managed_uuid* entity);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_parent_fn)(void* context, cw_managed_uuid entity,
-                                                                           cw_managed_uuid* parent);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_parent_fn)(void* context, cw_managed_uuid entity,
-                                                                           cw_managed_uuid parent);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_name_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_name_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view name);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_find_entity_by_name_fn)(void* context, cw_managed_string_view name, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_get_entity_parent_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_set_entity_parent_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid parent);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_entity_fn)(void* context, cw_managed_uuid entity);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_has_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view typeName, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_add_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view typeName);
@@ -404,13 +213,13 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_f
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_down_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_up_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_axis_fn)(void* context, uint32_t gamepad, uint32_t code, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_enable_action_map_fn)(void* context, cw_managed_string_view mapName, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_disable_action_map_fn)(void* context, cw_managed_string_view mapName, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_down_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_up_fn)(void* context, cw_managed_string_view actionName, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_axis_fn)(void* context, cw_managed_string_view actionName, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_action_vector_fn)(void* context, cw_managed_string_view actionName, cw_managed_vec2* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_enable_action_map_fn)(void* context, cw_managed_string_view mapName, uint8_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_disable_action_map_fn)(void* context, cw_managed_string_view mapName, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_clear_action_rebinds_fn)(void* context);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_delta_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_time_fn)(void* context, float* result);
@@ -477,6 +286,337 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_source_get_state_fn)
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_source_play_fn)(void* context, cw_managed_uuid entity);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_source_pause_fn)(void* context, cw_managed_uuid entity);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_source_stop_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_asset_get_name_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_asset_acquire_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_asset_release_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_asset_database_load_fn)(void* context, cw_managed_string_view path, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_asset_database_load_from_uuid_fn)(void* context, cw_managed_uuid asset, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_asset_database_get_path_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_asset_database_is_valid_fn)(void* context, cw_managed_uuid asset, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_bit_depth_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_channels_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_frequency_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_samples_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_length_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_read_mode_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_format_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_is3d_fn)(void* context, cw_managed_uuid asset, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_texture_get_width_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_texture_get_height_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_mixer_set_active_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_mixer_get_bus_volume_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_mixer_set_bus_volume_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, float volume);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_mixer_is_bus_muted_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_mixer_set_bus_muted_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, uint8_t muted);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_float_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_vector2_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, const cw_managed_vec2* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_int_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_color_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_vector3_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_matrix_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, const cw_managed_mat4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_texture_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, cw_managed_uuid texture);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_has_alpha_mode_override_fn)(void* context, cw_managed_uuid asset, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_get_alpha_mode_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_alpha_mode_fn)(void* context, cw_managed_uuid asset, int32_t alphaMode);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_clear_alpha_mode_override_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_create_fn)(void* context, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_create_fn)(void* context, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_add_force_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* force, int32_t mode);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_add_force_at_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* force, const cw_managed_vec3* position, int32_t mode);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_add_torque_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* torque, int32_t mode);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_compression_compress_fn)(void* context, cw_managed_mutable_blob destination, cw_managed_blob source, int32_t method, int32_t level, uint64_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_compression_decompress_fn)(void* context, cw_managed_mutable_blob destination, uint64_t maximumDestinationSize, cw_managed_blob source, uint64_t sourceSize, int32_t method, uint64_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_file_dialog_open_file_fn)(void* context, cw_managed_string_view title, cw_managed_string_view directory, cw_managed_string_view extensions, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_file_dialog_open_folder_fn)(void* context, cw_managed_string_view title, cw_managed_string_view directory, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_file_dialog_save_file_fn)(void* context, cw_managed_string_view title, cw_managed_string_view directory, cw_managed_string_view defaultName, cw_managed_string_view extensions, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_file_dialog_save_folder_fn)(void* context, cw_managed_string_view title, cw_managed_string_view directory, cw_managed_string_view defaultName, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_has_character_fn)(void* context, cw_managed_uuid asset, uint32_t codePoint, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_is_valid_fn)(void* context, cw_managed_uuid font, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_glyph_count_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_tab_width_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_width_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_height_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_pixel_range_fn)(void* context, cw_managed_uuid font, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_fallback_count_fn)(void* context, cw_managed_uuid font, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_has_glyph_fn)(void* context, cw_managed_uuid font, uint32_t codePoint, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_character_info_fn)(void* context, cw_managed_uuid font, uint32_t codePoint, uint8_t useFallbacks, cw_managed_font_character_info* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_fallback_fn)(void* context, cw_managed_uuid font, uint32_t index, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_add_fallback_fn)(void* context, cw_managed_uuid font, cw_managed_uuid value, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_clear_fallbacks_fn)(void* context, cw_managed_uuid font);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_system_font_count_fn)(void* context, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_system_font_path_fn)(void* context, uint32_t index, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_system_font_name_fn)(void* context, uint32_t index, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_clip_get_length_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_clip_get_sample_rate_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_clip_get_is_additive_fn)(void* context, cw_managed_uuid asset, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_play_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_pause_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_stop_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_hit_test_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* position, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_debug_write_log_fn)(void* context, int32_t severity, cw_managed_string_view message);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_random_initialize_fn)(void* context, int32_t seed);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_random_get_value_fn)(void* context, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_random_get_range_fn)(void* context, float minimum, float maximum, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_random_get_inside_unit_circle_fn)(void* context, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_random_get_inside_unit_sphere_fn)(void* context, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_noise_get_perlin2d_fn)(void* context, float x, float y, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_layer_mask_get_name_fn)(void* context, int32_t layer, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_layer_mask_get_layer_fn)(void* context, cw_managed_string_view name, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_scene_get_active_fn)(void* context, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_scene_get_execution_state_fn)(void* context, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_scene_get_loaded_count_fn)(void* context, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_scene_get_loaded_fn)(void* context, uint32_t index, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_scene_load_fn)(void* context, cw_managed_uuid scene, uint8_t makeActive, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_scene_unload_fn)(void* context, cw_managed_uuid scene, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_scene_reload_fn)(void* context, cw_managed_uuid scene, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_scene_set_active_fn)(void* context, cw_managed_uuid scene, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_field_of_view_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_field_of_view_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_projection_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_projection_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_near_clip_plane_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_near_clip_plane_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_far_clip_plane_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_far_clip_plane_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_orthographic_size_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_orthographic_size_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_aspect_ratio_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_aspect_ratio_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_background_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_background_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_viewport_rectangle_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_viewport_rectangle_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_hdr_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_hdr_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_msaa_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_msaa_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_occlusion_culling_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_occlusion_culling_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_texture_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_texture_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_type_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_type_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_intensity_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_intensity_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_range_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_range_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_spot_inner_angle_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_spot_inner_angle_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_spot_outer_angle_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_spot_outer_angle_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_source_radius_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_source_radius_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_use_color_temperature_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_use_color_temperature_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_temperature_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_temperature_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_visibility_layers_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_visibility_layers_fn)(void* context, cw_managed_uuid entity, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_enabled_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_enabled_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_affect_diffuse_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_affect_diffuse_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_affect_specular_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_affect_specular_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_volumetric_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_volumetric_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_shadows_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_shadows_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_shadow_bias_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_shadow_bias_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_shadow_normal_bias_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_shadow_normal_bias_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_shadow_near_plane_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_shadow_near_plane_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_shadow_importance_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_shadow_importance_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_shadow_resolution_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_shadow_resolution_fn)(void* context, cw_managed_uuid entity, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_cache_static_shadow_casters_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_cache_static_shadow_casters_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_get_backend_fn)(void* context, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_get_is_simulating_fn)(void* context, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_get_gravity_fn)(void* context, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_set_gravity_fn)(void* context, const cw_managed_vec2* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_get_velocity_iterations_fn)(void* context, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_set_velocity_iterations_fn)(void* context, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_get_position_iterations_fn)(void* context, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_set_position_iterations_fn)(void* context, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_get_default_material_fn)(void* context, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_set_default_material_fn)(void* context, cw_managed_uuid material);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_get_layer_name_fn)(void* context, int32_t layer, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_set_layer_name_fn)(void* context, int32_t layer, cw_managed_string_view name);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_get_layer_mask_fn)(void* context, int32_t layer, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_set_layer_mask_fn)(void* context, int32_t layer, uint32_t mask);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_resolve_entity_fn)(void* context, uint32_t runtimeId, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics2d_raycast_fn)(void* context, const cw_managed_vec2* origin, const cw_managed_vec2* direction, float distance, uint32_t layerMask, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_get_backend_fn)(void* context, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_get_backend_name_fn)(void* context, cw_managed_string_view* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_get_is_simulating_fn)(void* context, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_get_capabilities_fn)(void* context, uint64_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_get_gravity_fn)(void* context, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_set_gravity_fn)(void* context, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_get_substeps_fn)(void* context, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_set_substeps_fn)(void* context, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_get_default_material_fn)(void* context, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_set_default_material_fn)(void* context, cw_managed_uuid material);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_try_set_backend_fn)(void* context, int32_t value, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_is_backend_available_fn)(void* context, int32_t value, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_resolve_entity_fn)(void* context, uint64_t runtimeId, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_raycast_fn)(void* context, const cw_managed_vec3* origin, const cw_managed_vec3* direction, float distance, uint32_t layerMask, uint8_t includeTriggers, uint64_t ignoreBodyHandle, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_sweep_fn)(void* context, int32_t shapeType, const cw_managed_vec3* size, float radius, float height, const cw_managed_vec3* position, const cw_managed_quat* rotation, const cw_managed_vec3* direction, float distance, uint32_t layerMask, uint8_t includeTriggers, uint64_t ignoreBodyHandle, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics3d_overlap_fn)(void* context, int32_t shapeType, const cw_managed_vec3* size, float radius, float height, const cw_managed_vec3* position, const cw_managed_quat* rotation, uint32_t layerMask, uint8_t includeTriggers, uint64_t ignoreBodyHandle, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_get_vertex_count_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_get_index_count_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_copy_vertices_fn)(void* context, cw_managed_uuid asset, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_set_vertices_fn)(void* context, cw_managed_uuid asset, void* source, uint32_t count);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_copy_normals_fn)(void* context, cw_managed_uuid asset, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_set_normals_fn)(void* context, cw_managed_uuid asset, void* source, uint32_t count);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_copy_uvs_fn)(void* context, cw_managed_uuid asset, uint32_t channel, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_set_uvs_fn)(void* context, cw_managed_uuid asset, uint32_t channel, void* source, uint32_t count);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_copy_colors_fn)(void* context, cw_managed_uuid asset, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_set_colors_fn)(void* context, cw_managed_uuid asset, void* source, uint32_t count);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_copy_indices_fn)(void* context, cw_managed_uuid asset, void* destination, uint32_t capacity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_set_indices_fn)(void* context, cw_managed_uuid asset, void* source, uint32_t count);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_recalculate_bounds_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_recalculate_normals_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_recalculate_tangents_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_upload_data_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_clear_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_get_bounds_min_fn)(void* context, cw_managed_uuid asset, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_get_bounds_max_fn)(void* context, cw_managed_uuid asset, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_set_vertex_buffer_params_fn)(void* context, cw_managed_uuid asset, uint32_t vertexCount, void* layout, uint32_t layoutCount);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_set_vertex_buffer_data_fn)(void* context, cw_managed_uuid asset, void* source, uint32_t meshBufferStart, uint32_t count, uint32_t stride);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_get_vertex_buffer_data_fn)(void* context, cw_managed_uuid asset, void* destination, uint32_t capacity, uint32_t stride, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_get_vertex_stride_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_get_vertex_attribute_count_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_has_vertex_attribute_fn)(void* context, cw_managed_uuid asset, int32_t attribute, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_get_vertex_attribute_fn)(void* context, cw_managed_uuid asset, int32_t index, void* destination);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_create_plane_fn)(void* context, float width, float height, uint32_t subdivisionsX, uint32_t subdivisionsY, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_create_box_fn)(void* context, const cw_managed_vec3* dimensions, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_create_cube_fn)(void* context, float size, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_create_sphere_fn)(void* context, float radius, uint32_t segments, uint32_t rings, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_create_cylinder_fn)(void* context, float radius, float height, uint32_t segments, uint8_t capped, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_create_cone_fn)(void* context, float radius, float height, uint32_t segments, uint8_t capped, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_create_capsule_fn)(void* context, float radius, float height, uint32_t segments, uint32_t hemisphereRings, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_renderer_get_material_fn)(void* context, cw_managed_uuid entity, uint32_t index, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_renderer_set_material_fn)(void* context, cw_managed_uuid entity, uint32_t index, cw_managed_uuid material);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_determinant_fn)(void* context, const cw_managed_mat4* matrix, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_inverse_fn)(void* context, const cw_managed_mat4* matrix, cw_managed_mat4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_affine_inverse_fn)(void* context, const cw_managed_mat4* matrix, cw_managed_mat4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_look_at_fn)(void* context, const cw_managed_vec3* from, const cw_managed_vec3* to, const cw_managed_vec3* up, cw_managed_mat4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_add_script_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view assemblyName, cw_managed_string_view namespaceName, cw_managed_string_view typeName);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_remove_script_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view assemblyName, cw_managed_string_view namespaceName, cw_managed_string_view typeName);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_renderer_get_mesh_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_renderer_set_mesh_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_renderer_get_material_count_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_renderer_set_material_count_fn)(void* context, cw_managed_uuid entity, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider2d_get_is_trigger_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider2d_set_is_trigger_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider2d_get_offset_fn)(void* context, cw_managed_uuid entity, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider2d_set_offset_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider2d_get_material_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider2d_set_material_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_box_collider2d_get_size_fn)(void* context, cw_managed_uuid entity, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_box_collider2d_set_size_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_circle_collider2d_get_radius_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_circle_collider2d_set_radius_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_get_is_trigger_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_set_is_trigger_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_get_offset_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_set_offset_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_get_rotation_fn)(void* context, cw_managed_uuid entity, cw_managed_quat* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_set_rotation_fn)(void* context, cw_managed_uuid entity, const cw_managed_quat* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_get_material_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_set_material_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_get_collision_filter_fn)(void* context, cw_managed_uuid entity, cw_managed_physics_filter3d* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_set_collision_filter_fn)(void* context, cw_managed_uuid entity, const cw_managed_physics_filter3d* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_box_collider3d_get_size_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_box_collider3d_set_size_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sphere_collider3d_get_radius_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sphere_collider3d_set_radius_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capsule_collider3d_get_radius_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capsule_collider3d_set_radius_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capsule_collider3d_get_height_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capsule_collider3d_set_height_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_body_type_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_body_type_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_mass_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_mass_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_auto_mass_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_auto_mass_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_gravity_scale_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_gravity_scale_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_linear_damping_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_linear_damping_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_angular_damping_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_angular_damping_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_center_of_mass_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_center_of_mass_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_allow_sleep_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_allow_sleep_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_start_awake_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_start_awake_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_continuous_collision_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_continuous_collision_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_constraints_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_constraints_fn)(void* context, cw_managed_uuid entity, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_collision_filter_fn)(void* context, cw_managed_uuid entity, cw_managed_physics_filter3d* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_collision_filter_fn)(void* context, cw_managed_uuid entity, const cw_managed_physics_filter3d* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_linear_velocity_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_linear_velocity_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_angular_velocity_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_angular_velocity_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_awake_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_awake_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_body_handle_fn)(void* context, cw_managed_uuid entity, uint64_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_get_density_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_set_density_fn)(void* context, cw_managed_uuid asset, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_get_friction_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_set_friction_fn)(void* context, cw_managed_uuid asset, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_get_restitution_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_set_restitution_fn)(void* context, cw_managed_uuid asset, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_get_restitution_threshold_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_set_restitution_threshold_fn)(void* context, cw_managed_uuid asset, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_get_friction_combine_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_set_friction_combine_fn)(void* context, cw_managed_uuid asset, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_get_restitution_combine_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_set_restitution_combine_fn)(void* context, cw_managed_uuid asset, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_get_density_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_set_density_fn)(void* context, cw_managed_uuid asset, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_get_friction_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_set_friction_fn)(void* context, cw_managed_uuid asset, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_get_restitution_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_set_restitution_fn)(void* context, cw_managed_uuid asset, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_get_restitution_threshold_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_set_restitution_threshold_fn)(void* context, cw_managed_uuid asset, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_get_friction_combine_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_set_friction_combine_fn)(void* context, cw_managed_uuid asset, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_get_restitution_combine_fn)(void* context, cw_managed_uuid asset, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_set_restitution_combine_fn)(void* context, cw_managed_uuid asset, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_clip_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_set_clip_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_speed_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_set_speed_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_wrap_mode_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_set_wrap_mode_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_play_on_awake_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_set_play_on_awake_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_apply_root_motion_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_set_apply_root_motion_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_time_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_set_time_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_normalized_time_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_set_normalized_time_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_state_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_text_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_text_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_font_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
@@ -507,8 +647,8 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_horizontal_alignm
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_horizontal_alignment_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_vertical_alignment_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_vertical_alignment_fn)(void* context, cw_managed_uuid entity, int32_t value);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_font_style_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_font_style_fn)(void* context, cw_managed_uuid entity, uint32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_font_style_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_font_style_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_outline_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_outline_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_outline_width_fn)(void* context, cw_managed_uuid entity, float* result);
@@ -527,8 +667,6 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_line_spacing_fn)(
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_line_spacing_fn)(void* context, cw_managed_uuid entity, float value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_paragraph_spacing_fn)(void* context, cw_managed_uuid entity, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_paragraph_spacing_fn)(void* context, cw_managed_uuid entity, float value);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_tab_width_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_tab_width_fn)(void* context, cw_managed_uuid entity, uint32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_use_custom_decoration_color_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_use_custom_decoration_color_fn)(void* context, cw_managed_uuid entity, uint8_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_decoration_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
@@ -541,27 +679,12 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_strikethrough_off
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_strikethrough_offset_fn)(void* context, cw_managed_uuid entity, float value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_use_kerning_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_use_kerning_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_tab_width_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_tab_width_fn)(void* context, cw_managed_uuid entity, uint32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_hit_test_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* position, uint32_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_is_valid_fn)(void* context, cw_managed_uuid font, uint8_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_glyph_count_fn)(void* context, cw_managed_uuid font, uint32_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_tab_width_fn)(void* context, cw_managed_uuid font, uint32_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_width_fn)(void* context, cw_managed_uuid font, uint32_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_height_fn)(void* context, cw_managed_uuid font, uint32_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_atlas_pixel_range_fn)(void* context, cw_managed_uuid font, float* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_has_glyph_fn)(void* context, cw_managed_uuid font, uint32_t codePoint, uint8_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_character_info_fn)(void* context, cw_managed_uuid font, uint32_t codePoint, uint8_t useFallbacks, cw_managed_font_character_info* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_fallback_count_fn)(void* context, cw_managed_uuid font, uint32_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_get_fallback_fn)(void* context, cw_managed_uuid font, uint32_t index, cw_managed_uuid* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_add_fallback_fn)(void* context, cw_managed_uuid font, cw_managed_uuid value, uint8_t* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_font_clear_fallbacks_fn)(void* context, cw_managed_uuid font);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_determinant_fn)(void* context, const cw_managed_mat4* matrix, float* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_inverse_fn)(void* context, const cw_managed_mat4* matrix, cw_managed_mat4* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_matrix_affine_inverse_fn)(void* context, const cw_managed_mat4* matrix, cw_managed_mat4* result);
-typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_math_look_at_fn)(void* context, const cw_managed_vec3* from, const cw_managed_vec3* to, const cw_managed_vec3* up, cw_managed_mat4* result);
 
 typedef struct cw_managed_host_api
 {
@@ -612,13 +735,13 @@ typedef struct cw_managed_host_api
     cw_managed_input_get_gamepad_button_down_fn input_get_gamepad_button_down;
     cw_managed_input_get_gamepad_button_up_fn input_get_gamepad_button_up;
     cw_managed_input_get_gamepad_axis_fn input_get_gamepad_axis;
+    cw_managed_input_enable_action_map_fn input_enable_action_map;
+    cw_managed_input_disable_action_map_fn input_disable_action_map;
     cw_managed_input_get_action_fn input_get_action;
     cw_managed_input_get_action_down_fn input_get_action_down;
     cw_managed_input_get_action_up_fn input_get_action_up;
     cw_managed_input_get_axis_fn input_get_axis;
     cw_managed_input_get_action_vector_fn input_get_action_vector;
-    cw_managed_input_enable_action_map_fn input_enable_action_map;
-    cw_managed_input_disable_action_map_fn input_disable_action_map;
     cw_managed_input_clear_action_rebinds_fn input_clear_action_rebinds;
     cw_managed_time_get_delta_time_fn time_get_delta_time;
     cw_managed_time_get_time_fn time_get_time;
@@ -685,6 +808,337 @@ typedef struct cw_managed_host_api
     cw_managed_audio_source_play_fn audio_source_play;
     cw_managed_audio_source_pause_fn audio_source_pause;
     cw_managed_audio_source_stop_fn audio_source_stop;
+    cw_managed_asset_get_name_fn asset_get_name;
+    cw_managed_asset_acquire_fn asset_acquire;
+    cw_managed_asset_release_fn asset_release;
+    cw_managed_asset_database_load_fn asset_database_load;
+    cw_managed_asset_database_load_from_uuid_fn asset_database_load_from_uuid;
+    cw_managed_asset_database_get_path_fn asset_database_get_path;
+    cw_managed_asset_database_is_valid_fn asset_database_is_valid;
+    cw_managed_audio_clip_get_bit_depth_fn audio_clip_get_bit_depth;
+    cw_managed_audio_clip_get_channels_fn audio_clip_get_channels;
+    cw_managed_audio_clip_get_frequency_fn audio_clip_get_frequency;
+    cw_managed_audio_clip_get_samples_fn audio_clip_get_samples;
+    cw_managed_audio_clip_get_length_fn audio_clip_get_length;
+    cw_managed_audio_clip_get_read_mode_fn audio_clip_get_read_mode;
+    cw_managed_audio_clip_get_format_fn audio_clip_get_format;
+    cw_managed_audio_clip_get_is3d_fn audio_clip_get_is3d;
+    cw_managed_texture_get_width_fn texture_get_width;
+    cw_managed_texture_get_height_fn texture_get_height;
+    cw_managed_audio_mixer_set_active_fn audio_mixer_set_active;
+    cw_managed_audio_mixer_get_bus_volume_fn audio_mixer_get_bus_volume;
+    cw_managed_audio_mixer_set_bus_volume_fn audio_mixer_set_bus_volume;
+    cw_managed_audio_mixer_is_bus_muted_fn audio_mixer_is_bus_muted;
+    cw_managed_audio_mixer_set_bus_muted_fn audio_mixer_set_bus_muted;
+    cw_managed_material_set_float_fn material_set_float;
+    cw_managed_material_set_vector2_fn material_set_vector2;
+    cw_managed_material_set_int_fn material_set_int;
+    cw_managed_material_set_color_fn material_set_color;
+    cw_managed_material_set_vector3_fn material_set_vector3;
+    cw_managed_material_set_matrix_fn material_set_matrix;
+    cw_managed_material_set_texture_fn material_set_texture;
+    cw_managed_material_has_alpha_mode_override_fn material_has_alpha_mode_override;
+    cw_managed_material_get_alpha_mode_fn material_get_alpha_mode;
+    cw_managed_material_set_alpha_mode_fn material_set_alpha_mode;
+    cw_managed_material_clear_alpha_mode_override_fn material_clear_alpha_mode_override;
+    cw_managed_physics_material2d_create_fn physics_material2d_create;
+    cw_managed_physics_material3d_create_fn physics_material3d_create;
+    cw_managed_rigidbody3d_add_force_fn rigidbody3d_add_force;
+    cw_managed_rigidbody3d_add_force_at_fn rigidbody3d_add_force_at;
+    cw_managed_rigidbody3d_add_torque_fn rigidbody3d_add_torque;
+    cw_managed_compression_compress_fn compression_compress;
+    cw_managed_compression_decompress_fn compression_decompress;
+    cw_managed_file_dialog_open_file_fn file_dialog_open_file;
+    cw_managed_file_dialog_open_folder_fn file_dialog_open_folder;
+    cw_managed_file_dialog_save_file_fn file_dialog_save_file;
+    cw_managed_file_dialog_save_folder_fn file_dialog_save_folder;
+    cw_managed_font_has_character_fn font_has_character;
+    cw_managed_font_get_is_valid_fn font_get_is_valid;
+    cw_managed_font_get_glyph_count_fn font_get_glyph_count;
+    cw_managed_font_get_tab_width_fn font_get_tab_width;
+    cw_managed_font_get_atlas_width_fn font_get_atlas_width;
+    cw_managed_font_get_atlas_height_fn font_get_atlas_height;
+    cw_managed_font_get_atlas_pixel_range_fn font_get_atlas_pixel_range;
+    cw_managed_font_get_fallback_count_fn font_get_fallback_count;
+    cw_managed_font_has_glyph_fn font_has_glyph;
+    cw_managed_font_get_character_info_fn font_get_character_info;
+    cw_managed_font_get_fallback_fn font_get_fallback;
+    cw_managed_font_add_fallback_fn font_add_fallback;
+    cw_managed_font_clear_fallbacks_fn font_clear_fallbacks;
+    cw_managed_font_get_system_font_count_fn font_get_system_font_count;
+    cw_managed_font_get_system_font_path_fn font_get_system_font_path;
+    cw_managed_font_get_system_font_name_fn font_get_system_font_name;
+    cw_managed_animation_clip_get_length_fn animation_clip_get_length;
+    cw_managed_animation_clip_get_sample_rate_fn animation_clip_get_sample_rate;
+    cw_managed_animation_clip_get_is_additive_fn animation_clip_get_is_additive;
+    cw_managed_animation_component_play_fn animation_component_play;
+    cw_managed_animation_component_pause_fn animation_component_pause;
+    cw_managed_animation_component_stop_fn animation_component_stop;
+    cw_managed_text_hit_test_fn text_hit_test;
+    cw_managed_debug_write_log_fn debug_write_log;
+    cw_managed_random_initialize_fn random_initialize;
+    cw_managed_random_get_value_fn random_get_value;
+    cw_managed_random_get_range_fn random_get_range;
+    cw_managed_random_get_inside_unit_circle_fn random_get_inside_unit_circle;
+    cw_managed_random_get_inside_unit_sphere_fn random_get_inside_unit_sphere;
+    cw_managed_noise_get_perlin2d_fn noise_get_perlin2d;
+    cw_managed_layer_mask_get_name_fn layer_mask_get_name;
+    cw_managed_layer_mask_get_layer_fn layer_mask_get_layer;
+    cw_managed_scene_get_active_fn scene_get_active;
+    cw_managed_scene_get_execution_state_fn scene_get_execution_state;
+    cw_managed_scene_get_loaded_count_fn scene_get_loaded_count;
+    cw_managed_scene_get_loaded_fn scene_get_loaded;
+    cw_managed_scene_load_fn scene_load;
+    cw_managed_scene_unload_fn scene_unload;
+    cw_managed_scene_reload_fn scene_reload;
+    cw_managed_scene_set_active_fn scene_set_active;
+    cw_managed_camera_get_field_of_view_fn camera_get_field_of_view;
+    cw_managed_camera_set_field_of_view_fn camera_set_field_of_view;
+    cw_managed_camera_get_projection_fn camera_get_projection;
+    cw_managed_camera_set_projection_fn camera_set_projection;
+    cw_managed_camera_get_near_clip_plane_fn camera_get_near_clip_plane;
+    cw_managed_camera_set_near_clip_plane_fn camera_set_near_clip_plane;
+    cw_managed_camera_get_far_clip_plane_fn camera_get_far_clip_plane;
+    cw_managed_camera_set_far_clip_plane_fn camera_set_far_clip_plane;
+    cw_managed_camera_get_orthographic_size_fn camera_get_orthographic_size;
+    cw_managed_camera_set_orthographic_size_fn camera_set_orthographic_size;
+    cw_managed_camera_get_aspect_ratio_fn camera_get_aspect_ratio;
+    cw_managed_camera_set_aspect_ratio_fn camera_set_aspect_ratio;
+    cw_managed_camera_get_background_color_fn camera_get_background_color;
+    cw_managed_camera_set_background_color_fn camera_set_background_color;
+    cw_managed_camera_get_viewport_rectangle_fn camera_get_viewport_rectangle;
+    cw_managed_camera_set_viewport_rectangle_fn camera_set_viewport_rectangle;
+    cw_managed_camera_get_hdr_fn camera_get_hdr;
+    cw_managed_camera_set_hdr_fn camera_set_hdr;
+    cw_managed_camera_get_msaa_fn camera_get_msaa;
+    cw_managed_camera_set_msaa_fn camera_set_msaa;
+    cw_managed_camera_get_occlusion_culling_fn camera_get_occlusion_culling;
+    cw_managed_camera_set_occlusion_culling_fn camera_set_occlusion_culling;
+    cw_managed_sprite_renderer_get_texture_fn sprite_renderer_get_texture;
+    cw_managed_sprite_renderer_set_texture_fn sprite_renderer_set_texture;
+    cw_managed_sprite_renderer_get_color_fn sprite_renderer_get_color;
+    cw_managed_sprite_renderer_set_color_fn sprite_renderer_set_color;
+    cw_managed_sprite_renderer_get_sorting_layer_fn sprite_renderer_get_sorting_layer;
+    cw_managed_sprite_renderer_set_sorting_layer_fn sprite_renderer_set_sorting_layer;
+    cw_managed_sprite_renderer_get_order_in_layer_fn sprite_renderer_get_order_in_layer;
+    cw_managed_sprite_renderer_set_order_in_layer_fn sprite_renderer_set_order_in_layer;
+    cw_managed_light_get_type_fn light_get_type;
+    cw_managed_light_set_type_fn light_set_type;
+    cw_managed_light_get_color_fn light_get_color;
+    cw_managed_light_set_color_fn light_set_color;
+    cw_managed_light_get_intensity_fn light_get_intensity;
+    cw_managed_light_set_intensity_fn light_set_intensity;
+    cw_managed_light_get_range_fn light_get_range;
+    cw_managed_light_set_range_fn light_set_range;
+    cw_managed_light_get_spot_inner_angle_fn light_get_spot_inner_angle;
+    cw_managed_light_set_spot_inner_angle_fn light_set_spot_inner_angle;
+    cw_managed_light_get_spot_outer_angle_fn light_get_spot_outer_angle;
+    cw_managed_light_set_spot_outer_angle_fn light_set_spot_outer_angle;
+    cw_managed_light_get_source_radius_fn light_get_source_radius;
+    cw_managed_light_set_source_radius_fn light_set_source_radius;
+    cw_managed_light_get_use_color_temperature_fn light_get_use_color_temperature;
+    cw_managed_light_set_use_color_temperature_fn light_set_use_color_temperature;
+    cw_managed_light_get_temperature_fn light_get_temperature;
+    cw_managed_light_set_temperature_fn light_set_temperature;
+    cw_managed_light_get_visibility_layers_fn light_get_visibility_layers;
+    cw_managed_light_set_visibility_layers_fn light_set_visibility_layers;
+    cw_managed_light_get_enabled_fn light_get_enabled;
+    cw_managed_light_set_enabled_fn light_set_enabled;
+    cw_managed_light_get_affect_diffuse_fn light_get_affect_diffuse;
+    cw_managed_light_set_affect_diffuse_fn light_set_affect_diffuse;
+    cw_managed_light_get_affect_specular_fn light_get_affect_specular;
+    cw_managed_light_set_affect_specular_fn light_set_affect_specular;
+    cw_managed_light_get_volumetric_fn light_get_volumetric;
+    cw_managed_light_set_volumetric_fn light_set_volumetric;
+    cw_managed_light_get_shadows_fn light_get_shadows;
+    cw_managed_light_set_shadows_fn light_set_shadows;
+    cw_managed_light_get_shadow_bias_fn light_get_shadow_bias;
+    cw_managed_light_set_shadow_bias_fn light_set_shadow_bias;
+    cw_managed_light_get_shadow_normal_bias_fn light_get_shadow_normal_bias;
+    cw_managed_light_set_shadow_normal_bias_fn light_set_shadow_normal_bias;
+    cw_managed_light_get_shadow_near_plane_fn light_get_shadow_near_plane;
+    cw_managed_light_set_shadow_near_plane_fn light_set_shadow_near_plane;
+    cw_managed_light_get_shadow_importance_fn light_get_shadow_importance;
+    cw_managed_light_set_shadow_importance_fn light_set_shadow_importance;
+    cw_managed_light_get_shadow_resolution_fn light_get_shadow_resolution;
+    cw_managed_light_set_shadow_resolution_fn light_set_shadow_resolution;
+    cw_managed_light_get_cache_static_shadow_casters_fn light_get_cache_static_shadow_casters;
+    cw_managed_light_set_cache_static_shadow_casters_fn light_set_cache_static_shadow_casters;
+    cw_managed_physics2d_get_backend_fn physics2d_get_backend;
+    cw_managed_physics2d_get_is_simulating_fn physics2d_get_is_simulating;
+    cw_managed_physics2d_get_gravity_fn physics2d_get_gravity;
+    cw_managed_physics2d_set_gravity_fn physics2d_set_gravity;
+    cw_managed_physics2d_get_velocity_iterations_fn physics2d_get_velocity_iterations;
+    cw_managed_physics2d_set_velocity_iterations_fn physics2d_set_velocity_iterations;
+    cw_managed_physics2d_get_position_iterations_fn physics2d_get_position_iterations;
+    cw_managed_physics2d_set_position_iterations_fn physics2d_set_position_iterations;
+    cw_managed_physics2d_get_default_material_fn physics2d_get_default_material;
+    cw_managed_physics2d_set_default_material_fn physics2d_set_default_material;
+    cw_managed_physics2d_get_layer_name_fn physics2d_get_layer_name;
+    cw_managed_physics2d_set_layer_name_fn physics2d_set_layer_name;
+    cw_managed_physics2d_get_layer_mask_fn physics2d_get_layer_mask;
+    cw_managed_physics2d_set_layer_mask_fn physics2d_set_layer_mask;
+    cw_managed_physics2d_resolve_entity_fn physics2d_resolve_entity;
+    cw_managed_physics2d_raycast_fn physics2d_raycast;
+    cw_managed_physics3d_get_backend_fn physics3d_get_backend;
+    cw_managed_physics3d_get_backend_name_fn physics3d_get_backend_name;
+    cw_managed_physics3d_get_is_simulating_fn physics3d_get_is_simulating;
+    cw_managed_physics3d_get_capabilities_fn physics3d_get_capabilities;
+    cw_managed_physics3d_get_gravity_fn physics3d_get_gravity;
+    cw_managed_physics3d_set_gravity_fn physics3d_set_gravity;
+    cw_managed_physics3d_get_substeps_fn physics3d_get_substeps;
+    cw_managed_physics3d_set_substeps_fn physics3d_set_substeps;
+    cw_managed_physics3d_get_default_material_fn physics3d_get_default_material;
+    cw_managed_physics3d_set_default_material_fn physics3d_set_default_material;
+    cw_managed_physics3d_try_set_backend_fn physics3d_try_set_backend;
+    cw_managed_physics3d_is_backend_available_fn physics3d_is_backend_available;
+    cw_managed_physics3d_resolve_entity_fn physics3d_resolve_entity;
+    cw_managed_physics3d_raycast_fn physics3d_raycast;
+    cw_managed_physics3d_sweep_fn physics3d_sweep;
+    cw_managed_physics3d_overlap_fn physics3d_overlap;
+    cw_managed_mesh_get_vertex_count_fn mesh_get_vertex_count;
+    cw_managed_mesh_get_index_count_fn mesh_get_index_count;
+    cw_managed_mesh_copy_vertices_fn mesh_copy_vertices;
+    cw_managed_mesh_set_vertices_fn mesh_set_vertices;
+    cw_managed_mesh_copy_normals_fn mesh_copy_normals;
+    cw_managed_mesh_set_normals_fn mesh_set_normals;
+    cw_managed_mesh_copy_uvs_fn mesh_copy_uvs;
+    cw_managed_mesh_set_uvs_fn mesh_set_uvs;
+    cw_managed_mesh_copy_colors_fn mesh_copy_colors;
+    cw_managed_mesh_set_colors_fn mesh_set_colors;
+    cw_managed_mesh_copy_indices_fn mesh_copy_indices;
+    cw_managed_mesh_set_indices_fn mesh_set_indices;
+    cw_managed_mesh_recalculate_bounds_fn mesh_recalculate_bounds;
+    cw_managed_mesh_recalculate_normals_fn mesh_recalculate_normals;
+    cw_managed_mesh_recalculate_tangents_fn mesh_recalculate_tangents;
+    cw_managed_mesh_upload_data_fn mesh_upload_data;
+    cw_managed_mesh_clear_fn mesh_clear;
+    cw_managed_mesh_get_bounds_min_fn mesh_get_bounds_min;
+    cw_managed_mesh_get_bounds_max_fn mesh_get_bounds_max;
+    cw_managed_mesh_set_vertex_buffer_params_fn mesh_set_vertex_buffer_params;
+    cw_managed_mesh_set_vertex_buffer_data_fn mesh_set_vertex_buffer_data;
+    cw_managed_mesh_get_vertex_buffer_data_fn mesh_get_vertex_buffer_data;
+    cw_managed_mesh_get_vertex_stride_fn mesh_get_vertex_stride;
+    cw_managed_mesh_get_vertex_attribute_count_fn mesh_get_vertex_attribute_count;
+    cw_managed_mesh_has_vertex_attribute_fn mesh_has_vertex_attribute;
+    cw_managed_mesh_get_vertex_attribute_fn mesh_get_vertex_attribute;
+    cw_managed_mesh_create_plane_fn mesh_create_plane;
+    cw_managed_mesh_create_box_fn mesh_create_box;
+    cw_managed_mesh_create_cube_fn mesh_create_cube;
+    cw_managed_mesh_create_sphere_fn mesh_create_sphere;
+    cw_managed_mesh_create_cylinder_fn mesh_create_cylinder;
+    cw_managed_mesh_create_cone_fn mesh_create_cone;
+    cw_managed_mesh_create_capsule_fn mesh_create_capsule;
+    cw_managed_mesh_renderer_get_material_fn mesh_renderer_get_material;
+    cw_managed_mesh_renderer_set_material_fn mesh_renderer_set_material;
+    cw_managed_math_matrix_determinant_fn math_matrix_determinant;
+    cw_managed_math_matrix_inverse_fn math_matrix_inverse;
+    cw_managed_math_matrix_affine_inverse_fn math_matrix_affine_inverse;
+    cw_managed_math_look_at_fn math_look_at;
+    cw_managed_add_script_component_fn add_script_component;
+    cw_managed_remove_script_component_fn remove_script_component;
+    cw_managed_mesh_renderer_get_mesh_fn mesh_renderer_get_mesh;
+    cw_managed_mesh_renderer_set_mesh_fn mesh_renderer_set_mesh;
+    cw_managed_mesh_renderer_get_material_count_fn mesh_renderer_get_material_count;
+    cw_managed_mesh_renderer_set_material_count_fn mesh_renderer_set_material_count;
+    cw_managed_collider2d_get_is_trigger_fn collider2d_get_is_trigger;
+    cw_managed_collider2d_set_is_trigger_fn collider2d_set_is_trigger;
+    cw_managed_collider2d_get_offset_fn collider2d_get_offset;
+    cw_managed_collider2d_set_offset_fn collider2d_set_offset;
+    cw_managed_collider2d_get_material_fn collider2d_get_material;
+    cw_managed_collider2d_set_material_fn collider2d_set_material;
+    cw_managed_box_collider2d_get_size_fn box_collider2d_get_size;
+    cw_managed_box_collider2d_set_size_fn box_collider2d_set_size;
+    cw_managed_circle_collider2d_get_radius_fn circle_collider2d_get_radius;
+    cw_managed_circle_collider2d_set_radius_fn circle_collider2d_set_radius;
+    cw_managed_collider3d_get_is_trigger_fn collider3d_get_is_trigger;
+    cw_managed_collider3d_set_is_trigger_fn collider3d_set_is_trigger;
+    cw_managed_collider3d_get_offset_fn collider3d_get_offset;
+    cw_managed_collider3d_set_offset_fn collider3d_set_offset;
+    cw_managed_collider3d_get_rotation_fn collider3d_get_rotation;
+    cw_managed_collider3d_set_rotation_fn collider3d_set_rotation;
+    cw_managed_collider3d_get_material_fn collider3d_get_material;
+    cw_managed_collider3d_set_material_fn collider3d_set_material;
+    cw_managed_collider3d_get_collision_filter_fn collider3d_get_collision_filter;
+    cw_managed_collider3d_set_collision_filter_fn collider3d_set_collision_filter;
+    cw_managed_box_collider3d_get_size_fn box_collider3d_get_size;
+    cw_managed_box_collider3d_set_size_fn box_collider3d_set_size;
+    cw_managed_sphere_collider3d_get_radius_fn sphere_collider3d_get_radius;
+    cw_managed_sphere_collider3d_set_radius_fn sphere_collider3d_set_radius;
+    cw_managed_capsule_collider3d_get_radius_fn capsule_collider3d_get_radius;
+    cw_managed_capsule_collider3d_set_radius_fn capsule_collider3d_set_radius;
+    cw_managed_capsule_collider3d_get_height_fn capsule_collider3d_get_height;
+    cw_managed_capsule_collider3d_set_height_fn capsule_collider3d_set_height;
+    cw_managed_rigidbody3d_get_body_type_fn rigidbody3d_get_body_type;
+    cw_managed_rigidbody3d_set_body_type_fn rigidbody3d_set_body_type;
+    cw_managed_rigidbody3d_get_mass_fn rigidbody3d_get_mass;
+    cw_managed_rigidbody3d_set_mass_fn rigidbody3d_set_mass;
+    cw_managed_rigidbody3d_get_auto_mass_fn rigidbody3d_get_auto_mass;
+    cw_managed_rigidbody3d_set_auto_mass_fn rigidbody3d_set_auto_mass;
+    cw_managed_rigidbody3d_get_gravity_scale_fn rigidbody3d_get_gravity_scale;
+    cw_managed_rigidbody3d_set_gravity_scale_fn rigidbody3d_set_gravity_scale;
+    cw_managed_rigidbody3d_get_linear_damping_fn rigidbody3d_get_linear_damping;
+    cw_managed_rigidbody3d_set_linear_damping_fn rigidbody3d_set_linear_damping;
+    cw_managed_rigidbody3d_get_angular_damping_fn rigidbody3d_get_angular_damping;
+    cw_managed_rigidbody3d_set_angular_damping_fn rigidbody3d_set_angular_damping;
+    cw_managed_rigidbody3d_get_center_of_mass_fn rigidbody3d_get_center_of_mass;
+    cw_managed_rigidbody3d_set_center_of_mass_fn rigidbody3d_set_center_of_mass;
+    cw_managed_rigidbody3d_get_allow_sleep_fn rigidbody3d_get_allow_sleep;
+    cw_managed_rigidbody3d_set_allow_sleep_fn rigidbody3d_set_allow_sleep;
+    cw_managed_rigidbody3d_get_start_awake_fn rigidbody3d_get_start_awake;
+    cw_managed_rigidbody3d_set_start_awake_fn rigidbody3d_set_start_awake;
+    cw_managed_rigidbody3d_get_continuous_collision_fn rigidbody3d_get_continuous_collision;
+    cw_managed_rigidbody3d_set_continuous_collision_fn rigidbody3d_set_continuous_collision;
+    cw_managed_rigidbody3d_get_constraints_fn rigidbody3d_get_constraints;
+    cw_managed_rigidbody3d_set_constraints_fn rigidbody3d_set_constraints;
+    cw_managed_rigidbody3d_get_collision_filter_fn rigidbody3d_get_collision_filter;
+    cw_managed_rigidbody3d_set_collision_filter_fn rigidbody3d_set_collision_filter;
+    cw_managed_rigidbody3d_get_linear_velocity_fn rigidbody3d_get_linear_velocity;
+    cw_managed_rigidbody3d_set_linear_velocity_fn rigidbody3d_set_linear_velocity;
+    cw_managed_rigidbody3d_get_angular_velocity_fn rigidbody3d_get_angular_velocity;
+    cw_managed_rigidbody3d_set_angular_velocity_fn rigidbody3d_set_angular_velocity;
+    cw_managed_rigidbody3d_get_awake_fn rigidbody3d_get_awake;
+    cw_managed_rigidbody3d_set_awake_fn rigidbody3d_set_awake;
+    cw_managed_rigidbody3d_get_body_handle_fn rigidbody3d_get_body_handle;
+    cw_managed_physics_material2d_get_density_fn physics_material2d_get_density;
+    cw_managed_physics_material2d_set_density_fn physics_material2d_set_density;
+    cw_managed_physics_material2d_get_friction_fn physics_material2d_get_friction;
+    cw_managed_physics_material2d_set_friction_fn physics_material2d_set_friction;
+    cw_managed_physics_material2d_get_restitution_fn physics_material2d_get_restitution;
+    cw_managed_physics_material2d_set_restitution_fn physics_material2d_set_restitution;
+    cw_managed_physics_material2d_get_restitution_threshold_fn physics_material2d_get_restitution_threshold;
+    cw_managed_physics_material2d_set_restitution_threshold_fn physics_material2d_set_restitution_threshold;
+    cw_managed_physics_material2d_get_friction_combine_fn physics_material2d_get_friction_combine;
+    cw_managed_physics_material2d_set_friction_combine_fn physics_material2d_set_friction_combine;
+    cw_managed_physics_material2d_get_restitution_combine_fn physics_material2d_get_restitution_combine;
+    cw_managed_physics_material2d_set_restitution_combine_fn physics_material2d_set_restitution_combine;
+    cw_managed_physics_material3d_get_density_fn physics_material3d_get_density;
+    cw_managed_physics_material3d_set_density_fn physics_material3d_set_density;
+    cw_managed_physics_material3d_get_friction_fn physics_material3d_get_friction;
+    cw_managed_physics_material3d_set_friction_fn physics_material3d_set_friction;
+    cw_managed_physics_material3d_get_restitution_fn physics_material3d_get_restitution;
+    cw_managed_physics_material3d_set_restitution_fn physics_material3d_set_restitution;
+    cw_managed_physics_material3d_get_restitution_threshold_fn physics_material3d_get_restitution_threshold;
+    cw_managed_physics_material3d_set_restitution_threshold_fn physics_material3d_set_restitution_threshold;
+    cw_managed_physics_material3d_get_friction_combine_fn physics_material3d_get_friction_combine;
+    cw_managed_physics_material3d_set_friction_combine_fn physics_material3d_set_friction_combine;
+    cw_managed_physics_material3d_get_restitution_combine_fn physics_material3d_get_restitution_combine;
+    cw_managed_physics_material3d_set_restitution_combine_fn physics_material3d_set_restitution_combine;
+    cw_managed_animation_component_get_clip_fn animation_component_get_clip;
+    cw_managed_animation_component_set_clip_fn animation_component_set_clip;
+    cw_managed_animation_component_get_speed_fn animation_component_get_speed;
+    cw_managed_animation_component_set_speed_fn animation_component_set_speed;
+    cw_managed_animation_component_get_wrap_mode_fn animation_component_get_wrap_mode;
+    cw_managed_animation_component_set_wrap_mode_fn animation_component_set_wrap_mode;
+    cw_managed_animation_component_get_play_on_awake_fn animation_component_get_play_on_awake;
+    cw_managed_animation_component_set_play_on_awake_fn animation_component_set_play_on_awake;
+    cw_managed_animation_component_get_apply_root_motion_fn animation_component_get_apply_root_motion;
+    cw_managed_animation_component_set_apply_root_motion_fn animation_component_set_apply_root_motion;
+    cw_managed_animation_component_get_time_fn animation_component_get_time;
+    cw_managed_animation_component_set_time_fn animation_component_set_time;
+    cw_managed_animation_component_get_normalized_time_fn animation_component_get_normalized_time;
+    cw_managed_animation_component_set_normalized_time_fn animation_component_set_normalized_time;
+    cw_managed_animation_component_get_state_fn animation_component_get_state;
     cw_managed_text_get_text_fn text_get_text;
     cw_managed_text_set_text_fn text_set_text;
     cw_managed_text_get_font_fn text_get_font;
@@ -735,8 +1189,6 @@ typedef struct cw_managed_host_api
     cw_managed_text_set_line_spacing_fn text_set_line_spacing;
     cw_managed_text_get_paragraph_spacing_fn text_get_paragraph_spacing;
     cw_managed_text_set_paragraph_spacing_fn text_set_paragraph_spacing;
-    cw_managed_text_get_tab_width_fn text_get_tab_width;
-    cw_managed_text_set_tab_width_fn text_set_tab_width;
     cw_managed_text_get_use_custom_decoration_color_fn text_get_use_custom_decoration_color;
     cw_managed_text_set_use_custom_decoration_color_fn text_set_use_custom_decoration_color;
     cw_managed_text_get_decoration_color_fn text_get_decoration_color;
@@ -749,30 +1201,21 @@ typedef struct cw_managed_host_api
     cw_managed_text_set_strikethrough_offset_fn text_set_strikethrough_offset;
     cw_managed_text_get_use_kerning_fn text_get_use_kerning;
     cw_managed_text_set_use_kerning_fn text_set_use_kerning;
+    cw_managed_text_get_tab_width_fn text_get_tab_width;
+    cw_managed_text_set_tab_width_fn text_set_tab_width;
     cw_managed_text_get_sorting_layer_fn text_get_sorting_layer;
     cw_managed_text_set_sorting_layer_fn text_set_sorting_layer;
     cw_managed_text_get_order_in_layer_fn text_get_order_in_layer;
     cw_managed_text_set_order_in_layer_fn text_set_order_in_layer;
-    cw_managed_text_hit_test_fn text_hit_test;
-    cw_managed_font_get_is_valid_fn font_get_is_valid;
-    cw_managed_font_get_glyph_count_fn font_get_glyph_count;
-    cw_managed_font_get_tab_width_fn font_get_tab_width;
-    cw_managed_font_get_atlas_width_fn font_get_atlas_width;
-    cw_managed_font_get_atlas_height_fn font_get_atlas_height;
-    cw_managed_font_get_atlas_pixel_range_fn font_get_atlas_pixel_range;
-    cw_managed_font_has_glyph_fn font_has_glyph;
-    cw_managed_font_get_character_info_fn font_get_character_info;
-    cw_managed_font_get_fallback_count_fn font_get_fallback_count;
-    cw_managed_font_get_fallback_fn font_get_fallback;
-    cw_managed_font_add_fallback_fn font_add_fallback;
-    cw_managed_font_clear_fallbacks_fn font_clear_fallbacks;
-    cw_managed_math_matrix_determinant_fn math_matrix_determinant;
-    cw_managed_math_matrix_inverse_fn math_matrix_inverse;
-    cw_managed_math_matrix_affine_inverse_fn math_matrix_affine_inverse;
-    cw_managed_math_look_at_fn math_look_at;
 } cw_managed_host_api;
 
 #define CW_MANAGED_HOST_FUNCTION_LIST(X) \
+    X(GetEntityName, get_entity_name) \
+    X(SetEntityName, set_entity_name) \
+    X(FindEntityByName, find_entity_by_name) \
+    X(GetEntityParent, get_entity_parent) \
+    X(SetEntityParent, set_entity_parent) \
+    X(DestroyEntity, destroy_entity) \
     X(EntityHasComponent, entity_has_component) \
     X(EntityAddComponent, entity_add_component) \
     X(EntityRemoveComponent, entity_remove_component) \
@@ -810,13 +1253,13 @@ typedef struct cw_managed_host_api
     X(InputGetGamepadButtonDown, input_get_gamepad_button_down) \
     X(InputGetGamepadButtonUp, input_get_gamepad_button_up) \
     X(InputGetGamepadAxis, input_get_gamepad_axis) \
+    X(InputEnableActionMap, input_enable_action_map) \
+    X(InputDisableActionMap, input_disable_action_map) \
     X(InputGetAction, input_get_action) \
     X(InputGetActionDown, input_get_action_down) \
     X(InputGetActionUp, input_get_action_up) \
     X(InputGetAxis, input_get_axis) \
     X(InputGetActionVector, input_get_action_vector) \
-    X(InputEnableActionMap, input_enable_action_map) \
-    X(InputDisableActionMap, input_disable_action_map) \
     X(InputClearActionRebinds, input_clear_action_rebinds) \
     X(TimeGetDeltaTime, time_get_delta_time) \
     X(TimeGetTime, time_get_time) \
@@ -883,6 +1326,337 @@ typedef struct cw_managed_host_api
     X(AudioSourcePlay, audio_source_play) \
     X(AudioSourcePause, audio_source_pause) \
     X(AudioSourceStop, audio_source_stop) \
+    X(AssetGetName, asset_get_name) \
+    X(AssetAcquire, asset_acquire) \
+    X(AssetRelease, asset_release) \
+    X(AssetDatabaseLoad, asset_database_load) \
+    X(AssetDatabaseLoadFromUuid, asset_database_load_from_uuid) \
+    X(AssetDatabaseGetPath, asset_database_get_path) \
+    X(AssetDatabaseIsValid, asset_database_is_valid) \
+    X(AudioClipGetBitDepth, audio_clip_get_bit_depth) \
+    X(AudioClipGetChannels, audio_clip_get_channels) \
+    X(AudioClipGetFrequency, audio_clip_get_frequency) \
+    X(AudioClipGetSamples, audio_clip_get_samples) \
+    X(AudioClipGetLength, audio_clip_get_length) \
+    X(AudioClipGetReadMode, audio_clip_get_read_mode) \
+    X(AudioClipGetFormat, audio_clip_get_format) \
+    X(AudioClipGetIs3D, audio_clip_get_is3d) \
+    X(TextureGetWidth, texture_get_width) \
+    X(TextureGetHeight, texture_get_height) \
+    X(AudioMixerSetActive, audio_mixer_set_active) \
+    X(AudioMixerGetBusVolume, audio_mixer_get_bus_volume) \
+    X(AudioMixerSetBusVolume, audio_mixer_set_bus_volume) \
+    X(AudioMixerIsBusMuted, audio_mixer_is_bus_muted) \
+    X(AudioMixerSetBusMuted, audio_mixer_set_bus_muted) \
+    X(MaterialSetFloat, material_set_float) \
+    X(MaterialSetVector2, material_set_vector2) \
+    X(MaterialSetInt, material_set_int) \
+    X(MaterialSetColor, material_set_color) \
+    X(MaterialSetVector3, material_set_vector3) \
+    X(MaterialSetMatrix, material_set_matrix) \
+    X(MaterialSetTexture, material_set_texture) \
+    X(MaterialHasAlphaModeOverride, material_has_alpha_mode_override) \
+    X(MaterialGetAlphaMode, material_get_alpha_mode) \
+    X(MaterialSetAlphaMode, material_set_alpha_mode) \
+    X(MaterialClearAlphaModeOverride, material_clear_alpha_mode_override) \
+    X(PhysicsMaterial2DCreate, physics_material2d_create) \
+    X(PhysicsMaterial3DCreate, physics_material3d_create) \
+    X(Rigidbody3DAddForce, rigidbody3d_add_force) \
+    X(Rigidbody3DAddForceAt, rigidbody3d_add_force_at) \
+    X(Rigidbody3DAddTorque, rigidbody3d_add_torque) \
+    X(CompressionCompress, compression_compress) \
+    X(CompressionDecompress, compression_decompress) \
+    X(FileDialogOpenFile, file_dialog_open_file) \
+    X(FileDialogOpenFolder, file_dialog_open_folder) \
+    X(FileDialogSaveFile, file_dialog_save_file) \
+    X(FileDialogSaveFolder, file_dialog_save_folder) \
+    X(FontHasCharacter, font_has_character) \
+    X(FontGetIsValid, font_get_is_valid) \
+    X(FontGetGlyphCount, font_get_glyph_count) \
+    X(FontGetTabWidth, font_get_tab_width) \
+    X(FontGetAtlasWidth, font_get_atlas_width) \
+    X(FontGetAtlasHeight, font_get_atlas_height) \
+    X(FontGetAtlasPixelRange, font_get_atlas_pixel_range) \
+    X(FontGetFallbackCount, font_get_fallback_count) \
+    X(FontHasGlyph, font_has_glyph) \
+    X(FontGetCharacterInfo, font_get_character_info) \
+    X(FontGetFallback, font_get_fallback) \
+    X(FontAddFallback, font_add_fallback) \
+    X(FontClearFallbacks, font_clear_fallbacks) \
+    X(FontGetSystemFontCount, font_get_system_font_count) \
+    X(FontGetSystemFontPath, font_get_system_font_path) \
+    X(FontGetSystemFontName, font_get_system_font_name) \
+    X(AnimationClipGetLength, animation_clip_get_length) \
+    X(AnimationClipGetSampleRate, animation_clip_get_sample_rate) \
+    X(AnimationClipGetIsAdditive, animation_clip_get_is_additive) \
+    X(AnimationComponentPlay, animation_component_play) \
+    X(AnimationComponentPause, animation_component_pause) \
+    X(AnimationComponentStop, animation_component_stop) \
+    X(TextHitTest, text_hit_test) \
+    X(DebugWriteLog, debug_write_log) \
+    X(RandomInitialize, random_initialize) \
+    X(RandomGetValue, random_get_value) \
+    X(RandomGetRange, random_get_range) \
+    X(RandomGetInsideUnitCircle, random_get_inside_unit_circle) \
+    X(RandomGetInsideUnitSphere, random_get_inside_unit_sphere) \
+    X(NoiseGetPerlin2D, noise_get_perlin2d) \
+    X(LayerMaskGetName, layer_mask_get_name) \
+    X(LayerMaskGetLayer, layer_mask_get_layer) \
+    X(SceneGetActive, scene_get_active) \
+    X(SceneGetExecutionState, scene_get_execution_state) \
+    X(SceneGetLoadedCount, scene_get_loaded_count) \
+    X(SceneGetLoaded, scene_get_loaded) \
+    X(SceneLoad, scene_load) \
+    X(SceneUnload, scene_unload) \
+    X(SceneReload, scene_reload) \
+    X(SceneSetActive, scene_set_active) \
+    X(CameraGetFieldOfView, camera_get_field_of_view) \
+    X(CameraSetFieldOfView, camera_set_field_of_view) \
+    X(CameraGetProjection, camera_get_projection) \
+    X(CameraSetProjection, camera_set_projection) \
+    X(CameraGetNearClipPlane, camera_get_near_clip_plane) \
+    X(CameraSetNearClipPlane, camera_set_near_clip_plane) \
+    X(CameraGetFarClipPlane, camera_get_far_clip_plane) \
+    X(CameraSetFarClipPlane, camera_set_far_clip_plane) \
+    X(CameraGetOrthographicSize, camera_get_orthographic_size) \
+    X(CameraSetOrthographicSize, camera_set_orthographic_size) \
+    X(CameraGetAspectRatio, camera_get_aspect_ratio) \
+    X(CameraSetAspectRatio, camera_set_aspect_ratio) \
+    X(CameraGetBackgroundColor, camera_get_background_color) \
+    X(CameraSetBackgroundColor, camera_set_background_color) \
+    X(CameraGetViewportRectangle, camera_get_viewport_rectangle) \
+    X(CameraSetViewportRectangle, camera_set_viewport_rectangle) \
+    X(CameraGetHdr, camera_get_hdr) \
+    X(CameraSetHdr, camera_set_hdr) \
+    X(CameraGetMsaa, camera_get_msaa) \
+    X(CameraSetMsaa, camera_set_msaa) \
+    X(CameraGetOcclusionCulling, camera_get_occlusion_culling) \
+    X(CameraSetOcclusionCulling, camera_set_occlusion_culling) \
+    X(SpriteRendererGetTexture, sprite_renderer_get_texture) \
+    X(SpriteRendererSetTexture, sprite_renderer_set_texture) \
+    X(SpriteRendererGetColor, sprite_renderer_get_color) \
+    X(SpriteRendererSetColor, sprite_renderer_set_color) \
+    X(SpriteRendererGetSortingLayer, sprite_renderer_get_sorting_layer) \
+    X(SpriteRendererSetSortingLayer, sprite_renderer_set_sorting_layer) \
+    X(SpriteRendererGetOrderInLayer, sprite_renderer_get_order_in_layer) \
+    X(SpriteRendererSetOrderInLayer, sprite_renderer_set_order_in_layer) \
+    X(LightGetType, light_get_type) \
+    X(LightSetType, light_set_type) \
+    X(LightGetColor, light_get_color) \
+    X(LightSetColor, light_set_color) \
+    X(LightGetIntensity, light_get_intensity) \
+    X(LightSetIntensity, light_set_intensity) \
+    X(LightGetRange, light_get_range) \
+    X(LightSetRange, light_set_range) \
+    X(LightGetSpotInnerAngle, light_get_spot_inner_angle) \
+    X(LightSetSpotInnerAngle, light_set_spot_inner_angle) \
+    X(LightGetSpotOuterAngle, light_get_spot_outer_angle) \
+    X(LightSetSpotOuterAngle, light_set_spot_outer_angle) \
+    X(LightGetSourceRadius, light_get_source_radius) \
+    X(LightSetSourceRadius, light_set_source_radius) \
+    X(LightGetUseColorTemperature, light_get_use_color_temperature) \
+    X(LightSetUseColorTemperature, light_set_use_color_temperature) \
+    X(LightGetTemperature, light_get_temperature) \
+    X(LightSetTemperature, light_set_temperature) \
+    X(LightGetVisibilityLayers, light_get_visibility_layers) \
+    X(LightSetVisibilityLayers, light_set_visibility_layers) \
+    X(LightGetEnabled, light_get_enabled) \
+    X(LightSetEnabled, light_set_enabled) \
+    X(LightGetAffectDiffuse, light_get_affect_diffuse) \
+    X(LightSetAffectDiffuse, light_set_affect_diffuse) \
+    X(LightGetAffectSpecular, light_get_affect_specular) \
+    X(LightSetAffectSpecular, light_set_affect_specular) \
+    X(LightGetVolumetric, light_get_volumetric) \
+    X(LightSetVolumetric, light_set_volumetric) \
+    X(LightGetShadows, light_get_shadows) \
+    X(LightSetShadows, light_set_shadows) \
+    X(LightGetShadowBias, light_get_shadow_bias) \
+    X(LightSetShadowBias, light_set_shadow_bias) \
+    X(LightGetShadowNormalBias, light_get_shadow_normal_bias) \
+    X(LightSetShadowNormalBias, light_set_shadow_normal_bias) \
+    X(LightGetShadowNearPlane, light_get_shadow_near_plane) \
+    X(LightSetShadowNearPlane, light_set_shadow_near_plane) \
+    X(LightGetShadowImportance, light_get_shadow_importance) \
+    X(LightSetShadowImportance, light_set_shadow_importance) \
+    X(LightGetShadowResolution, light_get_shadow_resolution) \
+    X(LightSetShadowResolution, light_set_shadow_resolution) \
+    X(LightGetCacheStaticShadowCasters, light_get_cache_static_shadow_casters) \
+    X(LightSetCacheStaticShadowCasters, light_set_cache_static_shadow_casters) \
+    X(Physics2DGetBackend, physics2d_get_backend) \
+    X(Physics2DGetIsSimulating, physics2d_get_is_simulating) \
+    X(Physics2DGetGravity, physics2d_get_gravity) \
+    X(Physics2DSetGravity, physics2d_set_gravity) \
+    X(Physics2DGetVelocityIterations, physics2d_get_velocity_iterations) \
+    X(Physics2DSetVelocityIterations, physics2d_set_velocity_iterations) \
+    X(Physics2DGetPositionIterations, physics2d_get_position_iterations) \
+    X(Physics2DSetPositionIterations, physics2d_set_position_iterations) \
+    X(Physics2DGetDefaultMaterial, physics2d_get_default_material) \
+    X(Physics2DSetDefaultMaterial, physics2d_set_default_material) \
+    X(Physics2DGetLayerName, physics2d_get_layer_name) \
+    X(Physics2DSetLayerName, physics2d_set_layer_name) \
+    X(Physics2DGetLayerMask, physics2d_get_layer_mask) \
+    X(Physics2DSetLayerMask, physics2d_set_layer_mask) \
+    X(Physics2DResolveEntity, physics2d_resolve_entity) \
+    X(Physics2DRaycast, physics2d_raycast) \
+    X(Physics3DGetBackend, physics3d_get_backend) \
+    X(Physics3DGetBackendName, physics3d_get_backend_name) \
+    X(Physics3DGetIsSimulating, physics3d_get_is_simulating) \
+    X(Physics3DGetCapabilities, physics3d_get_capabilities) \
+    X(Physics3DGetGravity, physics3d_get_gravity) \
+    X(Physics3DSetGravity, physics3d_set_gravity) \
+    X(Physics3DGetSubsteps, physics3d_get_substeps) \
+    X(Physics3DSetSubsteps, physics3d_set_substeps) \
+    X(Physics3DGetDefaultMaterial, physics3d_get_default_material) \
+    X(Physics3DSetDefaultMaterial, physics3d_set_default_material) \
+    X(Physics3DTrySetBackend, physics3d_try_set_backend) \
+    X(Physics3DIsBackendAvailable, physics3d_is_backend_available) \
+    X(Physics3DResolveEntity, physics3d_resolve_entity) \
+    X(Physics3DRaycast, physics3d_raycast) \
+    X(Physics3DSweep, physics3d_sweep) \
+    X(Physics3DOverlap, physics3d_overlap) \
+    X(MeshGetVertexCount, mesh_get_vertex_count) \
+    X(MeshGetIndexCount, mesh_get_index_count) \
+    X(MeshCopyVertices, mesh_copy_vertices) \
+    X(MeshSetVertices, mesh_set_vertices) \
+    X(MeshCopyNormals, mesh_copy_normals) \
+    X(MeshSetNormals, mesh_set_normals) \
+    X(MeshCopyUvs, mesh_copy_uvs) \
+    X(MeshSetUvs, mesh_set_uvs) \
+    X(MeshCopyColors, mesh_copy_colors) \
+    X(MeshSetColors, mesh_set_colors) \
+    X(MeshCopyIndices, mesh_copy_indices) \
+    X(MeshSetIndices, mesh_set_indices) \
+    X(MeshRecalculateBounds, mesh_recalculate_bounds) \
+    X(MeshRecalculateNormals, mesh_recalculate_normals) \
+    X(MeshRecalculateTangents, mesh_recalculate_tangents) \
+    X(MeshUploadData, mesh_upload_data) \
+    X(MeshClear, mesh_clear) \
+    X(MeshGetBoundsMin, mesh_get_bounds_min) \
+    X(MeshGetBoundsMax, mesh_get_bounds_max) \
+    X(MeshSetVertexBufferParams, mesh_set_vertex_buffer_params) \
+    X(MeshSetVertexBufferData, mesh_set_vertex_buffer_data) \
+    X(MeshGetVertexBufferData, mesh_get_vertex_buffer_data) \
+    X(MeshGetVertexStride, mesh_get_vertex_stride) \
+    X(MeshGetVertexAttributeCount, mesh_get_vertex_attribute_count) \
+    X(MeshHasVertexAttribute, mesh_has_vertex_attribute) \
+    X(MeshGetVertexAttribute, mesh_get_vertex_attribute) \
+    X(MeshCreatePlane, mesh_create_plane) \
+    X(MeshCreateBox, mesh_create_box) \
+    X(MeshCreateCube, mesh_create_cube) \
+    X(MeshCreateSphere, mesh_create_sphere) \
+    X(MeshCreateCylinder, mesh_create_cylinder) \
+    X(MeshCreateCone, mesh_create_cone) \
+    X(MeshCreateCapsule, mesh_create_capsule) \
+    X(MeshRendererGetMaterial, mesh_renderer_get_material) \
+    X(MeshRendererSetMaterial, mesh_renderer_set_material) \
+    X(MathMatrixDeterminant, math_matrix_determinant) \
+    X(MathMatrixInverse, math_matrix_inverse) \
+    X(MathMatrixAffineInverse, math_matrix_affine_inverse) \
+    X(MathLookAt, math_look_at) \
+    X(AddScriptComponent, add_script_component) \
+    X(RemoveScriptComponent, remove_script_component) \
+    X(MeshRendererGetMesh, mesh_renderer_get_mesh) \
+    X(MeshRendererSetMesh, mesh_renderer_set_mesh) \
+    X(MeshRendererGetMaterialCount, mesh_renderer_get_material_count) \
+    X(MeshRendererSetMaterialCount, mesh_renderer_set_material_count) \
+    X(Collider2DGetIsTrigger, collider2d_get_is_trigger) \
+    X(Collider2DSetIsTrigger, collider2d_set_is_trigger) \
+    X(Collider2DGetOffset, collider2d_get_offset) \
+    X(Collider2DSetOffset, collider2d_set_offset) \
+    X(Collider2DGetMaterial, collider2d_get_material) \
+    X(Collider2DSetMaterial, collider2d_set_material) \
+    X(BoxCollider2DGetSize, box_collider2d_get_size) \
+    X(BoxCollider2DSetSize, box_collider2d_set_size) \
+    X(CircleCollider2DGetRadius, circle_collider2d_get_radius) \
+    X(CircleCollider2DSetRadius, circle_collider2d_set_radius) \
+    X(Collider3DGetIsTrigger, collider3d_get_is_trigger) \
+    X(Collider3DSetIsTrigger, collider3d_set_is_trigger) \
+    X(Collider3DGetOffset, collider3d_get_offset) \
+    X(Collider3DSetOffset, collider3d_set_offset) \
+    X(Collider3DGetRotation, collider3d_get_rotation) \
+    X(Collider3DSetRotation, collider3d_set_rotation) \
+    X(Collider3DGetMaterial, collider3d_get_material) \
+    X(Collider3DSetMaterial, collider3d_set_material) \
+    X(Collider3DGetCollisionFilter, collider3d_get_collision_filter) \
+    X(Collider3DSetCollisionFilter, collider3d_set_collision_filter) \
+    X(BoxCollider3DGetSize, box_collider3d_get_size) \
+    X(BoxCollider3DSetSize, box_collider3d_set_size) \
+    X(SphereCollider3DGetRadius, sphere_collider3d_get_radius) \
+    X(SphereCollider3DSetRadius, sphere_collider3d_set_radius) \
+    X(CapsuleCollider3DGetRadius, capsule_collider3d_get_radius) \
+    X(CapsuleCollider3DSetRadius, capsule_collider3d_set_radius) \
+    X(CapsuleCollider3DGetHeight, capsule_collider3d_get_height) \
+    X(CapsuleCollider3DSetHeight, capsule_collider3d_set_height) \
+    X(Rigidbody3DGetBodyType, rigidbody3d_get_body_type) \
+    X(Rigidbody3DSetBodyType, rigidbody3d_set_body_type) \
+    X(Rigidbody3DGetMass, rigidbody3d_get_mass) \
+    X(Rigidbody3DSetMass, rigidbody3d_set_mass) \
+    X(Rigidbody3DGetAutoMass, rigidbody3d_get_auto_mass) \
+    X(Rigidbody3DSetAutoMass, rigidbody3d_set_auto_mass) \
+    X(Rigidbody3DGetGravityScale, rigidbody3d_get_gravity_scale) \
+    X(Rigidbody3DSetGravityScale, rigidbody3d_set_gravity_scale) \
+    X(Rigidbody3DGetLinearDamping, rigidbody3d_get_linear_damping) \
+    X(Rigidbody3DSetLinearDamping, rigidbody3d_set_linear_damping) \
+    X(Rigidbody3DGetAngularDamping, rigidbody3d_get_angular_damping) \
+    X(Rigidbody3DSetAngularDamping, rigidbody3d_set_angular_damping) \
+    X(Rigidbody3DGetCenterOfMass, rigidbody3d_get_center_of_mass) \
+    X(Rigidbody3DSetCenterOfMass, rigidbody3d_set_center_of_mass) \
+    X(Rigidbody3DGetAllowSleep, rigidbody3d_get_allow_sleep) \
+    X(Rigidbody3DSetAllowSleep, rigidbody3d_set_allow_sleep) \
+    X(Rigidbody3DGetStartAwake, rigidbody3d_get_start_awake) \
+    X(Rigidbody3DSetStartAwake, rigidbody3d_set_start_awake) \
+    X(Rigidbody3DGetContinuousCollision, rigidbody3d_get_continuous_collision) \
+    X(Rigidbody3DSetContinuousCollision, rigidbody3d_set_continuous_collision) \
+    X(Rigidbody3DGetConstraints, rigidbody3d_get_constraints) \
+    X(Rigidbody3DSetConstraints, rigidbody3d_set_constraints) \
+    X(Rigidbody3DGetCollisionFilter, rigidbody3d_get_collision_filter) \
+    X(Rigidbody3DSetCollisionFilter, rigidbody3d_set_collision_filter) \
+    X(Rigidbody3DGetLinearVelocity, rigidbody3d_get_linear_velocity) \
+    X(Rigidbody3DSetLinearVelocity, rigidbody3d_set_linear_velocity) \
+    X(Rigidbody3DGetAngularVelocity, rigidbody3d_get_angular_velocity) \
+    X(Rigidbody3DSetAngularVelocity, rigidbody3d_set_angular_velocity) \
+    X(Rigidbody3DGetAwake, rigidbody3d_get_awake) \
+    X(Rigidbody3DSetAwake, rigidbody3d_set_awake) \
+    X(Rigidbody3DGetBodyHandle, rigidbody3d_get_body_handle) \
+    X(PhysicsMaterial2DGetDensity, physics_material2d_get_density) \
+    X(PhysicsMaterial2DSetDensity, physics_material2d_set_density) \
+    X(PhysicsMaterial2DGetFriction, physics_material2d_get_friction) \
+    X(PhysicsMaterial2DSetFriction, physics_material2d_set_friction) \
+    X(PhysicsMaterial2DGetRestitution, physics_material2d_get_restitution) \
+    X(PhysicsMaterial2DSetRestitution, physics_material2d_set_restitution) \
+    X(PhysicsMaterial2DGetRestitutionThreshold, physics_material2d_get_restitution_threshold) \
+    X(PhysicsMaterial2DSetRestitutionThreshold, physics_material2d_set_restitution_threshold) \
+    X(PhysicsMaterial2DGetFrictionCombine, physics_material2d_get_friction_combine) \
+    X(PhysicsMaterial2DSetFrictionCombine, physics_material2d_set_friction_combine) \
+    X(PhysicsMaterial2DGetRestitutionCombine, physics_material2d_get_restitution_combine) \
+    X(PhysicsMaterial2DSetRestitutionCombine, physics_material2d_set_restitution_combine) \
+    X(PhysicsMaterial3DGetDensity, physics_material3d_get_density) \
+    X(PhysicsMaterial3DSetDensity, physics_material3d_set_density) \
+    X(PhysicsMaterial3DGetFriction, physics_material3d_get_friction) \
+    X(PhysicsMaterial3DSetFriction, physics_material3d_set_friction) \
+    X(PhysicsMaterial3DGetRestitution, physics_material3d_get_restitution) \
+    X(PhysicsMaterial3DSetRestitution, physics_material3d_set_restitution) \
+    X(PhysicsMaterial3DGetRestitutionThreshold, physics_material3d_get_restitution_threshold) \
+    X(PhysicsMaterial3DSetRestitutionThreshold, physics_material3d_set_restitution_threshold) \
+    X(PhysicsMaterial3DGetFrictionCombine, physics_material3d_get_friction_combine) \
+    X(PhysicsMaterial3DSetFrictionCombine, physics_material3d_set_friction_combine) \
+    X(PhysicsMaterial3DGetRestitutionCombine, physics_material3d_get_restitution_combine) \
+    X(PhysicsMaterial3DSetRestitutionCombine, physics_material3d_set_restitution_combine) \
+    X(AnimationComponentGetClip, animation_component_get_clip) \
+    X(AnimationComponentSetClip, animation_component_set_clip) \
+    X(AnimationComponentGetSpeed, animation_component_get_speed) \
+    X(AnimationComponentSetSpeed, animation_component_set_speed) \
+    X(AnimationComponentGetWrapMode, animation_component_get_wrap_mode) \
+    X(AnimationComponentSetWrapMode, animation_component_set_wrap_mode) \
+    X(AnimationComponentGetPlayOnAwake, animation_component_get_play_on_awake) \
+    X(AnimationComponentSetPlayOnAwake, animation_component_set_play_on_awake) \
+    X(AnimationComponentGetApplyRootMotion, animation_component_get_apply_root_motion) \
+    X(AnimationComponentSetApplyRootMotion, animation_component_set_apply_root_motion) \
+    X(AnimationComponentGetTime, animation_component_get_time) \
+    X(AnimationComponentSetTime, animation_component_set_time) \
+    X(AnimationComponentGetNormalizedTime, animation_component_get_normalized_time) \
+    X(AnimationComponentSetNormalizedTime, animation_component_set_normalized_time) \
+    X(AnimationComponentGetState, animation_component_get_state) \
     X(TextGetText, text_get_text) \
     X(TextSetText, text_set_text) \
     X(TextGetFont, text_get_font) \
@@ -933,8 +1707,6 @@ typedef struct cw_managed_host_api
     X(TextSetLineSpacing, text_set_line_spacing) \
     X(TextGetParagraphSpacing, text_get_paragraph_spacing) \
     X(TextSetParagraphSpacing, text_set_paragraph_spacing) \
-    X(TextGetTabWidth, text_get_tab_width) \
-    X(TextSetTabWidth, text_set_tab_width) \
     X(TextGetUseCustomDecorationColor, text_get_use_custom_decoration_color) \
     X(TextSetUseCustomDecorationColor, text_set_use_custom_decoration_color) \
     X(TextGetDecorationColor, text_get_decoration_color) \
@@ -947,27 +1719,12 @@ typedef struct cw_managed_host_api
     X(TextSetStrikethroughOffset, text_set_strikethrough_offset) \
     X(TextGetUseKerning, text_get_use_kerning) \
     X(TextSetUseKerning, text_set_use_kerning) \
+    X(TextGetTabWidth, text_get_tab_width) \
+    X(TextSetTabWidth, text_set_tab_width) \
     X(TextGetSortingLayer, text_get_sorting_layer) \
     X(TextSetSortingLayer, text_set_sorting_layer) \
     X(TextGetOrderInLayer, text_get_order_in_layer) \
-    X(TextSetOrderInLayer, text_set_order_in_layer) \
-    X(TextHitTest, text_hit_test) \
-    X(FontGetIsValid, font_get_is_valid) \
-    X(FontGetGlyphCount, font_get_glyph_count) \
-    X(FontGetTabWidth, font_get_tab_width) \
-    X(FontGetAtlasWidth, font_get_atlas_width) \
-    X(FontGetAtlasHeight, font_get_atlas_height) \
-    X(FontGetAtlasPixelRange, font_get_atlas_pixel_range) \
-    X(FontHasGlyph, font_has_glyph) \
-    X(FontGetCharacterInfo, font_get_character_info) \
-    X(FontGetFallbackCount, font_get_fallback_count) \
-    X(FontGetFallback, font_get_fallback) \
-    X(FontAddFallback, font_add_fallback) \
-    X(FontClearFallbacks, font_clear_fallbacks) \
-    X(MathMatrixDeterminant, math_matrix_determinant) \
-    X(MathMatrixInverse, math_matrix_inverse) \
-    X(MathMatrixAffineInverse, math_matrix_affine_inverse) \
-    X(MathLookAt, math_look_at)
+    X(TextSetOrderInLayer, text_set_order_in_layer)
 
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_initialize_fn)(const cw_managed_host_api* host);
 typedef void(CW_MANAGED_CALL* cw_managed_shutdown_fn)(void);
@@ -982,6 +1739,9 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_create_script_fn)(cw_manag
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_script_fn)(cw_managed_instance instance);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_dispatch_fn)(cw_managed_instance instance,
                                                                   const cw_managed_event* event_data);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_notify_scene_event_fn)(uint32_t event_type,
+                                                                            cw_managed_uuid scene,
+                                                                            uint32_t execution_state);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capture_state_fn)(cw_managed_instance instance,
                                                                        cw_managed_blob_writer* output);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_apply_state_fn)(cw_managed_instance instance, cw_managed_blob state);
@@ -999,6 +1759,7 @@ typedef struct cw_managed_program_api
     cw_managed_create_script_fn create_script;
     cw_managed_destroy_script_fn destroy_script;
     cw_managed_dispatch_fn dispatch;
+    cw_managed_notify_scene_event_fn notify_scene_event;
     cw_managed_capture_state_fn capture_state;
     cw_managed_apply_state_fn apply_state;
     cw_managed_collect_diagnostics_fn collect_diagnostics;
@@ -1016,5 +1777,6 @@ static_assert(sizeof(cw_managed_vec3) == 12, "Managed Vector3 ABI layout changed
 static_assert(sizeof(cw_managed_vec4) == 16, "Managed Vector4 ABI layout changed.");
 static_assert(sizeof(cw_managed_quat) == 16, "Managed quaternion ABI layout changed.");
 static_assert(sizeof(cw_managed_mat4) == 64, "Managed Matrix4 ABI layout changed.");
+static_assert(sizeof(cw_managed_physics_filter3d) == 12, "Managed PhysicsFilter3D ABI layout changed.");
 static_assert(sizeof(cw_managed_contact_point) == 32, "Managed contact ABI layout changed.");
 #endif

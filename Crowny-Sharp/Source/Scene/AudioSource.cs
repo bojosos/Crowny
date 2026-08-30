@@ -8,10 +8,8 @@ namespace Crowny
         Stopped
     }
 
-    public partial class AudioSource : Component
+    public class AudioSource : Component
     {
-        private UUID EntityId => entity.uuid;
-
         /// <summary>The source volume in the range [0.0, 1.0].</summary>
         public float volume
         {
@@ -71,8 +69,8 @@ namespace Crowny
         /// <summary>The clip attached to the source.</summary>
         public AudioClip clip
         {
-            get { return GetClipBinding(); }
-            set { SetClipBinding(value); }
+            get { return ManagedRuntimeContext.CreateAsset<AudioClip>(ManagedRuntimeContext.AudioSourceGetClip(EntityId)); }
+            set { ManagedRuntimeContext.AudioSourceSetClip(EntityId, value?.uuid ?? UUID.Empty); }
         }
 
         /// <summary>The current playback state.</summary>

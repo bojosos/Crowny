@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Globalization;
 
 namespace Crowny
@@ -40,10 +39,10 @@ namespace Crowny
         {
             switch (logType)
             {
-                case LogType.Info:       Internal_Log(string.Format(format, args)); break;
-                case LogType.Warning:    Internal_LogWarning(string.Format(format, args)); break;
-                case LogType.Error:      Internal_LogError(string.Format(format, args)); break;
-                case LogType.Exception:  Internal_LogException(string.Format(format, args)); break;
+                case LogType.Info:       ManagedRuntimeContext.DebugWriteLog((int)LogType.Info, string.Format(format, args)); break;
+                case LogType.Warning:    ManagedRuntimeContext.DebugWriteLog((int)LogType.Warning, string.Format(format, args)); break;
+                case LogType.Error:      ManagedRuntimeContext.DebugWriteLog((int)LogType.Error, string.Format(format, args)); break;
+                case LogType.Exception:  ManagedRuntimeContext.DebugWriteLog((int)LogType.Exception, string.Format(format, args)); break;
             }
         }
 
@@ -53,7 +52,7 @@ namespace Crowny
         /// <param name="message">Message.</param>
         public static void Log(object message)
         {
-            Internal_Log(GetString(message));
+            ManagedRuntimeContext.DebugWriteLog((int)LogType.Info, GetString(message));
         }
 
         /// <summary>
@@ -62,7 +61,7 @@ namespace Crowny
         /// <param name="message">Message</param>
         public static void Warn(object message)
         {
-            Internal_LogWarning(GetString(message));
+            ManagedRuntimeContext.DebugWriteLog((int)LogType.Warning, GetString(message));
         }
 
         /// <summary>
@@ -71,7 +70,7 @@ namespace Crowny
         /// <param name="message">Message.</param>
         public static void Error(object message)
         {
-            Internal_LogError(GetString(message));
+            ManagedRuntimeContext.DebugWriteLog((int)LogType.Error, GetString(message));
         }
 
         /// <summary>
@@ -80,19 +79,8 @@ namespace Crowny
         /// <param name="message">Message.</param>
         public static void Exception(object message)
         {
-            Internal_LogException(GetString(message));
+            ManagedRuntimeContext.DebugWriteLog((int)LogType.Exception, GetString(message));
         }
 
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)] private extern static void Internal_Log(string message);
-        [MethodImpl(MethodImplOptions.InternalCall)] private extern static void Internal_LogWarning(string message);
-        [MethodImpl(MethodImplOptions.InternalCall)] private extern static void Internal_LogError(string message);
-        [MethodImpl(MethodImplOptions.InternalCall)] private extern static void Internal_LogException(string message);
-#else
-        private static void Internal_Log(string message) { ManagedRuntimeContext.WriteLog((int)LogType.Info, message); }
-        private static void Internal_LogWarning(string message) { ManagedRuntimeContext.WriteLog((int)LogType.Warning, message); }
-        private static void Internal_LogError(string message) { ManagedRuntimeContext.WriteLog((int)LogType.Error, message); }
-        private static void Internal_LogException(string message) { ManagedRuntimeContext.WriteLog((int)LogType.Exception, message); }
-#endif
     }
 }

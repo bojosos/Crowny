@@ -1,6 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
-
 namespace Crowny
 {
 
@@ -19,30 +16,13 @@ namespace Crowny
 
     public class AudioClip : Asset
     {
-        public int bitDepth => Internal_GetBitDepth(m_InternalPtr);
-        public int channels => Internal_GetChannels(m_InternalPtr);
-        public int frequency => Internal_GetFrequency(m_InternalPtr);
-        public int samples => Internal_GetSamples(m_InternalPtr);
-        public float length => Internal_GetLength(m_InternalPtr);
-        public AudioReadMode readMode => Internal_GetReadMode(m_InternalPtr);
-        public AudioFormat format => Internal_GetFormat(m_InternalPtr);
-        public bool is3D => Internal_Is3D(m_InternalPtr);
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern int Internal_GetBitDepth(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern int Internal_GetChannels(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern int Internal_GetFrequency(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern int Internal_GetSamples(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern float Internal_GetLength(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern AudioReadMode Internal_GetReadMode(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern AudioFormat Internal_GetFormat(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_Is3D(IntPtr thisPtr);
+        public int bitDepth => ManagedRuntimeContext.AudioClipGetBitDepth(uuid);
+        public int channels => ManagedRuntimeContext.AudioClipGetChannels(uuid);
+        public int frequency => ManagedRuntimeContext.AudioClipGetFrequency(uuid);
+        public int samples => ManagedRuntimeContext.AudioClipGetSamples(uuid);
+        public float length => ManagedRuntimeContext.AudioClipGetLength(uuid);
+        public AudioReadMode readMode => (AudioReadMode)ManagedRuntimeContext.AudioClipGetReadMode(uuid);
+        public AudioFormat format => (AudioFormat)ManagedRuntimeContext.AudioClipGetFormat(uuid);
+        public bool is3D => ManagedRuntimeContext.AudioClipGetIs3D(uuid);
     }
 }

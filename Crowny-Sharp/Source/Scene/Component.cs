@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
@@ -15,17 +14,23 @@ namespace Crowny
         {
             get
             {
-#if CROWNY_MONO
-                return Internal_GetEntity(m_InternalPtr);
-#else
-                return m_ManagedEntity ?? throw new InvalidOperationException("The component is not attached to an entity.");
-#endif
+                if (m_ManagedEntityId == UUID.Empty)
+                    throw new InvalidOperationException("The component is not attached to an entity.");
+                return new Entity { m_ManagedUuid = m_ManagedEntityId };
             }
         }
 
-#if !CROWNY_MONO
-        internal Entity m_ManagedEntity;
-#endif
+        internal UUID m_ManagedEntityId;
+
+        protected UUID EntityId
+        {
+            get
+            {
+                if (m_ManagedEntityId == UUID.Empty)
+                    throw new InvalidOperationException("The component is not attached to an entity.");
+                return m_ManagedEntityId;
+            }
+        }
 
 		/// <value>The transform of the object</value>
 		[DontSerializeField]
@@ -71,10 +76,6 @@ namespace Crowny
             entity.RemoveComponent<T>();
         }
 
-#if CROWNY_MONO
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Entity Internal_GetEntity(IntPtr internalPtr);
-#endif
 	}
 
 }

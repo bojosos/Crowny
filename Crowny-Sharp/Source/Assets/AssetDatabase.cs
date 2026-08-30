@@ -1,6 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
-
 namespace Crowny
 {
     public static class AssetDatabase
@@ -8,13 +5,13 @@ namespace Crowny
         /// <summary>Loads an asset by project-relative path (e.g. "Assets/player.texture").</summary>
         public static T Load<T>(string path) where T : Asset
         {
-            return Internal_Load(path) as T;
+            return ManagedRuntimeContext.CreateAsset<T>(ManagedRuntimeContext.AssetDatabaseLoad(path), true);
         }
 
         /// <summary>Loads an asset by UUID.</summary>
         public static T LoadFromUUID<T>(UUID uuid) where T : Asset
         {
-            return Internal_LoadFromUUID(uuid) as T;
+            return ManagedRuntimeContext.CreateAsset<T>(ManagedRuntimeContext.AssetDatabaseLoadFromUuid(uuid), true);
         }
 
         /// <summary>Returns the project-relative path for a loaded asset, or null if not found.</summary>
@@ -22,7 +19,8 @@ namespace Crowny
         {
             if (asset == null)
                 return null;
-            return Internal_GetAssetPath(asset.uuid);
+            string path = ManagedRuntimeContext.AssetDatabaseGetPath(asset.uuid);
+            return path.Length == 0 ? null : path;
         }
 
         /// <summary>Returns true if the asset is non-null and backed by a valid, loaded asset handle.</summary>
@@ -30,19 +28,8 @@ namespace Crowny
         {
             if (asset == null)
                 return false;
-            return Internal_IsValid(asset.uuid);
+            return ManagedRuntimeContext.AssetDatabaseIsValid(asset.uuid);
         }
 
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Asset Internal_Load(string path);
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Asset Internal_LoadFromUUID(UUID uuid);
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern string Internal_GetAssetPath(UUID uuid);
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_IsValid(UUID uuid);
     }
 }

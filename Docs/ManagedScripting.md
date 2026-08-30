@@ -2,7 +2,8 @@
 
 Crowny keeps the serialized `MonoScriptComponent` name and numeric component ID while moving runtime work behind the
 runtime-neutral `ManagedScripting` module. Mono remains the editor default during the transition. CoreCLR is an opt-in
-desktop preset until the shared Mono/CoreCLR parity gates pass.
+desktop preset until the remaining editor workflow, debugging, and operational gates pass. Public engine calls already
+use the same generated 513-function contract on both backends.
 
 ## Desktop CoreCLR package
 
@@ -54,8 +55,8 @@ namespace.
 - The CoreCLR catalog supports public fields and properties, or non-public members marked `[SerializeField]`. It excludes
   static, indexed, `[DontSerializeField]`, and unsupported member types.
 - Script callbacks use exact signatures. A same-named overload does not become a lifecycle or collision callback.
-- CoreCLR is not the editor default while public engine-call binding parity, inspector workflows, debugging, and the shared
-  contract suite remain incomplete.
+- CoreCLR is not the editor default while inspector workflows, debugging, and the full shared contract suite remain
+  incomplete. Public engine-call binding parity is enforced statically for both backends.
 - Browser builds use the dedicated .NET WebAssembly interpreter or AOT presets. Native AOT remains an evidence-gated,
   closed-world desktop player option. Neither preset is a substitute for the CoreCLR editor host.
 - Crowny makes no named-console support claim without vendor SDK, runtime, licensing, and certification evidence.

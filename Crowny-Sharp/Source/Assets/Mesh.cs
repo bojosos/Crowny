@@ -1,258 +1,190 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Crowny
 {
-
+    /// <summary>CPU-accessible mesh data shared by every managed runtime backend.</summary>
     public class Mesh : Asset
     {
-        public uint vertexCount { get { return Internal_GetVertexCount(m_InternalPtr); } }
-        public uint indexCount { get { return Internal_GetIndexCount(m_InternalPtr); } }
+        public uint vertexCount { get { return ManagedRuntimeContext.MeshGetVertexCount(m_ManagedUuid); } }
+        public uint indexCount { get { return ManagedRuntimeContext.MeshGetIndexCount(m_ManagedUuid); } }
 
         public Vector3[] vertices
         {
-            get { Internal_GetVertices(m_InternalPtr, out Vector3[] result); return result; }
-            set { Internal_SetVertices(m_InternalPtr, value); }
+            get { return ManagedArrayInterop.Read<Vector3>(vertexCount, (data, count) => ManagedRuntimeContext.MeshCopyVertices(m_ManagedUuid, data, count)); }
+            set { ManagedArrayInterop.WithPinned(value, (data, count) => ManagedRuntimeContext.MeshSetVertices(m_ManagedUuid, data, count)); }
         }
 
         public int[] triangles
         {
-            get { Internal_GetIndices(m_InternalPtr, out int[] result); return result; }
-            set { Internal_SetIndices(m_InternalPtr, value); }
+            get { return ManagedArrayInterop.Read<int>(indexCount, (data, count) => ManagedRuntimeContext.MeshCopyIndices(m_ManagedUuid, data, count)); }
+            set { ManagedArrayInterop.WithPinned(value, (data, count) => ManagedRuntimeContext.MeshSetIndices(m_ManagedUuid, data, count)); }
         }
 
         public Vector3[] normals
         {
-            get { Internal_GetNormals(m_InternalPtr, out Vector3[] result); return result; }
-            set { Internal_SetNormals(m_InternalPtr, value); }
+            get { return ManagedArrayInterop.Read<Vector3>(vertexCount, (data, count) => ManagedRuntimeContext.MeshCopyNormals(m_ManagedUuid, data, count)); }
+            set { ManagedArrayInterop.WithPinned(value, (data, count) => ManagedRuntimeContext.MeshSetNormals(m_ManagedUuid, data, count)); }
         }
 
         public Vector2[] uv
         {
-            get { Internal_GetUVs(m_InternalPtr, 0, out Vector2[] result); return result; }
-            set { Internal_SetUVs(m_InternalPtr, 0, value); }
+            get { return ReadUvs(0); }
+            set { WriteUvs(0, value); }
         }
 
         public Vector2[] uv2
         {
-            get { Internal_GetUVs(m_InternalPtr, 1, out Vector2[] result); return result; }
-            set { Internal_SetUVs(m_InternalPtr, 1, value); }
+            get { return ReadUvs(1); }
+            set { WriteUvs(1, value); }
         }
 
         public Vector4[] colors
         {
-            get { Internal_GetColors(m_InternalPtr, out Vector4[] result); return result; }
-            set { Internal_SetColors(m_InternalPtr, value); }
+            get { return ManagedArrayInterop.Read<Vector4>(vertexCount, (data, count) => ManagedRuntimeContext.MeshCopyColors(m_ManagedUuid, data, count)); }
+            set { ManagedArrayInterop.WithPinned(value, (data, count) => ManagedRuntimeContext.MeshSetColors(m_ManagedUuid, data, count)); }
         }
 
-        public Vector3 boundsMin { get { Internal_GetBoundsMin(m_InternalPtr, out Vector3 min); return min; } }
-        public Vector3 boundsMax { get { Internal_GetBoundsMax(m_InternalPtr, out Vector3 max); return max; } }
+        public Vector3 boundsMin { get { return ManagedRuntimeContext.MeshGetBoundsMin(m_ManagedUuid); } }
+        public Vector3 boundsMax { get { return ManagedRuntimeContext.MeshGetBoundsMax(m_ManagedUuid); } }
 
-        public void RecalculateBounds() => Internal_RecalculateBounds(m_InternalPtr);
-        public void RecalculateNormals() => Internal_RecalculateNormals(m_InternalPtr);
-        public void RecalculateTangents() => Internal_RecalculateTangents(m_InternalPtr);
-        public void UploadMeshData() => Internal_UploadMeshData(m_InternalPtr);
-        public void Clear() => Internal_Clear(m_InternalPtr);
+        public void RecalculateBounds() { ManagedRuntimeContext.MeshRecalculateBounds(m_ManagedUuid); }
+        public void RecalculateNormals() { ManagedRuntimeContext.MeshRecalculateNormals(m_ManagedUuid); }
+        public void RecalculateTangents() { ManagedRuntimeContext.MeshRecalculateTangents(m_ManagedUuid); }
+        public void UploadMeshData() { ManagedRuntimeContext.MeshUploadData(m_ManagedUuid); }
+        public void Clear() { ManagedRuntimeContext.MeshClear(m_ManagedUuid); }
 
-        /// <summary>
-        /// Sets the vertex buffer layout and vertex count. Call this before SetVertexBufferData.
-        /// </summary>
+        /// <summary>Sets the vertex buffer layout and vertex count.</summary>
         public void SetVertexBufferParams(uint vertexCount, params VertexAttributeDescriptor[] layout)
         {
-            Internal_SetVertexBufferParams(m_InternalPtr, vertexCount, layout);
+            if (layout == null)
+                throw new ArgumentNullException("layout");
+            ManagedArrayInterop.WithPinned(layout, (data, count) =>
+                ManagedRuntimeContext.MeshSetVertexBufferParams(m_ManagedUuid, vertexCount, data, count));
         }
 
-        /// <summary>
-        /// Writes raw interleaved vertex data from a managed array.
-        /// </summary>
+        /// <summary>Writes raw interleaved vertex data from a managed array.</summary>
         public void SetVertexBufferData<T>(T[] data, int dataStart, int meshBufferStart, int count) where T : struct
         {
-            GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
-            try
+            ValidateRange(data, dataStart, count);
+            if (meshBufferStart < 0)
+                throw new ArgumentOutOfRangeException("meshBufferStart");
+            int stride = Marshal.SizeOf(typeof(T));
+            ManagedArrayInterop.WithPinned(data, (pointer, ignored) =>
             {
-                int stride = Marshal.SizeOf(typeof(T));
-                IntPtr ptr = handle.AddrOfPinnedObject();
-                Internal_SetVertexBufferData(m_InternalPtr, ptr + dataStart * stride, (uint)meshBufferStart, (uint)count, (uint)stride);
-            }
-            finally
-            {
-                handle.Free();
-            }
+                IntPtr source = count == 0 ? IntPtr.Zero : IntPtr.Add(pointer, checked(dataStart * stride));
+                ManagedRuntimeContext.MeshSetVertexBufferData(m_ManagedUuid, source, checked((uint)meshBufferStart),
+                                                              checked((uint)count), checked((uint)stride));
+            });
         }
 
-        /// <summary>
-        /// Writes raw interleaved vertex data from a NativeArray. No GC allocation or pinning needed.
-        /// </summary>
+        /// <summary>Writes raw interleaved vertex data from a native array.</summary>
         public void SetVertexBufferData<T>(NativeArray<T> data, int dataStart, int meshBufferStart, int count) where T : struct
         {
+            if (dataStart < 0 || count < 0 || dataStart > data.Length - count)
+                throw new ArgumentOutOfRangeException("dataStart");
+            if (meshBufferStart < 0)
+                throw new ArgumentOutOfRangeException("meshBufferStart");
             int stride = Marshal.SizeOf(typeof(T));
-            Internal_SetVertexBufferData(m_InternalPtr, data.GetUnsafePtr() + dataStart * stride, (uint)meshBufferStart, (uint)count, (uint)stride);
+            IntPtr source = count == 0 ? IntPtr.Zero : IntPtr.Add(data.GetUnsafePtr(), checked(dataStart * stride));
+            ManagedRuntimeContext.MeshSetVertexBufferData(m_ManagedUuid, source, checked((uint)meshBufferStart),
+                                                          checked((uint)count), checked((uint)stride));
         }
 
-        /// <summary>
-        /// Reads raw interleaved vertex data into a new managed array.
-        /// </summary>
+        /// <summary>Reads raw interleaved vertex data into a new managed array.</summary>
         public T[] GetVertexBufferData<T>() where T : struct
         {
-            int stride = Marshal.SizeOf(typeof(T));
-            uint count = vertexCount;
-            T[] data = new T[count];
-            GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
-            try
-            {
-                Internal_GetVertexBufferData(m_InternalPtr, handle.AddrOfPinnedObject(), count, (uint)stride);
-            }
-            finally
-            {
-                handle.Free();
-            }
-            return data;
+            return ManagedArrayInterop.Read<T>(vertexCount, (data, count) =>
+                ManagedRuntimeContext.MeshGetVertexBufferData(m_ManagedUuid, data, count,
+                                                              checked((uint)Marshal.SizeOf(typeof(T)))));
         }
 
-        /// <summary>
-        /// Reads raw interleaved vertex data into an existing NativeArray. No GC allocation or pinning needed.
-        /// </summary>
+        /// <summary>Reads raw interleaved vertex data into an existing native array.</summary>
         public void GetVertexBufferData<T>(NativeArray<T> dest) where T : struct
         {
-            int stride = Marshal.SizeOf(typeof(T));
-            Internal_GetVertexBufferData(m_InternalPtr, dest.GetUnsafePtr(), (uint)dest.Length, (uint)stride);
+            ManagedRuntimeContext.MeshGetVertexBufferData(m_ManagedUuid, dest.GetUnsafePtr(),
+                                                          checked((uint)dest.Length),
+                                                          checked((uint)Marshal.SizeOf(typeof(T))));
         }
 
-        /// <summary>
-        /// Returns the stride (bytes per vertex) of the current vertex buffer layout.
-        /// </summary>
-        public uint vertexStride { get { return Internal_GetVertexStride(m_InternalPtr); } }
+        public uint vertexStride { get { return ManagedRuntimeContext.MeshGetVertexStride(m_ManagedUuid); } }
+        public uint vertexAttributeCount { get { return ManagedRuntimeContext.MeshGetVertexAttributeCount(m_ManagedUuid); } }
 
-        /// <summary>
-        /// Returns the number of vertex attributes in the current layout.
-        /// </summary>
-        public uint vertexAttributeCount { get { return Internal_GetVertexAttributeCount(m_InternalPtr); } }
-
-        /// <summary>
-        /// Returns whether the mesh has a specific vertex attribute.
-        /// </summary>
         public bool HasVertexAttribute(VertexAttribute attr)
         {
-            return Internal_HasVertexAttribute(m_InternalPtr, attr);
+            return ManagedRuntimeContext.MeshHasVertexAttribute(m_ManagedUuid, (int)attr);
         }
 
-        /// <summary>
-        /// Returns the descriptor for a vertex attribute at the given index.
-        /// </summary>
         public VertexAttributeDescriptor GetVertexAttribute(int index)
         {
-            Internal_GetVertexAttribute(m_InternalPtr, index, out VertexAttributeDescriptor desc);
-            return desc;
+            if (index < 0 || (uint)index >= vertexAttributeCount)
+                throw new ArgumentOutOfRangeException("index");
+            VertexAttributeDescriptor[] descriptor = new VertexAttributeDescriptor[1];
+            ManagedArrayInterop.WithPinned(descriptor, (data, ignored) => ManagedRuntimeContext.MeshGetVertexAttribute(m_ManagedUuid, index, data));
+            return descriptor[0];
         }
 
         /// <summary>Creates an XZ plane centered at the origin.</summary>
         public static Mesh CreatePlane(float width = 1.0f, float height = 1.0f, uint subdivisionsX = 1, uint subdivisionsY = 1)
         {
-            return Internal_CreatePlane(width, height, subdivisionsX, subdivisionsY);
+            return ManagedRuntimeContext.CreateAsset<Mesh>(
+                ManagedRuntimeContext.MeshCreatePlane(width, height, subdivisionsX, subdivisionsY), true);
         }
 
         /// <summary>Creates a box centered at the origin.</summary>
         public static Mesh CreateBox(Vector3 dimensions)
         {
-            return Internal_CreateBox(ref dimensions);
+            return ManagedRuntimeContext.CreateAsset<Mesh>(ManagedRuntimeContext.MeshCreateBox(dimensions), true);
         }
 
         /// <summary>Creates a cube centered at the origin.</summary>
         public static Mesh CreateCube(float size = 1.0f)
         {
-            return Internal_CreateCube(size);
+            return ManagedRuntimeContext.CreateAsset<Mesh>(ManagedRuntimeContext.MeshCreateCube(size), true);
         }
 
         /// <summary>Creates a UV sphere centered at the origin.</summary>
         public static Mesh CreateSphere(float radius = 0.5f, uint segments = 32, uint rings = 16)
         {
-            return Internal_CreateSphere(radius, segments, rings);
+            return ManagedRuntimeContext.CreateAsset<Mesh>(ManagedRuntimeContext.MeshCreateSphere(radius, segments, rings), true);
         }
 
         /// <summary>Creates a Y-axis cylinder centered at the origin.</summary>
         public static Mesh CreateCylinder(float radius = 0.5f, float height = 1.0f, uint segments = 32, bool capped = true)
         {
-            return Internal_CreateCylinder(radius, height, segments, capped);
+            return ManagedRuntimeContext.CreateAsset<Mesh>(ManagedRuntimeContext.MeshCreateCylinder(radius, height, segments, capped), true);
         }
 
         /// <summary>Creates a Y-axis cone centered at the origin.</summary>
         public static Mesh CreateCone(float radius = 0.5f, float height = 1.0f, uint segments = 32, bool capped = true)
         {
-            return Internal_CreateCone(radius, height, segments, capped);
+            return ManagedRuntimeContext.CreateAsset<Mesh>(ManagedRuntimeContext.MeshCreateCone(radius, height, segments, capped), true);
         }
 
         /// <summary>Creates a Y-axis capsule. Height includes both hemispheres.</summary>
         public static Mesh CreateCapsule(float radius = 0.5f, float height = 2.0f, uint segments = 32, uint hemisphereRings = 8)
         {
-            return Internal_CreateCapsule(radius, height, segments, hemisphereRings);
+            return ManagedRuntimeContext.CreateAsset<Mesh>(
+                ManagedRuntimeContext.MeshCreateCapsule(radius, height, segments, hemisphereRings), true);
         }
 
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetVertexCount(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetIndexCount(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetVertices(IntPtr thisPtr, out Vector3[] vertices);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetVertices(IntPtr thisPtr, Vector3[] vertices);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetNormals(IntPtr thisPtr, out Vector3[] normals);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetNormals(IntPtr thisPtr, Vector3[] normals);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetUVs(IntPtr thisPtr, uint channel, out Vector2[] uvs);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetUVs(IntPtr thisPtr, uint channel, Vector2[] uvs);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetColors(IntPtr thisPtr, out Vector4[] colors);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetColors(IntPtr thisPtr, Vector4[] colors);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetIndices(IntPtr thisPtr, out int[] indices);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetIndices(IntPtr thisPtr, int[] indices);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_RecalculateBounds(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_RecalculateNormals(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_RecalculateTangents(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_UploadMeshData(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_Clear(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetBoundsMin(IntPtr thisPtr, out Vector3 min);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetBoundsMax(IntPtr thisPtr, out Vector3 max);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetVertexBufferParams(IntPtr thisPtr, uint vertexCount, VertexAttributeDescriptor[] layout);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetVertexBufferData(IntPtr thisPtr, IntPtr data, uint meshBufferStart, uint count, uint stride);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetVertexBufferData(IntPtr thisPtr, IntPtr outData, uint count, uint stride);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetVertexStride(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetVertexAttributeCount(IntPtr thisPtr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_HasVertexAttribute(IntPtr thisPtr, VertexAttribute attr);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetVertexAttribute(IntPtr thisPtr, int index, out VertexAttributeDescriptor desc);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Mesh Internal_CreatePlane(float width, float height, uint subdivisionsX, uint subdivisionsY);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Mesh Internal_CreateBox(ref Vector3 dimensions);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Mesh Internal_CreateCube(float size);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Mesh Internal_CreateSphere(float radius, uint segments, uint rings);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Mesh Internal_CreateCylinder(float radius, float height, uint segments, bool capped);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Mesh Internal_CreateCone(float radius, float height, uint segments, bool capped);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Mesh Internal_CreateCapsule(float radius, float height, uint segments, uint hemisphereRings);
+        private Vector2[] ReadUvs(uint channel)
+        {
+            return ManagedArrayInterop.Read<Vector2>(vertexCount, (data, count) =>
+                ManagedRuntimeContext.MeshCopyUvs(m_ManagedUuid, channel, data, count));
+        }
+
+        private void WriteUvs(uint channel, Vector2[] value)
+        {
+            ManagedArrayInterop.WithPinned(value, (data, count) => ManagedRuntimeContext.MeshSetUvs(m_ManagedUuid, channel, data, count));
+        }
+
+        private static void ValidateRange<T>(T[] data, int dataStart, int count)
+        {
+            if (data == null)
+                throw new ArgumentNullException("data");
+            if (dataStart < 0 || count < 0 || dataStart > data.Length - count)
+                throw new ArgumentOutOfRangeException("dataStart");
+        }
     }
 }

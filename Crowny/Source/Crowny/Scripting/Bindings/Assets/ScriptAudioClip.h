@@ -13,14 +13,6 @@ namespace Crowny
         ScriptAudioClip(MonoObject* instance, const AssetHandle<AudioClip>& clip);
 
     private:
-        static int Internal_GetBitDepth(ScriptAudioClip* thisPtr);
-        static int Internal_GetChannels(ScriptAudioClip* thisPtr);
-        static int Internal_GetFrequency(ScriptAudioClip* thisPtr);
-        static int Internal_GetSamples(ScriptAudioClip* thisPtr);
-        static float Internal_GetLength(ScriptAudioClip* thisPtr);
-        static AudioReadMode Internal_GetReadMode(ScriptAudioClip* thisPtr);
-        static AudioFormat Internal_GetFormat(ScriptAudioClip* thisPtr);
-        static bool Internal_Is3D(ScriptAudioClip* thisPtr);
     };
 
 } // namespace Crowny

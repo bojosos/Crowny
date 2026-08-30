@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Crowny
@@ -63,7 +62,6 @@ namespace Crowny
     {
         public uint LayerMask;
         public bool IncludeTriggers;
-        /// <summary>Runtime body handle excluded from the query. Zero excludes nothing.</summary>
         public ulong IgnoreBodyHandle;
 
         public PhysicsQueryFilter3D(uint layerMask, bool includeTriggers = true, ulong ignoreBodyHandle = 0)
@@ -79,7 +77,6 @@ namespace Crowny
         }
     }
 
-    /// <summary>Primitive shape used by a sweep or overlap query.</summary>
     public enum PhysicsQueryShapeType3D
     {
         Box = 0,
@@ -95,7 +92,6 @@ namespace Crowny
         public float Radius;
         public float Height;
 
-        /// <summary>Creates a box query shape. Size contains the full width, height, and depth.</summary>
         public static PhysicsQueryShape3D Box(Vector3 size)
         {
             PhysicsQueryShape3D shape = new PhysicsQueryShape3D();
@@ -104,7 +100,6 @@ namespace Crowny
             return shape;
         }
 
-        /// <summary>Creates a sphere query shape.</summary>
         public static PhysicsQueryShape3D Sphere(float radius)
         {
             PhysicsQueryShape3D shape = new PhysicsQueryShape3D();
@@ -113,7 +108,6 @@ namespace Crowny
             return shape;
         }
 
-        /// <summary>Creates a capsule query shape.</summary>
         public static PhysicsQueryShape3D Capsule(float radius, float height)
         {
             PhysicsQueryShape3D shape = new PhysicsQueryShape3D();
@@ -132,158 +126,122 @@ namespace Crowny
         public Vector3 Normal;
         public float Distance;
         public float Fraction;
-        /// <summary>Runtime-only backend-independent body handle.</summary>
         public ulong BodyHandle;
-        /// <summary>Runtime-only backend-independent shape handle.</summary>
         public ulong ShapeHandle;
+        /// <summary>Runtime entity handle valid for the current active scene.</summary>
         public ulong EntityId;
 
-        /// <summary>Gets the hit entity, or null if it no longer exists.</summary>
         public Entity HitEntity { get { return Physics3D.ResolveEntity(EntityId); } }
     }
 
     /// <summary>Provides backend-independent access to the active 3D physics world.</summary>
     public static class Physics3D
     {
-        private static readonly RaycastHit3D[] EmptyHits = new RaycastHit3D[0];
+        private const uint InitialQueryCapacity = 16;
 
-        /// <summary>Gets the active backend.</summary>
-        public static PhysicsBackend3D Backend { get { return Internal_GetBackend(); } }
+        public static PhysicsBackend3D Backend
+        {
+            get { return (PhysicsBackend3D)ManagedRuntimeContext.Physics3DGetBackend(); }
+        }
 
-        /// <summary>Gets the active backend's display name.</summary>
-        public static string BackendName { get { return Internal_GetBackendName(); } }
+        public static string BackendName { get { return ManagedRuntimeContext.Physics3DGetBackendName(); } }
+        public static bool IsSimulating { get { return ManagedRuntimeContext.Physics3DGetIsSimulating(); } }
 
-        /// <summary>Gets whether a 3D scene is being simulated.</summary>
-        public static bool IsSimulating { get { return Internal_IsSimulating(); } }
-
-        /// <summary>Gets the features implemented by the active backend.</summary>
         public static Physics3DCapability Capabilities
         {
-            get { return (Physics3DCapability)Internal_GetCapabilities(); }
+            get { return (Physics3DCapability)ManagedRuntimeContext.Physics3DGetCapabilities(); }
         }
 
-        /// <summary>Gets or sets world gravity.</summary>
         public static Vector3 Gravity
         {
-            get { Internal_GetGravity(out Vector3 value); return value; }
-            set { Internal_SetGravity(ref value); }
+            get { return ManagedRuntimeContext.Physics3DGetGravity(); }
+            set { ManagedRuntimeContext.Physics3DSetGravity(value); }
         }
 
-        /// <summary>Gets or sets the number of solver substeps per fixed update.</summary>
         public static uint Substeps
         {
-            get { return Internal_GetSubsteps(); }
-            set { Internal_SetSubsteps(value); }
+            get { return ManagedRuntimeContext.Physics3DGetSubsteps(); }
+            set { ManagedRuntimeContext.Physics3DSetSubsteps(value); }
         }
 
-        /// <summary>Gets or sets the material assigned to newly created 3D colliders.</summary>
         public static PhysicsMaterial3D DefaultMaterial
         {
-            get { return Internal_GetDefaultMaterial(); }
-            set { Internal_SetDefaultMaterial(value); }
+            get { return ManagedRuntimeContext.CreateAsset<PhysicsMaterial3D>(ManagedRuntimeContext.Physics3DGetDefaultMaterial()); }
+            set { ManagedRuntimeContext.Physics3DSetDefaultMaterial(value != null ? value.uuid : UUID.Empty); }
         }
 
-        /// <summary>Changes backend while simulation is stopped.</summary>
         public static bool TrySetBackend(PhysicsBackend3D value)
         {
-            return Internal_TrySetBackend(value);
+            return ManagedRuntimeContext.Physics3DTrySetBackend((int)value);
         }
 
-        /// <summary>Checks whether this build includes a backend.</summary>
         public static bool IsBackendAvailable(PhysicsBackend3D value)
         {
-            return Internal_IsBackendAvailable(value);
+            return ManagedRuntimeContext.Physics3DIsBackendAvailable((int)value);
         }
 
-        /// <summary>Checks whether the active backend implements a feature.</summary>
         public static bool Supports(Physics3DCapability capability)
         {
             return (Capabilities & capability) == capability;
         }
 
-        /// <summary>Casts a ray and returns hits ordered from nearest to farthest.</summary>
         public static RaycastHit3D[] Raycast(Vector3 origin, Vector3 direction, float distance = Single.MaxValue,
                                              uint layerMask = UInt32.MaxValue, bool includeTriggers = true)
         {
-            Internal_Raycast(ref origin, ref direction, distance, layerMask, includeTriggers, 0,
-                             out RaycastHit3D[] results);
-            return results ?? EmptyHits;
+            return Raycast(origin, direction, distance, new PhysicsQueryFilter3D(layerMask, includeTriggers));
         }
 
-        /// <summary>Casts a ray using an explicit query filter.</summary>
         public static RaycastHit3D[] Raycast(Vector3 origin, Vector3 direction, float distance, PhysicsQueryFilter3D filter)
         {
-            Internal_Raycast(ref origin, ref direction, distance, filter.LayerMask, filter.IncludeTriggers,
-                             filter.IgnoreBodyHandle, out RaycastHit3D[] results);
-            return results ?? EmptyHits;
+            return ManagedArrayInterop.Query<RaycastHit3D>(InitialQueryCapacity, (destination, capacity) =>
+                QueryRaycast(origin, direction, distance, filter, destination, capacity));
         }
 
-        /// <summary>Casts a ray and returns its nearest hit.</summary>
         public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit3D hit,
                                    float distance = Single.MaxValue, uint layerMask = UInt32.MaxValue,
                                    bool includeTriggers = true)
         {
-            RaycastHit3D[] hits = Raycast(origin, direction, distance, layerMask, includeTriggers);
-            return FirstHit(hits, out hit);
+            return FirstHit(Raycast(origin, direction, distance, layerMask, includeTriggers), out hit);
         }
 
-        /// <summary>Casts a ray into a caller-owned array and returns the number of results written.</summary>
         public static int RaycastNonAlloc(Vector3 origin, Vector3 direction, RaycastHit3D[] results,
                                           float distance = Single.MaxValue, uint layerMask = UInt32.MaxValue,
                                           bool includeTriggers = true)
         {
-            ValidateResults(results);
-            if (results.Length == 0)
-                return 0;
-            return Internal_RaycastNonAlloc(ref origin, ref direction, distance, layerMask, includeTriggers, 0,
-                                            results, results.Length);
+            return RaycastNonAlloc(origin, direction, results, distance,
+                                   new PhysicsQueryFilter3D(layerMask, includeTriggers));
         }
 
-        /// <summary>Casts a ray into a caller-owned array using an explicit query filter.</summary>
         public static int RaycastNonAlloc(Vector3 origin, Vector3 direction, RaycastHit3D[] results,
                                           float distance, PhysicsQueryFilter3D filter)
         {
-            ValidateResults(results);
-            if (results.Length == 0)
-                return 0;
-            return Internal_RaycastNonAlloc(ref origin, ref direction, distance, filter.LayerMask,
-                                            filter.IncludeTriggers, filter.IgnoreBodyHandle, results, results.Length);
+            return ManagedArrayInterop.WriteNonAlloc(results, (destination, capacity) =>
+                QueryRaycast(origin, direction, distance, filter, destination, capacity));
         }
 
-        /// <summary>Sweeps a primitive shape through the scene.</summary>
         public static RaycastHit3D[] Sweep(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
                                            Vector3 direction, float distance, PhysicsQueryFilter3D filter)
         {
-            Internal_Sweep((int)shape.Type, ref shape.Size, shape.Radius, shape.Height, ref position, ref rotation,
-                           ref direction, distance, filter.LayerMask, filter.IncludeTriggers, filter.IgnoreBodyHandle,
-                           out RaycastHit3D[] results);
-            return results ?? EmptyHits;
+            return ManagedArrayInterop.Query<RaycastHit3D>(InitialQueryCapacity, (destination, capacity) =>
+                QuerySweep(shape, position, rotation, direction, distance, filter, destination, capacity));
         }
 
-        /// <summary>Sweeps a primitive shape and returns its nearest hit.</summary>
         public static bool Sweep(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation, Vector3 direction,
                                  out RaycastHit3D hit, float distance = Single.MaxValue,
                                  uint layerMask = UInt32.MaxValue, bool includeTriggers = true)
         {
-            RaycastHit3D[] hits = Sweep(shape, position, rotation, direction, distance,
-                new PhysicsQueryFilter3D(layerMask, includeTriggers));
-            return FirstHit(hits, out hit);
+            return FirstHit(Sweep(shape, position, rotation, direction, distance,
+                                  new PhysicsQueryFilter3D(layerMask, includeTriggers)), out hit);
         }
 
-        /// <summary>Sweeps a primitive shape into a caller-owned array.</summary>
         public static int SweepNonAlloc(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
                                         Vector3 direction, RaycastHit3D[] results, float distance,
                                         PhysicsQueryFilter3D filter)
         {
-            ValidateResults(results);
-            if (results.Length == 0)
-                return 0;
-            return Internal_SweepNonAlloc((int)shape.Type, ref shape.Size, shape.Radius, shape.Height,
-                                          ref position, ref rotation, ref direction, distance, filter.LayerMask,
-                                          filter.IncludeTriggers, filter.IgnoreBodyHandle, results, results.Length);
+            return ManagedArrayInterop.WriteNonAlloc(results, (destination, capacity) =>
+                QuerySweep(shape, position, rotation, direction, distance, filter, destination, capacity));
         }
 
-        /// <summary>Sweeps a primitive shape into a caller-owned array.</summary>
         public static int SweepNonAlloc(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
                                         Vector3 direction, RaycastHit3D[] results, float distance = Single.MaxValue,
                                         uint layerMask = UInt32.MaxValue, bool includeTriggers = true)
@@ -292,43 +250,56 @@ namespace Crowny
                                  new PhysicsQueryFilter3D(layerMask, includeTriggers));
         }
 
-        /// <summary>Finds bodies overlapping a primitive shape.</summary>
         public static RaycastHit3D[] Overlap(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
                                              PhysicsQueryFilter3D filter)
         {
-            Internal_Overlap((int)shape.Type, ref shape.Size, shape.Radius, shape.Height, ref position, ref rotation,
-                             filter.LayerMask, filter.IncludeTriggers, filter.IgnoreBodyHandle,
-                             out RaycastHit3D[] results);
-            return results ?? EmptyHits;
+            return ManagedArrayInterop.Query<RaycastHit3D>(InitialQueryCapacity, (destination, capacity) =>
+                QueryOverlap(shape, position, rotation, filter, destination, capacity));
         }
 
-        /// <summary>Finds bodies overlapping a primitive shape.</summary>
         public static RaycastHit3D[] Overlap(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
                                              uint layerMask = UInt32.MaxValue, bool includeTriggers = true)
         {
             return Overlap(shape, position, rotation, new PhysicsQueryFilter3D(layerMask, includeTriggers));
         }
 
-        /// <summary>Writes overlapping bodies into a caller-owned array.</summary>
         public static int OverlapNonAlloc(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
                                           RaycastHit3D[] results, PhysicsQueryFilter3D filter)
         {
-            ValidateResults(results);
-            if (results.Length == 0)
-                return 0;
-            return Internal_OverlapNonAlloc((int)shape.Type, ref shape.Size, shape.Radius, shape.Height,
-                                            ref position, ref rotation, filter.LayerMask, filter.IncludeTriggers,
-                                            filter.IgnoreBodyHandle,
-                                            results, results.Length);
+            return ManagedArrayInterop.WriteNonAlloc(results, (destination, capacity) =>
+                QueryOverlap(shape, position, rotation, filter, destination, capacity));
         }
 
-        /// <summary>Writes overlapping bodies into a caller-owned array.</summary>
         public static int OverlapNonAlloc(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
                                           RaycastHit3D[] results, uint layerMask = UInt32.MaxValue,
                                           bool includeTriggers = true)
         {
             return OverlapNonAlloc(shape, position, rotation, results,
                                    new PhysicsQueryFilter3D(layerMask, includeTriggers));
+        }
+
+        private static uint QueryRaycast(Vector3 origin, Vector3 direction, float distance, PhysicsQueryFilter3D filter,
+                                         IntPtr destination, uint capacity)
+        {
+            return ManagedRuntimeContext.Physics3DRaycast(origin, direction, distance, filter.LayerMask,
+                filter.IncludeTriggers, filter.IgnoreBodyHandle, destination, capacity);
+        }
+
+        private static uint QuerySweep(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
+                                       Vector3 direction, float distance, PhysicsQueryFilter3D filter,
+                                       IntPtr destination, uint capacity)
+        {
+            return ManagedRuntimeContext.Physics3DSweep((int)shape.Type, shape.Size, shape.Radius, shape.Height,
+                position, rotation, direction, distance, filter.LayerMask, filter.IncludeTriggers,
+                filter.IgnoreBodyHandle, destination, capacity);
+        }
+
+        private static uint QueryOverlap(PhysicsQueryShape3D shape, Vector3 position, Quaternion rotation,
+                                         PhysicsQueryFilter3D filter, IntPtr destination, uint capacity)
+        {
+            return ManagedRuntimeContext.Physics3DOverlap((int)shape.Type, shape.Size, shape.Radius, shape.Height,
+                position, rotation, filter.LayerMask, filter.IncludeTriggers, filter.IgnoreBodyHandle,
+                destination, capacity);
         }
 
         private static bool FirstHit(RaycastHit3D[] hits, out RaycastHit3D hit)
@@ -338,64 +309,14 @@ namespace Crowny
                 hit = hits[0];
                 return true;
             }
-
             hit = default(RaycastHit3D);
             return false;
         }
 
-        private static void ValidateResults(RaycastHit3D[] results)
-        {
-            if (results == null)
-                throw new ArgumentNullException("results");
-        }
-
         internal static Entity ResolveEntity(ulong entityId)
         {
-            return Internal_GetEntity(entityId);
+            UUID uuid = ManagedRuntimeContext.Physics3DResolveEntity(entityId);
+            return uuid == UUID.Empty ? null : new Entity { m_ManagedUuid = uuid };
         }
-
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsBackend3D Internal_GetBackend();
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern string Internal_GetBackendName();
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_IsSimulating();
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern ulong Internal_GetCapabilities();
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_GetGravity(out Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetGravity(ref Vector3 value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern uint Internal_GetSubsteps();
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetSubsteps(uint value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsMaterial3D Internal_GetDefaultMaterial();
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetDefaultMaterial(PhysicsMaterial3D value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_TrySetBackend(PhysicsBackend3D value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern bool Internal_IsBackendAvailable(PhysicsBackend3D value);
-        [MethodImpl(MethodImplOptions.InternalCall)] private static extern Entity Internal_GetEntity(ulong entityId);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_Raycast(ref Vector3 origin, ref Vector3 direction, float distance,
-                                                    uint layerMask, bool includeTriggers, ulong ignoreBodyHandle,
-                                                    out RaycastHit3D[] results);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern int Internal_RaycastNonAlloc(ref Vector3 origin, ref Vector3 direction, float distance,
-                                                           uint layerMask, bool includeTriggers, ulong ignoreBodyHandle,
-                                                           RaycastHit3D[] results, int capacity);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_Sweep(int shapeType, ref Vector3 size, float radius, float height,
-                                                  ref Vector3 position, ref Quaternion rotation, ref Vector3 direction,
-                                                  float distance, uint layerMask, bool includeTriggers,
-                                                  ulong ignoreBodyHandle,
-                                                  out RaycastHit3D[] results);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern int Internal_SweepNonAlloc(int shapeType, ref Vector3 size, float radius, float height,
-                                                         ref Vector3 position, ref Quaternion rotation,
-                                                         ref Vector3 direction, float distance, uint layerMask,
-                                                         bool includeTriggers, ulong ignoreBodyHandle,
-                                                         RaycastHit3D[] results, int capacity);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_Overlap(int shapeType, ref Vector3 size, float radius, float height,
-                                                    ref Vector3 position, ref Quaternion rotation, uint layerMask,
-                                                    bool includeTriggers, ulong ignoreBodyHandle,
-                                                    out RaycastHit3D[] results);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern int Internal_OverlapNonAlloc(int shapeType, ref Vector3 size, float radius, float height,
-                                                           ref Vector3 position, ref Quaternion rotation,
-                                                           uint layerMask, bool includeTriggers, ulong ignoreBodyHandle,
-                                                           RaycastHit3D[] results, int capacity);
     }
 }

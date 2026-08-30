@@ -12,8 +12,5 @@ namespace Crowny
         ScriptAnimationClip(MonoObject* instance, const AssetHandle<AnimationClip>& clip);
 
     private:
-        static float Internal_GetLength(ScriptAnimationClip* thisPtr);
-        static float Internal_GetSampleRate(ScriptAnimationClip* thisPtr);
-        static bool Internal_GetIsAdditive(ScriptAnimationClip* thisPtr);
     };
 } // namespace Crowny

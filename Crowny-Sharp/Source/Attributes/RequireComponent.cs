@@ -13,6 +13,8 @@ namespace Crowny
         private List<Type> components;
 #pragma warning restore 0414
 
+        internal IReadOnlyList<Type> Components => components;
+
         public RequireComponent(params Type[] components)
         {
             this.components = new List<Type>(components);

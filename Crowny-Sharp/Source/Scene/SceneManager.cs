@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
@@ -58,43 +57,33 @@ namespace Crowny
 
         public static UUID activeScene
         {
-            get
-            {
-                Internal_GetActiveScene(out UUID scene);
-                return scene;
-            }
+            get { return ManagedRuntimeContext.SceneGetActive(); }
         }
 
-        public static SceneExecutionState executionState { get { return Internal_GetExecutionState(); } }
+        public static SceneExecutionState executionState { get { return (SceneExecutionState)ManagedRuntimeContext.SceneGetExecutionState(); } }
 
         public static UUID[] loadedScenes
         {
             get
             {
-                uint count = Internal_GetLoadedSceneCount();
+                uint count = ManagedRuntimeContext.SceneGetLoadedCount();
                 UUID[] scenes = new UUID[(int)count];
                 for (uint i = 0; i < count; ++i)
-                {
-                    if (!Internal_GetLoadedScene(i, out scenes[i]))
-                    {
-                        Array.Resize(ref scenes, (int)i);
-                        break;
-                    }
-                }
+                    scenes[i] = ManagedRuntimeContext.SceneGetLoaded(i);
                 return scenes;
             }
         }
 
-        public static SceneOperationStatus Load(UUID scene, bool makeActive = true) { return Internal_Load(ref scene, makeActive); }
+        public static SceneOperationStatus Load(UUID scene, bool makeActive = true) { return (SceneOperationStatus)ManagedRuntimeContext.SceneLoad(scene, makeActive); }
         public static SceneOperationStatus Load(SceneReference scene, bool makeActive = true) { return Load(scene.uuid, makeActive); }
-        public static SceneOperationStatus Unload(UUID scene) { return Internal_Unload(ref scene); }
+        public static SceneOperationStatus Unload(UUID scene) { return (SceneOperationStatus)ManagedRuntimeContext.SceneUnload(scene); }
         public static SceneOperationStatus Unload(SceneReference scene) { return Unload(scene.uuid); }
-        public static SceneOperationStatus Reload(UUID scene) { return Internal_Reload(ref scene); }
+        public static SceneOperationStatus Reload(UUID scene) { return (SceneOperationStatus)ManagedRuntimeContext.SceneReload(scene); }
         public static SceneOperationStatus Reload(SceneReference scene) { return Reload(scene.uuid); }
-        public static SceneOperationStatus SetActive(UUID scene) { return Internal_SetActive(ref scene); }
+        public static SceneOperationStatus SetActive(UUID scene) { return (SceneOperationStatus)ManagedRuntimeContext.SceneSetActive(scene); }
         public static SceneOperationStatus SetActive(SceneReference scene) { return SetActive(scene.uuid); }
 
-        private static void Internal_NotifySceneEvent(SceneLifecycleEventType type, UUID scene, SceneExecutionState state)
+        internal static void NotifySceneEvent(SceneLifecycleEventType type, UUID scene, SceneExecutionState state)
         {
             switch (type)
             {
@@ -116,21 +105,5 @@ namespace Crowny
             }
         }
 
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetActiveScene(out UUID scene);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern SceneExecutionState Internal_GetExecutionState();
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern uint Internal_GetLoadedSceneCount();
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_GetLoadedScene(uint index, out UUID scene);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern SceneOperationStatus Internal_Load(ref UUID scene, bool makeActive);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern SceneOperationStatus Internal_Unload(ref UUID scene);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern SceneOperationStatus Internal_Reload(ref UUID scene);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern SceneOperationStatus Internal_SetActive(ref UUID scene);
     }
 }

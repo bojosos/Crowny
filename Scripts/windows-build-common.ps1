@@ -578,7 +578,7 @@ function Build-CrownyManagedAssemblies {
         }
         $env:CROWNY_MANAGED_ASSEMBLY_ROOT = $managedOutputRoot
         $fingerprint = Get-CrownyHash -Files (@($mcs, $monoExecutable, $mcsExecutable) + $engineSources + $gameSources) -Values @(
-            "configuration=$Configuration", "defines=CROWNY_MONO,$managedDefine", "unsafe=true",
+            "configuration=$Configuration", "defines=CROWNY_MONO,$managedDefine", "langversion=7.2", "unsafe=true",
             "debug=$emitDebugSymbols", "optimize=$(-not $emitDebugSymbols)"
         )
         $stampRoot = Join-Path $RepositoryRoot ".deps\stamps"
@@ -597,12 +597,13 @@ function Build-CrownyManagedAssemblies {
         New-Item -ItemType Directory -Force -Path $managedOutputRoot | Out-Null
         Write-Host "Building CrownySharp.dll..."
         Invoke-CrownyChecked -FilePath $mcs -ArgumentList (@(
-            $debugArgument, $optimizeArgument, "-unsafe", "-define:CROWNY_MONO,$managedDefine", "-target:library", "-out:$engineAssembly"
+            $debugArgument, $optimizeArgument, "-langversion:7.2", "-unsafe", "-define:CROWNY_MONO,$managedDefine",
+            "-target:library", "-out:$engineAssembly"
         ) + $engineSources)
         Write-Host "Building GameAssembly.dll..."
         Invoke-CrownyChecked -FilePath $mcs -ArgumentList (@(
-            $debugArgument, $optimizeArgument, "-define:$managedDefine", "-target:library", "-lib:$(Split-Path -Parent $engineAssembly)",
-            "-reference:CrownySharp.dll", "-out:$gameAssembly"
+            $debugArgument, $optimizeArgument, "-langversion:7.2", "-define:$managedDefine", "-target:library",
+            "-lib:$(Split-Path -Parent $engineAssembly)", "-reference:CrownySharp.dll", "-out:$gameAssembly"
         ) + $gameSources)
         if (-not $emitDebugSymbols) {
             foreach ($staleSymbols in $releaseStaleSymbols) {

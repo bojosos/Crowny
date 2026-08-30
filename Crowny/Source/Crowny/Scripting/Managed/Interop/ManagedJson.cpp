@@ -29,22 +29,34 @@ namespace Crowny
 
         bool ReadIdentity(const rapidjson::Value& value, ScriptTypeIdentity& output)
         {
-            return value.IsObject() && ReadString(value, "Assembly", output.Assembly) &&
-                   ReadString(value, "Namespace", output.Namespace) && ReadString(value, "TypeName", output.TypeName) && output.IsValid();
+            return value.IsObject() && ReadString(value, "Assembly", output.Assembly) && ReadString(value, "Namespace", output.Namespace) &&
+                   ReadString(value, "TypeName", output.TypeName) && output.IsValid();
         }
 
         bool TryParseKind(StringView value, ScriptValueKind& output)
         {
             static const Map<StringView, ScriptValueKind> kinds = {
-                { "Null", ScriptValueKind::Null },           { "Boolean", ScriptValueKind::Boolean },
-                { "SignedInteger", ScriptValueKind::SignedInteger }, { "UnsignedInteger", ScriptValueKind::UnsignedInteger },
-                { "Float", ScriptValueKind::Float },         { "String", ScriptValueKind::String },
-                { "Enum", ScriptValueKind::Enum },           { "Vector2", ScriptValueKind::Vector2 },
-                { "Vector3", ScriptValueKind::Vector3 },     { "Vector4", ScriptValueKind::Vector4 },
-                { "Quaternion", ScriptValueKind::Quaternion }, { "Matrix4", ScriptValueKind::Matrix4 },
-                { "Entity", ScriptValueKind::Entity },       { "Asset", ScriptValueKind::Asset },
-                { "Array", ScriptValueKind::Array },         { "List", ScriptValueKind::List },
-                { "Dictionary", ScriptValueKind::Dictionary }, { "Object", ScriptValueKind::Object },
+                { "Null", ScriptValueKind::Null },
+                { "Boolean", ScriptValueKind::Boolean },
+                { "SignedInteger", ScriptValueKind::SignedInteger },
+                { "UnsignedInteger", ScriptValueKind::UnsignedInteger },
+                { "Float", ScriptValueKind::Float },
+                { "Decimal", ScriptValueKind::Decimal },
+                { "String", ScriptValueKind::String },
+                { "Enum", ScriptValueKind::Enum },
+                { "Vector2", ScriptValueKind::Vector2 },
+                { "Vector3", ScriptValueKind::Vector3 },
+                { "Vector4", ScriptValueKind::Vector4 },
+                { "Color", ScriptValueKind::Color },
+                { "Quaternion", ScriptValueKind::Quaternion },
+                { "Matrix4", ScriptValueKind::Matrix4 },
+                { "Entity", ScriptValueKind::Entity },
+                { "Component", ScriptValueKind::Component },
+                { "Asset", ScriptValueKind::Asset },
+                { "Array", ScriptValueKind::Array },
+                { "List", ScriptValueKind::List },
+                { "Dictionary", ScriptValueKind::Dictionary },
+                { "Object", ScriptValueKind::Object },
                 { "Uuid", ScriptValueKind::Uuid },
             };
             const auto kind = kinds.find(value);
@@ -52,6 +64,58 @@ namespace Crowny
                 return false;
             output = kind->second;
             return true;
+        }
+
+        const char* KindName(ScriptValueKind kind)
+        {
+            switch (kind)
+            {
+            case ScriptValueKind::Null:
+                return "Null";
+            case ScriptValueKind::Boolean:
+                return "Boolean";
+            case ScriptValueKind::SignedInteger:
+                return "SignedInteger";
+            case ScriptValueKind::UnsignedInteger:
+                return "UnsignedInteger";
+            case ScriptValueKind::Float:
+                return "Float";
+            case ScriptValueKind::Decimal:
+                return "Decimal";
+            case ScriptValueKind::String:
+                return "String";
+            case ScriptValueKind::Enum:
+                return "Enum";
+            case ScriptValueKind::Vector2:
+                return "Vector2";
+            case ScriptValueKind::Vector3:
+                return "Vector3";
+            case ScriptValueKind::Vector4:
+                return "Vector4";
+            case ScriptValueKind::Color:
+                return "Color";
+            case ScriptValueKind::Quaternion:
+                return "Quaternion";
+            case ScriptValueKind::Matrix4:
+                return "Matrix4";
+            case ScriptValueKind::Entity:
+                return "Entity";
+            case ScriptValueKind::Component:
+                return "Component";
+            case ScriptValueKind::Asset:
+                return "Asset";
+            case ScriptValueKind::Array:
+                return "Array";
+            case ScriptValueKind::List:
+                return "List";
+            case ScriptValueKind::Dictionary:
+                return "Dictionary";
+            case ScriptValueKind::Object:
+                return "Object";
+            case ScriptValueKind::Uuid:
+                return "Uuid";
+            }
+            return "Null";
         }
 
         ScriptValue ReadValue(const rapidjson::Value& value, ScriptValueKind expectedKind = ScriptValueKind::Null)
@@ -70,9 +134,15 @@ namespace Crowny
                 return ScriptValue::Unsigned(value.GetUint64());
             if (expectedKind == ScriptValueKind::Float && value.IsNumber())
                 return ScriptValue::Float(value.GetDouble());
+            if (expectedKind == ScriptValueKind::Decimal && value.IsString())
+            {
+                ScriptValue result = ScriptValue::Text(String(value.GetString(), value.GetStringLength()));
+                result.Kind = ScriptValueKind::Decimal;
+                return result;
+            }
             if (expectedKind == ScriptValueKind::String && value.IsString())
                 return ScriptValue::Text(String(value.GetString(), value.GetStringLength()));
-            if ((expectedKind == ScriptValueKind::Entity || expectedKind == ScriptValueKind::Asset ||
+            if ((expectedKind == ScriptValueKind::Entity || expectedKind == ScriptValueKind::Component || expectedKind == ScriptValueKind::Asset ||
                  expectedKind == ScriptValueKind::Uuid) &&
                 value.IsString())
             {
@@ -81,8 +151,8 @@ namespace Crowny
                 result.ReferenceValue = UUID(String(value.GetString(), value.GetStringLength()));
                 return result;
             }
-            if ((expectedKind == ScriptValueKind::Vector2 || expectedKind == ScriptValueKind::Vector3 ||
-                 expectedKind == ScriptValueKind::Vector4 || expectedKind == ScriptValueKind::Quaternion) &&
+            if ((expectedKind == ScriptValueKind::Vector2 || expectedKind == ScriptValueKind::Vector3 || expectedKind == ScriptValueKind::Vector4 ||
+                 expectedKind == ScriptValueKind::Color || expectedKind == ScriptValueKind::Quaternion) &&
                 value.IsArray())
             {
                 const uint32_t count = expectedKind == ScriptValueKind::Vector2 ? 2 : expectedKind == ScriptValueKind::Vector3 ? 3 : 4;
@@ -115,8 +185,7 @@ namespace Crowny
                 }
                 return result;
             }
-            if ((expectedKind == ScriptValueKind::Array || expectedKind == ScriptValueKind::List ||
-                 expectedKind == ScriptValueKind::Dictionary) &&
+            if ((expectedKind == ScriptValueKind::Array || expectedKind == ScriptValueKind::List || expectedKind == ScriptValueKind::Dictionary) &&
                 value.IsArray())
             {
                 ScriptValue result;
@@ -153,14 +222,28 @@ namespace Crowny
         {
             switch (value.Kind)
             {
-            case ScriptValueKind::Null: writer.Null(); break;
-            case ScriptValueKind::Boolean: writer.Bool(value.BooleanValue); break;
+            case ScriptValueKind::Null:
+                writer.Null();
+                break;
+            case ScriptValueKind::Boolean:
+                writer.Bool(value.BooleanValue);
+                break;
             case ScriptValueKind::SignedInteger:
-            case ScriptValueKind::Enum: writer.Int64(value.SignedValue); break;
-            case ScriptValueKind::UnsignedInteger: writer.Uint64(value.UnsignedValue); break;
-            case ScriptValueKind::Float: writer.Double(value.FloatingValue); break;
-            case ScriptValueKind::String: writer.String(value.StringValue.c_str(), static_cast<rapidjson::SizeType>(value.StringValue.size())); break;
+            case ScriptValueKind::Enum:
+                writer.Int64(value.SignedValue);
+                break;
+            case ScriptValueKind::UnsignedInteger:
+                writer.Uint64(value.UnsignedValue);
+                break;
+            case ScriptValueKind::Float:
+                writer.Double(value.FloatingValue);
+                break;
+            case ScriptValueKind::Decimal:
+            case ScriptValueKind::String:
+                writer.String(value.StringValue.c_str(), static_cast<rapidjson::SizeType>(value.StringValue.size()));
+                break;
             case ScriptValueKind::Entity:
+            case ScriptValueKind::Component:
             case ScriptValueKind::Asset:
             case ScriptValueKind::Uuid: {
                 const String uuid = value.ReferenceValue.ToString();
@@ -170,12 +253,15 @@ namespace Crowny
             case ScriptValueKind::Vector2:
             case ScriptValueKind::Vector3:
             case ScriptValueKind::Vector4:
-            case ScriptValueKind::Quaternion:
+            case ScriptValueKind::Color:
+            case ScriptValueKind::Quaternion: {
+                const uint32_t count = value.Kind == ScriptValueKind::Vector2 ? 2 : value.Kind == ScriptValueKind::Vector3 ? 3 : 4;
                 writer.StartArray();
-                for (uint32_t index = 0; index < 4; ++index)
+                for (uint32_t index = 0; index < count; ++index)
                     writer.Double(value.VectorValue[index]);
                 writer.EndArray();
                 break;
+            }
             case ScriptValueKind::Matrix4:
                 writer.StartArray();
                 for (uint32_t column = 0; column < 4; ++column)
@@ -206,13 +292,21 @@ namespace Crowny
         bool TryParseEvent(StringView name, ScriptEventKind& output)
         {
             static const Map<StringView, ScriptEventKind> events = {
-                { "Start", ScriptEventKind::Start }, { "Update", ScriptEventKind::Update }, { "Destroy", ScriptEventKind::Destroy },
-                { "CollisionEnter2D", ScriptEventKind::CollisionEnter2D }, { "CollisionStay2D", ScriptEventKind::CollisionStay2D },
-                { "CollisionExit2D", ScriptEventKind::CollisionExit2D }, { "TriggerEnter2D", ScriptEventKind::TriggerEnter2D },
-                { "TriggerStay2D", ScriptEventKind::TriggerStay2D }, { "TriggerExit2D", ScriptEventKind::TriggerExit2D },
-                { "CollisionEnter3D", ScriptEventKind::CollisionEnter3D }, { "CollisionStay3D", ScriptEventKind::CollisionStay3D },
-                { "CollisionExit3D", ScriptEventKind::CollisionExit3D }, { "TriggerEnter3D", ScriptEventKind::TriggerEnter3D },
-                { "TriggerStay3D", ScriptEventKind::TriggerStay3D }, { "TriggerExit3D", ScriptEventKind::TriggerExit3D },
+                { "Start", ScriptEventKind::Start },
+                { "Update", ScriptEventKind::Update },
+                { "Destroy", ScriptEventKind::Destroy },
+                { "CollisionEnter2D", ScriptEventKind::CollisionEnter2D },
+                { "CollisionStay2D", ScriptEventKind::CollisionStay2D },
+                { "CollisionExit2D", ScriptEventKind::CollisionExit2D },
+                { "TriggerEnter2D", ScriptEventKind::TriggerEnter2D },
+                { "TriggerStay2D", ScriptEventKind::TriggerStay2D },
+                { "TriggerExit2D", ScriptEventKind::TriggerExit2D },
+                { "CollisionEnter3D", ScriptEventKind::CollisionEnter3D },
+                { "CollisionStay3D", ScriptEventKind::CollisionStay3D },
+                { "CollisionExit3D", ScriptEventKind::CollisionExit3D },
+                { "TriggerEnter3D", ScriptEventKind::TriggerEnter3D },
+                { "TriggerStay3D", ScriptEventKind::TriggerStay3D },
+                { "TriggerExit3D", ScriptEventKind::TriggerExit3D },
             };
             const auto event = events.find(name);
             if (event == events.end())
@@ -226,9 +320,8 @@ namespace Crowny
     {
         rapidjson::Document document;
         document.Parse(json.data(), json.size());
-        if (document.HasParseError() || !document.IsObject() || !document.HasMember("ManifestVersion") ||
-            !document["ManifestVersion"].IsUint() || document["ManifestVersion"].GetUint() != 1 || !document.HasMember("Types") ||
-            !document["Types"].IsArray())
+        if (document.HasParseError() || !document.IsObject() || !document.HasMember("ManifestVersion") || !document["ManifestVersion"].IsUint() ||
+            document["ManifestVersion"].GetUint() != 1 || !document.HasMember("Types") || !document["Types"].IsArray())
             return ManagedOperationResult::Failure("managed.catalog.json_invalid", "The managed host returned an invalid script catalog.", backend);
         ScriptCatalog parsed;
         parsed.ManifestVersion = document["ManifestVersion"].GetUint();
@@ -277,7 +370,8 @@ namespace Crowny
                     String kind;
                     if (!fieldValue.IsObject() || !fieldValue.HasMember("StableId") || !fieldValue["StableId"].IsUint64() ||
                         !ReadString(fieldValue, "Name", field.Name) || !ReadString(fieldValue, "ValueKind", kind))
-                        return ManagedOperationResult::Failure("managed.catalog.json_field_invalid", "The managed catalog contains an invalid field.", backend);
+                        return ManagedOperationResult::Failure("managed.catalog.json_field_invalid", "The managed catalog contains an invalid field.",
+                                                               backend);
                     field.StableId = fieldValue["StableId"].GetUint64();
                     if (!TryParseKind(kind, field.ValueKind))
                         return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
@@ -300,7 +394,27 @@ namespace Crowny
                         !ReadIdentity(fieldValue["DeclaredType"], field.DeclaredType))
                         return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
                                                                "The managed catalog contains an invalid declared field type.", backend);
-                    field.Flags = ScriptSchemaFieldFlags::Serializable | ScriptSchemaFieldFlags::Inspectable;
+                    bool serializable = true;
+                    if (fieldValue.HasMember("IsSerializable"))
+                    {
+                        if (!fieldValue["IsSerializable"].IsBool())
+                            return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
+                                                                   "The managed catalog contains an invalid serializable flag.", backend);
+                        serializable = fieldValue["IsSerializable"].GetBool();
+                    }
+                    bool inspectable = true;
+                    if (fieldValue.HasMember("IsInspectable"))
+                    {
+                        if (!fieldValue["IsInspectable"].IsBool())
+                            return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
+                                                                   "The managed catalog contains an invalid inspectable flag.", backend);
+                        inspectable = fieldValue["IsInspectable"].GetBool();
+                    }
+                    field.Flags = ScriptSchemaFieldFlags::None;
+                    if (serializable)
+                        field.Flags = field.Flags | ScriptSchemaFieldFlags::Serializable;
+                    if (inspectable)
+                        field.Flags = field.Flags | ScriptSchemaFieldFlags::Inspectable;
                     if (fieldValue.HasMember("IsReadOnly"))
                     {
                         if (!fieldValue["IsReadOnly"].IsBool())
@@ -355,8 +469,7 @@ namespace Crowny
         return validation;
     }
 
-    ManagedOperationResult ParseManagedStateJson(StringView json, ScriptState& state, ManagedBackendId backend,
-                                                 const ScriptTypeSchema* schema)
+    ManagedOperationResult ParseManagedStateJson(StringView json, ScriptState& state, ManagedBackendId backend, const ScriptTypeSchema* schema)
     {
         rapidjson::Document document;
         document.Parse(json.data(), json.size());
@@ -365,6 +478,13 @@ namespace Crowny
             !ReadString(document, "Namespace", parsed.Identity.Namespace) || !ReadString(document, "TypeName", parsed.Identity.TypeName) ||
             !document.HasMember("Fields") || !document["Fields"].IsObject())
             return ManagedOperationResult::Failure("managed.state.json_invalid", "The managed host returned invalid script state.", backend);
+        const rapidjson::Value* kinds = nullptr;
+        if (document.HasMember("Kinds"))
+        {
+            if (!document["Kinds"].IsObject())
+                return ManagedOperationResult::Failure("managed.state.json_invalid", "Managed state contains an invalid kind map.", backend);
+            kinds = &document["Kinds"];
+        }
         parsed.Root = ScriptValue::Object({});
         const rapidjson::Value& fields = document["Fields"];
         for (auto member = fields.MemberBegin(); member != fields.MemberEnd(); ++member)
@@ -380,6 +500,17 @@ namespace Crowny
                 if (field != schema->Fields.end())
                     expectedKind = field->ValueKind;
             }
+            if (expectedKind == ScriptValueKind::Null && kinds != nullptr)
+            {
+                const auto encodedKind = kinds->FindMember(member->name.GetString());
+                if (encodedKind != kinds->MemberEnd())
+                {
+                    if (!encodedKind->value.IsString() ||
+                        !TryParseKind(StringView(encodedKind->value.GetString(), encodedKind->value.GetStringLength()), expectedKind))
+                        return ManagedOperationResult::Failure("managed.state.json_invalid", "Managed state contains an unknown value kind.",
+                                                               backend);
+                }
+            }
             parsed.Root.Members.emplace(name, ReadValue(member->value, expectedKind));
         }
         parsed.Root.DeclaredType = parsed.Identity;
@@ -392,16 +523,27 @@ namespace Crowny
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         writer.StartObject();
-        writer.Key("Assembly"); writer.String(state.Identity.Assembly.c_str());
-        writer.Key("Namespace"); writer.String(state.Identity.Namespace.c_str());
-        writer.Key("TypeName"); writer.String(state.Identity.TypeName.c_str());
-        writer.Key("Fields");
+        writer.Key("Assembly");
+        writer.String(state.Identity.Assembly.c_str());
+        writer.Key("Namespace");
+        writer.String(state.Identity.Namespace.c_str());
+        writer.Key("TypeName");
+        writer.String(state.Identity.TypeName.c_str());
         ScriptValue merged = state.Root;
         if (merged.Kind != ScriptValueKind::Object)
             merged = ScriptValue::Object({});
         for (const auto& [name, value] : state.OrphanedMembers)
             if (merged.Members.find(name) == merged.Members.end())
                 merged.Members.emplace(name, value);
+        writer.Key("Kinds");
+        writer.StartObject();
+        for (const auto& [name, value] : merged.Members)
+        {
+            writer.Key(name.c_str(), static_cast<rapidjson::SizeType>(name.size()));
+            writer.String(KindName(value.Kind));
+        }
+        writer.EndObject();
+        writer.Key("Fields");
         WriteValue(writer, merged);
         writer.EndObject();
         return String(buffer.GetString(), buffer.GetSize());
@@ -423,9 +565,9 @@ namespace Crowny
             String severity;
             if (ReadString(value, "Severity", severity))
             {
-                diagnostic.Severity = severity == "Info" ? ManagedDiagnosticSeverity::Info
+                diagnostic.Severity = severity == "Info"      ? ManagedDiagnosticSeverity::Info
                                       : severity == "Warning" ? ManagedDiagnosticSeverity::Warning
-                                                                : ManagedDiagnosticSeverity::Error;
+                                                              : ManagedDiagnosticSeverity::Error;
             }
             ReadString(value, "Code", diagnostic.Code);
             ReadString(value, "Message", diagnostic.Message);

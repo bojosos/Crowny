@@ -2,8 +2,13 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/TextLayout.h"
+
+#include <array>
+#include <atomic>
+#include <thread>
 
 using namespace Crowny;
 
@@ -33,6 +38,23 @@ namespace
         component.Size = 36.0f;
         component.VerticalAlignment = TextVerticalAlignment::Baseline;
         return component;
+    }
+
+    std::array<TextLayoutToken, 3> MakeQueryTokens(size_t sourceByteCount = 1)
+    {
+        std::array<TextLayoutToken, 3> tokens{};
+        for (size_t index = 0; index < tokens.size(); index++)
+        {
+            TextLayoutToken& token = tokens[index];
+            token.CodePoint = U'a' + static_cast<char32_t>(index);
+            token.SourceByteStart = index * sourceByteCount;
+            token.SourceByteEnd = (index + 1) * sourceByteCount;
+            token.ClusterByteStart = token.SourceByteStart;
+            token.ClusterByteEnd = token.SourceByteEnd;
+            token.Advance = 1.0;
+            token.Renderable = true;
+        }
+        return tokens;
     }
 } // namespace
 
@@ -408,6 +430,68 @@ TEST_CASE("Text layout hit testing includes justification and ellipsis", "[Text]
     CHECK(afterEllipsis.CaretPosition == glm::vec2(2.0f, 0.0f));
 
     CHECK_FALSE(TextLayout::HitTest({}, { 0.0f, 0.0f }).Valid);
+}
+
+TEST_CASE("Synchronous text hit-test queries allocate nothing after warm-up", "[Text][Layout][Memory][Frame]")
+{
+    const TextComponent component = MakeUnitTextComponent();
+    const std::array<TextLayoutToken, 3> tokens = MakeQueryTokens();
+    constexpr std::array<uint32_t, 3> QUERY_COUNTS{ 1, 1'000, 10'000 };
+    const glm::vec2 queryPosition{ 1.7f, 0.0f };
+
+    REQUIRE(TextLayout::HitTestPrepared(component, UNIT_LAYOUT_FONT, tokens, 3, queryPosition).Valid);
+    for (const uint32_t queryCount : QUERY_COUNTS)
+    {
+        uint64_t observedOffsets = 0;
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        for (uint32_t query = 0; query < queryCount; query++)
+            observedOffsets += TextLayout::HitTestPrepared(component, UNIT_LAYOUT_FONT, tokens, 3, queryPosition).SourceByteOffset;
+        const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+        CHECK(observedOffsets == static_cast<uint64_t>(queryCount) * 2u);
+        CHECK(delta.AllocationCount == 0u);
+        CHECK(delta.RequestedBytes == 0u);
+    }
+}
+
+TEST_CASE("Synchronous text hit-test scratch is independent per thread", "[Text][Layout][Memory][Threading]")
+{
+    std::atomic<uint32_t> ready{ 0 };
+    std::atomic<bool> start{ false };
+    std::array<bool, 2> warmQueriesValid{};
+    std::array<uint64_t, 2> observedOffsets{};
+    std::array<uint64_t, 2> allocationCounts{};
+
+    const auto query = [&](size_t worker, size_t sourceByteCount, float position) {
+        const TextComponent component = MakeUnitTextComponent();
+        const std::array<TextLayoutToken, 3> tokens = MakeQueryTokens(sourceByteCount);
+        const size_t sourceByteLength = tokens.back().SourceByteEnd;
+        warmQueriesValid[worker] = TextLayout::HitTestPrepared(component, UNIT_LAYOUT_FONT, tokens, sourceByteLength, { position, 0.0f }).Valid;
+        ready.fetch_add(1, std::memory_order_release);
+        while (!start.load(std::memory_order_acquire))
+            std::this_thread::yield();
+
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        for (uint32_t iteration = 0; iteration < 1'000; iteration++)
+            observedOffsets[worker] +=
+              TextLayout::HitTestPrepared(component, UNIT_LAYOUT_FONT, tokens, sourceByteLength, { position, 0.0f }).SourceByteOffset;
+        allocationCounts[worker] = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot()).AllocationCount;
+    };
+
+    std::thread first(query, 0, 1, 1.7f);
+    std::thread second(query, 1, 4, 2.8f);
+    while (ready.load(std::memory_order_acquire) != 2)
+        std::this_thread::yield();
+    start.store(true, std::memory_order_release);
+    first.join();
+    second.join();
+
+    CHECK(warmQueriesValid[0]);
+    CHECK(warmQueriesValid[1]);
+    CHECK(observedOffsets[0] == 2'000u);
+    CHECK(observedOffsets[1] == 12'000u);
+    CHECK(allocationCounts[0] == 0u);
+    CHECK(allocationCounts[1] == 0u);
 }
 
 TEST_CASE("Text layout caret stops do not split combining sequences", "[Text][Layout]")

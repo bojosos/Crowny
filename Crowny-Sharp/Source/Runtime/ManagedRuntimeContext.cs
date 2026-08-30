@@ -9,7 +9,6 @@ namespace Crowny
     {
         [ThreadStatic]
         private static float callbackDeltaTime;
-        private static Action<int, string> logHandler;
         private static Func<UUID, Type, Component> scriptResolver;
 
         internal static float DeltaTime => callbackDeltaTime;
@@ -19,16 +18,6 @@ namespace Crowny
             float previous = callbackDeltaTime;
             callbackDeltaTime = deltaTime;
             return new CallbackScope(previous);
-        }
-
-        internal static void SetLogHandler(Action<int, string> handler)
-        {
-            logHandler = handler;
-        }
-
-        internal static void WriteLog(int severity, string message)
-        {
-            logHandler?.Invoke(severity, message);
         }
 
         internal static void SetNativeHostApi(ManagedNativeHostApi api)
@@ -41,22 +30,29 @@ namespace Crowny
             scriptResolver = resolver;
         }
 
-#if !CROWNY_MONO
         internal static T GetComponent<T>(UUID entity) where T : Component
         {
-            Type type = typeof(T);
+            return GetComponent(entity, typeof(T)) as T;
+        }
+
+        internal static Component GetComponent(UUID entity, Type type)
+        {
+            if (!typeof(Component).IsAssignableFrom(type))
+                throw new ArgumentException("The requested managed type is not a component.", "type");
             if (typeof(EntityBehaviour).IsAssignableFrom(type))
-                return scriptResolver?.Invoke(entity, type) as T;
-            if (!HasComponent<T>(entity))
+                return ManagedRuntimeAdapter.ResolveScriptComponent(entity, type);
+            if (!EntityHasComponent(entity, type.FullName ?? type.Name))
                 return null;
-            return CreateComponent<T>(entity);
+            Component component = (Component)Activator.CreateInstance(type, true);
+            component.m_ManagedEntityId = entity;
+            return component;
         }
 
         internal static bool HasComponent<T>(UUID entity) where T : Component
         {
             Type type = typeof(T);
             if (typeof(EntityBehaviour).IsAssignableFrom(type))
-                return scriptResolver?.Invoke(entity, type) != null;
+                return ManagedRuntimeAdapter.ResolveScriptComponent(entity, type) != null;
             return EntityHasComponent(entity, type.FullName ?? type.Name);
         }
 
@@ -64,35 +60,97 @@ namespace Crowny
         {
             Type type = typeof(T);
             if (typeof(EntityBehaviour).IsAssignableFrom(type))
-                throw new InvalidOperationException("Managed script components must be attached through scene script metadata.");
+            {
+                AddScriptComponent(entity, type);
+                Component script = ManagedRuntimeAdapter.ResolveScriptComponent(entity, type);
+                if (script == null)
+                    throw new InvalidOperationException("The managed script component was attached without a live instance: " + type.FullName + ".");
+                return script as T;
+            }
             EntityAddComponent(entity, type.FullName ?? type.Name);
-            return CreateComponent<T>(entity);
+            return GetComponent(entity, type) as T;
         }
 
         internal static void RemoveComponent<T>(UUID entity) where T : Component
         {
             Type type = typeof(T);
             if (typeof(EntityBehaviour).IsAssignableFrom(type))
-                throw new InvalidOperationException("Managed script components must be removed through scene script metadata.");
+            {
+                GetScriptIdentity(type, out string assemblyName, out string namespaceName, out string typeName);
+                RemoveScriptComponent(entity, assemblyName, namespaceName, typeName);
+                return;
+            }
             EntityRemoveComponent(entity, type.FullName ?? type.Name);
         }
 
-        internal static T CreateAsset<T>(UUID uuid) where T : Asset
+        internal static void AddScriptComponent(UUID entity, Type type)
         {
-            if (uuid == UUID.Empty)
-                return null;
-            T asset = Activator.CreateInstance<T>();
-            asset.m_ManagedUuid = uuid;
-            return asset;
+            if (!typeof(EntityBehaviour).IsAssignableFrom(type))
+                throw new ArgumentException("The requested managed type is not a script component.", "type");
+            GetScriptIdentity(type, out string assemblyName, out string namespaceName, out string typeName);
+            AddScriptComponent(entity, assemblyName, namespaceName, typeName);
         }
 
-        private static T CreateComponent<T>(UUID entity) where T : Component
+        internal static T CreateAsset<T>(UUID uuid, bool ownsLease = false) where T : Asset
         {
-            T component = Activator.CreateInstance<T>();
-            component.m_ManagedEntity = new Entity { m_ManagedUuid = entity };
-            return component;
+            return (T)CreateAsset(typeof(T), uuid, ownsLease);
         }
-#endif
+
+        internal static Asset CreateAsset(Type type, UUID uuid, bool ownsLease = false)
+        {
+            if (!typeof(Asset).IsAssignableFrom(type))
+                throw new ArgumentException("The requested managed type is not an asset.", "type");
+            if (uuid == UUID.Empty)
+                return null;
+            if (!ownsLease)
+                AssetAcquire(uuid);
+            try
+            {
+                Asset asset = (Asset)Activator.CreateInstance(type, true);
+                asset.m_ManagedUuid = uuid;
+                asset.m_OwnsManagedLease = true;
+                return asset;
+            }
+            catch
+            {
+                ReleaseAsset(uuid);
+                throw;
+            }
+        }
+
+        internal static void ReleaseAsset(UUID uuid)
+        {
+            if (!ManagedHostTransport.IsInitialized || uuid == UUID.Empty)
+                return;
+            try
+            {
+                AssetRelease(uuid);
+            }
+            catch
+            {
+                // Finalizers cannot propagate shutdown races or native errors.
+            }
+        }
+
+        internal static UUID FromGuid(Guid value)
+        {
+            string text = value.ToString("N");
+            return new UUID(Convert.ToUInt32(text.Substring(0, 8), 16), Convert.ToUInt32(text.Substring(8, 8), 16),
+                            Convert.ToUInt32(text.Substring(16, 8), 16), Convert.ToUInt32(text.Substring(24, 8), 16));
+        }
+
+        internal static Component ResolveRegisteredScriptComponent(UUID entity, Type type)
+        {
+            return scriptResolver?.Invoke(entity, type);
+        }
+
+        private static void GetScriptIdentity(Type type, out string assemblyName, out string namespaceName, out string typeName)
+        {
+            assemblyName = type.Assembly.GetName().Name ?? string.Empty;
+            namespaceName = type.Namespace ?? string.Empty;
+            string fullName = type.FullName ?? type.Name;
+            typeName = namespaceName.Length == 0 ? fullName : fullName.Substring(namespaceName.Length + 1);
+        }
 
         private static void EnsureHostBindings()
         {
@@ -110,7 +168,7 @@ namespace Crowny
 
         private static ManagedNativeUuid EncodeUuid(UUID value)
         {
-            ManagedNativeUuid result = default(ManagedNativeUuid);
+            ManagedNativeUuid result = default;
             byte* bytes = result.Bytes;
             WriteBigEndian(bytes, 0, value.d0);
             WriteBigEndian(bytes, 4, value.d1);
@@ -130,6 +188,11 @@ namespace Crowny
             if (value.Data == null || value.Length == 0)
                 return string.Empty;
             return Encoding.UTF8.GetString(value.Data, checked((int)value.Length));
+        }
+
+        private static string DecodeOptionalString(ManagedNativeStringView value)
+        {
+            return value.Data == null ? null : DecodeString(value);
         }
 
         private static CharacterInfo DecodeFontCharacterInfo(ManagedNativeFontCharacterInfo value)
@@ -154,9 +217,19 @@ namespace Crowny
             };
         }
 
+        private static byte[] DecodeBytes(ManagedNativeBlob value)
+        {
+            if (value.Data == null || value.Length == 0)
+                return Array.Empty<byte>();
+            int length = checked((int)value.Length);
+            byte[] result = new byte[length];
+            Marshal.Copy((IntPtr)value.Data, result, 0, length);
+            return result;
+        }
+
         private static ManagedNativeMatrix4 EncodeMatrix(Matrix4 value)
         {
-            ManagedNativeMatrix4 result = default(ManagedNativeMatrix4);
+            ManagedNativeMatrix4 result = default;
             float* values = result.Values;
             for (int index = 0; index < 16; ++index)
                 values[index] = value[index];

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
-using System.Globalization;
 
 namespace Crowny
 {
@@ -19,7 +17,7 @@ namespace Crowny
                 return "";
             if (obj is ScriptObject && !(obj is EntityBehaviour))
                 throw new ArgumentException("JsonUtility.ToJson does not support engine types.");
-            return Internal_ToJson(obj, prettyPrint);
+            return ManagedJsonCodec.Serialize(obj, prettyPrint);
         }
 
         public static T FromJson<T>(string json) { return (T)FromJson(json, typeof(T)); }
@@ -32,13 +30,8 @@ namespace Crowny
                 throw new ArgumentNullException("JSON type cannot be null");
             if (type.IsAbstract || type.IsSubclassOf(typeof(Crowny.ScriptObject)))
                 throw new ArgumentException("Cannot deserialize JSON to new instance of type '" + type.Name + "'.");
-            return Internal_FromJson(json, type);
+            return ManagedJsonCodec.Deserialize(json, type);
         }
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static string Internal_ToJson(object obj, bool prettyPrint);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static object Internal_FromJson(string message, Type type);
 
     }
 }
