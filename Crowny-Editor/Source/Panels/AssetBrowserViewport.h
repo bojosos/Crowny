@@ -5,6 +5,56 @@
 
 namespace Crowny
 {
+    enum class AssetBrowserToolbarMode : uint8_t
+    {
+        Wide,
+        Compact,
+        Narrow
+    };
+
+    struct AssetBrowserToolbarLayout
+    {
+        AssetBrowserToolbarMode Mode = AssetBrowserToolbarMode::Narrow;
+        uint32_t ColumnCount = 2u;
+        uint32_t ControlRowCount = 2u;
+        bool SearchSharesControlRow = false;
+        bool ShowsThumbnailSize = false;
+
+        bool operator==(const AssetBrowserToolbarLayout&) const = default;
+    };
+
+    constexpr AssetBrowserToolbarLayout GetAssetBrowserToolbarLayout(float availableWidth, bool gridView)
+    {
+        constexpr float minimumSearchWidth = 220.0f;
+        constexpr float typeWidth = 120.0f;
+        constexpr float sortWidth = 108.0f;
+        constexpr float viewWidth = 92.0f;
+        constexpr float thumbnailWidth = 125.0f;
+        constexpr float columnSpacing = 8.0f;
+
+        const uint32_t controlCount = gridView ? 4u : 3u;
+        const float fixedControlWidth = typeWidth + sortWidth + viewWidth + (gridView ? thumbnailWidth : 0.0f);
+        const float wideMinimum = minimumSearchWidth + fixedControlWidth + columnSpacing * static_cast<float>(controlCount);
+        if (availableWidth >= wideMinimum)
+            return { AssetBrowserToolbarMode::Wide, controlCount + 1u, 1u, true, gridView };
+
+        const float compactMinimum = gridView ? 430.0f : 330.0f;
+        if (availableWidth >= compactMinimum)
+            return { AssetBrowserToolbarMode::Compact, controlCount, 1u, false, gridView };
+
+        return { AssetBrowserToolbarMode::Narrow, 2u, 2u, false, gridView };
+    }
+
+    constexpr float GetAssetBrowserNavigationWidth(float frameHeight, float reloadLabelWidth, float itemSpacing, float framePaddingX)
+    {
+        return frameHeight * 3.0f + reloadLabelWidth + framePaddingX * 2.0f + itemSpacing * 3.0f;
+    }
+
+    constexpr bool NeedsAssetBrowserBreadcrumbScrollbar(float contentWidth, float availableWidth)
+    {
+        return contentWidth > std::max(availableWidth, 0.0f);
+    }
+
     struct AssetBrowserItemRange
     {
         uint32_t Begin = 0u;

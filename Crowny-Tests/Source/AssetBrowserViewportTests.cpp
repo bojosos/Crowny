@@ -5,6 +5,64 @@
 
 using namespace Crowny;
 
+TEST_CASE("Asset browser toolbar keeps its table shape stable for the rendered frame", "[Editor][AssetBrowser][Viewport]")
+{
+    const AssetBrowserToolbarLayout wideGrid = GetAssetBrowserToolbarLayout(900.0f, true);
+    CHECK(wideGrid.Mode == AssetBrowserToolbarMode::Wide);
+    CHECK(wideGrid.ColumnCount == 5u);
+    CHECK(wideGrid.SearchSharesControlRow);
+    CHECK(wideGrid.ShowsThumbnailSize);
+
+    const AssetBrowserToolbarLayout wideList = GetAssetBrowserToolbarLayout(900.0f, false);
+    CHECK(wideList.Mode == AssetBrowserToolbarMode::Wide);
+    CHECK(wideList.ColumnCount == 4u);
+    CHECK_FALSE(wideList.ShowsThumbnailSize);
+
+    // A view change takes effect next frame. The current table keeps the columns it declared.
+    const AssetBrowserToolbarLayout renderedFrame = GetAssetBrowserToolbarLayout(900.0f, false);
+    const AssetBrowserToolbarLayout nextFrame = GetAssetBrowserToolbarLayout(900.0f, true);
+    CHECK(renderedFrame.ColumnCount == 4u);
+    CHECK_FALSE(renderedFrame.ShowsThumbnailSize);
+    CHECK(nextFrame.ColumnCount == 5u);
+    CHECK(nextFrame.ShowsThumbnailSize);
+}
+
+TEST_CASE("Asset browser toolbar uses full-width search before controls collapse", "[Editor][AssetBrowser][Viewport]")
+{
+    const AssetBrowserToolbarLayout compactGrid = GetAssetBrowserToolbarLayout(600.0f, true);
+    CHECK(compactGrid.Mode == AssetBrowserToolbarMode::Compact);
+    CHECK(compactGrid.ColumnCount == 4u);
+    CHECK(compactGrid.ControlRowCount == 1u);
+    CHECK_FALSE(compactGrid.SearchSharesControlRow);
+
+    const AssetBrowserToolbarLayout compactList = GetAssetBrowserToolbarLayout(500.0f, false);
+    CHECK(compactList.Mode == AssetBrowserToolbarMode::Compact);
+    CHECK(compactList.ColumnCount == 3u);
+    CHECK(GetAssetBrowserToolbarLayout(697.0f, true).Mode == AssetBrowserToolbarMode::Wide);
+    CHECK(GetAssetBrowserToolbarLayout(696.9f, true).Mode == AssetBrowserToolbarMode::Compact);
+    CHECK(GetAssetBrowserToolbarLayout(564.0f, false).Mode == AssetBrowserToolbarMode::Wide);
+    CHECK(GetAssetBrowserToolbarLayout(563.9f, false).Mode == AssetBrowserToolbarMode::Compact);
+
+    const AssetBrowserToolbarLayout narrowGrid = GetAssetBrowserToolbarLayout(320.0f, true);
+    CHECK(narrowGrid.Mode == AssetBrowserToolbarMode::Narrow);
+    CHECK(narrowGrid.ColumnCount == 2u);
+    CHECK(narrowGrid.ControlRowCount == 2u);
+
+    const AssetBrowserToolbarLayout narrowList = GetAssetBrowserToolbarLayout(320.0f, false);
+    CHECK(narrowList.Mode == AssetBrowserToolbarMode::Narrow);
+    CHECK(narrowList.ColumnCount == 2u);
+}
+
+TEST_CASE("Asset browser header dimensions follow font and breadcrumb content", "[Editor][AssetBrowser][Viewport]")
+{
+    CHECK(GetAssetBrowserNavigationWidth(24.0f, 48.0f, 6.0f, 4.0f) == 146.0f);
+    CHECK(GetAssetBrowserNavigationWidth(32.0f, 64.0f, 8.0f, 6.0f) == 196.0f);
+
+    CHECK_FALSE(NeedsAssetBrowserBreadcrumbScrollbar(300.0f, 300.0f));
+    CHECK(NeedsAssetBrowserBreadcrumbScrollbar(300.1f, 300.0f));
+    CHECK(NeedsAssetBrowserBreadcrumbScrollbar(1.0f, -20.0f));
+}
+
 TEST_CASE("Asset browser viewport maps clipped grid rows to absolute items", "[Editor][AssetBrowser][Viewport]")
 {
     CHECK(GetAssetBrowserRowCount(0u, 5u) == 0u);
@@ -67,7 +125,8 @@ TEST_CASE("Stable asset browser viewport calculations allocate nothing", "[Edito
     {
         const uint32_t firstRow = 1200u + frame % 4u;
         const AssetBrowserItemRange range = GetAssetBrowserItemRange(firstRow, firstRow + 8u, 6u, 10000u);
-        checksum += range.Begin + range.End + GetAssetBrowserRowCount(10000u, 6u) + GetAssetBrowserItemRow(9123u, 6u);
+        const AssetBrowserToolbarLayout toolbar = GetAssetBrowserToolbarLayout(320.0f + static_cast<float>(frame), frame % 2u == 0u);
+        checksum += range.Begin + range.End + GetAssetBrowserRowCount(10000u, 6u) + GetAssetBrowserItemRow(9123u, 6u) + toolbar.ColumnCount;
     }
     const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
 

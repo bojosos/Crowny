@@ -299,14 +299,19 @@ namespace Crowny
         if (m_CurrentDirectoryEntry == nullptr)
             return;
 
+        m_SearchFieldActive = false;
         UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 6.0f));
         UI::ScopedStyle framePadding(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
         const ImGuiTableFlags tableFlags =
           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoBordersInBody;
+        const bool focusSearch = ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_RouteFocused);
+        const float navigationWidth =
+          GetAssetBrowserNavigationWidth(ImGui::GetFrameHeight(), ImGui::CalcTextSize("Reload").x, ImGui::GetStyle().ItemSpacing.x,
+                                         ImGui::GetStyle().FramePadding.x);
 
         if (!ImGui::BeginTable("##assetBrowserNavigation", 2, tableFlags))
             return;
-        ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, 132.0f);
+        ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, navigationWidth);
         ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
@@ -366,44 +371,74 @@ namespace Crowny
             UpdateDisplayList(); // Show newly imported assets as they complete
 
         ImGui::TableSetColumnIndex(1);
-        ImGui::BeginChild("##assetBreadcrumbs", ImVec2(0.0f, ImGui::GetFrameHeight()), false, ImGuiWindowFlags_HorizontalScrollbar);
+        float breadcrumbContentWidth = 0.0f;
         for (size_t i = 0; i < m_DirectoryPathEntries.size(); i++)
         {
-            DirectoryEntry* dirEntry = m_DirectoryPathEntries[i];
-            ImGui::PushID(static_cast<int>(i));
             if (i > 0)
-            {
-                ImGui::AlignTextToFramePadding();
-                ImGui::TextDisabled(">");
-                ImGui::SameLine();
-            }
+                breadcrumbContentWidth += ImGui::CalcTextSize(">").x + ImGui::GetStyle().ItemSpacing.x;
 
             const bool current = i + 1 == m_DirectoryPathEntries.size();
-            if (current)
-            {
-                ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(dirEntry->ElementName.c_str());
-            }
-            else if (ImGui::SmallButton(dirEntry->ElementName.c_str()))
-            {
-                SetCurrentDirectory(dirEntry);
-                ImGui::PopID();
-                break;
-            }
-            UI::SetTooltip(dirEntry->Filepath.string());
+            breadcrumbContentWidth += ImGui::CalcTextSize(m_DirectoryPathEntries[i]->ElementName.c_str()).x;
             if (!current)
-                ImGui::SameLine();
-            ImGui::PopID();
+                breadcrumbContentWidth += ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
+        }
+
+        const bool breadcrumbScrolls =
+          NeedsAssetBrowserBreadcrumbScrollbar(breadcrumbContentWidth, ImGui::GetContentRegionAvail().x);
+        const float breadcrumbHeight = ImGui::GetFrameHeight() + (breadcrumbScrolls ? ImGui::GetStyle().ScrollbarSize : 0.0f);
+        DirectoryEntry* requestedDirectory = nullptr;
+        if (ImGui::BeginChild("##assetBreadcrumbs", ImVec2(0.0f, breadcrumbHeight), false, ImGuiWindowFlags_HorizontalScrollbar))
+        {
+            for (size_t i = 0; i < m_DirectoryPathEntries.size(); i++)
+            {
+                DirectoryEntry* dirEntry = m_DirectoryPathEntries[i];
+                ImGui::PushID(static_cast<int>(i));
+                if (i > 0)
+                {
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextDisabled(">");
+                    ImGui::SameLine();
+                }
+
+                const bool current = i + 1 == m_DirectoryPathEntries.size();
+                if (current)
+                {
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextUnformatted(dirEntry->ElementName.c_str());
+                }
+                else if (ImGui::SmallButton(dirEntry->ElementName.c_str()))
+                    requestedDirectory = dirEntry;
+                UI::SetTooltip(dirEntry->Filepath.string());
+                if (!current)
+                    ImGui::SameLine();
+                ImGui::PopID();
+
+                if (requestedDirectory != nullptr)
+                    break;
+            }
+            if (m_ScrollBreadcrumbToEnd)
+            {
+                ImGui::SetScrollHereX(1.0f);
+                m_ScrollBreadcrumbToEnd = false;
+            }
         }
         ImGui::EndChild();
         ImGui::EndTable();
+        if (requestedDirectory != nullptr)
+            SetCurrentDirectory(requestedDirectory);
 
         static const char* filterLabels[] = { "All assets", "Scenes", "Images", "Materials", "Models", "Audio", "Code" };
         static const char* sortingLabels[] = { "Name", "Size", "Date" };
         const auto drawSearch = [&]() {
-            ImGui::SetNextItemWidth(-1.0f);
+            ImGui::PushID("AssetBrowserSearch");
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            if (focusSearch)
+                ImGui::SetKeyboardFocusHere();
             if (UIUtils::SearchWidget(m_SearchString, "Search this folder..."))
                 UpdateDisplayList();
+            m_SearchFieldActive = ImGui::IsItemActive();
+            UI::SetTooltip("Search this folder (Ctrl+F)");
+            ImGui::PopID();
         };
         const auto drawFilter = [&]() {
             ImGui::SetNextItemWidth(-1.0f);
@@ -467,17 +502,17 @@ namespace Crowny
         };
 
         const float availableWidth = ImGui::GetContentRegionAvail().x;
-        const bool compact = availableWidth < 680.0f;
-        const int controlColumns = m_View == AssetBrowserView::Grid ? 4 : 3;
-        if (!compact)
+        const bool gridLayout = m_View == AssetBrowserView::Grid;
+        const AssetBrowserToolbarLayout toolbarLayout = GetAssetBrowserToolbarLayout(availableWidth, gridLayout);
+        if (toolbarLayout.SearchSharesControlRow)
         {
-            if (ImGui::BeginTable("##assetBrowserToolbar", controlColumns + 1, tableFlags))
+            if (ImGui::BeginTable("##assetBrowserToolbar", static_cast<int>(toolbarLayout.ColumnCount), tableFlags))
             {
                 ImGui::TableSetupColumn("Search", ImGuiTableColumnFlags_WidthStretch);
                 ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 120.0f);
                 ImGui::TableSetupColumn("Sort", ImGuiTableColumnFlags_WidthFixed, 108.0f);
                 ImGui::TableSetupColumn("View", ImGuiTableColumnFlags_WidthFixed, 92.0f);
-                if (m_View == AssetBrowserView::Grid)
+                if (toolbarLayout.ShowsThumbnailSize)
                     ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 125.0f);
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
@@ -488,7 +523,7 @@ namespace Crowny
                 drawSort();
                 ImGui::TableSetColumnIndex(3);
                 drawView();
-                if (m_View == AssetBrowserView::Grid)
+                if (toolbarLayout.ShowsThumbnailSize)
                 {
                     ImGui::TableSetColumnIndex(4);
                     drawThumbnailSize();
@@ -499,14 +534,14 @@ namespace Crowny
         else
         {
             drawSearch();
-            if (ImGui::BeginTable("##assetBrowserCompactToolbar", availableWidth < 430.0f ? 2 : controlColumns, tableFlags))
+            if (ImGui::BeginTable("##assetBrowserCompactToolbar", static_cast<int>(toolbarLayout.ColumnCount), tableFlags))
             {
                 ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthStretch);
                 ImGui::TableSetupColumn("Sort", ImGuiTableColumnFlags_WidthStretch);
-                if (availableWidth >= 430.0f)
+                if (toolbarLayout.ControlRowCount == 1u)
                 {
                     ImGui::TableSetupColumn("View", ImGuiTableColumnFlags_WidthFixed, 92.0f);
-                    if (m_View == AssetBrowserView::Grid)
+                    if (toolbarLayout.ShowsThumbnailSize)
                         ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 120.0f);
                 }
                 ImGui::TableNextRow();
@@ -514,12 +549,12 @@ namespace Crowny
                 drawFilter();
                 ImGui::TableSetColumnIndex(1);
                 drawSort();
-                if (availableWidth < 430.0f)
+                if (toolbarLayout.ControlRowCount > 1u)
                 {
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
                     drawView();
-                    if (m_View == AssetBrowserView::Grid)
+                    if (toolbarLayout.ShowsThumbnailSize)
                     {
                         ImGui::TableSetColumnIndex(1);
                         drawThumbnailSize();
@@ -529,7 +564,7 @@ namespace Crowny
                 {
                     ImGui::TableSetColumnIndex(2);
                     drawView();
-                    if (m_View == AssetBrowserView::Grid)
+                    if (toolbarLayout.ShowsThumbnailSize)
                     {
                         ImGui::TableSetColumnIndex(3);
                         drawThumbnailSize();
@@ -543,7 +578,7 @@ namespace Crowny
     void AssetBrowserPanel::HandleKeyboardNavigation()
     {
         // Disable keyboard stuff if ImGui wants to use the keyboard (for example in InputText widgets)
-        if (ImGui::GetIO().WantCaptureKeyboard)
+        if (m_SearchFieldActive || ImGui::GetIO().WantTextInput || ImGui::GetIO().WantCaptureKeyboard || ImGui::IsAnyItemActive())
             return;
 
         const DisplayList& displayList = GetDisplayList();
@@ -982,16 +1017,23 @@ namespace Crowny
         const DisplayList& displayList = GetDisplayList();
         if (displayList.empty())
         {
-            const bool constrained = !m_SearchString.empty() || m_AssetFilter != AssetBrowserFilter::All;
-            const char* message = constrained ? "No assets match these filters." : "This folder is empty.";
+            const bool searching = !m_SearchString.empty();
+            const bool filtering = m_AssetFilter != AssetBrowserFilter::All;
+            const bool constrained = searching || filtering;
+            const char* message = searching && filtering   ? "No assets match this search and type filter."
+                                  : searching              ? "No assets match this search."
+                                  : filtering              ? "No assets match this type filter."
+                                                           : "This folder is empty.";
             const float messageWidth = ImGui::CalcTextSize(message).x;
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (panelWidth - messageWidth) * 0.5f));
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 24.0f);
             ImGui::TextDisabled("%s", message);
             if (constrained)
             {
-                const char* clearLabel = "Clear search and filter";
-                const float clearWidth = ImGui::CalcTextSize(clearLabel).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+                const char* clearLabel = searching && filtering ? "Clear search and filter##assetEmptyReset"
+                                         : searching            ? "Clear search##assetEmptyReset"
+                                                                : "Show all assets##assetEmptyReset";
+                const float clearWidth = ImGui::CalcTextSize(clearLabel, nullptr, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (panelWidth - clearWidth) * 0.5f));
                 if (ImGui::Button(clearLabel))
                 {
@@ -1651,6 +1693,7 @@ namespace Crowny
             tmp = tmp->Parent;
         }
         std::reverse(m_DirectoryPathEntries.begin(), m_DirectoryPathEntries.end());
+        m_ScrollBreadcrumbToEnd = true;
     }
 
     String AssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType) const

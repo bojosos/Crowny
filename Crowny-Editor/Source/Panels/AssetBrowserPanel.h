@@ -143,6 +143,8 @@ namespace Crowny
         Path m_RenamingPath;
         String m_RenamingText;
         AssetBrowserOperationQueue m_DeferredOperations;
+        bool m_SearchFieldActive = false;
+        bool m_ScrollBreadcrumbToEnd = true;
 
         std::function<void(const Path&)> m_SetSelectedPathCallback;
     };
