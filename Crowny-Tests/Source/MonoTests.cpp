@@ -187,3 +187,24 @@ TEST_CASE("Managed animation API exposes clip identity and playback controls", "
         CHECK(animation->GetMethod(method, 0) != nullptr);
     }
 }
+
+TEST_CASE("Managed material API exposes explicit alpha routing", "[Mono][Renderer][Materials][.ProcessIsolated]")
+{
+    AttachThread();
+
+    Crowny::MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+    if (assembly == nullptr)
+    {
+        const Path assemblyPath = Crowny::Test::ResolveManagedAssembly("CrownySharp.dll", "Crowny-Sharp/CrownySharp.dll");
+        REQUIRE(fs::is_regular_file(assemblyPath));
+        assembly = &MonoManager::Get().LoadAssembly(assemblyPath, CROWNY_ASSEMBLY);
+    }
+
+    Crowny::MonoClass* alphaMode = assembly->GetClass(CROWNY_NS, "AlphaMode");
+    Crowny::MonoClass* material = assembly->GetClass(CROWNY_NS, "Material");
+    REQUIRE(alphaMode != nullptr);
+    REQUIRE(material != nullptr);
+    CHECK(material->GetProperty("AlphaModeOverride") != nullptr);
+    CHECK(material->GetProperty("HasAlphaModeOverride") != nullptr);
+    CHECK(material->GetMethod("ClearAlphaModeOverride", 0) != nullptr);
+}

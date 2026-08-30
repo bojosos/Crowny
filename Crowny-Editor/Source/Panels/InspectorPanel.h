@@ -70,6 +70,7 @@ namespace Crowny
 
         void DrawApplyRevert(float xOffset, float width);
         void DrawHeader();
+        void FlushPendingMaterialSave();
 
     private:
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
@@ -92,6 +93,7 @@ namespace Crowny
 
         // Material inspector auto-save state
         MaterialInspectorSchemaCache m_MaterialSchemaCache;
+        Path m_MaterialLastSavePath;
         uint64_t m_MaterialLastSaveVersion = 0;
         std::chrono::steady_clock::time_point m_MaterialLastSaveTime;
 
