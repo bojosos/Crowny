@@ -57,12 +57,12 @@ jobs:
       - name: Build Crowny-Sharp
         run: |
           cd Crowny-Sharp
-          find ./Source -type f -name "*.cs" -print0 | xargs -0 csc -unsafe -define:CROWNY_MONO -debug:portable -optimize- -target:library -out:CrownySharp.dll "../Crowny/Dependencies/FastNoiseLite/CSharp/FastNoiseLite.cs"
+          find ./Source -type f -name "*.cs" -print0 | xargs -0 csc -unsafe -langversion:latest -define:CROWNY_MONO -debug:portable -optimize- -target:library -out:CrownySharp.dll "../Crowny/Dependencies/FastNoiseLite/CSharp/FastNoiseLite.cs"
 
       - name: Build Crowny-Sandbox
         run: |
           cd Crowny-Sandbox
-          find ./Source -type f -name "*.cs" -print0 | xargs -0 csc -debug:portable -optimize- -lib:../Crowny-Sharp -reference:CrownySharp.dll -target:library -out:GameAssembly.dll
+          find ./Source -type f -name "*.cs" -print0 | xargs -0 csc -langversion:latest -debug:portable -optimize- -lib:../Crowny-Sharp -reference:CrownySharp.dll -target:library -out:GameAssembly.dll
 
       - name: Build Crowny-Tests
         run: make Crowny-Tests -j$(nproc) config=release_linux64 CXX=clang++
