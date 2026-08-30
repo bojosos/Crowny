@@ -419,8 +419,11 @@ namespace Crowny
             return false;
 
         const uint32_t targetSamples = std::min(StreamBufferSamples, m_AudioClip->GetNumSamples());
+        uint32_t sampleBytes = 0;
+        if (!AudioUtils::TryGetBufferSize(targetSamples, m_AudioClip->GetDesc().BitDepth, sampleBytes))
+            return false;
         const uint32_t bytesPerSample = m_AudioClip->GetDesc().BitDepth / 8;
-        Vector<uint8_t> samples(targetSamples * bytesPerSample);
+        m_StreamScratch.DecodedSamples.resize(sampleBytes);
         uint32_t samplesRead = 0;
         if (m_StreamQueuePosition >= m_AudioClip->GetNumSamples())
         {
@@ -431,7 +434,8 @@ namespace Crowny
         while (samplesRead < targetSamples)
         {
             const uint32_t count = std::min(targetSamples - samplesRead, m_AudioClip->GetNumSamples() - m_StreamQueuePosition);
-            const uint32_t read = m_AudioClip->GetSamples(samples.data() + samplesRead * bytesPerSample, m_StreamQueuePosition, count);
+            const uint32_t read =
+              m_AudioClip->GetSamples(m_StreamScratch.DecodedSamples.data() + samplesRead * bytesPerSample, m_StreamQueuePosition, count);
             samplesRead += read;
             m_StreamQueuePosition += read;
             if (read < count || m_StreamQueuePosition >= m_AudioClip->GetNumSamples())
@@ -448,7 +452,7 @@ namespace Crowny
             return false;
 
         AudioDataInfo info = { samplesRead, m_AudioClip->GetFrequency(), m_AudioClip->GetNumChannels(), m_AudioClip->GetDesc().BitDepth };
-        if (!AudioManager::TryGet()->WriteToOpenALBuffer(bufferId, samples.data(), info))
+        if (!AudioManager::TryGet()->WriteToOpenALBuffer(bufferId, m_StreamScratch.DecodedSamples.data(), info, m_StreamScratch))
             return false;
         m_StreamBufferSampleCounts[bufferIndex] = samplesRead;
         return true;

@@ -91,8 +91,10 @@ namespace Crowny
     private:
         bool IsExtSupported(const String& ext) const;
         ALCcontext* GetContext() const;
+        bool WriteToOpenALBuffer(uint32_t bufferId, const uint8_t* samples, const AudioDataInfo& info, AudioStreamScratch& scratch);
         void ApplyGlobalSettings();
         bool EnsureContextCurrent();
+        void RefreshPCMCapabilities();
         void RefreshEFXCapability();
 
     private:
@@ -114,6 +116,9 @@ namespace Crowny
         bool m_EFXFallbackReported = false;
         bool m_EFXAvailableReported = false;
         AssetHandle<AudioMixer> m_ActiveMixer;
+
+        AudioPCMCapabilities m_PCMCapabilities;
+        bool m_IntegerPCMFallbackReported = false;
 
         float m_DopplerFactor = 1.0f;
         float m_SpeedOfSound = 343.3f;

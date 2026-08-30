@@ -106,8 +106,8 @@ namespace Crowny
                                    uint32_t mipCount = 0);
 
         // Generates a complete mip chain through Basis Universal's production resampler. The first entry is a copy of source.
-        static bool GenerateMipChain(const PixelData& source, const TextureMipGenerationOptions& options,
-                                     Vector<Ref<PixelData>>& output, String* error = nullptr);
+        static bool GenerateMipChain(const PixelData& source, const TextureMipGenerationOptions& options, Vector<Ref<PixelData>>& output,
+                                     String* error = nullptr);
 
         static bool ConvertPixels(const PixelData& src, PixelData& dst);
         static void PackPixel(float r, float g, float b, float a, TextureFormat format, uint8_t* dst);
@@ -145,12 +145,13 @@ namespace Crowny
         uint8_t* GetData() { return m_Buffer; }
         const uint8_t* GetData() const { return m_Buffer; }
         bool OwnsBuffer() const { return m_OwnsData; }
-        void SetBuffer(uint8_t* data);
-        void SetOwnedBuffer(uint8_t* data);
+        bool SetBuffer(uint8_t* data);
+        bool SetOwnedBuffer(uint8_t* data);
         uint8_t* ReleaseBuffer();
         void Clear();
-        void SetRowPitch(uint32_t rowPitch) { m_RowPitch = rowPitch; }
-        void SetSlicePitch(uint32_t slicePitch) { m_SlicePitch = slicePitch; }
+        // Pixel layout may be configured while unbound, but cannot change underneath attached storage.
+        bool SetRowPitch(uint32_t rowPitch);
+        bool SetSlicePitch(uint32_t slicePitch);
         uint32_t GetRowSkip() const;
         uint32_t GetSliceSkip() const;
         uint32_t GetPhysicalRowCount() const;

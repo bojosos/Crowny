@@ -870,14 +870,79 @@ TEST_CASE("PixelData::PaddedViewDerivesSlicePitch", "[PixelUtils]")
     CHECK(view->GetSlicePitch() == rowPitch * 2);
 }
 
+TEST_CASE("PixelData::BoundStorageFreezesPitchLayout", "[PixelUtils]")
+{
+    PixelData pixels(2, 2, 1, TextureFormat::RGBA8);
+    pixels.AllocateInternalBuffer();
+    REQUIRE(pixels.IsValid());
+    REQUIRE(pixels.GetSize() == 16);
+
+    CHECK_FALSE(pixels.SetRowPitch(64));
+    CHECK_FALSE(pixels.SetSlicePitch(128));
+    CHECK(pixels.GetRowPitch() == 8);
+    CHECK(pixels.GetSlicePitch() == 16);
+    CHECK(pixels.GetSize() == 16);
+
+    const glm::vec4 expected(0.25f, 0.5f, 0.75f, 1.0f);
+    REQUIRE(pixels.TrySetColorAt(1, 1, 0, expected));
+    PixelData copy(pixels);
+    REQUIRE(copy.IsValid());
+    CHECK(copy.GetSize() == 16);
+    CHECK_THAT(copy.GetColorAt(1, 1).r, Catch::Matchers::WithinAbs(expected.r, 0.01f));
+    CHECK_THAT(copy.GetColorAt(1, 1).g, Catch::Matchers::WithinAbs(expected.g, 0.01f));
+    CHECK_THAT(copy.GetColorAt(1, 1).b, Catch::Matchers::WithinAbs(expected.b, 0.01f));
+}
+
+TEST_CASE("PixelData::InvalidLayoutsRejectStorage", "[PixelUtils]")
+{
+    std::array<uint8_t, 32> storage{};
+
+    PixelData invalidView(2, 2, 1, TextureFormat::RGBA8);
+    REQUIRE(invalidView.SetRowPitch(7));
+    REQUIRE(invalidView.SetSlicePitch(14));
+    CHECK_FALSE(invalidView.SetBuffer(storage.data()));
+    CHECK(invalidView.GetData() == nullptr);
+    CHECK_FALSE(invalidView.IsValid());
+
+    uint8_t* ownedStorage = new uint8_t[storage.size()]{};
+    CHECK_FALSE(invalidView.SetOwnedBuffer(ownedStorage));
+    CHECK(invalidView.GetData() == nullptr);
+    CHECK_FALSE(invalidView.OwnsBuffer());
+    delete[] ownedStorage;
+
+    PixelData invalidSlice(2, 2, 1, TextureFormat::RGBA8);
+    REQUIRE(invalidSlice.SetSlicePitch(15));
+    CHECK_FALSE(invalidSlice.SetBuffer(storage.data()));
+    CHECK(invalidSlice.GetData() == nullptr);
+
+    PixelData invalidCopy(invalidView);
+    CHECK(invalidCopy.GetData() == nullptr);
+    CHECK_FALSE(invalidCopy.OwnsBuffer());
+    CHECK_FALSE(invalidCopy.IsValid());
+
+    PixelData unbound(2, 2, 1, TextureFormat::RGBA8);
+    REQUIRE(unbound.HasValidPitches());
+    PixelData unboundCopy(unbound);
+    CHECK(unboundCopy.GetData() == nullptr);
+    CHECK_FALSE(unboundCopy.OwnsBuffer());
+
+    Ref<PixelData> padded = PixelData::CreateView(2, 2, 1, TextureFormat::RGBA8, storage.data(), 12, 28);
+    REQUIRE(padded->IsValid());
+    CHECK(padded->GetRowPitch() == 12);
+    CHECK(padded->GetSlicePitch() == 28);
+
+    Ref<PixelData> compressed = PixelData::CreateView(5, 7, 1, TextureFormat::BC1, storage.data(), 16, 32);
+    REQUIRE(compressed->IsValid());
+    CHECK(compressed->GetPhysicalRowCount() == 2);
+}
+
 TEST_CASE("PixelUtils::Conversion::OverlappingLayouts", "[PixelUtils]")
 {
     constexpr uint32_t sourceRowPitch = 8;
     constexpr uint32_t destinationRowPitch = 12;
     std::array<uint8_t, destinationRowPitch * 2> storage{};
     Ref<PixelData> source = PixelData::CreateView(2, 2, 1, TextureFormat::RGBA8, storage.data(), sourceRowPitch, sourceRowPitch * 2);
-    Ref<PixelData> destination =
-      PixelData::CreateView(2, 2, 1, TextureFormat::RGBA8, storage.data(), destinationRowPitch, destinationRowPitch * 2);
+    Ref<PixelData> destination = PixelData::CreateView(2, 2, 1, TextureFormat::RGBA8, storage.data(), destinationRowPitch, destinationRowPitch * 2);
 
     REQUIRE(source->TrySetColorAt(0, 0, 0, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)));
     REQUIRE(source->TrySetColorAt(1, 0, 0, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)));

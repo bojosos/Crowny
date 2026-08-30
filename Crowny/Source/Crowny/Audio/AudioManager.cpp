@@ -83,6 +83,7 @@ namespace Crowny
             return;
         }
 
+        RefreshPCMCapabilities();
         ApplyGlobalSettings();
         RefreshEFXCapability();
     }
@@ -108,8 +109,7 @@ namespace Crowny
         {
             if (!m_EFXAvailableReported)
             {
-                CW_ENGINE_INFO("OpenAL EFX enabled: {0} auxiliary send(s), EAX reverb: {1}.", m_EFX.MaxAuxiliarySends,
-                               m_EFX.HasEAXReverb);
+                CW_ENGINE_INFO("OpenAL EFX enabled: {0} auxiliary send(s), EAX reverb: {1}.", m_EFX.MaxAuxiliarySends, m_EFX.HasEAXReverb);
                 m_EFXAvailableReported = true;
             }
             return;
@@ -121,9 +121,15 @@ namespace Crowny
             CW_ENGINE_WARN("OpenAL EFX unavailable (missing {0}); effects are disabled, core playback remains available.",
                            m_EFX.MissingEntrypoint != nullptr ? m_EFX.MissingEntrypoint : "unknown entrypoint");
         else
-            CW_ENGINE_WARN("OpenAL EFX unavailable ({0}); effects are disabled, core playback remains available.",
-                           EFX::GetStatusName(m_EFX.Status));
+            CW_ENGINE_WARN("OpenAL EFX unavailable ({0}); effects are disabled, core playback remains available.", EFX::GetStatusName(m_EFX.Status));
         m_EFXFallbackReported = true;
+    }
+
+    void AudioManager::RefreshPCMCapabilities()
+    {
+        m_PCMCapabilities.SupportsFloat32 = IsExtSupported("AL_EXT_FLOAT32");
+        m_PCMCapabilities.SupportsMultichannel = IsExtSupported("AL_EXT_MCFORMATS");
+        m_IntegerPCMFallbackReported = false;
     }
 
     void AudioManager::ApplyGlobalSettings()
@@ -337,6 +343,7 @@ namespace Crowny
         }
 
         m_ActiveDevice = device;
+        RefreshPCMCapabilities();
         ApplyGlobalSettings();
         RefreshEFXCapability();
         return true;
@@ -365,59 +372,46 @@ namespace Crowny
 
     bool AudioManager::WriteToOpenALBuffer(uint32_t bufferId, const uint8_t* samples, const AudioDataInfo& info)
     {
+        AudioStreamScratch scratch;
+        return WriteToOpenALBuffer(bufferId, samples, info, scratch);
+    }
+
+    bool AudioManager::WriteToOpenALBuffer(uint32_t bufferId, const uint8_t* samples, const AudioDataInfo& info, AudioStreamScratch& scratch)
+    {
         if (!IsAvailable() || bufferId == 0 || samples == nullptr || info.NumSamples == 0 || info.SampleRate == 0)
             return false;
 
-        const bool supportedChannels = info.NumChannels == 1 || info.NumChannels == 2 || info.NumChannels == 4 || info.NumChannels == 6 ||
-                                       info.NumChannels == 7 || info.NumChannels == 8;
-        if (!supportedChannels || AudioUtils::GetBufferSize(info.NumSamples, info.BitDepth) == 0)
+        PreparedAudioPCM prepared;
+        const AudioPCMPreparationStatus preparation = AudioUtils::PrepareOpenALPCM(samples, info, m_PCMCapabilities, scratch, prepared);
+        if (preparation == AudioPCMPreparationStatus::UnsupportedChannels || preparation == AudioPCMPreparationStatus::UnsupportedBitDepth)
         {
             CW_ENGINE_ERROR("Unsupported PCM format: {0} channels, {1}-bit.", info.NumChannels, info.BitDepth);
             return false;
         }
-
-        const bool multichannel = info.NumChannels > 2;
-        if (multichannel && !IsExtSupported("AL_EXT_MCFORMATS"))
+        if (preparation == AudioPCMPreparationStatus::UnsupportedMultichannel)
         {
             CW_ENGINE_ERROR("OpenAL device does not support {0}-channel buffers.", info.NumChannels);
             return false;
         }
-
-        const void* uploadData = samples;
-        uint32_t uploadBitDepth = info.BitDepth;
-        uint32_t uploadSize = AudioUtils::GetBufferSize(info.NumSamples, info.BitDepth);
-        Vector<uint8_t> convertedBytes;
-        Vector<float> convertedFloats;
-
-        if (info.BitDepth == 8)
+        if (preparation == AudioPCMPreparationStatus::SizeOverflow)
         {
-            convertedBytes.resize(info.NumSamples);
-            AudioUtils::ConvertSigned8ToUnsigned(samples, convertedBytes.data(), info.NumSamples);
-            uploadData = convertedBytes.data();
+            CW_ENGINE_ERROR("PCM upload is too large for OpenAL: {0} samples at {1}-bit.", info.NumSamples, info.BitDepth);
+            return false;
         }
-        else if (info.BitDepth > 16 && IsExtSupported("AL_EXT_float32"))
-        {
-            convertedFloats.resize(info.NumSamples);
-            AudioUtils::ConvertToFloat(samples, info.BitDepth, convertedFloats.data(), info.NumSamples);
-            uploadData = convertedFloats.data();
-            uploadBitDepth = 32;
-            uploadSize = info.NumSamples * sizeof(float);
-        }
-        else if (info.BitDepth > 16)
+        if (preparation != AudioPCMPreparationStatus::Ready)
+            return false;
+
+        if (prepared.UsedIntegerFallback && !m_IntegerPCMFallbackReported)
         {
             CW_ENGINE_WARN("OpenAL float buffers are unavailable. Converting {0}-bit PCM to 16-bit.", info.BitDepth);
-            convertedBytes.resize(info.NumSamples * sizeof(int16_t));
-            AudioUtils::ConvertBitDepth(samples, info.BitDepth, convertedBytes.data(), 16, info.NumSamples);
-            uploadData = convertedBytes.data();
-            uploadBitDepth = 16;
-            uploadSize = static_cast<uint32_t>(convertedBytes.size());
+            m_IntegerPCMFallbackReported = true;
         }
 
-        const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, uploadBitDepth);
+        const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, prepared.BitDepth);
         if (format == AL_NONE)
             return false;
         alGetError();
-        alBufferData(bufferId, format, uploadData, static_cast<ALsizei>(uploadSize), static_cast<ALsizei>(info.SampleRate));
+        alBufferData(bufferId, format, prepared.Data, prepared.Size, static_cast<ALsizei>(info.SampleRate));
         return alGetError() == AL_NO_ERROR;
     }
 

@@ -18,12 +18,18 @@ namespace Crowny
         {
             switch (filter)
             {
-            case TextureMipFilter::Box: return "box";
-            case TextureMipFilter::Triangle: return "tent";
-            case TextureMipFilter::Mitchell: return "mitchell";
-            case TextureMipFilter::Lanczos4: return "lanczos4";
-            case TextureMipFilter::Kaiser: return "kaiser";
-            case TextureMipFilter::Count: break;
+            case TextureMipFilter::Box:
+                return "box";
+            case TextureMipFilter::Triangle:
+                return "tent";
+            case TextureMipFilter::Mitchell:
+                return "mitchell";
+            case TextureMipFilter::Lanczos4:
+                return "lanczos4";
+            case TextureMipFilter::Kaiser:
+                return "kaiser";
+            case TextureMipFilter::Count:
+                break;
             }
             return nullptr;
         }
@@ -132,8 +138,8 @@ namespace Crowny
       { "R16", 2, PFF_INTEGER | PFF_NORMALIZED, PCT_SHORT, 1, 16, 0, 0, 0, 0x0000FFFF, 0, 0, 0, 0, 0, 0, 0 },
       { "RG16", 4, PFF_INTEGER | PFF_NORMALIZED, PCT_SHORT, 2, 16, 16, 0, 0, 0x0000FFFF, 0xFFFF0000, 0, 0, 0, 16, 0, 0 },
       { "RGB16", 6, PFF_INTEGER | PFF_NORMALIZED, PCT_SHORT, 3, 16, 16, 16, 0, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF, 0, 0, 16, 0, 0 },
-      { "RGBA16", 8, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_SHORT, 4, 16, 16, 16, 16, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF,
-        0xFFFF0000, 0, 16, 0, 16 },
+      { "RGBA16", 8, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_SHORT, 4, 16, 16, 16, 16, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF, 0xFFFF0000, 0, 16,
+        0, 16 },
     } };
     static_assert(PIXEL_FORMATS.size() == static_cast<size_t>(TextureFormat::FormatCount));
 
@@ -167,12 +173,11 @@ namespace Crowny
         return index > static_cast<size_t>(TextureFormat::NONE) && index < PIXEL_FORMATS.size();
     }
 
-    bool PixelUtils::GenerateMipChain(const PixelData& source, const TextureMipGenerationOptions& options,
-                                      Vector<Ref<PixelData>>& output, String* error)
+    bool PixelUtils::GenerateMipChain(const PixelData& source, const TextureMipGenerationOptions& options, Vector<Ref<PixelData>>& output,
+                                      String* error)
     {
         output.clear();
-        if (!source.IsValid() || source.GetDepth() != 1 || IsCompressedFormat(source.GetFormat()) ||
-            IsDepthFormat(source.GetFormat()) ||
+        if (!source.IsValid() || source.GetDepth() != 1 || IsCompressedFormat(source.GetFormat()) || IsDepthFormat(source.GetFormat()) ||
             (IsIntegerFormat(source.GetFormat()) && !IsNormalizedFormat(source.GetFormat())))
         {
             SetMipError(error, "Mip generation requires one valid, uncompressed 2D color image");
@@ -252,8 +257,7 @@ namespace Crowny
                 {
                     for (uint32_t x = 0; x < width; ++x)
                     {
-                        glm::vec3 normal(mipImage(x, y)[0] * 2.0f - 1.0f, mipImage(x, y)[1] * 2.0f - 1.0f,
-                                         mipImage(x, y)[2] * 2.0f - 1.0f);
+                        glm::vec3 normal(mipImage(x, y)[0] * 2.0f - 1.0f, mipImage(x, y)[1] * 2.0f - 1.0f, mipImage(x, y)[2] * 2.0f - 1.0f);
                         const float lengthSquared = glm::dot(normal, normal);
                         normal = lengthSquared > 1e-10f ? normal * glm::inversesqrt(lengthSquared) : glm::vec3(0.0f, 0.0f, 1.0f);
                         mipImage(x, y)[0] = normal.x * 0.5f + 0.5f;
@@ -744,7 +748,7 @@ namespace Crowny
       : RefCounted(other), m_OwnsData(false), m_Format(other.m_Format), m_Width(other.m_Width), m_Height(other.m_Height), m_Depth(other.m_Depth),
         m_RowPitch(other.m_RowPitch), m_SlicePitch(other.m_SlicePitch)
     {
-        if (other.m_Buffer != nullptr && other.GetSize() > 0)
+        if (other.IsValid())
         {
             m_Buffer = new uint8_t[other.GetSize()];
             std::memcpy(m_Buffer, other.m_Buffer, other.GetSize());
@@ -913,27 +917,67 @@ namespace Crowny
         m_OwnsData = true;
     }
 
-    void PixelData::SetBuffer(uint8_t* data)
+    bool PixelData::SetBuffer(uint8_t* data)
     {
+        if (data != nullptr && !HasValidPitches())
+        {
+            CW_ENGINE_ERROR("Cannot bind storage to an invalid pixel layout");
+            return false;
+        }
         if (m_Buffer == data)
-            return;
+            return true;
 
         Clear();
         m_Buffer = data;
         m_OwnsData = false;
+        return true;
     }
 
-    void PixelData::SetOwnedBuffer(uint8_t* data)
+    bool PixelData::SetOwnedBuffer(uint8_t* data)
     {
+        if (data != nullptr && !HasValidPitches())
+        {
+            CW_ENGINE_ERROR("Cannot bind owned storage to an invalid pixel layout");
+            return false;
+        }
         if (m_Buffer == data)
         {
             m_OwnsData = data != nullptr;
-            return;
+            return true;
         }
 
         Clear();
         m_Buffer = data;
         m_OwnsData = data != nullptr;
+        return true;
+    }
+
+    bool PixelData::SetRowPitch(uint32_t rowPitch)
+    {
+        if (rowPitch == m_RowPitch)
+            return true;
+        if (m_Buffer != nullptr)
+        {
+            CW_ENGINE_ERROR("Cannot change pixel row pitch while storage is bound");
+            return false;
+        }
+
+        m_RowPitch = rowPitch;
+        return true;
+    }
+
+    bool PixelData::SetSlicePitch(uint32_t slicePitch)
+    {
+        if (slicePitch == m_SlicePitch)
+            return true;
+        if (m_Buffer != nullptr)
+        {
+            CW_ENGINE_ERROR("Cannot change pixel slice pitch while storage is bound");
+            return false;
+        }
+
+        m_SlicePitch = slicePitch;
+        return true;
     }
 
     uint8_t* PixelData::ReleaseBuffer()

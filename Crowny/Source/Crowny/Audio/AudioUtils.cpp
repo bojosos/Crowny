@@ -1,6 +1,9 @@
 #include "cwpch.h"
 
+#include "Crowny/Audio/AudioClip.h"
 #include "Crowny/Audio/AudioUtils.h"
+
+#include <limits>
 
 namespace Crowny
 {
@@ -75,11 +78,28 @@ namespace Crowny
         }
     }
 
-    uint32_t AudioUtils::GetBufferSize(uint32_t numSamples, uint32_t bitDepth)
+    bool AudioUtils::TryGetBufferSize(uint32_t numSamples, uint32_t bitDepth, uint32_t& size)
     {
         if (bitDepth != 8 && bitDepth != 16 && bitDepth != 24 && bitDepth != 32)
-            return 0;
-        return numSamples * (bitDepth / 8);
+        {
+            size = 0;
+            return false;
+        }
+
+        const uint64_t size64 = static_cast<uint64_t>(numSamples) * (bitDepth / 8);
+        if (size64 > std::numeric_limits<uint32_t>::max())
+        {
+            size = 0;
+            return false;
+        }
+        size = static_cast<uint32_t>(size64);
+        return true;
+    }
+
+    uint32_t AudioUtils::GetBufferSize(uint32_t numSamples, uint32_t bitDepth)
+    {
+        uint32_t size = 0;
+        return TryGetBufferSize(numSamples, bitDepth, size) ? size : 0;
     }
 
     void AudioUtils::ConvertSigned8ToUnsigned(const uint8_t* samples, uint8_t* output, uint32_t numSamples)
@@ -147,6 +167,12 @@ namespace Crowny
     void AudioUtils::ConvertBitDepth(const uint8_t* samples, uint32_t inBitDepth, uint8_t* output, uint32_t outBitDepth, uint32_t numSamples)
     {
         Vector<int32_t> temporary;
+        ConvertBitDepth(samples, inBitDepth, output, outBitDepth, numSamples, temporary);
+    }
+
+    void AudioUtils::ConvertBitDepth(const uint8_t* samples, uint32_t inBitDepth, uint8_t* output, uint32_t outBitDepth, uint32_t numSamples,
+                                     Vector<int32_t>& temporary)
+    {
         const int32_t* src = nullptr;
         const bool needNewBuffer = inBitDepth != 32;
         if (needNewBuffer)
@@ -320,6 +346,61 @@ namespace Crowny
             CW_ENGINE_ASSERT(false);
             break;
         }
+    }
+
+    AudioPCMPreparationStatus AudioUtils::PrepareOpenALPCM(const uint8_t* samples, const AudioDataInfo& info,
+                                                           const AudioPCMCapabilities& capabilities, AudioStreamScratch& scratch,
+                                                           PreparedAudioPCM& prepared)
+    {
+        prepared = {};
+        if (samples == nullptr || info.NumSamples == 0 || info.SampleRate == 0)
+            return AudioPCMPreparationStatus::InvalidInput;
+
+        const bool supportedChannels = info.NumChannels == 1 || info.NumChannels == 2 || info.NumChannels == 4 || info.NumChannels == 6 ||
+                                       info.NumChannels == 7 || info.NumChannels == 8;
+        if (!supportedChannels)
+            return AudioPCMPreparationStatus::UnsupportedChannels;
+        if (info.NumChannels > 2 && !capabilities.SupportsMultichannel)
+            return AudioPCMPreparationStatus::UnsupportedMultichannel;
+        if (info.BitDepth != 8 && info.BitDepth != 16 && info.BitDepth != 24 && info.BitDepth != 32)
+            return AudioPCMPreparationStatus::UnsupportedBitDepth;
+
+        uint32_t uploadBitDepth = info.BitDepth;
+        if (info.BitDepth > 16)
+            uploadBitDepth = capabilities.SupportsFloat32 ? 32 : 16;
+
+        uint32_t uploadSize = 0;
+        if (info.SampleRate > static_cast<uint32_t>(std::numeric_limits<ALsizei>::max()) ||
+            !TryGetBufferSize(info.NumSamples, uploadBitDepth, uploadSize) || uploadSize > static_cast<uint32_t>(std::numeric_limits<ALsizei>::max()))
+            return AudioPCMPreparationStatus::SizeOverflow;
+
+        const void* uploadData = samples;
+        bool usedIntegerFallback = false;
+        if (info.BitDepth == 8)
+        {
+            scratch.ConvertedBytes.resize(uploadSize);
+            ConvertSigned8ToUnsigned(samples, scratch.ConvertedBytes.data(), info.NumSamples);
+            uploadData = scratch.ConvertedBytes.data();
+        }
+        else if (info.BitDepth > 16 && capabilities.SupportsFloat32)
+        {
+            scratch.ConvertedFloats.resize(info.NumSamples);
+            ConvertToFloat(samples, info.BitDepth, scratch.ConvertedFloats.data(), info.NumSamples);
+            uploadData = scratch.ConvertedFloats.data();
+        }
+        else if (info.BitDepth > 16)
+        {
+            scratch.ConvertedBytes.resize(uploadSize);
+            ConvertBitDepth(samples, info.BitDepth, scratch.ConvertedBytes.data(), 16, info.NumSamples, scratch.ConversionSamples);
+            uploadData = scratch.ConvertedBytes.data();
+            usedIntegerFallback = true;
+        }
+
+        prepared.Data = uploadData;
+        prepared.Size = static_cast<ALsizei>(uploadSize);
+        prepared.BitDepth = uploadBitDepth;
+        prepared.UsedIntegerFallback = usedIntegerFallback;
+        return AudioPCMPreparationStatus::Ready;
     }
 
     bool AudioUtils::ShouldResumeAfterGlobalPause(AudioSourceState state) { return state == AudioSourceState::Playing; }

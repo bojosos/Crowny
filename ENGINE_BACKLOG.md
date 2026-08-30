@@ -91,6 +91,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Unify entity picking without adding an entity ID output to every material shader. Make readback asynchronous, bounds-safe, generation-checked, and fast for large scenes.
   - [x] Click and material-drop picking share one finite, half-open display-to-texture coordinate resolver, use the actual object-ID extent, reject invalid targets before synchronous readback, and propagate the new viewport size only after target replacement succeeds.
 - [ ] Finish cameras: projection validation, physical/orthographic controls, viewport/aspect changes, clear modes, culling masks, camera selection, and C# parity.
+  - [x] EditorCamera normalizes invalid projection inputs, updates pose setters coherently, and lazily caches stable view/view-projection matrices with zero steady-state allocations.
 - [ ] Add and retain reference-image regression tests across Vulkan and OpenGL, with tolerances, diff artifacts, headless CI policy, and future-backend comparison.
 - [ ] Keep `RENDERER_BACKLOG.md` as the detailed renderer design and verification log.
 
@@ -118,6 +119,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Complete OpenAL support for devices, contexts, sources, spatialization, streaming, listener state, attenuation, Doppler, distance models, filters, auxiliary sends, EFX effects, reverb presets, routing, and capability diagnostics.
 - [ ] Treat missing EFX entry points as an expected capability fallback, with one clear message and no broken base audio.
 - [ ] Restore per-source streaming decoders and move OpenAL ownership to a dedicated audio thread. Decode PCM on bounded workers and drain safely on scene/application shutdown.
+  - [x] Streaming sources retain decoded/conversion scratch, cache per-device PCM capabilities, validate OpenAL upload sizes, and allocate nothing after reaching their warm high-water mark.
 - [ ] Expand audio assets, import, previews, waveform/duration metadata, serialization, editor controls, and C# parity.
 
 ## Editor experience
@@ -151,6 +153,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Audio source and mixer dropdowns borrow bus, parent, effect, and waveform labels instead of rebuilding option strings each visible frame. The borrowed-label path preserves mixed-value previews and allocates nothing across 120 warm frames.
 - [ ] Finish `PixelUtils` and `PixelData`: validated pitches/sizes, all declared conversions, compression/decompression boundaries, mip generation, color spaces, alpha rules, safe overflow handling, and row-parallel kernels for large images.
   - [x] Alpha-coverage mip scaling preserves premultiplied RGB through the existing unpremultiply/store path, including sparse opaque colors and fully transparent inputs.
+  - [x] PixelData freezes pitches while storage is bound, rejects invalid layouts before adoption, and never copies from invalid or unbound storage.
 - [ ] Finish the cross-platform window system: multiple windows where supported, DPI, display enumeration, fullscreen modes, resize/minimize/focus, cursor modes, clipboard, drag/drop, icons, input routing, Vulkan/OpenGL surface lifetime, and C# APIs.
   - [x] GLFW logical-size, framebuffer-size, DPI, position, focus, and minimize callback storms coalesce into one deterministic, allocation-free state batch per poll on Windows and Linux.
 

@@ -2,6 +2,7 @@
 
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Audio/AudioClip.h"
+#include "Crowny/Audio/AudioUtils.h"
 #include "Crowny/Common/RefCounted.h"
 
 namespace Crowny
@@ -101,6 +102,7 @@ namespace Crowny
         uint32_t m_StreamBufferSampleCounts[StreamBufferCount]{};
         uint32_t m_StreamProcessedPosition = 0;
         uint32_t m_StreamQueuePosition = 0;
+        AudioStreamScratch m_StreamScratch;
         uint32_t m_SourceID = 0;
 
         Ref<AudioBus> m_Bus;

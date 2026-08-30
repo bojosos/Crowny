@@ -9,10 +9,12 @@
 #include "Crowny/Audio/EFXLoader.h"
 #include "Crowny/Common/DataStream.h"
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Scene/Scene.h"
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <limits>
 
 using namespace Crowny;
@@ -60,6 +62,141 @@ TEST_CASE("Audio buffer sizes use interleaved sample counts", "[Audio]")
     CHECK(AudioUtils::GetBufferSize(7, 24) == 21);
     CHECK(AudioUtils::GetBufferSize(7, 32) == 28);
     CHECK(AudioUtils::GetBufferSize(7, 12) == 0);
+    CHECK(AudioUtils::GetBufferSize(std::numeric_limits<uint32_t>::max(), 32) == 0);
+}
+
+TEST_CASE("OpenAL PCM preparation selects the supported conversion path", "[Audio][OpenAL]")
+{
+    AudioStreamScratch scratch;
+    PreparedAudioPCM prepared;
+
+    SECTION("signed 8-bit input becomes unsigned")
+    {
+        const std::array<uint8_t, 4> input = { 0x80, 0xFF, 0x00, 0x7F };
+        const AudioDataInfo info = { static_cast<uint32_t>(input.size()), 48000, 1, 8 };
+        REQUIRE(AudioUtils::PrepareOpenALPCM(input.data(), info, {}, scratch, prepared) == AudioPCMPreparationStatus::Ready);
+        CHECK(prepared.BitDepth == 8);
+        CHECK(prepared.Size == 4);
+        CHECK_FALSE(prepared.UsedIntegerFallback);
+        REQUIRE(prepared.Data != nullptr);
+        const auto* converted = static_cast<const uint8_t*>(prepared.Data);
+        const std::array<uint8_t, 4> expected = { 0, 127, 128, 255 };
+        CHECK(std::equal(converted, converted + input.size(), expected.begin()));
+    }
+
+    SECTION("16-bit input is uploaded without a copy")
+    {
+        const std::array<int16_t, 3> input = { -32768, 0, 32767 };
+        const AudioDataInfo info = { static_cast<uint32_t>(input.size()), 48000, 1, 16 };
+        const auto* bytes = reinterpret_cast<const uint8_t*>(input.data());
+        REQUIRE(AudioUtils::PrepareOpenALPCM(bytes, info, {}, scratch, prepared) == AudioPCMPreparationStatus::Ready);
+        CHECK(prepared.Data == bytes);
+        CHECK(prepared.BitDepth == 16);
+        CHECK(prepared.Size == static_cast<ALsizei>(input.size() * sizeof(int16_t)));
+        CHECK_FALSE(prepared.UsedIntegerFallback);
+    }
+
+    SECTION("24-bit input uses float when supported")
+    {
+        const std::array<uint8_t, 6> input = { 0x00, 0x00, 0x80, 0x00, 0xFF, 0x7F };
+        const AudioDataInfo info = { 2, 48000, 1, 24 };
+        AudioPCMCapabilities capabilities;
+        capabilities.SupportsFloat32 = true;
+        REQUIRE(AudioUtils::PrepareOpenALPCM(input.data(), info, capabilities, scratch, prepared) == AudioPCMPreparationStatus::Ready);
+        CHECK(prepared.BitDepth == 32);
+        CHECK(prepared.Size == static_cast<ALsizei>(2 * sizeof(float)));
+        CHECK_FALSE(prepared.UsedIntegerFallback);
+        const auto* converted = static_cast<const float*>(prepared.Data);
+        CHECK(converted[0] == Catch::Approx(-1.0f));
+        CHECK(converted[1] == Catch::Approx(0.9999695f));
+    }
+
+    SECTION("24-bit input falls back to 16-bit when float is unavailable")
+    {
+        const std::array<uint8_t, 6> input = { 0x00, 0x00, 0x80, 0x00, 0xFF, 0x7F };
+        const AudioDataInfo info = { 2, 48000, 1, 24 };
+        REQUIRE(AudioUtils::PrepareOpenALPCM(input.data(), info, {}, scratch, prepared) == AudioPCMPreparationStatus::Ready);
+        CHECK(prepared.BitDepth == 16);
+        CHECK(prepared.Size == static_cast<ALsizei>(2 * sizeof(int16_t)));
+        CHECK(prepared.UsedIntegerFallback);
+        std::array<int16_t, 2> converted{};
+        std::memcpy(converted.data(), prepared.Data, prepared.Size);
+        CHECK(converted[0] == std::numeric_limits<int16_t>::min());
+        CHECK(converted[1] == std::numeric_limits<int16_t>::max());
+    }
+}
+
+TEST_CASE("OpenAL PCM preparation validates capabilities and ALsizei bounds", "[Audio][OpenAL]")
+{
+    const std::array<uint8_t, 2> input{};
+    AudioStreamScratch scratch;
+    PreparedAudioPCM prepared;
+
+    AudioDataInfo info = { 1, 48000, 3, 16 };
+    CHECK(AudioUtils::PrepareOpenALPCM(input.data(), info, {}, scratch, prepared) == AudioPCMPreparationStatus::UnsupportedChannels);
+    CHECK(prepared.Data == nullptr);
+
+    info.NumChannels = 4;
+    CHECK(AudioUtils::PrepareOpenALPCM(input.data(), info, {}, scratch, prepared) == AudioPCMPreparationStatus::UnsupportedMultichannel);
+    AudioPCMCapabilities multichannel;
+    multichannel.SupportsMultichannel = true;
+    CHECK(AudioUtils::PrepareOpenALPCM(input.data(), info, multichannel, scratch, prepared) == AudioPCMPreparationStatus::Ready);
+
+    info.NumChannels = 1;
+    info.BitDepth = 12;
+    CHECK(AudioUtils::PrepareOpenALPCM(input.data(), info, {}, scratch, prepared) == AudioPCMPreparationStatus::UnsupportedBitDepth);
+
+    info.BitDepth = 16;
+    info.SampleRate = static_cast<uint32_t>(std::numeric_limits<ALsizei>::max()) + 1u;
+    CHECK(AudioUtils::PrepareOpenALPCM(input.data(), info, {}, scratch, prepared) == AudioPCMPreparationStatus::SizeOverflow);
+
+    info.SampleRate = 48000;
+    info.NumSamples = static_cast<uint32_t>(std::numeric_limits<ALsizei>::max()) / 2u + 1u;
+    CHECK(AudioUtils::PrepareOpenALPCM(input.data(), info, {}, scratch, prepared) == AudioPCMPreparationStatus::SizeOverflow);
+    CHECK(prepared.Data == nullptr);
+    CHECK(prepared.Size == 0);
+}
+
+TEST_CASE("OpenAL streaming scratch is allocation-free after its high-water mark", "[Audio][OpenAL][Allocation]")
+{
+    struct PreparationCase
+    {
+        uint32_t BitDepth;
+        bool SupportsFloat32;
+    };
+    constexpr std::array<PreparationCase, 4> cases = { PreparationCase{ 8, false }, PreparationCase{ 16, false }, PreparationCase{ 24, false },
+                                                       PreparationCase{ 32, true } };
+
+    for (const PreparationCase& preparationCase : cases)
+    {
+        CAPTURE(preparationCase.BitDepth, preparationCase.SupportsFloat32);
+        constexpr uint32_t sampleCount = 16384;
+        AudioDataInfo info = { sampleCount, 48000, 2, preparationCase.BitDepth };
+        AudioPCMCapabilities capabilities;
+        capabilities.SupportsFloat32 = preparationCase.SupportsFloat32;
+        AudioStreamScratch scratch;
+        uint32_t decodedSize = 0;
+        REQUIRE(AudioUtils::TryGetBufferSize(sampleCount, preparationCase.BitDepth, decodedSize));
+        scratch.DecodedSamples.resize(decodedSize);
+
+        PreparedAudioPCM prepared;
+        REQUIRE(AudioUtils::PrepareOpenALPCM(scratch.DecodedSamples.data(), info, capabilities, scratch, prepared) ==
+                AudioPCMPreparationStatus::Ready);
+
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        AudioPCMPreparationStatus status = AudioPCMPreparationStatus::InvalidInput;
+        for (uint32_t refill = 0; refill < 120 * 3; refill++)
+        {
+            scratch.DecodedSamples.resize(decodedSize);
+            status = AudioUtils::PrepareOpenALPCM(scratch.DecodedSamples.data(), info, capabilities, scratch, prepared);
+        }
+        const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+        const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+        CHECK(status == AudioPCMPreparationStatus::Ready);
+        CHECK(delta.AllocationCount == 0u);
+        CHECK(delta.RequestedBytes == 0u);
+    }
 }
 
 TEST_CASE("Signed 8-bit PCM is converted to OpenAL unsigned PCM", "[Audio]")
