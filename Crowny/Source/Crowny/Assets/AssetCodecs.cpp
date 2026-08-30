@@ -976,12 +976,15 @@ namespace Crowny
                 archive(cereal::binary_data(zeroBuf.data(), byteSize));
             }
         }
+        archive(material.m_HasAlphaModeOverride, material.m_AlphaMode);
     }
 
     void Load(BinaryDataStreamInputArchive& archive, Material& material)
     {
         const AssetFileHeader header = ReadAssetHeader(archive);
-        ValidateAssetHeader(header, AssetType::Material, MATERIAL_FORMAT_VERSION);
+        if (header.Magic == ASSET_FILE_MAGIC &&
+            (header.Type != AssetType::Material || (header.Version != 2u && header.Version != MATERIAL_FORMAT_VERSION)))
+            throw cereal::Exception("Material asset format is not supported. Reimport the source asset.");
         archive(cereal::base_class<Asset>(&material));
         UUID shaderUuid;
         archive(shaderUuid);
@@ -1021,6 +1024,16 @@ namespace Crowny
                 if (blockIt != pass.UniformBlocks.end() && member.Offset + byteSize <= blockIt->second->m_Size)
                     blockIt->second->Write(member.Offset, buf.data(), byteSize);
             }
+        }
+        material.m_HasAlphaModeOverride = false;
+        material.m_AlphaMode = AlphaMode::Opaque;
+        if (header.Magic == ASSET_FILE_MAGIC && header.Version >= 3u)
+            archive(material.m_HasAlphaModeOverride, material.m_AlphaMode);
+        if (material.m_AlphaMode > AlphaMode::WeightedOIT)
+        {
+            CW_ENGINE_WARN("Material '{}': invalid serialized alpha mode. Falling back to shader inference.", material.GetName());
+            material.m_HasAlphaModeOverride = false;
+            material.m_AlphaMode = AlphaMode::Opaque;
         }
     }
 

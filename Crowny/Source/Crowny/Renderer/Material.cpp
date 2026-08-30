@@ -99,6 +99,28 @@ namespace Crowny
         ReloadParams();
     }
 
+    void Material::SetAlphaMode(AlphaMode alphaMode)
+    {
+        if (alphaMode > AlphaMode::WeightedOIT)
+        {
+            CW_ENGINE_WARN("Ignoring invalid material alpha mode {}", static_cast<uint32_t>(alphaMode));
+            return;
+        }
+        if (m_HasAlphaModeOverride && m_AlphaMode == alphaMode)
+            return;
+        m_AlphaMode = alphaMode;
+        m_HasAlphaModeOverride = true;
+        ++m_ParamVersion;
+    }
+
+    void Material::ClearAlphaModeOverride()
+    {
+        if (!m_HasAlphaModeOverride)
+            return;
+        m_HasAlphaModeOverride = false;
+        ++m_ParamVersion;
+    }
+
     void Material::ReloadParams()
     {
         m_LayoutVersion = NextLayoutVersion();

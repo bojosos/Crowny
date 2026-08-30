@@ -101,6 +101,14 @@ namespace Crowny
         const ShaderVariation& GetVariation() const { return m_Variation; }
         void ReloadParams();
 
+        // By default the renderer infers alpha routing from the shader. An
+        // explicit mode is serialized with the material and can request
+        // specialized routes such as weighted blended OIT.
+        void SetAlphaMode(AlphaMode alphaMode);
+        void ClearAlphaModeOverride();
+        bool HasAlphaModeOverride() const { return m_HasAlphaModeOverride; }
+        AlphaMode GetAlphaMode() const { return m_AlphaMode; }
+
         uint64_t GetParamVersion() const { return m_ParamVersion; }
         /** Globally unique generation for the current reflected parameter layout. */
         uint64_t GetLayoutVersion() const { return m_LayoutVersion; }
@@ -246,6 +254,8 @@ namespace Crowny
         UnorderedMap<String, AssetHandle<Texture>> m_TextureHandles;
         AssetHandle<Shader> m_Shader;
         ShaderVariation m_Variation;
+        AlphaMode m_AlphaMode = AlphaMode::Opaque;
+        bool m_HasAlphaModeOverride = false;
         uint64_t m_ParamVersion = 0;
         uint64_t m_LayoutVersion = NextLayoutVersion();
     };

@@ -92,17 +92,23 @@ namespace Crowny
         const bool hasExplicitMaterialModel = std::any_of(tags.begin(), tags.end(), [](const String& tag) {
             return tag.starts_with("material_model=");
         });
+        MaterialRenderClassification result;
         if (hasExplicitMaterialModel)
-            return Classify({}, tags, hasBlending, alphaMasked);
-
-        String shaderIdentity = shader->GetName();
-        if (shaderIdentity.empty())
+            result = Classify({}, tags, hasBlending, alphaMasked);
+        else
         {
-            Path shaderPath;
-            if (AssetManager::TryGet() != nullptr && AssetManager::TryGet()->GetAssetPath(shader.GetUUID(), shaderPath))
-                shaderIdentity = shaderPath.generic_string();
+            String shaderIdentity = shader->GetName();
+            if (shaderIdentity.empty())
+            {
+                Path shaderPath;
+                if (AssetManager::TryGet() != nullptr && AssetManager::TryGet()->GetAssetPath(shader.GetUUID(), shaderPath))
+                    shaderIdentity = shaderPath.generic_string();
+            }
+            result = Classify(shaderIdentity, tags, hasBlending, alphaMasked);
         }
-        return Classify(shaderIdentity, tags, hasBlending, alphaMasked);
+        if (material.HasAlphaModeOverride())
+            result.Alpha = material.GetAlphaMode();
+        return result;
     }
 
     GpuMaterialData GpuMaterialPacker::Pack(const StandardMaterialDesc& desc)

@@ -127,6 +127,8 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
 - [x] Alpha-test standard GPU-record masked materials in the static and animated main depth variants, including motion-vector and object-ID output layouts; retain the material-aware shadow alpha test.
 - [x] Render requested weighted blended OIT materials into conditional accumulation/revealage targets, composite them as one fixed group before strict transparency, fall back to premultiplied drawing when OIT setup fails, and avoid allocating their 24 MB at 1080p when the view has no OIT draws. Render layers currently order within weighted and strict groups rather than interleaving the two modes.
+- [x] Make weighted OIT reachable from real native materials through an explicit alpha-mode override, with shader inference as the compatibility default, GPU-resource invalidation, and backward-compatible binary/YAML persistence.
+- [ ] Expose the explicit material alpha-mode override in the C# API and material inspector, including `Inferred` and weighted-OIT presets.
 - [x] Match masked main-depth coverage to Forward+/Deferred+ by including interpolated vertex alpha, and guard the compiled masked shader in the built-in pack.
 - [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
 - [x] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
