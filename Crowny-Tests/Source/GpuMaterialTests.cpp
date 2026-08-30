@@ -128,14 +128,27 @@ TEST_CASE("Materials can explicitly request and persist weighted OIT routing", "
     {
         ScopedAssetManager()
         {
-            AssetListenerManager::StartUp();
-            AssetManager::StartUp();
+            if (AssetListenerManager::TryGet() == nullptr)
+            {
+                AssetListenerManager::StartUp();
+                OwnsListenerManager = true;
+            }
+            if (AssetManager::TryGet() == nullptr)
+            {
+                AssetManager::StartUp();
+                OwnsAssetManager = true;
+            }
         }
         ~ScopedAssetManager()
         {
-            AssetManager::Shutdown();
-            AssetListenerManager::Shutdown();
+            if (OwnsAssetManager)
+                AssetManager::Shutdown();
+            if (OwnsListenerManager)
+                AssetListenerManager::Shutdown();
         }
+
+        bool OwnsListenerManager = false;
+        bool OwnsAssetManager = false;
     } scopedAssetManager;
     AssetManager& manager = AssetManager::Get();
     const Ref<ShaderTechnique> technique = ShaderTechnique::Create({ "material_model=standard" }, {}, {});
