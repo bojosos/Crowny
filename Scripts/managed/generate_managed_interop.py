@@ -321,7 +321,7 @@ def sharp_native_parameter(parameter: dict) -> tuple[list[str], str]:
 
 def sharp_result_declaration(result_type: str) -> tuple[str, str]:
     native_type = SHARP_CS_TYPES[result_type]
-    declaration = f"            {native_type} result = default({native_type});"
+    declaration = f"            {native_type} result = default;"
     if result_type == "bool":
         return declaration, "result != 0"
     if result_type in {"f32", "i32", "u32", "u64"}:
