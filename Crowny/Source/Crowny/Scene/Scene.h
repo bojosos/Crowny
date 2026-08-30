@@ -19,7 +19,7 @@ namespace Crowny
     class SceneRenderer;
     class ScriptRuntime;
     struct CameraComponent;
-    struct PersistedScriptState;
+    struct ScriptState;
     struct ScriptTypeIdentity;
 
     class Scene : public Asset
@@ -85,7 +85,7 @@ namespace Crowny
         bool HasScriptComponent(Entity entity, const ScriptTypeIdentity& identity) const;
         bool HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName) const;
         bool AddScriptComponent(Entity entity, const ScriptTypeIdentity& identity, bool initialize = true);
-        bool AddScriptComponent(Entity entity, const PersistedScriptState& state, bool initialize = true);
+        bool AddScriptComponent(Entity entity, const ScriptState& state, bool initialize = true);
         bool AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize = true);
         void RemoveScriptComponent(Entity entity, const ScriptTypeIdentity& identity);
         void RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
@@ -137,7 +137,7 @@ namespace Crowny
         void OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity);
 
         void OnTransformComponentDestroy(entt::registry& registry, entt::entity entity);
-        void OnMonoScriptComponentDestroy(entt::registry& registry, entt::entity entity);
+        void OnManagedScriptComponentDestroy(entt::registry& registry, entt::entity entity);
 
     private:
         friend class ComponentEditor;

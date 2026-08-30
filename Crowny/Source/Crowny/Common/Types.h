@@ -20,8 +20,8 @@ namespace Crowny
     class MonoField;
     class MonoProperty;
 
-    class MonoScript;
-    class MonoScriptComponent;
+    class ManagedScript;
+    class ManagedScriptComponent;
     class AudioListenerComponent;
 
     struct Component;
@@ -39,8 +39,6 @@ namespace Crowny
     class Font;
     class Texture;
     class Mesh;
-    class SerializableObjectInfo;
-    class SerializableObject;
     class AudioSource;
     class AudioListener;
     class AudioClip;

@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Backends/Mono/MonoBindingRegistry.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 
 namespace Crowny
@@ -27,10 +27,10 @@ namespace Crowny
     {
         if (!asset.IsLoaded() || !asset.HasUUID())
             return nullptr;
-        AssetInfo* assetInfo = ScriptInfoManager::Get().GetAssetInfo(asset->GetAssetType());
-        if (assetInfo == nullptr)
+        MonoAssetBinding* binding = MonoBindingRegistry::Get().FindAsset(asset->GetAssetType());
+        if (binding == nullptr)
             return nullptr;
-        ScriptAssetBase* scriptAsset = assetInfo->CreateCallback(asset, instance);
+        ScriptAssetBase* scriptAsset = binding->Create(asset, instance);
         if (scriptAsset == nullptr)
             return nullptr;
         scriptAsset->SetOwnership(ownership);

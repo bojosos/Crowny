@@ -1,7 +1,5 @@
 #include "cwpch.h"
 
-#include <mono/metadata/object.h>
-
 #include "Crowny/Ecs/Components.h"
 
 #include "Crowny/Assets/AssetManager.h"
@@ -15,17 +13,18 @@
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/MeshFactory.h"
 
-#include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
-#include "Crowny/Scripting/Mono/MonoAssembly.h"
-#include "Crowny/Scripting/Mono/MonoMethod.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
-#include "Crowny/Scripting/Serialization/SerializableObject.h"
-#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
-
 namespace Crowny
 {
     namespace
     {
+        ScriptState MakeEmptyScriptState(const ScriptTypeIdentity& identity)
+        {
+            ScriptState state;
+            state.Identity = identity;
+            state.Root = ScriptValue::Object({}, identity);
+            return state;
+        }
+
         AnimationWrapMode SanitizeWrapMode(AnimationWrapMode wrapMode)
         {
             switch (wrapMode)
@@ -654,164 +653,52 @@ namespace Crowny
         }
     }
 
-    MonoScript::MonoScript() : m_Identity{ GAME_ASSEMBLY, {}, {} }, InstanceId(s_NextAvailableId++) {}
-
-    MonoScript::MonoScript(ScriptTypeIdentity identity) : m_Identity(std::move(identity)), InstanceId(s_NextAvailableId++) {}
-
-    MonoScript::MonoScript(MonoReflectionType* runtimeType) : MonoScript(GAME_ASSEMBLY, runtimeType) {}
-
-    MonoScript::MonoScript(const String& assemblyName, MonoReflectionType* runtimeType)
-      : m_Identity{ assemblyName, {}, {} }, m_RuntimeType(runtimeType), InstanceId(s_NextAvailableId++)
+    ManagedScript::ManagedScript(ScriptTypeIdentity identity)
+      : m_Identity(std::move(identity)), InstanceId(s_NextAvailableId.fetch_add(1, std::memory_order_relaxed)),
+        m_State(MakeEmptyScriptState(m_Identity))
     {
-        if (runtimeType == nullptr)
-            return;
-        MonoUtils::GetClassName(runtimeType, m_Identity.Namespace, m_Identity.TypeName);
-        if (MonoManager::IsStartedUp())
-        {
-            MonoAssembly* assembly = MonoManager::Get().FindAssembly(MonoUtils::GetClass(runtimeType));
-            if (assembly != nullptr)
-                m_Identity.Assembly = assembly->GetName();
-        }
+        CW_ENGINE_ASSERT(m_Identity.IsValid());
     }
 
-    MonoScript::MonoScript(const MonoScript& other)
-      : InstanceId(s_NextAvailableId.fetch_add(1, std::memory_order_relaxed)), m_Identity(other.m_Identity), m_MissingType(other.m_MissingType),
-        m_SerializedObjectData(other.CapturePersistedState().Fields), m_ManagedState(other.m_ManagedState)
+    ManagedScript::ManagedScript(const ManagedScript& other)
+      : InstanceId(s_NextAvailableId.fetch_add(1, std::memory_order_relaxed)), m_Identity(other.m_Identity), m_State(other.m_State)
     {
     }
 
-    MonoScript& MonoScript::operator=(const MonoScript& other)
+    ManagedScript& ManagedScript::operator=(const ManagedScript& other)
     {
         if (this == &other)
             return *this;
 
         m_Identity = other.m_Identity;
-        m_MissingType = other.m_MissingType;
-        m_SerializedObjectData = other.CapturePersistedState().Fields;
-        m_ManagedState = other.m_ManagedState;
-        m_ObjectInfo = nullptr;
-        m_RuntimeType = nullptr;
-        m_Class = nullptr;
-        m_ScriptEntityBehaviour = nullptr;
+        m_State = other.m_State;
         m_RuntimeHandle = {};
-        ResetRuntimeCallbacks();
         return *this;
     }
 
-    PersistedScriptState MonoScript::CapturePersistedState() const
-    {
-        PersistedScriptState persisted{ m_Identity, m_SerializedObjectData, m_ManagedState };
-        if (m_ScriptEntityBehaviour == nullptr || m_MissingType)
-            return persisted;
-
-        MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-        if (instance == nullptr || m_ObjectInfo == nullptr)
-            return persisted;
-
-        Ref<SerializableObject> state = SerializableObject::CreateFromMonoObject(instance, m_ObjectInfo);
-        if (state != nullptr)
-        {
-            state->Serialize();
-            persisted.Fields = state;
-        }
-        return persisted;
-    }
-
-    bool MonoScript::ApplyPersistedState(const PersistedScriptState& state)
+    bool ManagedScript::SetState(ScriptState state)
     {
         if (state.Identity != m_Identity)
         {
-            CW_ENGINE_WARN("Cannot apply persisted state for '{}:{}' to script '{}:{}'.", state.Identity.Assembly, state.Identity.GetFullName(),
-                           m_Identity.Assembly, m_Identity.GetFullName());
+            CW_ENGINE_WARN("Cannot apply state for '{}:{}' to script '{}:{}'.", state.Identity.Assembly, state.Identity.GetFullName(), m_Identity.Assembly,
+                           m_Identity.GetFullName());
             return false;
         }
-
-        m_ManagedState = state.ManagedState;
-
-        MonoObject* instance = GetManagedInstance();
-        if (!m_MissingType && instance != nullptr && m_ObjectInfo != nullptr)
-        {
-            if (state.Fields != nullptr)
-                state.Fields->Deserialize(instance, m_ObjectInfo);
-            m_SerializedObjectData = nullptr;
-            return true;
-        }
-
-        m_SerializedObjectData = state.Fields;
+        m_State = std::move(state);
         return true;
     }
 
-    bool MonoScript::ApplyPersistedFields(Ref<SerializableObject> fields)
-    {
-        return ApplyPersistedState({ m_Identity, std::move(fields), m_ManagedState });
-    }
-
-    bool MonoScript::ResolveObjectInfo()
-    {
-        m_ObjectInfo = nullptr;
-        m_Class = nullptr;
-        m_RuntimeType = nullptr;
-        if (!m_Identity.IsValid() || !MonoManager::IsStartedUp() || !ScriptInfoManager::IsStartedUp())
-            return false;
-
-        m_Class = MonoManager::Get().FindClass(m_Identity.Assembly, m_Identity.Namespace, m_Identity.TypeName);
-        if (m_Class == nullptr ||
-            !ScriptInfoManager::Get().GetSerializableObjectInfo(m_Identity.Assembly, m_Identity.Namespace, m_Identity.TypeName, m_ObjectInfo))
-        {
-            m_ObjectInfo = nullptr;
-            m_Class = nullptr;
-            return false;
-        }
-
-        m_RuntimeType = MonoUtils::GetType(m_Class->GetInternalPtr());
-        return true;
-    }
-
-    void MonoScript::ResetRuntimeCallbacks()
-    {
-        m_OnStartThunk = nullptr;
-        m_OnUpdateThunk = nullptr;
-        m_OnDestroyThunk = nullptr;
-        m_OnCollisionEnterThunk = nullptr;
-        m_OnCollisionStayThunk = nullptr;
-        m_OnCollisionExitThunk = nullptr;
-        m_OnTriggerEnterThunk = nullptr;
-        m_OnTriggerStayThunk = nullptr;
-        m_OnTriggerExitThunk = nullptr;
-        m_OnCollisionEnter3DThunk = nullptr;
-        m_OnCollisionStay3DThunk = nullptr;
-        m_OnCollisionExit3DThunk = nullptr;
-        m_OnTriggerEnter3DThunk = nullptr;
-        m_OnTriggerStay3DThunk = nullptr;
-        m_OnTriggerExit3DThunk = nullptr;
-    }
-
-    void MonoScript::ClearRuntimeInstance()
-    {
-        m_ScriptEntityBehaviour = nullptr;
-        m_ObjectInfo = nullptr;
-        m_RuntimeType = nullptr;
-        m_Class = nullptr;
-        ResetRuntimeCallbacks();
-    }
-
-    MonoClass* MonoScript::GetManagedClass() const { return m_Class; }
-    MonoObject* MonoScript::GetManagedInstance() const
-    {
-        return m_ScriptEntityBehaviour != nullptr ? m_ScriptEntityBehaviour->GetManagedInstance() : nullptr;
-    }
-
-    MonoScript* MonoScriptComponent::FindScript(uint64_t runtimeInstanceId)
+    ManagedScript* ManagedScriptComponent::FindScript(uint64_t runtimeInstanceId)
     {
         const auto script = std::find_if(Scripts.begin(), Scripts.end(),
-                                         [runtimeInstanceId](const MonoScript& candidate) { return candidate.InstanceId == runtimeInstanceId; });
+                                         [runtimeInstanceId](const ManagedScript& candidate) { return candidate.InstanceId == runtimeInstanceId; });
         return script == Scripts.end() ? nullptr : &*script;
     }
 
-    const MonoScript* MonoScriptComponent::FindScript(uint64_t runtimeInstanceId) const
+    const ManagedScript* ManagedScriptComponent::FindScript(uint64_t runtimeInstanceId) const
     {
         const auto script = std::find_if(Scripts.begin(), Scripts.end(),
-                                         [runtimeInstanceId](const MonoScript& candidate) { return candidate.InstanceId == runtimeInstanceId; });
+                                         [runtimeInstanceId](const ManagedScript& candidate) { return candidate.InstanceId == runtimeInstanceId; });
         return script == Scripts.end() ? nullptr : &*script;
     }
 
@@ -1140,402 +1027,4 @@ namespace Crowny
             entity.GetScene()->RecreatePhysics3DShapes(entity);
     }
 
-    void MonoScript::Create(Entity entity)
-    {
-        if (!entity || !m_Identity.IsValid())
-        {
-            CW_ENGINE_WARN("Cannot create managed script with invalid persisted identity '{}:{}'.", m_Identity.Assembly, m_Identity.GetFullName());
-            return;
-        }
-        if (!MonoManager::IsStartedUp() || !ScriptInfoManager::IsStartedUp() || !ScriptSceneObjectManager::IsStartedUp())
-        {
-            CW_ENGINE_WARN("Managed script '{}:{}' remains retained because the scripting runtime is unavailable.", m_Identity.Assembly,
-                           m_Identity.GetFullName());
-            return;
-        }
-
-        const uint64_t runtimeInstanceId = InstanceId;
-        const PersistedScriptState persisted = CapturePersistedState();
-
-        if (m_ScriptEntityBehaviour != nullptr)
-            ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, this);
-
-        MonoObject* instance = nullptr;
-        if (!ResolveObjectInfo())
-        {
-            m_MissingType = true;
-            MonoClass* missingClass = ScriptInfoManager::Get().GetBuiltinClasses().MissingEntityBehaviour;
-            if (missingClass == nullptr)
-            {
-                CW_ENGINE_WARN("Managed script type '{}:{}' is unavailable. Its persisted fields were retained.", m_Identity.Assembly,
-                               m_Identity.GetFullName());
-                return;
-            }
-            CW_ENGINE_WARN("Managed script type '{}:{}' is unavailable. Its persisted fields were retained.", m_Identity.Assembly,
-                           m_Identity.GetFullName());
-            instance = missingClass->CreateInstance(true);
-        }
-        else
-        {
-            m_MissingType = false;
-            instance = m_ObjectInfo->m_MonoClass->CreateInstance(true);
-        }
-
-        // A managed constructor can add another script to this entity and relocate
-        // MonoScriptComponent::Scripts. Never dereference this across that boundary.
-        if (!entity || !entity.HasComponent<MonoScriptComponent>())
-            return;
-        MonoScript* current = entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId);
-        if (current == nullptr)
-        {
-            CW_ENGINE_WARN("Managed script '{}:{}' was removed while its constructor was running.", persisted.Identity.Assembly,
-                           persisted.Identity.GetFullName());
-            return;
-        }
-
-        ScriptSceneObjectManager::Get().CreateManagedScriptComponent(instance, entity, *current);
-        current->ApplyPersistedState(persisted);
-    }
-
-    void MonoScript::OnInitialize(ScriptEntityBehaviour* entityBehaviour)
-    {
-        m_ScriptEntityBehaviour = entityBehaviour;
-        if (!ResolveObjectInfo())
-        {
-            m_MissingType = true;
-            ResetRuntimeCallbacks();
-            return;
-        }
-        m_MissingType = false;
-
-        MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-        if (instance != nullptr)
-            m_RuntimeType = MonoUtils::GetType(MonoUtils::GetClass(instance));
-
-        ResetRuntimeCallbacks();
-
-        MonoClass* currentClass = m_Class;
-        while (currentClass != nullptr)
-        {
-            if (m_OnStartThunk == nullptr)
-            {
-                MonoMethod* onStartMethod = currentClass->GetMethod("Start", 0);
-                if (onStartMethod != nullptr)
-                    m_OnStartThunk = (LifecycleThunk)onStartMethod->GetThunk();
-            }
-
-            if (m_OnUpdateThunk == nullptr)
-            {
-                MonoMethod* onUpdateMethod = currentClass->GetMethod("Update", 0);
-                if (onUpdateMethod != nullptr)
-                    m_OnUpdateThunk = (LifecycleThunk)onUpdateMethod->GetThunk();
-            }
-
-            if (m_OnDestroyThunk == nullptr)
-            {
-                MonoMethod* onDestroyMethod = currentClass->GetMethod("Destroy", 0);
-                if (onDestroyMethod != nullptr)
-                    m_OnDestroyThunk = (LifecycleThunk)onDestroyMethod->GetThunk();
-            }
-
-            if (m_OnCollisionEnterThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnCollisionEnter2D", "Collision2D");
-                if (method != nullptr)
-                    m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)method->GetThunk();
-            }
-            if (m_OnCollisionStayThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnCollisionStay2D", "Collision2D");
-                if (method != nullptr)
-                    m_OnCollisionStayThunk = (OnCollisionStayThunkDef)method->GetThunk();
-            }
-            if (m_OnCollisionExitThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnCollisionExit2D", "Collision2D");
-                if (method != nullptr)
-                    m_OnCollisionExitThunk = (OnCollisionExitThunkDef)method->GetThunk();
-            }
-            if (m_OnTriggerEnterThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnTriggerEnter2D", "Entity");
-                if (method != nullptr)
-                    m_OnTriggerEnterThunk = (OnTriggerEnterThunkDef)method->GetThunk();
-            }
-            if (m_OnTriggerStayThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnTriggerStay2D", "Entity");
-                if (method != nullptr)
-                    m_OnTriggerStayThunk = (OnTriggerStayThunkDef)method->GetThunk();
-            }
-            if (m_OnTriggerExitThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnTriggerExit2D", "Entity");
-                if (method != nullptr)
-                    m_OnTriggerExitThunk = (OnTriggerExitThunkDef)method->GetThunk();
-            }
-            if (m_OnCollisionEnter3DThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnCollisionEnter3D", "Collision3D");
-                if (method == nullptr)
-                    method = currentClass->GetMethod("OnCollisionEnter", "Collision3D");
-                if (method != nullptr)
-                    m_OnCollisionEnter3DThunk = (OnCollisionEnterThunkDef)method->GetThunk();
-            }
-            if (m_OnCollisionStay3DThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnCollisionStay3D", "Collision3D");
-                if (method == nullptr)
-                    method = currentClass->GetMethod("OnCollisionStay", "Collision3D");
-                if (method != nullptr)
-                    m_OnCollisionStay3DThunk = (OnCollisionStayThunkDef)method->GetThunk();
-            }
-            if (m_OnCollisionExit3DThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnCollisionExit3D", "Collision3D");
-                if (method == nullptr)
-                    method = currentClass->GetMethod("OnCollisionExit", "Collision3D");
-                if (method != nullptr)
-                    m_OnCollisionExit3DThunk = (OnCollisionExitThunkDef)method->GetThunk();
-            }
-            if (m_OnTriggerEnter3DThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnTriggerEnter3D", "Entity");
-                if (method == nullptr)
-                    method = currentClass->GetMethod("OnTriggerEnter", "Entity");
-                if (method != nullptr)
-                    m_OnTriggerEnter3DThunk = (OnTriggerEnterThunkDef)method->GetThunk();
-            }
-            if (m_OnTriggerStay3DThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnTriggerStay3D", "Entity");
-                if (method == nullptr)
-                    method = currentClass->GetMethod("OnTriggerStay", "Entity");
-                if (method != nullptr)
-                    m_OnTriggerStay3DThunk = (OnTriggerStayThunkDef)method->GetThunk();
-            }
-            if (m_OnTriggerExit3DThunk == nullptr)
-            {
-                MonoMethod* method = currentClass->GetMethod("OnTriggerExit3D", "Entity");
-                if (method == nullptr)
-                    method = currentClass->GetMethod("OnTriggerExit", "Entity");
-                if (method != nullptr)
-                    m_OnTriggerExit3DThunk = (OnTriggerExitThunkDef)method->GetThunk();
-            }
-
-            MonoClass* baseClass = currentClass->GetBaseClass();
-            if (baseClass == ScriptEntityBehaviour::GetMetaData()->ScriptClass)
-                break;
-            currentClass = baseClass;
-        }
-        // Shared managed lifecycle policy runs after construction in both backends.
-    }
-
-    void MonoScript::SetClassName(const String& className)
-    {
-        const size_t namespaceSeparator = className.find_last_of('.');
-        ScriptTypeIdentity identity = m_Identity;
-        if (identity.Assembly.empty())
-            identity.Assembly = GAME_ASSEMBLY;
-        if (namespaceSeparator == String::npos)
-        {
-            identity.Namespace = "Sandbox";
-            identity.TypeName = className;
-        }
-        else
-        {
-            identity.Namespace = className.substr(0, namespaceSeparator);
-            identity.TypeName = className.substr(namespaceSeparator + 1);
-        }
-        if (identity != m_Identity)
-            m_SerializedObjectData = nullptr;
-        m_Identity = std::move(identity);
-        m_MissingType = !ResolveObjectInfo();
-        ResetRuntimeCallbacks();
-    }
-
-    void MonoScript::OnStart() { GetStartCallback().Invoke(); }
-
-    void MonoScript::OnUpdate() { GetUpdateCallback().Invoke(); }
-
-    void MonoScript::OnDestroy() { GetDestroyCallback().Invoke(); }
-
-    void MonoScript::RuntimeCallback::Invoke() const
-    {
-        if (*this)
-            MonoUtils::InvokeThunk(Thunk, Instance);
-    }
-
-    MonoScript::RuntimeCallback MonoScript::GetStartCallback() const { return { GetManagedInstance(), m_OnStartThunk }; }
-
-    MonoScript::RuntimeCallback MonoScript::GetUpdateCallback() const { return { GetManagedInstance(), m_OnUpdateThunk }; }
-
-    MonoScript::RuntimeCallback MonoScript::GetDestroyCallback() const { return { GetManagedInstance(), m_OnDestroyThunk }; }
-
-    struct CollisionDataInterop
-    {
-        MonoArray* Colliders;
-        MonoArray* ContactPoints;
-    };
-
-    static CollisionDataInterop CollisionDataToManaged(const Collision2D& collision)
-    {
-        CollisionDataInterop output;
-        MonoArray* colliders = mono_array_new(MonoManager::Get().GetDomain(), ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(), 2);
-
-        ScriptEntity* col1 = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(collision.Colliders[0]);
-        if (col1 != nullptr)
-            mono_array_setref(colliders, 0, col1->GetManagedInstance());
-        ScriptEntity* col2 = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(collision.Colliders[1]);
-        if (col2 != nullptr)
-            mono_array_setref(colliders, 1, col2->GetManagedInstance());
-
-        output.Colliders = colliders;
-
-        ::MonoClass* vecClass = MonoManager::Get().FindClass("Crowny", "Vector2")->GetInternalPtr();
-        MonoArray* points = mono_array_new(MonoManager::Get().GetDomain(), vecClass, collision.Points.size());
-        for (uint32_t i = 0; i < collision.Points.size(); i++)
-            mono_array_set(points, glm::vec2, i, collision.Points[i]);
-        output.ContactPoints = points;
-        return output;
-    };
-
-    void MonoScript::OnCollisionEnter2D(const Collision2D& collision)
-    {
-        if (m_OnCollisionEnterThunk != nullptr)
-        {
-            const CollisionDataInterop data = CollisionDataToManaged(collision);
-            MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
-            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(m_OnCollisionEnterThunk, instance, managedCollision);
-        }
-    }
-
-    void MonoScript::OnCollisionStay2D(const Collision2D& collision)
-    {
-        if (m_OnCollisionStayThunk != nullptr)
-        {
-            const CollisionDataInterop data = CollisionDataToManaged(collision);
-            MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
-            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(m_OnCollisionStayThunk, instance, managedCollision);
-        }
-    }
-
-    void MonoScript::OnCollisionExit2D(const Collision2D& collision)
-    {
-        if (m_OnCollisionExitThunk != nullptr)
-        {
-            const CollisionDataInterop data = CollisionDataToManaged(collision);
-            MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
-            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(m_OnCollisionExitThunk, instance, managedCollision);
-        }
-    }
-
-    void MonoScript::OnTriggerEnter2D(Entity other)
-    {
-        if (m_OnTriggerEnterThunk != nullptr)
-        {
-            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(m_OnTriggerEnterThunk, instance,
-                                   ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
-        }
-    }
-
-    void MonoScript::OnTriggerStay2D(Entity other)
-    {
-        if (m_OnTriggerStayThunk != nullptr)
-        {
-            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(m_OnTriggerStayThunk, instance,
-                                   ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
-        }
-    }
-
-    void MonoScript::OnTriggerExit2D(Entity other)
-    {
-        if (m_OnTriggerExitThunk != nullptr)
-        {
-            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(m_OnTriggerExitThunk, instance,
-                                   ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
-        }
-    }
-
-    struct Collision3DInterop
-    {
-        MonoArray* Colliders;
-        MonoArray* Contacts;
-    };
-
-    struct ContactPoint3DInterop
-    {
-        glm::vec3 Point;
-        glm::vec3 Normal;
-        float Separation;
-        float NormalImpulse;
-    };
-
-    static Collision3DInterop CollisionDataToManaged(const Collision3D& collision)
-    {
-        Collision3DInterop output{};
-        output.Colliders = mono_array_new(MonoManager::Get().GetDomain(), ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(),
-                                          static_cast<uintptr_t>(collision.Colliders.size()));
-        for (size_t i = 0; i < collision.Colliders.size(); ++i)
-        {
-            ScriptEntity* entity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(collision.Colliders[i]);
-            if (entity != nullptr)
-                mono_array_setref(output.Colliders, i, entity->GetManagedInstance());
-        }
-
-        MonoClass* contactClass = MonoManager::Get().FindClass("Crowny", "ContactPoint3D");
-        if (contactClass == nullptr)
-            return output;
-        output.Contacts =
-          mono_array_new(MonoManager::Get().GetDomain(), contactClass->GetInternalPtr(), static_cast<uintptr_t>(collision.Points.size()));
-        for (size_t i = 0; i < collision.Points.size(); ++i)
-        {
-            const PhysicsContactPoint3D& point = collision.Points[i];
-            const ContactPoint3DInterop managedPoint{ point.Point, point.Normal, point.Separation, point.NormalImpulse };
-            mono_array_set(output.Contacts, ContactPoint3DInterop, i, managedPoint);
-        }
-        return output;
-    }
-
-    using Collision3DThunk = void(CW_THUNKCALL*)(MonoObject*, MonoObject*, MonoException**);
-    using Trigger3DThunk = void(CW_THUNKCALL*)(MonoObject*, MonoObject*, MonoException**);
-
-    static void InvokeCollision3D(Collision3DThunk thunk, MonoScript* script, const Collision3D& collision)
-    {
-        if (thunk == nullptr || script->GetManagedInstance() == nullptr)
-            return;
-        const Collision3DInterop data = CollisionDataToManaged(collision);
-        MonoClass* collisionClass = MonoManager::Get().FindClass("Crowny", "Collision3D");
-        if (collisionClass == nullptr)
-            return;
-        MonoObject* managedCollision = MonoUtils::Box(collisionClass->GetInternalPtr(), (void*)&data);
-        MonoUtils::InvokeThunk(thunk, script->GetManagedInstance(), managedCollision);
-    }
-
-    void MonoScript::OnCollisionEnter3D(const Collision3D& collision) { InvokeCollision3D(m_OnCollisionEnter3DThunk, this, collision); }
-
-    void MonoScript::OnCollisionStay3D(const Collision3D& collision) { InvokeCollision3D(m_OnCollisionStay3DThunk, this, collision); }
-
-    void MonoScript::OnCollisionExit3D(const Collision3D& collision) { InvokeCollision3D(m_OnCollisionExit3DThunk, this, collision); }
-
-    static void InvokeTrigger3D(Trigger3DThunk thunk, MonoScript* script, Entity other)
-    {
-        if (thunk == nullptr || script->GetManagedInstance() == nullptr)
-            return;
-        ScriptEntity* managedOther = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other);
-        if (managedOther != nullptr)
-            MonoUtils::InvokeThunk(thunk, script->GetManagedInstance(), managedOther->GetManagedInstance());
-    }
-
-    void MonoScript::OnTriggerEnter3D(Entity other) { InvokeTrigger3D(m_OnTriggerEnter3DThunk, this, other); }
-
-    void MonoScript::OnTriggerStay3D(Entity other) { InvokeTrigger3D(m_OnTriggerStay3DThunk, this, other); }
-
-    void MonoScript::OnTriggerExit3D(Entity other) { InvokeTrigger3D(m_OnTriggerExit3DThunk, this, other); }
 } // namespace Crowny

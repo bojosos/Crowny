@@ -6,7 +6,7 @@
 namespace Crowny
 {
     class Entity;
-    class MonoScript;
+    class ManagedScript;
     class Scene;
 
     class ScriptRuntime
@@ -20,11 +20,11 @@ namespace Crowny
         static void OnShutdown();
         static void OnShutdown(const Ref<Scene>& scene);
 
-        static bool CreateScript(Entity entity, MonoScript& script, bool dispatchStart);
-        static void DestroyScript(Entity entity, MonoScript& script, bool dispatchDestroy = true);
-        static void Dispatch(MonoScript& script, const ScriptEvent& event);
-        static ScriptState CaptureState(MonoScript& script);
-        static bool ApplyState(MonoScript& script, const ScriptState& state);
+        static bool CreateScript(Entity entity, ManagedScript& script, bool dispatchStart);
+        static void DestroyScript(Entity entity, ManagedScript& script, bool dispatchDestroy = true);
+        static void Dispatch(ManagedScript& script, const ScriptEvent& event);
+        static ScriptState CaptureState(ManagedScript& script);
+        static bool ApplyState(ManagedScript& script, const ScriptState& state);
         static bool RunsInEditor(const ScriptTypeIdentity& identity);
         static void NotifyEntityDestroyed(const Entity& entity);
         static void NotifyComponentDestroyed(uint64_t instanceId);

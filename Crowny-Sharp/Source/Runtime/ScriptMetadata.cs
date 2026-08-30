@@ -19,10 +19,9 @@ namespace Crowny
             IsSerializable = ScriptMetadata.CanSerialize(ValueType) && !Attribute.IsDefined(field, typeof(DontSerializeField)) &&
                              (publicMember || Attribute.IsDefined(field, typeof(SerializeField)));
             IsInspectable = ScriptMetadata.CanInspect(ValueType) && !Attribute.IsDefined(field, typeof(HideInInspector)) &&
-                            (publicMember || Attribute.IsDefined(field, typeof(ShowInInspector)));
+                             (publicMember || Attribute.IsDefined(field, typeof(ShowInInspector)));
             CanWrite = !field.IsInitOnly;
             IsReadOnly = !CanWrite || Attribute.IsDefined(field, typeof(ReadOnly));
-            FormerNames = FormerNamesFor(field);
         }
 
         internal ScriptMember(PropertyInfo property)
@@ -36,10 +35,9 @@ namespace Crowny
             IsSerializable = ScriptMetadata.CanSerialize(ValueType) && !Attribute.IsDefined(property, typeof(DontSerializeField)) &&
                              (hasPublicAccessor || Attribute.IsDefined(property, typeof(SerializeField)));
             IsInspectable = ScriptMetadata.CanInspect(ValueType) && !Attribute.IsDefined(property, typeof(HideInInspector)) &&
-                            (hasPublicAccessor || Attribute.IsDefined(property, typeof(ShowInInspector)));
+                             (hasPublicAccessor || Attribute.IsDefined(property, typeof(ShowInInspector)));
             CanWrite = setter != null;
             IsReadOnly = !CanWrite || Attribute.IsDefined(property, typeof(ReadOnly));
-            FormerNames = FormerNamesFor(property);
         }
 
         internal string Name { get; private set; }
@@ -48,7 +46,6 @@ namespace Crowny
         internal bool IsInspectable { get; private set; }
         internal bool CanWrite { get; private set; }
         internal bool IsReadOnly { get; private set; }
-        internal string[] FormerNames { get; private set; }
 
         internal object GetValue(object instance)
         {
@@ -80,13 +77,6 @@ namespace Crowny
             throw new InvalidOperationException("Unsupported managed member " + member + ".");
         }
 
-        private static string[] FormerNamesFor(MemberInfo memberInfo)
-        {
-            return memberInfo.GetCustomAttributes(typeof(FormerlySerializedAs), true)
-                             .Cast<FormerlySerializedAs>()
-                             .Select(attribute => attribute.OldName)
-                             .ToArray();
-        }
     }
 
     internal static class ScriptMetadata
@@ -325,20 +315,16 @@ namespace Crowny
         internal static string Capture(IEnumerable<Type> scriptTypes)
         {
             Type[] orderedTypes = scriptTypes.OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
-            Dictionary<string, int> legacyIdentityCounts = orderedTypes.Where(type => type.IsNested)
-                .GroupBy(LegacyIdentity, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-
             List<object> types = new List<object>();
             foreach (Type type in orderedTypes)
-                types.Add(WriteType(type, legacyIdentityCounts));
+                types.Add(WriteType(type));
             Dictionary<string, object> catalog = new Dictionary<string, object>(StringComparer.Ordinal);
-            catalog.Add("ManifestVersion", 1);
+            catalog.Add("ManifestVersion", 2);
             catalog.Add("Types", types);
             return ManagedJsonCodec.SerializeDom(catalog);
         }
 
-        private static Dictionary<string, object> WriteType(Type type, IReadOnlyDictionary<string, int> legacyIdentityCounts)
+        private static Dictionary<string, object> WriteType(Type type)
         {
             Dictionary<string, MethodInfo> callbacks = ScriptCallbacks.Discover(type);
             Dictionary<string, object> result = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -346,7 +332,6 @@ namespace Crowny
             result.Add("Assembly", type.Assembly.GetName().Name ?? string.Empty);
             result.Add("Namespace", type.Namespace ?? string.Empty);
             result.Add("TypeName", TypeName(type));
-            result.Add("FormerIdentities", FormerIdentities(type, legacyIdentityCounts));
             result.Add("BaseType", type.BaseType != null && type.BaseType != typeof(EntityBehaviour) ? Identity(type.BaseType) : null);
             result.Add("RunInEditor", Attribute.IsDefined(type, typeof(RunInEditor), true));
             result.Add("Events", callbacks.Where(callback => callback.Value != null)
@@ -360,7 +345,6 @@ namespace Crowny
                 Dictionary<string, object> field = new Dictionary<string, object>(StringComparer.Ordinal);
                 field.Add("StableId", StableId((type.Assembly.GetName().Name ?? string.Empty) + ":" + type.FullName + ":" + member.Name));
                 field.Add("Name", member.Name);
-                field.Add("FormerNames", member.FormerNames);
                 field.Add("ValueKind", ScriptMetadata.ValueKind(member.ValueType));
                 field.Add("ElementKind", ElementKind(member.ValueType));
                 field.Add("KeyKind", KeyKind(member.ValueType));
@@ -375,21 +359,6 @@ namespace Crowny
             return result;
         }
 
-        private static List<object> FormerIdentities(Type type, IReadOnlyDictionary<string, int> legacyIdentityCounts)
-        {
-            List<object> result = new List<object>();
-            int count;
-            if (type.IsNested && legacyIdentityCounts.TryGetValue(LegacyIdentity(type), out count) && count == 1)
-            {
-                Dictionary<string, object> identity = new Dictionary<string, object>(StringComparer.Ordinal);
-                identity.Add("Assembly", type.Assembly.GetName().Name ?? string.Empty);
-                identity.Add("Namespace", type.Namespace ?? string.Empty);
-                identity.Add("TypeName", type.Name);
-                result.Add(identity);
-            }
-            return result;
-        }
-
         private static Dictionary<string, object> Identity(Type type)
         {
             Dictionary<string, object> identity = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -397,11 +366,6 @@ namespace Crowny
             identity.Add("Namespace", type.Namespace ?? string.Empty);
             identity.Add("TypeName", TypeName(type));
             return identity;
-        }
-
-        private static string LegacyIdentity(Type type)
-        {
-            return (type.Assembly.GetName().Name ?? string.Empty) + ":" + (type.Namespace ?? string.Empty) + ":" + type.Name;
         }
 
         private static string TypeName(Type type)

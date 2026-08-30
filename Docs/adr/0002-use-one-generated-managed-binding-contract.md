@@ -8,7 +8,7 @@ CrownySharp will call one versioned, typed host-function table on every managed 
 
 CrownySharp also owns the runtime-independent scripting policy: serializable-member discovery, inspector visibility, callback discovery, required-component preparation, stable catalog generation, and transactional state capture and application. Mono and CoreCLR adapt runtime hosting and invocation; they do not define separate gameplay, metadata, or state contracts. Persisted state includes explicit top-level value kinds so it remains readable without a loaded assembly catalog. Decimal values use invariant strings to preserve all 128 bits, and entity, component, asset, and UUID references use stable Crowny identities.
 
-Mono-specific C# is limited to acquiring the host table and resolving managed-script instances. Its native reflected serializer remains isolated as a legacy scene-data and domain-refresh adapter, not as the canonical state model. Old CrownySharp binaries are not part of the current compatibility promise, but that adapter is the intended future binary/data compatibility seam.
+Mono-specific C# is limited to acquiring the host table and resolving managed-script instances. Mono wrapper registration and callback dispatch live behind its native adapter; it has no separate reflected scene serializer or inspector model. Pre-format-11 scenes and previously compiled CrownySharp binaries are outside the current contract. Any future compatibility support belongs in an explicit import adapter rather than either runtime backend.
 
 ## Considered options
 
@@ -19,4 +19,4 @@ Mono-specific C# is limited to acquiring the host table and resolving managed-sc
 
 ## Consequences
 
-Adding an engine binding requires one manifest entry, one native implementation, and the public CrownySharp member. Adding a serializable kind, callback, or lifecycle rule requires one shared CrownySharp implementation and its runtime-neutral native representation. No backend-specific feature code is allowed. Source and serialized scene compatibility remain requirements; binary compatibility with previously compiled CrownySharp assemblies does not.
+Adding an engine binding requires one manifest entry, one native implementation, and the public CrownySharp member. Adding a serializable kind, callback, or lifecycle rule requires one shared CrownySharp implementation and its runtime-neutral native representation. No backend-specific feature code is allowed. Scene and managed-state identities are exact for the current format; compatibility work must be isolated from the runtime-neutral model.

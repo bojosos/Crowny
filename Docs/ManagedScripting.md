@@ -1,9 +1,10 @@
 # Managed scripting
 
-Crowny keeps the serialized `MonoScriptComponent` name and numeric component ID while moving runtime work behind the
-runtime-neutral `ManagedScripting` module. Mono remains the editor default during the transition. CoreCLR is an opt-in
-desktop preset until the remaining editor workflow, debugging, and operational gates pass. Public engine calls already
-use the same generated 513-function contract on both backends.
+Crowny exposes one backend-neutral `ManagedScriptComponent`, `ManagedScript`, and `ScriptState` model. Mono and CoreCLR
+own their runtime instances, callbacks, loading, and reload mechanics behind `ManagedScripting`; neither runtime object
+leaks into scene data or editor code. Mono remains the editor default during the transition. CoreCLR is an opt-in desktop
+preset until the remaining editor workflow, debugging, and operational gates pass. Public engine calls use the same
+generated 515-function contract on both backends.
 
 ## Desktop CoreCLR package
 
@@ -39,19 +40,25 @@ packaging requires an explicit matching `RuntimeRoot`. Service the runtime, host
 ## Reload and serialized data
 
 A reload captures every live script through the runtime-neutral state model, unloads the old collectible context, loads
-and validates the replacement catalog, migrates renamed fields, recreates instances, and restores state. If replacement
+and validates the replacement catalog, retains exact-name fields with compatible kinds, recreates instances, and restores state. If replacement
 fails, the adapter reloads the previous program and restores the same snapshots. If rollback also fails, it clears the
 invalid runtime state and reports both failures.
 
-Unknown serialized members stay attached to the native instance and are written back after capture so an older build does
-not erase data it cannot interpret. `[FormerlySerializedAs]` migrates a field or property rename. Assembly-qualified nested
-type names use `Outer+Inner`; the old short nested name remains readable only when it is unambiguous within the assembly and
-namespace.
+The shared C# codec emits recursive kind and declared-type metadata for fields, object members, collection elements, and
+dictionary entries. Assembly-qualified nested type names use `Outer+Inner`. Missing scripts retain their complete state
+because no catalog normalization occurs until the script type is available. Once a type is loaded, unknown, renamed, or
+kind-incompatible members are intentionally dropped rather than carried as an implicit compatibility layer.
+
+Scene format 11 is based exclusively on `ScriptState`. YAML uses `ManagedScriptComponent`; binary scenes store the same
+JSON state payload. It is also the only scene format accepted by this build. Per-component version gates, YAML aliases,
+and legacy text, physics, and managed-script readers have been removed. Regenerate project scenes when adopting this
+version; compatibility can return later as an explicit import tool without complicating the runtime scene codec.
 
 ## Compatibility policy
 
-- Existing gameplay source is recompiled for the selected backend. Scene component IDs and serialized script identities do
-  not change.
+- Gameplay source is recompiled for the selected backend. Scene files must be regenerated as format 11. Script and member
+  identities are exact; renames require updating or regenerating affected scene data. The managed
+  component keeps its numeric scene ID, while its YAML name and payload intentionally changed.
 - The CoreCLR catalog supports public fields and properties, or non-public members marked `[SerializeField]`. It excludes
   static, indexed, `[DontSerializeField]`, and unsupported member types.
 - Script callbacks use exact signatures. A same-named overload does not become a lifecycle or collision callback.
@@ -64,6 +71,6 @@ namespace.
 ## Required verification
 
 Before promoting CoreCLR to the editor default, run the generated-ABI check, managed publishes, native contract tests,
-legacy scene round trips, missing-script retention, repeated unload checks, exception-stack checks, inspector edits,
+format-11 scene round trips, missing-script retention, repeated unload checks, exception-stack checks, inspector edits,
 lifecycle and collision ordering, public binding marshalling, and private-runtime package launch. Record startup, callback,
 allocation, reload, memory, build-time, and artifact-size measurements against Mono.

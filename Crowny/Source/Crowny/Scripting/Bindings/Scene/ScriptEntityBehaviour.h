@@ -4,14 +4,14 @@
 
 namespace Crowny
 {
+    class ManagedScript;
+
     class ScriptEntityBehaviour : public ScriptObject<ScriptEntityBehaviour, ScriptComponentBase>
     {
     public:
         SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "EntityBehaviour");
 
     private:
-        virtual ScriptObjectBackupData BeginRefresh() override;
-        virtual void EndRefresh(const ScriptObjectBackupData& data) override;
         virtual MonoObject* CreateManagedInstance(bool construct) override;
         virtual void ClearManagedInstance() override;
         virtual void OnManagedInstanceDeleted(bool assemblyRefresh) override;
@@ -21,10 +21,8 @@ namespace Crowny
         String m_Namespace;
         String m_TypeName;
         uint64_t m_ScriptInstanceId = 0;
-        bool m_TypeMissing = false;
-        // Entity m_Entity;
 
     public:
-        ScriptEntityBehaviour(MonoObject* instance, Entity entity, MonoScript& script);
+        ScriptEntityBehaviour(MonoObject* instance, Entity entity, const ManagedScript& script);
     };
 } // namespace Crowny

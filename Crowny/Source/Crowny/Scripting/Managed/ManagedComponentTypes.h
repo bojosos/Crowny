@@ -1,8 +1,7 @@
 #pragma once
 
-// Managed name, native ECS component, legacy Mono wrapper. This is the single
-// built-in component registry used by the shared host ABI and the Mono object
-// compatibility layer.
+// Managed name, native ECS component, Mono adapter wrapper. This is the single
+// built-in component registry used by the shared host ABI and Mono wrapper dispatch.
 #define CW_MANAGED_COMPONENT_TYPES(X)                                                                                                                \
     X("Crowny.AnimationComponent", AnimationComponent, ScriptAnimation)                                                                              \
     X("Crowny.Transform", TransformComponent, ScriptTransform)                                                                                       \

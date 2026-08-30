@@ -41,19 +41,7 @@ namespace Crowny
 
         YAML::Node FindComponentNode(const YAML::Node& entityNode, const SceneComponentCodec& codec)
         {
-            const YAML::Node componentNode = entityNode[codec.YamlName];
-            if (componentNode)
-                return componentNode;
-            for (const char* alias : codec.YamlAliases)
-            {
-                if (alias == nullptr)
-                    continue;
-                if (const YAML::Node aliasNode = entityNode[alias])
-                    return aliasNode;
-            }
-            // A default-constructed yaml-cpp node is Null and truthy. Return the
-            // original Undefined lookup so callers correctly skip the codec.
-            return componentNode;
+            return entityNode[codec.YamlName];
         }
 
         void ResolveRelationships(Scene& scene, UnorderedMap<Entity, Vector<UUID>>& relationships)
@@ -109,10 +97,10 @@ namespace Crowny
         EndYAMLMap(out, "Entity");
     }
 
-    void SceneSerializer::DeserializeEntities(const YAML::Node& entitiesNode, uint32_t serializedSceneVersion)
+    void SceneSerializer::DeserializeEntities(const YAML::Node& entitiesNode)
     {
         UnorderedMap<Entity, Vector<UUID>> relationships;
-        SceneComponentReadContext context{ m_Scene.get(), serializedSceneVersion, &relationships };
+        SceneComponentReadContext context{ m_Scene.get(), &relationships };
 
         for (const YAML::Node& entityNode : entitiesNode)
         {
@@ -132,8 +120,6 @@ namespace Crowny
                 if (!componentNode)
                     continue;
                 codec.ReadYaml(componentNode, entity, context);
-                if (serializedSceneVersion < codec.Version)
-                    codec.Migrate(entity, serializedSceneVersion, codec.Version);
             }
         }
 
@@ -239,10 +225,10 @@ namespace Crowny
             YAML::Node data = YAML::Load(text);
             if (!data["Scene"])
                 return false;
-            const uint32_t version = data["Version"].as<uint32_t>(1);
-            if (version > FORMAT_VERSION)
+            const uint32_t version = data["Version"].as<uint32_t>(0);
+            if (version != FORMAT_VERSION)
             {
-                CW_ENGINE_ERROR("Scene '{}' uses unsupported version {}.", filepath, version);
+                CW_ENGINE_ERROR("Scene '{}' uses version {}, but this build requires version {}.", filepath, version, FORMAT_VERSION);
                 return false;
             }
 
@@ -255,7 +241,7 @@ namespace Crowny
             m_Scene->m_ImGuiLayout = data["ImGuiLayout"].as<String>("");
             m_Scene->m_Filepath = filepath;
             if (data["Entities"])
-                DeserializeEntities(data["Entities"], version);
+                DeserializeEntities(data["Entities"]);
 
             auto view = m_Scene->GetAllEntitiesWith<TagComponent>();
             Entity root;
@@ -313,9 +299,9 @@ namespace Crowny
         {
             uint32_t version;
             archive(version);
-            if (version > FORMAT_VERSION)
+            if (version != FORMAT_VERSION)
             {
-                CW_ENGINE_ERROR("Binary scene '{}' uses unsupported version {}.", filepath, version);
+                CW_ENGINE_ERROR("Binary scene '{}' uses version {}, but this build requires version {}.", filepath, version, FORMAT_VERSION);
                 stream->Close();
                 return false;
             }
@@ -335,7 +321,7 @@ namespace Crowny
             uint32_t entityCount;
             archive(entityCount);
             UnorderedMap<Entity, Vector<UUID>> relationships;
-            SceneComponentReadContext context{ m_Scene.get(), version, &relationships };
+            SceneComponentReadContext context{ m_Scene.get(), &relationships };
             for (uint32_t entityIndex = 0; entityIndex < entityCount; entityIndex++)
             {
                 UUID uuid;
@@ -351,8 +337,6 @@ namespace Crowny
                     if (codec == nullptr)
                         throw std::runtime_error("Unknown binary component ID " + std::to_string(stableId));
                     codec->ReadBinary(archive, entity, context);
-                    if (version < codec->Version)
-                        codec->Migrate(entity, version, codec->Version);
                 }
             }
             ResolveRelationships(*m_Scene, relationships);
@@ -387,35 +371,26 @@ namespace Crowny
                 archive(physics2DSettings->LayerNames[index]);
             for (uint32_t index = 0; index < 32; index++)
                 archive(physics2DSettings->MaskBits[index]);
-            if (version >= 2)
-            {
-                UUID defaultMaterial;
-                archive(defaultMaterial);
-                physics2DSettings->DefaultMaterial = LoadAssetReference<PhysicsMaterial2D>(defaultMaterial);
-            }
+            UUID defaultMaterial2D;
+            archive(defaultMaterial2D);
+            physics2DSettings->DefaultMaterial = LoadAssetReference<PhysicsMaterial2D>(defaultMaterial2D);
             if (Physics2D::TryGet() != nullptr)
                 Physics2D::TryGet()->SetPhysicsSettings(physics2DSettings);
 
-            if (version >= 1)
-            {
-                Physics3DSettings physics3DSettings;
-                uint32_t backend;
-                archive(backend);
-                archive(physics3DSettings.Gravity.x, physics3DSettings.Gravity.y, physics3DSettings.Gravity.z);
-                archive(physics3DSettings.Substeps, physics3DSettings.EnableSleeping, physics3DSettings.EnableContinuousCollision,
-                        physics3DSettings.Deterministic);
-                if (version >= 6)
-                {
-                    UUID defaultMaterial;
-                    archive(defaultMaterial);
-                    physics3DSettings.DefaultMaterial = LoadAssetReference<PhysicsMaterial3D>(defaultMaterial);
-                }
-                if (backend <= static_cast<uint32_t>(Physics3DBackendType::Bullet) &&
-                    Physics3D::IsBackendCompiled(static_cast<Physics3DBackendType>(backend)))
-                    physics3DSettings.Backend = static_cast<Physics3DBackendType>(backend);
-                if (Physics3D::IsStartedUp())
-                    Physics3D::Get().SetSettings(physics3DSettings);
-            }
+            Physics3DSettings physics3DSettings;
+            uint32_t backend;
+            archive(backend);
+            archive(physics3DSettings.Gravity.x, physics3DSettings.Gravity.y, physics3DSettings.Gravity.z);
+            archive(physics3DSettings.Substeps, physics3DSettings.EnableSleeping, physics3DSettings.EnableContinuousCollision,
+                    physics3DSettings.Deterministic);
+            UUID defaultMaterial3D;
+            archive(defaultMaterial3D);
+            physics3DSettings.DefaultMaterial = LoadAssetReference<PhysicsMaterial3D>(defaultMaterial3D);
+            if (backend <= static_cast<uint32_t>(Physics3DBackendType::Bullet) &&
+                Physics3D::IsBackendCompiled(static_cast<Physics3DBackendType>(backend)))
+                physics3DSettings.Backend = static_cast<Physics3DBackendType>(backend);
+            if (Physics3D::IsStartedUp())
+                Physics3D::Get().SetSettings(physics3DSettings);
 
             stream->Close();
             return true;

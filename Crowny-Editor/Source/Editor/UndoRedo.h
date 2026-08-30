@@ -3,7 +3,6 @@
 #include "Crowny/Common/Module.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
-#include "Crowny/Scripting/Serialization/SerializableObject.h"
 
 namespace Crowny
 {
@@ -302,7 +301,7 @@ namespace Crowny
     class ChangeScriptComponentAction : public UndoAction
     {
     public:
-        using State = Vector<PersistedScriptState>;
+        using State = Vector<ScriptState>;
 
         ChangeScriptComponentAction(Entity entity, State oldState, String name = "Edit script");
 

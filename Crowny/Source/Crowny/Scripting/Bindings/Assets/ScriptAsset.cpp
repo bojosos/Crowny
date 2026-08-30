@@ -1,8 +1,8 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Backends/Mono/MonoBindingRegistry.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
 
 namespace Crowny
 {
@@ -55,10 +55,10 @@ namespace Crowny
 
     ::MonoClass* ScriptAssetBase::GetManagedAssetClass(uint32_t id)
     {
-        AssetInfo* const info = ScriptInfoManager::Get().GetAssetInfo(id);
-        if (info == nullptr)
+        MonoAssetBinding* const binding = MonoBindingRegistry::Get().FindAsset(static_cast<AssetType>(id));
+        if (binding == nullptr)
             return nullptr;
-        return info->AssetClass->GetInternalPtr();
+        return binding->ManagedClass->GetInternalPtr();
     }
 
     ScriptAsset::ScriptAsset(MonoObject* instance) : ScriptObject(instance) {}

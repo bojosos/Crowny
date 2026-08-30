@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    // Retains detached persisted state and stable entity/script identities only.
+    // Retains backend-neutral state and stable entity/script identities only.
     // No Mono object, class, field, or inspector callable crosses a frame or domain reload.
     class ScriptInspectorTransaction final : public RetainedUndoActionFactory
     {

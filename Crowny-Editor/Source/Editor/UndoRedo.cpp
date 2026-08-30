@@ -2,9 +2,7 @@
 
 #include "Editor/UndoRedo.h"
 
-#include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Serialization/SceneSerializer.h"
-#include "Crowny/Serialization/ScriptSerializer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 
 #include <imgui.h>
@@ -16,24 +14,6 @@ namespace Crowny
     namespace
     {
         const String EmptyActionName;
-
-        PersistedScriptState CloneScriptState(const PersistedScriptState& state, Scene* scene)
-        {
-            PersistedScriptState clone{ state.Identity, nullptr, state.ManagedState };
-            if (state.Fields == nullptr)
-                return clone;
-
-            Ref<MemoryDataStream> output = CreateRef<MemoryDataStream>();
-            BinaryDataStreamOutputArchive outputArchive(output);
-            Ref<SerializableObject> fields = state.Fields;
-            outputArchive(fields);
-
-            ScriptSerializationSceneScope sceneScope(scene);
-            Ref<MemoryDataStream> input = CreateRef<MemoryDataStream>(output->Data(), output->Size());
-            BinaryDataStreamInputArchive inputArchive(input);
-            inputArchive(clone.Fields);
-            return clone;
-        }
 
         void SerializeSubtree(SceneSerializer& serializer, YAML::Emitter& output, Entity entity)
         {
@@ -319,13 +299,13 @@ namespace Crowny
     ChangeScriptComponentAction::State ChangeScriptComponentAction::Capture(Entity entity)
     {
         State state;
-        if (!entity || !entity.HasComponent<MonoScriptComponent>())
+        if (!entity || !entity.HasComponent<ManagedScriptComponent>())
             return state;
 
-        const MonoScriptComponent& component = entity.GetComponent<MonoScriptComponent>();
+        ManagedScriptComponent& component = entity.GetComponent<ManagedScriptComponent>();
         state.reserve(component.Scripts.size());
-        for (const MonoScript& script : component.Scripts)
-            state.push_back(CloneScriptState(script.CapturePersistedState(), entity.GetScene()));
+        for (ManagedScript& script : component.Scripts)
+            state.push_back(ScriptRuntime::CaptureState(script));
         return state;
     }
 
@@ -346,37 +326,34 @@ namespace Crowny
             return;
 
         Vector<ScriptTypeIdentity> currentTypes;
-        if (entity.HasComponent<MonoScriptComponent>())
+        if (entity.HasComponent<ManagedScriptComponent>())
         {
-            for (const MonoScript& script : entity.GetComponent<MonoScriptComponent>().Scripts)
+            for (const ManagedScript& script : entity.GetComponent<ManagedScriptComponent>().Scripts)
                 currentTypes.push_back(script.GetTypeIdentity());
         }
         Vector<ScriptTypeIdentity> desiredTypes;
         desiredTypes.reserve(state.size());
-        for (const PersistedScriptState& script : state)
+        for (const ScriptState& script : state)
             desiredTypes.push_back(script.Identity);
 
         if (currentTypes != desiredTypes)
         {
             for (const ScriptTypeIdentity& identity : currentTypes)
                 m_Scene->RemoveScriptComponent(entity, identity);
-            for (const PersistedScriptState& script : state)
+            for (const ScriptState& script : state)
                 m_Scene->AddScriptComponent(entity, script);
+            return;
         }
 
-        if (!entity.HasComponent<MonoScriptComponent>())
+        if (!entity.HasComponent<ManagedScriptComponent>())
             return;
-        MonoScriptComponent& component = entity.GetComponent<MonoScriptComponent>();
-        for (const PersistedScriptState& snapshot : state)
+        ManagedScriptComponent& component = entity.GetComponent<ManagedScriptComponent>();
+        for (const ScriptState& snapshot : state)
         {
             const auto found = std::find_if(component.Scripts.begin(), component.Scripts.end(),
-                                            [&](const MonoScript& script) { return script.GetTypeIdentity() == snapshot.Identity; });
+                                            [&](const ManagedScript& script) { return script.GetTypeIdentity() == snapshot.Identity; });
             if (found != component.Scripts.end())
-            {
-                found->ApplyPersistedState(snapshot);
-                if (snapshot.ManagedState.Identity.IsValid())
-                    ScriptRuntime::ApplyState(*found, snapshot.ManagedState);
-            }
+                ScriptRuntime::ApplyState(*found, snapshot);
         }
     }
 

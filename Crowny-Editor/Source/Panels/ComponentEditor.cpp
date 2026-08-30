@@ -63,7 +63,7 @@ namespace Crowny
         {
             if (!entity)
                 continue;
-            if (tid == entt::type_hash<MonoScriptComponent>::value())
+            if (tid == entt::type_hash<ManagedScriptComponent>::value())
             {
                 const ScriptTypeIdentity identity = scriptName.empty() ? ScriptTypeIdentity{} : ScriptTypeIdentity{ GAME_ASSEMBLY, "Sandbox", scriptName };
                 if (!identity.IsValid() || !EntityHasScript(entity, identity))
@@ -87,9 +87,9 @@ namespace Crowny
     // ---------------------------------------------------------------------------
     static bool EntityHasScript(const Entity& entity, const ScriptTypeIdentity& identity)
     {
-        if (!entity.HasComponent<MonoScriptComponent>())
+        if (!entity.HasComponent<ManagedScriptComponent>())
             return false;
-        const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+        const auto& scripts = entity.GetComponent<ManagedScriptComponent>().Scripts;
         return std::find_if(scripts.begin(), scripts.end(), [&](const auto& script) { return script.GetTypeIdentity() == identity; }) != scripts.end();
     }
 
@@ -455,9 +455,9 @@ namespace Crowny
                 PrefabOverrideContext::s_ActivePrefabComponent = nullptr;
             }
 
-            if (!multiSelection && tid == entt::type_hash<MonoScriptComponent>::value())
+            if (!multiSelection && tid == entt::type_hash<ManagedScriptComponent>::value())
             {
-                // MonoScriptComponent draws its own collapsing headers (one per script).
+                // ManagedScriptComponent draws its own collapsing headers (one per script).
                 ci.widget(primary, entities);
                 continue;
             }

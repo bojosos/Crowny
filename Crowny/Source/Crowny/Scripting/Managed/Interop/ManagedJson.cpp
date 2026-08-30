@@ -218,6 +218,56 @@ namespace Crowny
             return result;
         }
 
+        ScriptValue ReadValueWithMetadata(const rapidjson::Value& value, const rapidjson::Value* metadata,
+                                          ScriptValueKind fallbackKind = ScriptValueKind::Null)
+        {
+            ScriptValueKind kind = fallbackKind;
+            if (metadata != nullptr)
+            {
+                if (!metadata->IsObject() || !metadata->HasMember("Kind") || !(*metadata)["Kind"].IsString() ||
+                    !TryParseKind(StringView((*metadata)["Kind"].GetString(), (*metadata)["Kind"].GetStringLength()), kind))
+                    throw std::runtime_error("Managed state contains invalid value metadata");
+            }
+
+            ScriptValue result = ReadValue(value, kind);
+            if (metadata == nullptr)
+                return result;
+
+            if (metadata->HasMember("Assembly") || metadata->HasMember("Namespace") || metadata->HasMember("TypeName"))
+            {
+                if (!ReadString(*metadata, "Assembly", result.DeclaredType.Assembly) ||
+                    !ReadString(*metadata, "Namespace", result.DeclaredType.Namespace) ||
+                    !ReadString(*metadata, "TypeName", result.DeclaredType.TypeName))
+                    throw std::runtime_error("Managed state contains invalid declared-type metadata");
+            }
+
+            if (value.IsObject() && metadata->HasMember("Members"))
+            {
+                const rapidjson::Value& members = (*metadata)["Members"];
+                if (!members.IsObject())
+                    throw std::runtime_error("Managed state contains invalid object metadata");
+                result.Members.clear();
+                for (auto member = value.MemberBegin(); member != value.MemberEnd(); ++member)
+                {
+                    const auto memberMetadata = members.FindMember(member->name.GetString());
+                    result.Members.emplace(String(member->name.GetString(), member->name.GetStringLength()),
+                                           ReadValueWithMetadata(member->value,
+                                                                 memberMetadata != members.MemberEnd() ? &memberMetadata->value : nullptr));
+                }
+            }
+            else if (value.IsArray() && metadata->HasMember("Elements"))
+            {
+                const rapidjson::Value& elements = (*metadata)["Elements"];
+                if (!elements.IsArray() || elements.Size() != value.Size())
+                    throw std::runtime_error("Managed state contains invalid collection metadata");
+                result.Elements.clear();
+                result.Elements.reserve(value.Size());
+                for (rapidjson::SizeType index = 0; index < value.Size(); ++index)
+                    result.Elements.push_back(ReadValueWithMetadata(value[index], &elements[index]));
+            }
+            return result;
+        }
+
         template <class Writer> void WriteValue(Writer& writer, const ScriptValue& value)
         {
             switch (value.Kind)
@@ -289,6 +339,42 @@ namespace Crowny
             }
         }
 
+        template <class Writer> void WriteValueMetadata(Writer& writer, const ScriptValue& value)
+        {
+            writer.StartObject();
+            writer.Key("Kind");
+            writer.String(KindName(value.Kind));
+            if (value.DeclaredType.IsValid())
+            {
+                writer.Key("Assembly");
+                writer.String(value.DeclaredType.Assembly.c_str());
+                writer.Key("Namespace");
+                writer.String(value.DeclaredType.Namespace.c_str());
+                writer.Key("TypeName");
+                writer.String(value.DeclaredType.TypeName.c_str());
+            }
+            if (!value.Members.empty())
+            {
+                writer.Key("Members");
+                writer.StartObject();
+                for (const auto& [name, member] : value.Members)
+                {
+                    writer.Key(name.c_str(), static_cast<rapidjson::SizeType>(name.size()));
+                    WriteValueMetadata(writer, member);
+                }
+                writer.EndObject();
+            }
+            if (!value.Elements.empty())
+            {
+                writer.Key("Elements");
+                writer.StartArray();
+                for (const ScriptValue& element : value.Elements)
+                    WriteValueMetadata(writer, element);
+                writer.EndArray();
+            }
+            writer.EndObject();
+        }
+
         bool TryParseEvent(StringView name, ScriptEventKind& output)
         {
             static const Map<StringView, ScriptEventKind> events = {
@@ -321,7 +407,7 @@ namespace Crowny
         rapidjson::Document document;
         document.Parse(json.data(), json.size());
         if (document.HasParseError() || !document.IsObject() || !document.HasMember("ManifestVersion") || !document["ManifestVersion"].IsUint() ||
-            document["ManifestVersion"].GetUint() != 1 || !document.HasMember("Types") || !document["Types"].IsArray())
+            document["ManifestVersion"].GetUint() != MANAGED_CATALOG_VERSION || !document.HasMember("Types") || !document["Types"].IsArray())
             return ManagedOperationResult::Failure("managed.catalog.json_invalid", "The managed host returned an invalid script catalog.", backend);
         ScriptCatalog parsed;
         parsed.ManifestVersion = document["ManifestVersion"].GetUint();
@@ -341,20 +427,6 @@ namespace Crowny
                                                            "The managed catalog contains an invalid edit-mode flag.", backend);
                 if (value["RunInEditor"].GetBool())
                     type.Flags = type.Flags | ScriptTypeFlags::RunInEditor;
-            }
-            if (value.HasMember("FormerIdentities"))
-            {
-                if (!value["FormerIdentities"].IsArray())
-                    return ManagedOperationResult::Failure("managed.catalog.json_type_invalid",
-                                                           "The managed catalog contains invalid former type identities.", backend);
-                for (const rapidjson::Value& formerValue : value["FormerIdentities"].GetArray())
-                {
-                    ScriptTypeIdentity former;
-                    if (!ReadIdentity(formerValue, former))
-                        return ManagedOperationResult::Failure("managed.catalog.json_type_invalid",
-                                                               "The managed catalog contains an invalid former type identity.", backend);
-                    type.FormerIdentities.push_back(std::move(former));
-                }
             }
             if (value.HasMember("BaseType") && !value["BaseType"].IsNull() && !ReadIdentity(value["BaseType"], type.BaseType))
                 return ManagedOperationResult::Failure("managed.catalog.json_type_invalid",
@@ -431,19 +503,6 @@ namespace Crowny
                         if (fieldValue["IsNullable"].GetBool())
                             field.Flags = field.Flags | ScriptSchemaFieldFlags::Nullable;
                     }
-                    if (fieldValue.HasMember("FormerNames") && !fieldValue["FormerNames"].IsArray())
-                        return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
-                                                               "The managed catalog contains an invalid former-name collection.", backend);
-                    if (fieldValue.HasMember("FormerNames"))
-                    {
-                        for (const rapidjson::Value& formerName : fieldValue["FormerNames"].GetArray())
-                        {
-                            if (!formerName.IsString())
-                                return ManagedOperationResult::Failure("managed.catalog.json_field_invalid",
-                                                                       "The managed catalog contains an invalid former field name.", backend);
-                            field.FormerNames.emplace_back(formerName.GetString(), formerName.GetStringLength());
-                        }
-                    }
                     type.Fields.push_back(std::move(field));
                 }
             }
@@ -474,44 +533,50 @@ namespace Crowny
         rapidjson::Document document;
         document.Parse(json.data(), json.size());
         ScriptState parsed;
-        if (document.HasParseError() || !document.IsObject() || !ReadString(document, "Assembly", parsed.Identity.Assembly) ||
+        if (document.HasParseError() || !document.IsObject() || !document.HasMember("StateVersion") || !document["StateVersion"].IsUint() ||
+            document["StateVersion"].GetUint() != MANAGED_STATE_VERSION || !ReadString(document, "Assembly", parsed.Identity.Assembly) ||
             !ReadString(document, "Namespace", parsed.Identity.Namespace) || !ReadString(document, "TypeName", parsed.Identity.TypeName) ||
             !document.HasMember("Fields") || !document["Fields"].IsObject())
             return ManagedOperationResult::Failure("managed.state.json_invalid", "The managed host returned invalid script state.", backend);
-        const rapidjson::Value* kinds = nullptr;
-        if (document.HasMember("Kinds"))
-        {
-            if (!document["Kinds"].IsObject())
-                return ManagedOperationResult::Failure("managed.state.json_invalid", "Managed state contains an invalid kind map.", backend);
-            kinds = &document["Kinds"];
-        }
+        if (!document.HasMember("Metadata") || !document["Metadata"].IsObject())
+            return ManagedOperationResult::Failure("managed.state.json_invalid", "Managed state contains invalid field metadata.", backend);
+        const rapidjson::Value& metadata = document["Metadata"];
         parsed.Root = ScriptValue::Object({});
-        const rapidjson::Value& fields = document["Fields"];
-        for (auto member = fields.MemberBegin(); member != fields.MemberEnd(); ++member)
-        {
-            const String name(member->name.GetString(), member->name.GetStringLength());
-            ScriptValueKind expectedKind = ScriptValueKind::Null;
-            if (schema != nullptr)
+        const auto readMembers = [&](const rapidjson::Value& members, Map<String, ScriptValue>& output) {
+            for (auto member = members.MemberBegin(); member != members.MemberEnd(); ++member)
             {
-                const auto field = std::find_if(schema->Fields.begin(), schema->Fields.end(), [&](const ScriptFieldSchema& candidate) {
-                    return candidate.Name == name ||
-                           std::find(candidate.FormerNames.begin(), candidate.FormerNames.end(), name) != candidate.FormerNames.end();
-                });
-                if (field != schema->Fields.end())
-                    expectedKind = field->ValueKind;
-            }
-            if (expectedKind == ScriptValueKind::Null && kinds != nullptr)
-            {
-                const auto encodedKind = kinds->FindMember(member->name.GetString());
-                if (encodedKind != kinds->MemberEnd())
+                const String name(member->name.GetString(), member->name.GetStringLength());
+                ScriptValueKind expectedKind = ScriptValueKind::Null;
+                const ScriptFieldSchema* schemaField = nullptr;
+                if (schema != nullptr)
                 {
-                    if (!encodedKind->value.IsString() ||
-                        !TryParseKind(StringView(encodedKind->value.GetString(), encodedKind->value.GetStringLength()), expectedKind))
-                        return ManagedOperationResult::Failure("managed.state.json_invalid", "Managed state contains an unknown value kind.",
-                                                               backend);
+                    const auto field = std::find_if(schema->Fields.begin(), schema->Fields.end(), [&](const ScriptFieldSchema& candidate) {
+                        return candidate.Name == name;
+                    });
+                    if (field != schema->Fields.end())
+                    {
+                        expectedKind = field->ValueKind;
+                        schemaField = &*field;
+                    }
                 }
+                const auto encodedMetadata = metadata.FindMember(member->name.GetString());
+                if (encodedMetadata == metadata.MemberEnd())
+                    return false;
+                ScriptValue value = ReadValueWithMetadata(member->value, &encodedMetadata->value, expectedKind);
+                if (!value.DeclaredType.IsValid() && schemaField != nullptr)
+                    value.DeclaredType = schemaField->DeclaredType;
+                output.emplace(name, std::move(value));
             }
-            parsed.Root.Members.emplace(name, ReadValue(member->value, expectedKind));
+            return true;
+        };
+        try
+        {
+            if (!readMembers(document["Fields"], parsed.Root.Members))
+                return ManagedOperationResult::Failure("managed.state.json_invalid", "Managed state is missing field metadata.", backend);
+        }
+        catch (const std::exception& exception)
+        {
+            return ManagedOperationResult::Failure("managed.state.json_invalid", exception.what(), backend);
         }
         parsed.Root.DeclaredType = parsed.Identity;
         state = std::move(parsed);
@@ -523,28 +588,26 @@ namespace Crowny
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         writer.StartObject();
+        writer.Key("StateVersion");
+        writer.Uint(MANAGED_STATE_VERSION);
         writer.Key("Assembly");
         writer.String(state.Identity.Assembly.c_str());
         writer.Key("Namespace");
         writer.String(state.Identity.Namespace.c_str());
         writer.Key("TypeName");
         writer.String(state.Identity.TypeName.c_str());
-        ScriptValue merged = state.Root;
-        if (merged.Kind != ScriptValueKind::Object)
-            merged = ScriptValue::Object({});
-        for (const auto& [name, value] : state.OrphanedMembers)
-            if (merged.Members.find(name) == merged.Members.end())
-                merged.Members.emplace(name, value);
-        writer.Key("Kinds");
+        const Map<String, ScriptValue> empty;
+        const Map<String, ScriptValue>& members = state.Root.Kind == ScriptValueKind::Object ? state.Root.Members : empty;
+        writer.Key("Metadata");
         writer.StartObject();
-        for (const auto& [name, value] : merged.Members)
+        for (const auto& [name, value] : members)
         {
             writer.Key(name.c_str(), static_cast<rapidjson::SizeType>(name.size()));
-            writer.String(KindName(value.Kind));
+            WriteValueMetadata(writer, value);
         }
         writer.EndObject();
         writer.Key("Fields");
-        WriteValue(writer, merged);
+        WriteValue(writer, ScriptValue::Object(members));
         writer.EndObject();
         return String(buffer.GetString(), buffer.GetSize());
     }

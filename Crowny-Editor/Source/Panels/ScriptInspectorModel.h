@@ -10,14 +10,14 @@ namespace Crowny
     class ScriptInspectorModel
     {
     public:
-        explicit ScriptInspectorModel(MonoScript& script) : m_Script(script), m_State(ScriptRuntime::CaptureState(script)) {}
+        explicit ScriptInspectorModel(ManagedScript& script) : m_Script(script), m_State(ScriptRuntime::CaptureState(script)) {}
 
         ScriptState& GetState() { return m_State; }
         const ScriptState& GetState() const { return m_State; }
         bool Commit() { return ScriptRuntime::ApplyState(m_Script, m_State); }
 
     private:
-        MonoScript& m_Script;
+        ManagedScript& m_Script;
         ScriptState m_State;
     };
 } // namespace Crowny

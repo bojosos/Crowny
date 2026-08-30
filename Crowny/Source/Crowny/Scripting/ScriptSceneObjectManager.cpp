@@ -1,8 +1,8 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Backends/Mono/MonoBindingRegistry.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/ScriptComponent.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 namespace Crowny
@@ -21,7 +21,7 @@ namespace Crowny
 
     ScriptEntity* ScriptSceneObjectManager::CreateScriptEntity(Entity entity)
     {
-        MonoClass* entityClass = ScriptInfoManager::Get().GetBuiltinClasses().Entity;
+        MonoClass* entityClass = MonoBindingRegistry::Get().GetBuiltinTypes().Entity;
         MonoObject* instance = entityClass->CreateInstance();
         return CreateScriptEntity(instance, entity);
     }
@@ -90,12 +90,17 @@ namespace Crowny
         return nullptr;
     }
 
+    ScriptEntityBehaviour* ScriptSceneObjectManager::GetManagedScriptComponent(uint64_t instanceId)
+    {
+        return dynamic_cast<ScriptEntityBehaviour*>(GetScriptComponent(instanceId));
+    }
+
     ScriptComponentBase* ScriptSceneObjectManager::CreateScriptComponent(Entity entity, const ComponentBase& component, MonoReflectionType* reflType)
     {
-        ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(reflType);
-        if (info == nullptr)
+        MonoComponentBinding* binding = MonoBindingRegistry::Get().FindComponent(reflType);
+        if (binding == nullptr)
             return nullptr;
-        ScriptComponentBase* nativeInstance = info->CreateCallback(entity);
+        ScriptComponentBase* nativeInstance = binding->Create(entity);
         nativeInstance->SetNativeEntity(entity);
         const uint64_t instanceId = component.InstanceId;
         m_ScriptComponents[instanceId] = nativeInstance;
@@ -103,7 +108,7 @@ namespace Crowny
         return nativeInstance;
     }
 
-    ScriptEntityBehaviour* ScriptSceneObjectManager::CreateManagedScriptComponent(MonoObject* instance, Entity entity, MonoScript& script)
+    ScriptEntityBehaviour* ScriptSceneObjectManager::CreateManagedScriptComponent(MonoObject* instance, Entity entity, const ManagedScript& script)
     {
         ScriptEntityBehaviour* nativeInstance = new ScriptEntityBehaviour(instance, entity, script);
         m_ScriptComponents[script.InstanceId] = nativeInstance;
@@ -117,7 +122,7 @@ namespace Crowny
         delete scriptComponent;
     }
 
-    void ScriptSceneObjectManager::DestroyManagedScriptComponent(Entity entity, MonoScript* script)
+    void ScriptSceneObjectManager::DestroyManagedScriptComponent(Entity entity, ManagedScript* script)
     {
         if (!entity || script == nullptr)
             return;
@@ -125,7 +130,6 @@ namespace Crowny
         if (iter == m_ScriptComponents.end() || iter->second->GetNativeEntity() != entity)
             return;
         DestroyScriptComponent(iter->second, script->InstanceId);
-        script->ClearRuntimeInstance();
     }
 
     void ScriptSceneObjectManager::NotifyEntityDestroyed(Entity entity)

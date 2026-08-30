@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Backends/Mono/MonoBindingRegistry.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 
 namespace Crowny
@@ -61,7 +61,7 @@ namespace Crowny
         for (ScriptObjectBase* scriptObject : persistentObjects)
             scriptObject->ClearManagedInstance();
 
-        ScriptInfoManager::Get().ClearAssemblyInfo();
+        MonoBindingRegistry::Get().Clear();
         MonoManager::Get().UnloadScriptDomain();
 
         ProcessFinalizedObjects(true);
@@ -83,14 +83,14 @@ namespace Crowny
                 loaded = false;
                 break;
             }
-            ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
+            MonoBindingRegistry::Get().LoadAssembly(entry.Name);
         }
 
         bool previousDomainRestored = !previousAssemblies.empty();
         if (!loaded)
         {
             CW_ENGINE_ERROR("Managed assembly refresh failed after validation. Restoring the previous domain.");
-            ScriptInfoManager::Get().ClearAssemblyInfo();
+            MonoBindingRegistry::Get().Clear();
             MonoManager::Get().UnloadScriptDomain();
             for (const AssemblyRefreshInfo& entry : previousAssemblies)
             {
@@ -101,12 +101,12 @@ namespace Crowny
                     previousDomainRestored = false;
                     break;
                 }
-                ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
+                MonoBindingRegistry::Get().LoadAssembly(entry.Name);
             }
 
             if (!previousDomainRestored)
             {
-                ScriptInfoManager::Get().ClearAssemblyInfo();
+                MonoBindingRegistry::Get().Clear();
                 MonoManager::Get().UnloadScriptDomain();
                 ProcessFinalizedObjects(true);
                 return { AssemblyRefreshStatus::PreviousDomainRestoreFailed };

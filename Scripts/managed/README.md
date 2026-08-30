@@ -2,7 +2,7 @@
 
 `managed-interop.json` is the transport contract shared by every Crowny managed backend. The generator emits the native ABI, the managed-host ABI, the CrownySharp transport, AOT roots, and linker roots. Gameplay-facing C# never selects Mono or CoreCLR for an engine operation.
 
-The current ABI exposes 513 typed feature functions. Mono and CoreCLR consume the same table; the parity check prevents a backend-specific feature path from being added beside it.
+The current ABI exposes 515 typed feature functions. Mono and CoreCLR consume the same table; the parity check prevents a backend-specific feature path from being added beside it.
 
 To add a managed binding:
 
@@ -24,6 +24,6 @@ The three runtime hooks are separate from feature bindings. Mono acquires the ho
 
 `Crowny-Sharp/Source/Runtime` is the single implementation of managed member discovery, inspector visibility, lifecycle callback discovery, `RequireComponent`, script-catalog generation, and script-state serialization. Both runtime adapters call that code. A backend must not recreate those rules with Mono metadata or CoreCLR reflection.
 
-Managed state JSON contains `Assembly`, `Namespace`, `TypeName`, `Kinds`, and `Fields`. `Kinds` makes top-level values self-describing during scene loading and missing-script retention. Decimal values are invariant strings; vectors, colors, quaternions, and matrices are numeric arrays; entity, component, asset, and UUID references are UUID strings. Native code retains unknown fields as orphaned state and merges them back when saving.
+Managed state JSON contains the raw `Fields` payload consumed by both runtime adapters plus one native `Metadata` map. The metadata makes nested kinds and declared types self-describing without changing the payload applied by C#. Decimal values are invariant strings; vectors, colors, quaternions, and matrices are numeric arrays; entity, component, asset, and UUID references are UUID strings. Runtime state is normalized against exact current catalog identities and member names; old schema aliases are outside the runtime contract.
 
-The remaining native Mono reflected serializer is a deliberately separate legacy adapter used by existing scene data and Mono's internal domain-refresh machinery. It is not authoritative for new state or catalog behavior. Previously compiled CrownySharp assemblies are not supported by the current ABI; the legacy adapter is kept as the future compatibility seam if that promise is added later.
+Mono reflection is limited to `Backends/Mono/MonoBindingRegistry` and runtime wrapper dispatch. It is not used for managed-script discovery, scene state, undo, inspection, or reload snapshots. The retired `SerializableObject` graph and Mono-only inspector no longer exist. Previously compiled CrownySharp assemblies and pre-format-11 scenes are not supported; a future compatibility promise must be implemented as an explicit import adapter rather than folded back into the runtime-neutral model.

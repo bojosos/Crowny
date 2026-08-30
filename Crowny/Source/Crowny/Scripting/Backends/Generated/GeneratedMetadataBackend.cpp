@@ -71,9 +71,9 @@ namespace Crowny
                                                              ManagedBackendId::GeneratedMetadata),
                              0 };
                 const ScriptTypeSchema* schema = m_Catalog.FindType(request.Identity);
-                ScriptStateResult migrated = MigrateScriptState(request.InitialState, *schema, ManagedBackendId::GeneratedMetadata);
-                if (!migrated.Result.Succeeded)
-                    return { std::move(migrated.Result), 0 };
+                ScriptStateResult normalized = NormalizeScriptState(request.InitialState, *schema, ManagedBackendId::GeneratedMetadata);
+                if (!normalized.Result.Succeeded)
+                    return { std::move(normalized.Result), 0 };
 
                 if (m_NextHandle == 0)
                     return { ManagedOperationResult::Failure("managed.generated.handle_exhausted",
@@ -81,7 +81,7 @@ namespace Crowny
                                                              ManagedBackendId::GeneratedMetadata),
                              0 };
                 const uint64_t handle = m_NextHandle++;
-                m_Instances.emplace(handle, Instance{ request.Entity, std::move(migrated.State) });
+                m_Instances.emplace(handle, Instance{ request.Entity, std::move(normalized.State) });
                 return { ManagedOperationResult::Success(), handle };
             }
 
@@ -110,11 +110,11 @@ namespace Crowny
                 if (instance == m_Instances.end())
                     return StaleHandle();
                 const ScriptTypeSchema* schema = m_Catalog.FindType(instance->second.State.Identity);
-                ScriptStateResult migrated = MigrateScriptState(state, *schema, ManagedBackendId::GeneratedMetadata);
-                if (!migrated.Result.Succeeded)
-                    return migrated.Result;
-                instance->second.State = std::move(migrated.State);
-                return migrated.Result;
+                ScriptStateResult normalized = NormalizeScriptState(state, *schema, ManagedBackendId::GeneratedMetadata);
+                if (!normalized.Result.Succeeded)
+                    return normalized.Result;
+                instance->second.State = std::move(normalized.State);
+                return normalized.Result;
             }
 
             Vector<ManagedDiagnostic> Update() override { return {}; }

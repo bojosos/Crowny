@@ -1,7 +1,6 @@
 #include "cwpch.h"
 
 #include "Crowny/Serialization/SceneComponentCodec.h"
-#include "Crowny/Serialization/ScriptSerializer.h"
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/Yaml.h"
@@ -10,10 +9,11 @@
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedJson.h"
-#include "Crowny/Scripting/Serialization/SerializableObject.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
 #include <cereal/types/string.hpp>
+
+#include <array>
 
 namespace Crowny
 {
@@ -149,9 +149,7 @@ namespace Crowny
         template <typename T> bool HasComponent(Entity entity) { return entity.HasComponent<T>(); }
         template <typename T> bool AlwaysSerialize(Entity) { return true; }
 
-        bool ShouldSerializeMonoScript(Entity entity) { return !entity.GetComponent<MonoScriptComponent>().Scripts.empty(); }
-
-        void NoMigration(Entity, uint32_t, uint32_t) {}
+        bool ShouldSerializeManagedScript(Entity entity) { return !entity.GetComponent<ManagedScriptComponent>().Scripts.empty(); }
 
         template <typename T> struct ComponentIO;
 
@@ -338,15 +336,14 @@ namespace Crowny
                 archive(sprite.Texture.GetUUID(), sprite.SortingLayer, sprite.OrderInLayer);
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& sprite = entity.AddComponent<SpriteRendererComponent>();
                 archive(sprite.Color.x, sprite.Color.y, sprite.Color.z, sprite.Color.w);
                 UUID texture;
                 archive(texture);
                 sprite.Texture = LoadAssetReference<Texture>(texture);
-                if (context.SceneVersion >= 5)
-                    archive(sprite.SortingLayer, sprite.OrderInLayer);
+                archive(sprite.SortingLayer, sprite.OrderInLayer);
             }
         };
 
@@ -399,14 +396,12 @@ namespace Crowny
                     archive(material.GetUUID());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& mesh = entity.AddComponent<MeshRendererComponent>();
                 UUID meshUuid;
                 archive(meshUuid);
                 mesh.MeshHandle = LoadAssetReference<Mesh>(meshUuid);
-                if (context.SceneVersion < 4)
-                    return;
                 archive(mesh.VisibilityLayers.Value, mesh.LodBias, mesh.RenderLayerOrder, mesh.Visible, mesh.CastShadows, mesh.ReceiveShadows,
                         mesh.MotionVectors);
                 uint32_t materialCount = 0;
@@ -524,7 +519,7 @@ namespace Crowny
                 archive(text.ShadowOffset.x, text.ShadowOffset.y, text.ShadowSoftness);
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& text = entity.AddComponent<TextComponent>();
                 UUID font;
@@ -540,41 +535,18 @@ namespace Crowny
                 text.Overflow = static_cast<TextOverflow>(overflow);
                 text.HorizontalAlignment = static_cast<TextHorizontalAlignment>(horizontalAlignment);
                 text.VerticalAlignment = static_cast<TextVerticalAlignment>(verticalAlignment);
-                if (context.SceneVersion >= 3)
-                {
-                    archive(text.AutoSizeMin, text.AutoSizeMax, text.LayoutSize.x, text.LayoutSize.y);
-                    uint32_t wrapMode;
-                    archive(wrapMode, text.ClipToBounds, text.MaxLines, text.ParagraphSpacing);
-                    text.WrapMode = static_cast<TextWrapMode>(wrapMode);
-                    archive(text.UseCustomDecorationColor, text.DecorationColor.x, text.DecorationColor.y, text.DecorationColor.z,
-                            text.DecorationColor.w);
-                    archive(text.DecorationThickness, text.UnderlineOffset, text.StrikethroughOffset);
-                }
-                else
-                {
-                    text.AutoSizeMin = 36.0f;
-                    text.AutoSizeMax = 36.0f;
-                }
-                if (context.SceneVersion >= 5)
-                    archive(text.SortingLayer, text.OrderInLayer);
-                if (context.SceneVersion >= 10)
-                {
-                    archive(text.TabWidth, text.ShadowColor.x, text.ShadowColor.y, text.ShadowColor.z, text.ShadowColor.w);
-                    archive(text.ShadowOffset.x, text.ShadowOffset.y, text.ShadowSoftness);
-                }
+                archive(text.AutoSizeMin, text.AutoSizeMax, text.LayoutSize.x, text.LayoutSize.y);
+                uint32_t wrapMode;
+                archive(wrapMode, text.ClipToBounds, text.MaxLines, text.ParagraphSpacing);
+                text.WrapMode = static_cast<TextWrapMode>(wrapMode);
+                archive(text.UseCustomDecorationColor, text.DecorationColor.x, text.DecorationColor.y, text.DecorationColor.z,
+                        text.DecorationColor.w);
+                archive(text.DecorationThickness, text.UnderlineOffset, text.StrikethroughOffset);
+                archive(text.SortingLayer, text.OrderInLayer);
+                archive(text.TabWidth, text.ShadowColor.x, text.ShadowColor.y, text.ShadowColor.z, text.ShadowColor.w);
+                archive(text.ShadowOffset.x, text.ShadowOffset.y, text.ShadowSoftness);
             }
         };
-
-        void MigrateText(Entity entity, uint32_t, uint32_t)
-        {
-            auto& text = entity.GetComponent<TextComponent>();
-            text.AutoSizeMin = std::max(0.0f, text.AutoSizeMin);
-            text.AutoSizeMax = std::max(text.AutoSizeMin, text.AutoSizeMax);
-            text.LayoutSize = glm::max(text.LayoutSize, glm::vec2(0.0f));
-            text.DecorationThickness = std::max(0.0f, text.DecorationThickness);
-            text.TabWidth = std::max(1u, text.TabWidth);
-            text.ShadowSoftness = std::max(0.0f, text.ShadowSoftness);
-        }
 
         template <> struct ComponentIO<AudioListenerComponent>
         {
@@ -642,26 +614,17 @@ namespace Crowny
             }
         };
 
-        template <> struct ComponentIO<MonoScriptComponent>
+        template <> struct ComponentIO<ManagedScriptComponent>
         {
             static void WriteYaml(YAML::Emitter& out, Entity entity)
             {
-                auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+                auto& scripts = entity.GetComponent<ManagedScriptComponent>().Scripts;
                 SerializeValueYAML(out, "Scripts", YAML::BeginSeq);
                 for (auto& script : scripts)
                 {
-                    PersistedScriptState state = script.CapturePersistedState();
-                    state.ManagedState = ScriptRuntime::CaptureState(script);
+                    const ScriptState state = ScriptRuntime::CaptureState(script);
                     out << YAML::BeginMap;
-                    SerializeValueYAML(out, "Assembly", state.Identity.Assembly);
-                    SerializeValueYAML(out, "Namespace", state.Identity.Namespace);
-                    SerializeValueYAML(out, "TypeName", state.Identity.TypeName);
-                    SerializeValueYAML(out, "Fields", YAML::BeginSeq);
-                    if (state.Fields != nullptr)
-                        state.Fields->SerializeYAML(out);
-                    EndYAMLSeq(out);
-                    if (state.ManagedState.Identity.IsValid())
-                        SerializeValueYAML(out, "ManagedState", WriteManagedStateJson(state.ManagedState));
+                    SerializeValueYAML(out, "State", WriteManagedStateJson(state));
                     out << YAML::EndMap;
                 }
                 EndYAMLSeq(out);
@@ -669,143 +632,58 @@ namespace Crowny
 
             static void ReadYaml(const YAML::Node& node, Entity entity, SceneComponentReadContext& context)
             {
-                ScriptSerializationSceneScope sceneScope(context.TargetScene);
                 const YAML::Node entries = node["Scripts"];
-                if (context.SceneVersion >= 7 && entries)
+                if (!entries || !entries.IsSequence())
                 {
-                    if (!entries.IsSequence())
-                    {
-                        CW_ENGINE_WARN("Entity '{}' has a malformed managed script list. The entries were ignored.", entity.GetName());
-                        return;
-                    }
-                    for (const YAML::Node& entry : entries)
-                    {
-                        try
-                        {
-                            PersistedScriptState state;
-                            state.Identity.Assembly = entry["Assembly"].as<String>("");
-                            state.Identity.Namespace = entry["Namespace"].as<String>("");
-                            state.Identity.TypeName = entry["TypeName"].as<String>("");
-                            const YAML::Node fields = entry["Fields"];
-                            if (fields && fields.IsSequence() && fields.size() > 0)
-                                state.Fields = SerializableObject::DeserializeYAML(fields);
-                            else if (fields && !fields.IsSequence())
-                            {
-                                CW_ENGINE_WARN("Managed script '{}:{}' has malformed fields and was ignored.", state.Identity.Assembly,
-                                               state.Identity.GetFullName());
-                                continue;
-                            }
-                            const String managedState = entry["ManagedState"].as<String>("");
-                            if (!managedState.empty())
-                            {
-                                ManagedOperationResult parsed =
-                                  ParseManagedStateJson(managedState, state.ManagedState, ManagedBackendId::GeneratedMetadata);
-                                if (!parsed.Succeeded)
-                                {
-                                    CW_ENGINE_WARN("Managed script '{}:{}' has malformed runtime-neutral state. Its legacy fields were retained.",
-                                                   state.Identity.Assembly, state.Identity.GetFullName());
-                                    state.ManagedState = {};
-                                }
-                            }
-                            context.TargetScene->AddScriptComponent(entity, state);
-                        }
-                        catch (const std::exception& exception)
-                        {
-                            CW_ENGINE_WARN("Could not read a persisted managed script on entity '{}'. {}.", entity.GetName(), exception.what());
-                        }
-                    }
+                    CW_ENGINE_WARN("Entity '{}' has a malformed managed script list. The entries were ignored.", entity.GetName());
                     return;
                 }
-
-                if (context.SceneVersion >= 7)
-                {
-                    CW_ENGINE_WARN("Entity '{}' is missing its managed script entries. The component was ignored.", entity.GetName());
-                    return;
-                }
-
-                if (!node.IsMap())
-                {
-                    CW_ENGINE_WARN("Entity '{}' has malformed legacy managed script data. The entries were ignored.", entity.GetName());
-                    return;
-                }
-                for (const auto& scriptNode : node)
+                for (const YAML::Node& entry : entries)
                 {
                     try
                     {
-                        PersistedScriptState state;
-                        state.Identity = { GAME_ASSEMBLY, "Sandbox", scriptNode.first.as<String>() };
-                        state.Fields = SerializableObject::DeserializeYAML(scriptNode.second);
+                        const String encoded = entry["State"].as<String>("");
+                        ScriptState state;
+                        ManagedOperationResult parsed = ParseManagedStateJson(encoded, state, ManagedBackendId::GeneratedMetadata);
+                        if (!parsed.Succeeded)
+                        {
+                            CW_ENGINE_WARN("Entity '{}' contains malformed managed script state. The entry was ignored.", entity.GetName());
+                            continue;
+                        }
                         context.TargetScene->AddScriptComponent(entity, state);
                     }
                     catch (const std::exception& exception)
                     {
-                        CW_ENGINE_WARN("Could not read a legacy managed script on entity '{}'. {}.", entity.GetName(), exception.what());
+                        CW_ENGINE_WARN("Could not read managed script state on entity '{}'. {}.", entity.GetName(), exception.what());
                     }
                 }
             }
 
             static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
             {
-                auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+                auto& scripts = entity.GetComponent<ManagedScriptComponent>().Scripts;
                 archive(static_cast<uint32_t>(scripts.size()));
                 for (auto& script : scripts)
                 {
-                    PersistedScriptState state = script.CapturePersistedState();
-                    state.ManagedState = ScriptRuntime::CaptureState(script);
-                    archive(state.Identity.Assembly, state.Identity.Namespace, state.Identity.TypeName);
-                    const bool hasFields = state.Fields != nullptr;
-                    archive(hasFields);
-                    if (hasFields)
-                        Save(archive, *state.Fields);
-                    const bool hasManagedState = state.ManagedState.Identity.IsValid();
-                    archive(hasManagedState);
-                    if (hasManagedState)
-                    {
-                        const String managedState = WriteManagedStateJson(state.ManagedState);
-                        archive(managedState);
-                    }
+                    const String state = WriteManagedStateJson(ScriptRuntime::CaptureState(script));
+                    archive(state);
                 }
             }
 
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
             {
-                ScriptSerializationSceneScope sceneScope(context.TargetScene);
-                ScriptTypeMetadataSerializationScope metadataScope(context.SceneVersion >= 8);
                 uint32_t scriptCount;
                 archive(scriptCount);
                 for (uint32_t index = 0; index < scriptCount; index++)
                 {
-                    PersistedScriptState state;
-                    bool hasFields = true;
-                    if (context.SceneVersion >= 7)
+                    String encoded;
+                    archive(encoded);
+                    ScriptState state;
+                    ManagedOperationResult parsed = ParseManagedStateJson(encoded, state, ManagedBackendId::GeneratedMetadata);
+                    if (!parsed.Succeeded)
                     {
-                        archive(state.Identity.Assembly, state.Identity.Namespace, state.Identity.TypeName, hasFields);
-                    }
-                    else
-                    {
-                        archive(state.Identity.TypeName);
-                        state.Identity.Assembly = GAME_ASSEMBLY;
-                        state.Identity.Namespace = "Sandbox";
-                    }
-                    if (hasFields)
-                    {
-                        SerializableObject value;
-                        Load(archive, value);
-                        state.Fields = CreateRef<SerializableObject>(std::move(value));
-                    }
-                    if (context.SceneVersion >= 9)
-                    {
-                        bool hasManagedState = false;
-                        archive(hasManagedState);
-                        if (hasManagedState)
-                        {
-                            String managedState;
-                            archive(managedState);
-                            ManagedOperationResult parsed =
-                              ParseManagedStateJson(managedState, state.ManagedState, ManagedBackendId::GeneratedMetadata);
-                            if (!parsed.Succeeded)
-                                state.ManagedState = {};
-                        }
+                        CW_ENGINE_WARN("Entity '{}' contains malformed managed script state. The entry was ignored.", entity.GetName());
+                        continue;
                     }
                     context.TargetScene->AddScriptComponent(entity, state);
                 }
@@ -861,7 +739,7 @@ namespace Crowny
                 archive(rigidbody.GetConfiguredCenterOfMass().x, rigidbody.GetConfiguredCenterOfMass().y, rigidbody.GetConfiguredInertia());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& rigidbody = entity.AddComponent<Rigidbody2DComponent>();
                 uint32_t bodyType, constraints, collisionMode, sleepMode, interpolation;
@@ -881,14 +759,11 @@ namespace Crowny
                 rigidbody.SetLayerMask(layerMask, entity);
                 rigidbody.SetAutoMass(autoMass, entity);
                 rigidbody.SetInterpolationMode(static_cast<RigidbodyInterpolation>(interpolation));
-                if (context.SceneVersion >= 2)
-                {
-                    glm::vec2 center;
-                    float inertia;
-                    archive(center.x, center.y, inertia);
-                    rigidbody.SetCenterOfMass(center);
-                    rigidbody.SetInertia(inertia);
-                }
+                glm::vec2 center;
+                float inertia;
+                archive(center.x, center.y, inertia);
+                rigidbody.SetCenterOfMass(center);
+                rigidbody.SetInertia(inertia);
             }
         };
 
@@ -924,7 +799,7 @@ namespace Crowny
                 WritePhysicsMaterialBinary(archive, collider.GetMaterial(), collider.GetMaterialData());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& collider = entity.AddComponent<BoxCollider2DComponent>();
                 glm::vec2 offset, size;
@@ -933,14 +808,7 @@ namespace Crowny
                 collider.SetOffset(offset, entity);
                 collider.SetSize(size, entity);
                 collider.SetIsTrigger(trigger);
-                if (context.SceneVersion >= 6)
-                    collider.SetMaterial(ReadPhysicsMaterialBinary<PhysicsMaterial2D>(archive));
-                else
-                {
-                    UUID material;
-                    archive(material);
-                    collider.SetMaterial(LoadAssetReference<PhysicsMaterial2D>(material));
-                }
+                collider.SetMaterial(ReadPhysicsMaterialBinary<PhysicsMaterial2D>(archive));
             }
         };
 
@@ -975,7 +843,7 @@ namespace Crowny
                 WritePhysicsMaterialBinary(archive, collider.GetMaterial(), collider.GetMaterialData());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& collider = entity.AddComponent<CircleCollider2DComponent>();
                 glm::vec2 offset;
@@ -985,14 +853,7 @@ namespace Crowny
                 collider.SetOffset(offset, entity);
                 collider.SetRadius(radius, entity);
                 collider.SetIsTrigger(trigger);
-                if (context.SceneVersion >= 6)
-                    collider.SetMaterial(ReadPhysicsMaterialBinary<PhysicsMaterial2D>(archive));
-                else
-                {
-                    UUID material;
-                    archive(material);
-                    collider.SetMaterial(LoadAssetReference<PhysicsMaterial2D>(material));
-                }
+                collider.SetMaterial(ReadPhysicsMaterialBinary<PhysicsMaterial2D>(archive));
             }
         };
 
@@ -1396,8 +1257,7 @@ namespace Crowny
             archive(collider.GetFilter().Layer, collider.GetFilter().Mask, collider.GetFilter().Group);
         }
 
-        void ReadCollider3DBinary(BinaryDataStreamInputArchive& archive, Collider3D& collider, Entity entity,
-                                  const SceneComponentReadContext& context)
+        void ReadCollider3DBinary(BinaryDataStreamInputArchive& archive, Collider3D& collider, Entity entity)
         {
             glm::vec3 offset;
             glm::quat rotation;
@@ -1406,15 +1266,7 @@ namespace Crowny
             archive(offset.x, offset.y, offset.z);
             archive(rotation.x, rotation.y, rotation.z, rotation.w);
             archive(trigger);
-            AssetHandle<PhysicsMaterial3D> material;
-            if (context.SceneVersion >= 6)
-                material = ReadPhysicsMaterialBinary<PhysicsMaterial3D>(archive);
-            else
-            {
-                PhysicsMaterialData legacyData;
-                archive(legacyData.Density, legacyData.Friction, legacyData.Restitution);
-                material = CreateTransientMaterial<PhysicsMaterial3D>(legacyData);
-            }
+            AssetHandle<PhysicsMaterial3D> material = ReadPhysicsMaterialBinary<PhysicsMaterial3D>(archive);
             archive(filter.Layer, filter.Mask, filter.Group);
             collider.SetOffset(offset, entity);
             collider.SetRotation(rotation, entity);
@@ -1447,10 +1299,10 @@ namespace Crowny
                 archive(collider.GetSize().x, collider.GetSize().y, collider.GetSize().z);
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& collider = entity.AddComponent<BoxCollider3DComponent>();
-                ReadCollider3DBinary(archive, collider, entity, context);
+                ReadCollider3DBinary(archive, collider, entity);
                 glm::vec3 size;
                 archive(size.x, size.y, size.z);
                 collider.SetSize(size, entity);
@@ -1480,10 +1332,10 @@ namespace Crowny
                 archive(collider.GetRadius());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& collider = entity.AddComponent<SphereCollider3DComponent>();
-                ReadCollider3DBinary(archive, collider, entity, context);
+                ReadCollider3DBinary(archive, collider, entity);
                 float radius;
                 archive(radius);
                 collider.SetRadius(radius, entity);
@@ -1515,10 +1367,10 @@ namespace Crowny
                 archive(collider.GetRadius(), collider.GetHeight());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& collider = entity.AddComponent<CapsuleCollider3DComponent>();
-                ReadCollider3DBinary(archive, collider, entity, context);
+                ReadCollider3DBinary(archive, collider, entity);
                 float radius, height;
                 archive(radius, height);
                 collider.SetRadius(radius, entity);
@@ -1644,16 +1496,12 @@ namespace Crowny
         };
 
         template <typename T>
-        constexpr SceneComponentCodec MakeCodec(SceneComponentId id, uint32_t version, const char* yamlName, std::array<const char*, 2> yamlAliases,
-                                                const char* prefabPath, const char* editorName,
+        constexpr SceneComponentCodec MakeCodec(SceneComponentId id, const char* yamlName, const char* prefabPath, const char* editorName,
                                                 SceneComponentYamlType yamlType = SceneComponentYamlType::Map,
-                                                SceneComponentCodec::HasComponentFunction shouldSerialize = &AlwaysSerialize<T>,
-                                                SceneComponentCodec::MigrationFunction migrate = &NoMigration)
+                                                SceneComponentCodec::HasComponentFunction shouldSerialize = &AlwaysSerialize<T>)
         {
             return { id,
-                     version,
                      yamlName,
-                     yamlAliases,
                      yamlType,
                      &HasComponent<T>,
                      shouldSerialize,
@@ -1661,43 +1509,37 @@ namespace Crowny
                      &ComponentIO<T>::ReadYaml,
                      &ComponentIO<T>::WriteBinary,
                      &ComponentIO<T>::ReadBinary,
-                     migrate,
                      prefabPath,
                      editorName };
         }
 
         static constexpr std::array<SceneComponentCodec, 21> COMPONENT_CODECS = {
-            MakeCodec<TagComponent>(SceneComponentId::Tag, 1, "TagComponent", {}, nullptr, "Tag"),
-            MakeCodec<TransformComponent>(SceneComponentId::Transform, 1, "TransformComponent", {}, "Transform", "Transform"),
-            MakeCodec<CameraComponent>(SceneComponentId::Camera, 1, "CameraComponent", {}, "Camera", "Camera"),
-            MakeCodec<SpriteRendererComponent>(SceneComponentId::SpriteRenderer, 5, "SpriteRendererComponent", {}, "Sprite Renderer",
-                                               "Sprite Renderer"),
-            MakeCodec<MeshRendererComponent>(SceneComponentId::MeshRenderer, 4, "MeshRendererComponent", {}, "Mesh Filter", "Mesh Renderer"),
-            MakeCodec<TextComponent>(SceneComponentId::Text, 10, "TextComponent", {}, "Text", "Text", SceneComponentYamlType::Map,
-                                     &AlwaysSerialize<TextComponent>, &MigrateText),
-            MakeCodec<AudioListenerComponent>(SceneComponentId::AudioListener, 1, "AudioListenerComponent", {}, nullptr, "Audio Listener",
+            MakeCodec<TagComponent>(SceneComponentId::Tag, "TagComponent", nullptr, "Tag"),
+            MakeCodec<TransformComponent>(SceneComponentId::Transform, "TransformComponent", "Transform", "Transform"),
+            MakeCodec<CameraComponent>(SceneComponentId::Camera, "CameraComponent", "Camera", "Camera"),
+            MakeCodec<SpriteRendererComponent>(SceneComponentId::SpriteRenderer, "SpriteRendererComponent", "Sprite Renderer", "Sprite Renderer"),
+            MakeCodec<MeshRendererComponent>(SceneComponentId::MeshRenderer, "MeshRendererComponent", "Mesh Filter", "Mesh Renderer"),
+            MakeCodec<TextComponent>(SceneComponentId::Text, "TextComponent", "Text", "Text"),
+            MakeCodec<AudioListenerComponent>(SceneComponentId::AudioListener, "AudioListenerComponent", nullptr, "Audio Listener",
                                               SceneComponentYamlType::Null),
-            MakeCodec<AudioSourceComponent>(SceneComponentId::AudioSource, 1, "AudioSourceComponent", {}, "Audio Source", "Audio Source"),
-            MakeCodec<MonoScriptComponent>(SceneComponentId::MonoScript, 8, "MonoScriptComponent", {}, nullptr, "Script", SceneComponentYamlType::Map,
-                                           &ShouldSerializeMonoScript),
-            MakeCodec<Rigidbody2DComponent>(SceneComponentId::Rigidbody2D, 2, "Rigidbody2DComponent", { "Rigidbody2D", nullptr }, "Rigidbody 2D",
-                                            "Rigidbody 2D"),
-            MakeCodec<BoxCollider2DComponent>(SceneComponentId::BoxCollider2D, 6, "BoxCollider2DComponent", { "BoxCollider2D", nullptr },
-                                              "Box Collider 2D", "Box Collider 2D"),
-            MakeCodec<CircleCollider2DComponent>(SceneComponentId::CircleCollider2D, 6, "CircleCollider2DComponent", { "CircleCollider2D", nullptr },
-                                                 "Circle Collider 2D", "Circle Collider 2D"),
-            MakeCodec<RelationshipComponent>(SceneComponentId::Relationship, 1, "RelationshipComponent", {}, nullptr, nullptr),
-            MakeCodec<PrefabComponent>(SceneComponentId::Prefab, 1, "PrefabComponent", {}, nullptr, nullptr),
-            MakeCodec<ProceduralMeshComponent>(SceneComponentId::ProceduralMesh, 1, "ProceduralMeshComponent", {}, "Procedural Mesh",
-                                               "Procedural Mesh"),
-            MakeCodec<Rigidbody3DComponent>(SceneComponentId::Rigidbody3D, 1, "Rigidbody3DComponent", {}, "Rigidbody 3D", "Rigidbody 3D"),
-            MakeCodec<BoxCollider3DComponent>(SceneComponentId::BoxCollider3D, 6, "BoxCollider3DComponent", {}, "Box Collider 3D", "Box Collider 3D"),
-            MakeCodec<SphereCollider3DComponent>(SceneComponentId::SphereCollider3D, 6, "SphereCollider3DComponent", {}, "Sphere Collider 3D",
+            MakeCodec<AudioSourceComponent>(SceneComponentId::AudioSource, "AudioSourceComponent", "Audio Source", "Audio Source"),
+            MakeCodec<ManagedScriptComponent>(SceneComponentId::ManagedScript, "ManagedScriptComponent", nullptr, "Script",
+                                              SceneComponentYamlType::Map, &ShouldSerializeManagedScript),
+            MakeCodec<Rigidbody2DComponent>(SceneComponentId::Rigidbody2D, "Rigidbody2DComponent", "Rigidbody 2D", "Rigidbody 2D"),
+            MakeCodec<BoxCollider2DComponent>(SceneComponentId::BoxCollider2D, "BoxCollider2DComponent", "Box Collider 2D", "Box Collider 2D"),
+            MakeCodec<CircleCollider2DComponent>(SceneComponentId::CircleCollider2D, "CircleCollider2DComponent", "Circle Collider 2D",
+                                                 "Circle Collider 2D"),
+            MakeCodec<RelationshipComponent>(SceneComponentId::Relationship, "RelationshipComponent", nullptr, nullptr),
+            MakeCodec<PrefabComponent>(SceneComponentId::Prefab, "PrefabComponent", nullptr, nullptr),
+            MakeCodec<ProceduralMeshComponent>(SceneComponentId::ProceduralMesh, "ProceduralMeshComponent", "Procedural Mesh", "Procedural Mesh"),
+            MakeCodec<Rigidbody3DComponent>(SceneComponentId::Rigidbody3D, "Rigidbody3DComponent", "Rigidbody 3D", "Rigidbody 3D"),
+            MakeCodec<BoxCollider3DComponent>(SceneComponentId::BoxCollider3D, "BoxCollider3DComponent", "Box Collider 3D", "Box Collider 3D"),
+            MakeCodec<SphereCollider3DComponent>(SceneComponentId::SphereCollider3D, "SphereCollider3DComponent", "Sphere Collider 3D",
                                                  "Sphere Collider 3D"),
-            MakeCodec<CapsuleCollider3DComponent>(SceneComponentId::CapsuleCollider3D, 6, "CapsuleCollider3DComponent", {}, "Capsule Collider 3D",
+            MakeCodec<CapsuleCollider3DComponent>(SceneComponentId::CapsuleCollider3D, "CapsuleCollider3DComponent", "Capsule Collider 3D",
                                                   "Capsule Collider 3D"),
-            MakeCodec<AnimationComponent>(SceneComponentId::Animation, 1, "AnimationComponent", {}, "Animation", "Animation"),
-            MakeCodec<LightComponent>(SceneComponentId::Light, 1, "LightComponent", {}, "Light", "Light")
+            MakeCodec<AnimationComponent>(SceneComponentId::Animation, "AnimationComponent", "Animation", "Animation"),
+            MakeCodec<LightComponent>(SceneComponentId::Light, "LightComponent", "Light", "Light")
         };
 
         constexpr bool HasStableIds()

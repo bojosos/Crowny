@@ -370,11 +370,11 @@ namespace Crowny
                     return { ManagedOperationResult::Failure("managed.script.type_missing", "The CoreCLR script type is not in the catalog.",
                                                              ManagedBackendId::CoreCLR),
                              0 };
-                ScriptStateResult migrated = MigrateScriptState(request.InitialState, *schema, ManagedBackendId::CoreCLR);
-                if (!migrated.Result.Succeeded)
-                    return { migrated.Result, 0 };
+                ScriptStateResult normalized = NormalizeScriptState(request.InitialState, *schema, ManagedBackendId::CoreCLR);
+                if (!normalized.Result.Succeeded)
+                    return { normalized.Result, 0 };
                 uint64_t managedHandle = 0;
-                ManagedOperationResult created = CreateManaged(*schema, request.Entity, migrated.State, managedHandle);
+                ManagedOperationResult created = CreateManaged(*schema, request.Entity, normalized.State, managedHandle);
                 if (!created.Succeeded)
                     return { created, 0 };
                 if (m_NextHandle == 0)
@@ -385,8 +385,7 @@ namespace Crowny
                              0 };
                 }
                 const uint64_t logicalHandle = m_NextHandle++;
-                m_Instances.emplace(logicalHandle,
-                                    Instance{ managedHandle, request.Entity, schema->Identity, std::move(migrated.State.OrphanedMembers) });
+                m_Instances.emplace(logicalHandle, Instance{ managedHandle, request.Entity, schema->Identity });
                 return { created, logicalHandle };
             }
 
@@ -458,8 +457,6 @@ namespace Crowny
                 ScriptState state;
                 ManagedOperationResult parsed = ParseManagedStateJson(StringView(reinterpret_cast<const char*>(bytes.data()), bytes.size()), state,
                                                                       ManagedBackendId::CoreCLR, schema);
-                if (parsed.Succeeded)
-                    state.OrphanedMembers = instance->second.OrphanedMembers;
                 return { parsed, std::move(state) };
             }
 
@@ -472,16 +469,15 @@ namespace Crowny
                 if (schema == nullptr)
                     return ManagedOperationResult::Failure("managed.coreclr.type_missing", "The live script type is no longer in the catalog.",
                                                            ManagedBackendId::CoreCLR);
-                ScriptStateResult migrated = MigrateScriptState(state, *schema, ManagedBackendId::CoreCLR);
-                if (!migrated.Result.Succeeded)
-                    return migrated.Result;
-                const String json = WriteManagedStateJson(migrated.State);
+                ScriptStateResult normalized = NormalizeScriptState(state, *schema, ManagedBackendId::CoreCLR);
+                if (!normalized.Result.Succeeded)
+                    return normalized.Result;
+                const String json = WriteManagedStateJson(normalized.State);
                 const cw_managed_blob blob{ reinterpret_cast<const uint8_t*>(json.data()), json.size() };
                 const cw_managed_status status = m_Api.apply_state(instance->second.ManagedHandle, blob);
                 if (status != CW_MANAGED_STATUS_OK)
                     return StatusFailure(status, "managed.coreclr.apply_failed", "Managed script state application failed.");
-                instance->second.OrphanedMembers = std::move(migrated.State.OrphanedMembers);
-                return migrated.Result;
+                return normalized.Result;
             }
 
             Vector<ManagedDiagnostic> Update() override
@@ -523,7 +519,6 @@ namespace Crowny
                 uint64_t ManagedHandle = 0;
                 UUID Entity;
                 ScriptTypeIdentity Identity;
-                Map<String, ScriptValue> OrphanedMembers;
             };
 
             ManagedOperationResult InitializeRuntime(const ManagedProgramDefinition& program)
@@ -664,15 +659,14 @@ namespace Crowny
                         return ManagedOperationResult::Failure("managed.coreclr.reload_type_missing",
                                                                "A live script type is missing from the replacement program.",
                                                                ManagedBackendId::CoreCLR);
-                    ScriptStateResult migrated = MigrateScriptState(snapshot.State, *schema, ManagedBackendId::CoreCLR);
-                    if (!migrated.Result.Succeeded)
-                        return migrated.Result;
+                    ScriptStateResult normalized = NormalizeScriptState(snapshot.State, *schema, ManagedBackendId::CoreCLR);
+                    if (!normalized.Result.Succeeded)
+                        return normalized.Result;
                     uint64_t managedHandle = 0;
-                    ManagedOperationResult result = CreateManaged(*schema, snapshot.Entity, migrated.State, managedHandle);
+                    ManagedOperationResult result = CreateManaged(*schema, snapshot.Entity, normalized.State, managedHandle);
                     if (!result.Succeeded)
                         return result;
-                    instances.emplace(snapshot.PreviousHandle,
-                                      Instance{ managedHandle, snapshot.Entity, schema->Identity, std::move(migrated.State.OrphanedMembers) });
+                    instances.emplace(snapshot.PreviousHandle, Instance{ managedHandle, snapshot.Entity, schema->Identity });
                 }
                 return ManagedOperationResult::Success();
             }

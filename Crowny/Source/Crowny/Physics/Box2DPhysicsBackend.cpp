@@ -4,6 +4,7 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics2DBackend.h"
+#include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 
@@ -215,10 +216,10 @@ namespace Crowny
 
             static void DispatchToEntity(const ContactEvent& event, Entity receiver, Entity other, bool reverse)
             {
-                if (!receiver || !other || !receiver.HasComponent<MonoScriptComponent>())
+                if (!receiver || !other || !receiver.HasComponent<ManagedScriptComponent>())
                     return;
 
-                auto& scripts = receiver.GetComponent<MonoScriptComponent>().Scripts;
+                auto& scripts = receiver.GetComponent<ManagedScriptComponent>().Scripts;
                 ScriptEvent scriptEvent;
                 scriptEvent.OtherEntity = other.GetUuid();
                 if (event.Contact.IsTrigger)

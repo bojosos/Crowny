@@ -34,7 +34,7 @@ namespace Crowny
 
     template <class Component> Ref<UndoAction> ComponentRemoveAction(Entity entity)
     {
-        if constexpr (std::is_same_v<Component, MonoScriptComponent>)
+        if constexpr (std::is_same_v<Component, ManagedScriptComponent>)
         {
             ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(entity);
             entity.RemoveComponent<Component>();
@@ -71,14 +71,14 @@ namespace Crowny
             auto [it, res] = m_ComponentInfos[m_CurrentComponentGroup].insert_or_assign(hash, componentInfo);
             CW_ENGINE_ASSERT(res);
             m_OrderedComponentInfos.push_back(std::make_pair(hash, componentInfo));
-            if constexpr (!std::is_same_v<Component, MonoScriptComponent>)
+            if constexpr (!std::is_same_v<Component, ManagedScriptComponent>)
                 m_ComponentMenu.AddComponent(hash, componentInfo.name, m_CurrentComponentGroup);
             return std::get<ComponentInfo>(*it);
         }
 
         template <class Component> ComponentInfo& RegisterComponent(const String& name, typename ComponentInfo::SingleCallback widget)
         {
-            if constexpr (std::is_same_v<Component, MonoScriptComponent>)
+            if constexpr (std::is_same_v<Component, ManagedScriptComponent>)
             {
                 Ref<ScriptInspectorTransaction> transaction = CreateRef<ScriptInspectorTransaction>();
                 auto wrappedWidget = [widget, transaction](Entity primary, const Vector<Entity>& entities) {
@@ -133,7 +133,7 @@ namespace Crowny
 
         template <class Component> ComponentInfo& RegisterComponent(const String& name)
         {
-            if constexpr (std::is_same_v<Component, MonoScriptComponent>)
+            if constexpr (std::is_same_v<Component, ManagedScriptComponent>)
             {
                 Ref<ScriptInspectorTransaction> transaction = CreateRef<ScriptInspectorTransaction>();
                 auto widget = [transaction](Entity primary, const Vector<Entity>& entities) {
@@ -208,7 +208,7 @@ namespace Crowny
         Ref<ComponentUndoSnapshot<TagComponent>> m_TagSnapshots = CreateRef<ComponentUndoSnapshot<TagComponent>>();
     };
 
-    template <> void ComponentEditorWidget<MonoScriptComponent>(Entity entity);
+    template <> void ComponentEditorWidget<ManagedScriptComponent>(Entity entity);
     template <> void ComponentSelectionEditorWidget<TransformComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<CameraComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<LightComponent>(Entity primary, const Vector<Entity>& entities);

@@ -169,13 +169,13 @@ namespace Crowny
         }
     } // namespace
 
-    template <> void ComponentEditorWidget<MonoScriptComponent>(Entity entity)
+    template <> void ComponentEditorWidget<ManagedScriptComponent>(Entity entity)
     {
         ManagedScripting* managed = Application::TryGet()->GetRuntime().GetManagedScripting();
-        MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
+        ManagedScriptComponent& scriptComponent = entity.GetComponent<ManagedScriptComponent>();
         for (uint32_t index = 0; index < scriptComponent.Scripts.size();)
         {
-            MonoScript& script = scriptComponent.Scripts[index];
+            ManagedScript& script = scriptComponent.Scripts[index];
             ImGui::PushID(static_cast<int>(index));
             if (ImGui::Button("-"))
             {
@@ -183,7 +183,7 @@ namespace Crowny
                 UndoRedo::Get().OnItemInteract(true);
                 entity.GetScene()->RemoveScriptComponent(entity, identity);
                 ImGui::PopID();
-                if (!entity.HasComponent<MonoScriptComponent>())
+                if (!entity.HasComponent<ManagedScriptComponent>())
                     return;
                 continue;
             }

@@ -50,8 +50,8 @@ TEST_CASE("Runtime clones create fresh component and script identities", "[Scene
 {
     Ref<Scene> editScene = CreateRef<Scene>("Identity scene");
     Entity entity = editScene->CreateEntity("Script host");
-    MonoScriptComponent& scripts = entity.AddComponent<MonoScriptComponent>();
-    scripts.Scripts.emplace_back();
+    ManagedScriptComponent& scripts = entity.AddComponent<ManagedScriptComponent>();
+    scripts.Scripts.emplace_back(ScriptTypeIdentity{ "GameAssembly", "Tests", "IdentityBehaviour" });
     const uint64_t editComponentId = scripts.InstanceId;
     const uint64_t editScriptId = scripts.Scripts.front().InstanceId;
 
@@ -60,11 +60,11 @@ TEST_CASE("Runtime clones create fresh component and script identities", "[Scene
     {
         Ref<Scene> runtimeScene = CreateRef<Scene>(*editScene);
         const Entity runtimeEntity = runtimeScene->GetEntityFromUuid(entity.GetUuid());
-        const MonoScriptComponent& runtimeScripts = runtimeEntity.GetComponent<MonoScriptComponent>();
+        const ManagedScriptComponent& runtimeScripts = runtimeEntity.GetComponent<ManagedScriptComponent>();
         CHECK(runtimeScripts.InstanceId != editComponentId);
         CHECK(runtimeScripts.Scripts.front().InstanceId != editScriptId);
         CHECK(runtimeScripts.Scripts.front().InstanceId != previousRuntimeScriptId);
-        CHECK(runtimeScripts.Scripts.front().GetManagedInstance() == nullptr);
+        CHECK_FALSE(runtimeScripts.Scripts.front().GetRuntimeHandle().IsValid());
         previousRuntimeScriptId = runtimeScripts.Scripts.front().InstanceId;
     }
 }

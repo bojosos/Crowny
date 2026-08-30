@@ -216,7 +216,7 @@ namespace Crowny
         m_ComponentEditor.PopComponentGroup();
 
         // Scripting
-        m_ComponentEditor.RegisterComponent<MonoScriptComponent>("C# Script");
+        m_ComponentEditor.RegisterComponent<ManagedScriptComponent>("C# Script");
     }
 
     void InspectorPanel::HandleInspectorDragDrop(Entity selectedEntity)
@@ -261,12 +261,12 @@ namespace Crowny
                         const String className = fileEntry->Filepath.filename().replace_extension("").string();
                         Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
                         bool exists = false;
-                        if (selectedEntity.HasComponent<MonoScriptComponent>())
+                        if (selectedEntity.HasComponent<ManagedScriptComponent>())
                         {
-                            auto& scripts = selectedEntity.GetComponent<MonoScriptComponent>().Scripts;
+                            auto& scripts = selectedEntity.GetComponent<ManagedScriptComponent>().Scripts;
                             for (const auto& script : scripts)
                             {
-                                if (script.GetTypeName() == className)
+                                if (script.GetTypeIdentity().TypeName == className)
                                     exists = true;
                             }
                         }

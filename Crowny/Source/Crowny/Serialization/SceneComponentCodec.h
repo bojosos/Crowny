@@ -3,7 +3,6 @@
 #include "Crowny/Common/Types.h"
 #include "Crowny/Ecs/Entity.h"
 
-#include <array>
 #include <span>
 
 class BinaryDataStreamInputArchive;
@@ -27,7 +26,7 @@ namespace Crowny
         Text = 5,
         AudioListener = 6,
         AudioSource = 7,
-        MonoScript = 8,
+        ManagedScript = 8,
         Rigidbody2D = 9,
         BoxCollider2D = 10,
         CircleCollider2D = 11,
@@ -51,7 +50,6 @@ namespace Crowny
     struct SceneComponentReadContext
     {
         Scene* TargetScene = nullptr;
-        uint32_t SceneVersion = 0;
         UnorderedMap<Entity, Vector<UUID>>* Relationships = nullptr;
     };
 
@@ -62,12 +60,8 @@ namespace Crowny
         using ReadYamlFunction = void (*)(const YAML::Node&, Entity, SceneComponentReadContext&);
         using WriteBinaryFunction = void (*)(BinaryDataStreamOutputArchive&, Entity);
         using ReadBinaryFunction = void (*)(BinaryDataStreamInputArchive&, Entity, SceneComponentReadContext&);
-        using MigrationFunction = void (*)(Entity, uint32_t, uint32_t);
-
         SceneComponentId Id;
-        uint32_t Version;
         const char* YamlName;
-        std::array<const char*, 2> YamlAliases;
         SceneComponentYamlType YamlType;
         HasComponentFunction HasComponent;
         HasComponentFunction ShouldSerialize;
@@ -75,7 +69,6 @@ namespace Crowny
         ReadYamlFunction ReadYaml;
         WriteBinaryFunction WriteBinary;
         ReadBinaryFunction ReadBinary;
-        MigrationFunction Migrate;
 
         // These names are optional. Prefab tools use the property-path prefix,
         // while editor tools can use the display name without owning another table.

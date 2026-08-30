@@ -123,10 +123,8 @@ namespace Crowny
 
     const ScriptTypeSchema* ScriptCatalog::FindType(const ScriptTypeIdentity& identity) const
     {
-        const auto type = std::find_if(Types.begin(), Types.end(), [&](const ScriptTypeSchema& candidate) {
-            return candidate.Identity == identity ||
-                   std::find(candidate.FormerIdentities.begin(), candidate.FormerIdentities.end(), identity) != candidate.FormerIdentities.end();
-        });
+        const auto type = std::find_if(Types.begin(), Types.end(),
+                                       [&](const ScriptTypeSchema& candidate) { return candidate.Identity == identity; });
         return type != Types.end() ? &*type : nullptr;
     }
 
@@ -193,15 +191,10 @@ namespace Crowny
                 return ManagedOperationResult::Failure("managed.catalog.type_invalid", "The script catalog contains an invalid or duplicate type.",
                                                        backend);
 
-            Vector<ScriptTypeIdentity> allIdentities = type.FormerIdentities;
-            allIdentities.push_back(type.Identity);
-            for (const ScriptTypeIdentity& identity : allIdentities)
-            {
-                const String key = identity.Assembly + ":" + identity.GetFullName();
-                if (!identity.IsValid() || !identities.insert(key).second)
-                    return ManagedOperationResult::Failure("managed.catalog.type_identity_collision",
-                                                           "The script catalog contains an invalid or colliding type identity.", backend);
-            }
+            const String key = type.Identity.Assembly + ":" + type.Identity.GetFullName();
+            if (!identities.insert(key).second)
+                return ManagedOperationResult::Failure("managed.catalog.type_identity_collision",
+                                                       "The script catalog contains a colliding type identity.", backend);
 
             Set<uint64_t> fieldIds;
             Set<String> fieldNames;
@@ -210,60 +203,35 @@ namespace Crowny
                 if (field.StableId == 0 || field.Name.empty() || !fieldIds.insert(field.StableId).second || !fieldNames.insert(field.Name).second)
                     return ManagedOperationResult::Failure("managed.catalog.field_invalid",
                                                            "The script catalog contains an invalid or duplicate field.", backend);
-                for (const String& formerName : field.FormerNames)
-                {
-                    if (formerName.empty() || !fieldNames.insert(formerName).second)
-                        return ManagedOperationResult::Failure("managed.catalog.field_name_collision",
-                                                               "The script catalog contains a colliding former field name.", backend);
-                }
             }
         }
         return ManagedOperationResult::Success();
     }
 
-    ScriptStateResult MigrateScriptState(const ScriptState& state, const ScriptTypeSchema& target, ManagedBackendId backend)
+    ScriptStateResult NormalizeScriptState(const ScriptState& state, const ScriptTypeSchema& target, ManagedBackendId backend)
     {
-        const bool compatibleIdentity =
-          !state.Identity.IsValid() || state.Identity == target.Identity ||
-          std::find(target.FormerIdentities.begin(), target.FormerIdentities.end(), state.Identity) != target.FormerIdentities.end();
-        if (!compatibleIdentity)
+        if (state.Identity.IsValid() && state.Identity != target.Identity)
             return { ManagedOperationResult::Failure("managed.script.state_identity_mismatch", "Script state belongs to an incompatible script type.",
-                                                     backend),
+                                                      backend),
                      {} };
         if (state.Root.Kind != ScriptValueKind::Null && state.Root.Kind != ScriptValueKind::Object)
             return { ManagedOperationResult::Failure("managed.script.state_root_invalid", "Script state must be represented by an object value.",
                                                      backend),
                      {} };
 
-        ScriptState migrated;
-        migrated.Identity = target.Identity;
-        migrated.Root = ScriptValue::Object({}, target.Identity);
-        migrated.OrphanedMembers = state.OrphanedMembers;
-        Map<String, ScriptValue> remaining = state.Root.Members;
+        ScriptState normalized;
+        normalized.Identity = target.Identity;
+        normalized.Root = ScriptValue::Object({}, target.Identity);
         for (const ScriptFieldSchema& field : target.Fields)
         {
             if ((field.Flags & ScriptSchemaFieldFlags::Serializable) == ScriptSchemaFieldFlags::None)
                 continue;
-            auto value = remaining.find(field.Name);
-            if (value == remaining.end())
-            {
-                for (const String& formerName : field.FormerNames)
-                {
-                    value = remaining.find(formerName);
-                    if (value != remaining.end())
-                        break;
-                }
-            }
-            if (value == remaining.end())
+            const auto value = state.Root.Members.find(field.Name);
+            if (value == state.Root.Members.end())
                 continue;
             if (value->second.Kind == field.ValueKind || value->second.Kind == ScriptValueKind::Null)
-                migrated.Root.Members[field.Name] = std::move(value->second);
-            else
-                migrated.OrphanedMembers[field.Name] = std::move(value->second);
-            remaining.erase(value);
+                normalized.Root.Members[field.Name] = value->second;
         }
-        for (auto& [name, value] : remaining)
-            migrated.OrphanedMembers[name] = std::move(value);
-        return { ManagedOperationResult::Success(), std::move(migrated) };
+        return { ManagedOperationResult::Success(), std::move(normalized) };
     }
 } // namespace Crowny

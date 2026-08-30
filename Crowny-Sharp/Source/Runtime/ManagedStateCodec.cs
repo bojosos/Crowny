@@ -18,12 +18,13 @@ namespace Crowny
         internal static string Capture(Type type, object instance, IReadOnlyList<ScriptMember> members)
         {
             Dictionary<string, object> root = new Dictionary<string, object>(StringComparer.Ordinal);
+            root.Add("StateVersion", 1);
             root.Add("Assembly", type.Assembly.GetName().Name);
             root.Add("Namespace", type.Namespace ?? string.Empty);
             root.Add("TypeName", GetTypeName(type));
             Dictionary<string, object> fields = new Dictionary<string, object>(StringComparer.Ordinal);
-            Dictionary<string, object> kinds = new Dictionary<string, object>(StringComparer.Ordinal);
-            root.Add("Kinds", kinds);
+            Dictionary<string, object> metadata = new Dictionary<string, object>(StringComparer.Ordinal);
+            root.Add("Metadata", metadata);
             root.Add("Fields", fields);
 
             HashSet<object> visited = new HashSet<object>(ReferenceComparer.Instance);
@@ -31,8 +32,9 @@ namespace Crowny
             {
                 if (!member.IsSerializable)
                     continue;
-                kinds.Add(member.Name, ScriptMetadata.ValueKind(member.ValueType));
-                fields.Add(member.Name, WriteValue(member.GetValue(instance), member.ValueType, visited));
+                EncodedValue encoded = EncodeValue(member.GetValue(instance), member.ValueType, visited);
+                metadata.Add(member.Name, encoded.Metadata);
+                fields.Add(member.Name, encoded.Value);
             }
             return ManagedJsonCodec.SerializeDom(root);
         }
@@ -48,6 +50,9 @@ namespace Crowny
         internal static void Apply(object instance, IReadOnlyList<ScriptMember> members, string state)
         {
             Dictionary<string, object> root = RequireObject(ManagedJsonCodec.Parse(state), "managed state");
+            object stateVersion;
+            if (!root.TryGetValue("StateVersion", out stateVersion) || Convert.ToInt32(stateVersion, CultureInfo.InvariantCulture) != 1)
+                throw new FormatException("Managed state uses an unsupported format version.");
             object fieldsValue;
             Dictionary<string, object> fields = root.TryGetValue("Fields", out fieldsValue)
                 ? RequireObject(fieldsValue, "managed state Fields")
@@ -58,19 +63,7 @@ namespace Crowny
                     continue;
                 object memberValue;
                 if (!fields.TryGetValue(member.Name, out memberValue))
-                {
-                    bool found = false;
-                    foreach (string formerName in member.FormerNames)
-                    {
-                        if (fields.TryGetValue(formerName, out memberValue))
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found)
-                        continue;
-                }
+                    continue;
                 member.SetValue(instance, ReadValue(memberValue, member.ValueType));
             }
         }
@@ -107,61 +100,63 @@ namespace Crowny
             }
         }
 
-        private static object WriteValue(object value, Type declaredType, HashSet<object> visited)
+        private static EncodedValue EncodeValue(object value, Type declaredType, HashSet<object> visited)
         {
             Type type = Nullable.GetUnderlyingType(declaredType) ?? declaredType;
+            Dictionary<string, object> metadata = CreateMetadata(type);
             if (value == null)
-                return null;
+                return new EncodedValue(null, metadata);
             if (type == typeof(bool) || type == typeof(string))
-                return value;
+                return new EncodedValue(value, metadata);
             if (type == typeof(char))
-                return value.ToString();
+                return new EncodedValue(value.ToString(), metadata);
             if (type.IsEnum)
             {
                 Type underlyingType = Enum.GetUnderlyingType(type);
-                return IsUnsignedInteger(underlyingType)
+                object encoded = IsUnsignedInteger(underlyingType)
                     ? (object)Convert.ToUInt64(value, CultureInfo.InvariantCulture)
                     : Convert.ToInt64(value, CultureInfo.InvariantCulture);
+                return new EncodedValue(encoded, metadata);
             }
             if (type == typeof(decimal))
-                return ((decimal)value).ToString(CultureInfo.InvariantCulture);
+                return new EncodedValue(((decimal)value).ToString(CultureInfo.InvariantCulture), metadata);
             if (IsNumber(type))
-                return value;
+                return new EncodedValue(value, metadata);
             if (type == typeof(UUID))
-                return value.ToString();
+                return new EncodedValue(value.ToString(), metadata);
             Entity entity = value as Entity;
             if (entity != null)
-                return entity.uuid.ToString();
+                return new EncodedValue(entity.uuid.ToString(), metadata);
             Component component = value as Component;
             if (component != null)
-                return component.m_ManagedEntityId.ToString();
+                return new EncodedValue(component.m_ManagedEntityId.ToString(), metadata);
             Asset asset = value as Asset;
             if (asset != null)
-                return asset.uuid.ToString();
+                return new EncodedValue(asset.uuid.ToString(), metadata);
             if (type == typeof(Vector2))
             {
                 Vector2 vector = (Vector2)value;
-                return Values(vector.x, vector.y);
+                return new EncodedValue(Values(vector.x, vector.y), metadata);
             }
             if (type == typeof(Vector3))
             {
                 Vector3 vector = (Vector3)value;
-                return Values(vector.x, vector.y, vector.z);
+                return new EncodedValue(Values(vector.x, vector.y, vector.z), metadata);
             }
             if (type == typeof(Vector4))
             {
                 Vector4 vector = (Vector4)value;
-                return Values(vector.x, vector.y, vector.z, vector.w);
+                return new EncodedValue(Values(vector.x, vector.y, vector.z, vector.w), metadata);
             }
             if (type == typeof(Color))
             {
                 Color color = (Color)value;
-                return Values(color.r, color.g, color.b, color.a);
+                return new EncodedValue(Values(color.r, color.g, color.b, color.a), metadata);
             }
             if (type == typeof(Quaternion))
             {
                 Quaternion quaternion = (Quaternion)value;
-                return Values(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+                return new EncodedValue(Values(quaternion.x, quaternion.y, quaternion.z, quaternion.w), metadata);
             }
             if (type == typeof(Matrix4))
             {
@@ -169,7 +164,7 @@ namespace Crowny
                 List<object> values = new List<object>(16);
                 for (int index = 0; index < 16; ++index)
                     values.Add(matrix[index]);
-                return values;
+                return new EncodedValue(values, metadata);
             }
 
             bool tracked = !type.IsValueType;
@@ -181,37 +176,67 @@ namespace Crowny
                 {
                     Type elementType = type.GetElementType();
                     List<object> elements = new List<object>();
+                    List<object> elementMetadata = new List<object>();
                     foreach (object element in (Array)value)
-                        elements.Add(WriteValue(element, elementType, visited));
-                    return elements;
+                    {
+                        EncodedValue encoded = EncodeValue(element, elementType, visited);
+                        elements.Add(encoded.Value);
+                        elementMetadata.Add(encoded.Metadata);
+                    }
+                    metadata.Add("Elements", elementMetadata);
+                    return new EncodedValue(elements, metadata);
                 }
                 if (IsGeneric(type, typeof(List<>)))
                 {
                     Type elementType = type.GetGenericArguments()[0];
                     List<object> elements = new List<object>();
+                    List<object> elementMetadata = new List<object>();
                     foreach (object element in (IEnumerable)value)
-                        elements.Add(WriteValue(element, elementType, visited));
-                    return elements;
+                    {
+                        EncodedValue encoded = EncodeValue(element, elementType, visited);
+                        elements.Add(encoded.Value);
+                        elementMetadata.Add(encoded.Metadata);
+                    }
+                    metadata.Add("Elements", elementMetadata);
+                    return new EncodedValue(elements, metadata);
                 }
                 if (IsGeneric(type, typeof(Dictionary<,>)))
                 {
                     Type[] arguments = type.GetGenericArguments();
                     List<object> entries = new List<object>();
+                    List<object> entryMetadata = new List<object>();
                     foreach (DictionaryEntry entry in (IDictionary)value)
                     {
                         Dictionary<string, object> encoded = new Dictionary<string, object>(StringComparer.Ordinal);
-                        encoded.Add("Key", WriteValue(entry.Key, arguments[0], visited));
-                        encoded.Add("Value", WriteValue(entry.Value, arguments[1], visited));
+                        Dictionary<string, object> encodedMetadata = CreateMetadata(null);
+                        Dictionary<string, object> entryMemberMetadata = new Dictionary<string, object>(StringComparer.Ordinal);
+                        EncodedValue key = EncodeValue(entry.Key, arguments[0], visited);
+                        EncodedValue entryValue = EncodeValue(entry.Value, arguments[1], visited);
+                        encoded.Add("Key", key.Value);
+                        encoded.Add("Value", entryValue.Value);
+                        entryMemberMetadata.Add("Key", key.Metadata);
+                        entryMemberMetadata.Add("Value", entryValue.Metadata);
+                        encodedMetadata.Add("Members", entryMemberMetadata);
                         entries.Add(encoded);
+                        entryMetadata.Add(encodedMetadata);
                     }
-                    return entries;
+                    metadata.Add("Elements", entryMetadata);
+                    return new EncodedValue(entries, metadata);
                 }
 
                 Dictionary<string, object> members = new Dictionary<string, object>(StringComparer.Ordinal);
+                Dictionary<string, object> memberMetadata = new Dictionary<string, object>(StringComparer.Ordinal);
                 foreach (ScriptMember member in ScriptMetadata.Discover(type, false))
+                {
                     if (member.IsSerializable)
-                        members.Add(member.Name, WriteValue(member.GetValue(value), member.ValueType, visited));
-                return members;
+                    {
+                        EncodedValue encoded = EncodeValue(member.GetValue(value), member.ValueType, visited);
+                        members.Add(member.Name, encoded.Value);
+                        memberMetadata.Add(member.Name, encoded.Metadata);
+                    }
+                }
+                metadata.Add("Members", memberMetadata);
+                return new EncodedValue(members, metadata);
             }
             finally
             {
@@ -342,11 +367,6 @@ namespace Crowny
         {
             if (members.TryGetValue(member.Name, out value))
                 return true;
-            foreach (string formerName in member.FormerNames)
-            {
-                if (members.TryGetValue(formerName, out value))
-                    return true;
-            }
             value = null;
             return false;
         }
@@ -414,6 +434,32 @@ namespace Crowny
             string fullName = type.FullName ?? type.Name;
             string typeNamespace = type.Namespace ?? string.Empty;
             return typeNamespace.Length == 0 ? fullName : fullName.Substring(typeNamespace.Length + 1);
+        }
+
+        private static Dictionary<string, object> CreateMetadata(Type type)
+        {
+            Dictionary<string, object> metadata = new Dictionary<string, object>(StringComparer.Ordinal);
+            string kind = type == null ? "Object" : ScriptMetadata.ValueKind(type);
+            metadata.Add("Kind", kind);
+            if (type != null && (kind == "Enum" || kind == "Entity" || kind == "Component" || kind == "Asset" || kind == "Object"))
+            {
+                metadata.Add("Assembly", type.Assembly.GetName().Name ?? string.Empty);
+                metadata.Add("Namespace", type.Namespace ?? string.Empty);
+                metadata.Add("TypeName", GetTypeName(type));
+            }
+            return metadata;
+        }
+
+        private sealed class EncodedValue
+        {
+            internal EncodedValue(object value, Dictionary<string, object> metadata)
+            {
+                Value = value;
+                Metadata = metadata;
+            }
+
+            internal readonly object Value;
+            internal readonly Dictionary<string, object> Metadata;
         }
 
         private sealed class ReferenceComparer : IEqualityComparer<object>

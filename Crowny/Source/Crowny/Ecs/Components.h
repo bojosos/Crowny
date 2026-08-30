@@ -12,7 +12,6 @@
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/Physics/Physics3DTypes.h"
-#include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/RenderLight.h"
 
@@ -582,138 +581,43 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<AudioSourceComponent>(Entity e);
 
-    struct PersistedScriptState
-    {
-        ScriptTypeIdentity Identity;
-        Ref<SerializableObject> Fields;
-        ScriptState ManagedState;
-    };
-
-    class MonoScript
+    class ManagedScript
     {
     public:
-        using LifecycleThunk = void(CW_THUNKCALL*)(MonoObject*, MonoException**);
-
-        struct RuntimeCallback
-        {
-            MonoObject* Instance = nullptr;
-            LifecycleThunk Thunk = nullptr;
-
-            void Invoke() const;
-            explicit operator bool() const { return Instance != nullptr && Thunk != nullptr; }
-        };
-
-        MonoScript();
-        explicit MonoScript(ScriptTypeIdentity identity);
-        MonoScript(MonoReflectionType* runtimeType);
-        MonoScript(const String& assemblyName, MonoReflectionType* runtimeType);
-        MonoScript(const MonoScript& other);
-        MonoScript& operator=(const MonoScript& other);
-        MonoScript(MonoScript&& other) noexcept = default;
-        MonoScript& operator=(MonoScript&& other) noexcept = default;
-
-        void SetClassName(const String& className);
-        MonoClass* GetManagedClass() const;
-        MonoReflectionType* GetRuntimeType() const { return m_RuntimeType; }
-        MonoObject* GetManagedInstance() const;
-
-        Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
-
-        PersistedScriptState CapturePersistedState() const;
-        bool ApplyPersistedState(const PersistedScriptState& state);
-        bool ApplyPersistedFields(Ref<SerializableObject> fields);
+        explicit ManagedScript(ScriptTypeIdentity identity);
+        ManagedScript(const ManagedScript& other);
+        ManagedScript& operator=(const ManagedScript& other);
+        ManagedScript(ManagedScript&& other) noexcept = default;
+        ManagedScript& operator=(ManagedScript&& other) noexcept = default;
 
         const ScriptTypeIdentity& GetTypeIdentity() const { return m_Identity; }
-        const String& GetAssemblyName() const { return m_Identity.Assembly; }
-        const String& GetTypeName() const { return m_Identity.TypeName; }
-        const String& GetNamespace() const { return m_Identity.Namespace; }
         ScriptInstanceHandle GetRuntimeHandle() const { return m_RuntimeHandle; }
         void SetRuntimeHandle(ScriptInstanceHandle handle) { m_RuntimeHandle = handle; }
         void ClearRuntimeHandle() { m_RuntimeHandle = {}; }
-        const ScriptState& GetManagedState() const { return m_ManagedState; }
-        void SetManagedState(ScriptState state) { m_ManagedState = std::move(state); }
+        const ScriptState& GetState() const { return m_State; }
+        bool SetState(ScriptState state);
 
-        void OnInitialize(ScriptEntityBehaviour* entityBehaviour);
-        void Create(Entity entity);
-        void ClearRuntimeInstance();
-        void OnStart();
-        void OnUpdate();
-        void OnDestroy();
-        RuntimeCallback GetStartCallback() const;
-        RuntimeCallback GetUpdateCallback() const;
-        RuntimeCallback GetDestroyCallback() const;
-
-        void OnCollisionEnter2D(const Collision2D& collision);
-        void OnCollisionStay2D(const Collision2D& collision);
-        void OnCollisionExit2D(const Collision2D& collision);
-
-        void OnTriggerEnter2D(Entity other);
-        void OnTriggerStay2D(Entity other);
-        void OnTriggerExit2D(Entity other);
-
-        void OnCollisionEnter3D(const Collision3D& collision);
-        void OnCollisionStay3D(const Collision3D& collision);
-        void OnCollisionExit3D(const Collision3D& collision);
-
-        void OnTriggerEnter3D(Entity other);
-        void OnTriggerStay3D(Entity other);
-        void OnTriggerExit3D(Entity other);
-
-        uint64_t InstanceId; // These also require one for scripting
+        uint64_t InstanceId;
 
     private:
-        bool ResolveObjectInfo();
-        void ResetRuntimeCallbacks();
-
-        typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        typedef void(CW_THUNKCALL* OnCollisionStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        typedef void(CW_THUNKCALL* OnCollisionExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        typedef void(CW_THUNKCALL* OnTriggerEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        typedef void(CW_THUNKCALL* OnTriggerStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        typedef void(CW_THUNKCALL* OnTriggerExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-
-        LifecycleThunk m_OnStartThunk = nullptr;
-        LifecycleThunk m_OnUpdateThunk = nullptr;
-        LifecycleThunk m_OnDestroyThunk = nullptr;
-
-        OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
-        OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
-        OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
-        OnTriggerEnterThunkDef m_OnTriggerEnterThunk = nullptr;
-        OnTriggerStayThunkDef m_OnTriggerStayThunk = nullptr;
-        OnTriggerExitThunkDef m_OnTriggerExitThunk = nullptr;
-        OnCollisionEnterThunkDef m_OnCollisionEnter3DThunk = nullptr;
-        OnCollisionStayThunkDef m_OnCollisionStay3DThunk = nullptr;
-        OnCollisionExitThunkDef m_OnCollisionExit3DThunk = nullptr;
-        OnTriggerEnterThunkDef m_OnTriggerEnter3DThunk = nullptr;
-        OnTriggerStayThunkDef m_OnTriggerStay3DThunk = nullptr;
-        OnTriggerExitThunkDef m_OnTriggerExit3DThunk = nullptr;
-
         ScriptTypeIdentity m_Identity;
-        bool m_MissingType = false;
-
-        Ref<SerializableObject> m_SerializedObjectData;
-        Ref<SerializableObjectInfo> m_ObjectInfo;
-        MonoReflectionType* m_RuntimeType = nullptr;
-        MonoClass* m_Class = nullptr;
-        ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
         ScriptInstanceHandle m_RuntimeHandle;
-        ScriptState m_ManagedState;
+        ScriptState m_State;
     };
 
-    class MonoScriptComponent : public ComponentBase
+    class ManagedScriptComponent : public ComponentBase
     {
     public:
-        MonoScriptComponent() : ComponentBase() {}
-        MonoScriptComponent(const MonoScriptComponent&) = default;
+        ManagedScriptComponent() : ComponentBase() {}
+        ManagedScriptComponent(const ManagedScriptComponent&) = default;
 
-        MonoScript* FindScript(uint64_t runtimeInstanceId);
-        const MonoScript* FindScript(uint64_t runtimeInstanceId) const;
+        ManagedScript* FindScript(uint64_t runtimeInstanceId);
+        const ManagedScript* FindScript(uint64_t runtimeInstanceId) const;
 
-        Vector<MonoScript> Scripts;
+        Vector<ManagedScript> Scripts;
     };
 
-    template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e);
+    template <> void ComponentEditorWidget<ManagedScriptComponent>(Entity e);
 
     enum class Rigidbody2DConstraintsBits
     {
@@ -1207,7 +1111,7 @@ namespace Crowny
 
     using AllComponents =
       ComponentGroup<TransformComponent, CameraComponent, LightComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
-                     ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent,
+                     ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent, RelationshipComponent, ManagedScriptComponent,
                      Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent, Rigidbody3DComponent, BoxCollider3DComponent,
                      SphereCollider3DComponent, CapsuleCollider3DComponent, AnimationComponent, PrefabComponent>;
 

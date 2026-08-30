@@ -83,12 +83,11 @@ namespace
         ScriptTypeSchema mover;
         mover.StableId = 0x1001;
         mover.Identity = { "GameAssembly", "Contract", "Mover" };
-        mover.FormerIdentities.push_back({ "GameAssembly", "Legacy", "Mover" });
         mover.Fields.push_back(speed);
         mover.Events.push_back(ScriptEventKind::Start);
 
         ScriptCatalog catalog;
-        catalog.ManifestVersion = 1;
+        catalog.ManifestVersion = MANAGED_CATALOG_VERSION;
         catalog.ManifestHash = 0xC0DE;
         catalog.Types.push_back(std::move(mover));
         return catalog;
@@ -145,19 +144,20 @@ TEST_CASE("Generated metadata backend exercises the managed scripting contract",
     scripting.Shutdown();
 }
 
-TEST_CASE("Managed state migration honors former names and preserves unknown fields", "[Scripting][Managed][Contract]")
+TEST_CASE("Managed state normalization uses the exact current schema", "[Scripting][Managed][Contract]")
 {
     ScriptCatalog catalog = MakeCatalog();
-    catalog.Types.front().Fields.front().FormerNames = { "Velocity" };
-    ScriptState legacy;
-    legacy.Identity = { "GameAssembly", "Legacy", "Mover" };
-    legacy.Root = ScriptValue::Object({ { "Velocity", ScriptValue::Float(4.0) }, { "Removed", ScriptValue::Signed(7) } });
+    ScriptState source;
+    source.Identity = catalog.Types.front().Identity;
+    source.Root = ScriptValue::Object({ { "Speed", ScriptValue::Float(4.0) }, { "Removed", ScriptValue::Signed(7) } });
 
-    const ScriptStateResult migrated = MigrateScriptState(legacy, catalog.Types.front(), ManagedBackendId::GeneratedMetadata);
-    REQUIRE(migrated.Result.Succeeded);
-    CHECK(migrated.State.Identity == catalog.Types.front().Identity);
-    CHECK(migrated.State.Root.Members.at("Speed") == ScriptValue::Float(4.0));
-    CHECK(migrated.State.OrphanedMembers.at("Removed") == ScriptValue::Signed(7));
+    const ScriptStateResult normalized = NormalizeScriptState(source, catalog.Types.front(), ManagedBackendId::GeneratedMetadata);
+    REQUIRE(normalized.Result.Succeeded);
+    CHECK(normalized.State.Identity == catalog.Types.front().Identity);
+    CHECK((normalized.State.Root.Members == Map<String, ScriptValue>{ { "Speed", ScriptValue::Float(4.0) } }));
+
+    source.Identity = { "GameAssembly", "OldNamespace", "Mover" };
+    CHECK_FALSE(NormalizeScriptState(source, catalog.Types.front(), ManagedBackendId::GeneratedMetadata).Result.Succeeded);
 }
 
 TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[Scripting][Managed][Contract]")
@@ -297,9 +297,9 @@ TEST_CASE("Managed JSON uses catalog kinds to preserve ambiguous values", "[Scri
     ScriptTypeSchema schema;
     schema.Identity = { "GameAssembly", "Contract", "StateCarrier" };
     schema.Fields = {
-        { 1, "Id", {}, ScriptValueKind::Uuid },
-        { 2, "Direction", {}, ScriptValueKind::Vector3 },
-        { 3, "Unsigned", {}, ScriptValueKind::UnsignedInteger },
+        { 1, "Id", ScriptValueKind::Uuid },
+        { 2, "Direction", ScriptValueKind::Vector3 },
+        { 3, "Unsigned", ScriptValueKind::UnsignedInteger },
     };
 
     ScriptState source;
@@ -321,15 +321,14 @@ TEST_CASE("Managed JSON uses catalog kinds to preserve ambiguous values", "[Scri
 
 TEST_CASE("Managed catalog preserves unambiguous nested script identities", "[Scripting][Managed][Contract]")
 {
-    const String json = R"({"ManifestVersion":1,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
-                        R"("TypeName":"Outer+Mover","FormerIdentities":[{"Assembly":"GameAssembly","Namespace":"Game",)"
-                        R"("TypeName":"Mover"}],"BaseType":null,"RunInEditor":true,"Events":["Start"],"Fields":[]}]})";
+    const String json = R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"Outer+Mover","BaseType":null,"RunInEditor":true,"Events":["Start"],"Fields":[]}]})";
     ScriptCatalog catalog;
     const ManagedOperationResult result = ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR);
     REQUIRE(result.Succeeded);
     REQUIRE(catalog.Types.size() == 1);
     CHECK(catalog.FindType({ "GameAssembly", "Game", "Outer+Mover" }) == &catalog.Types.front());
-    CHECK(catalog.FindType({ "GameAssembly", "Game", "Mover" }) == &catalog.Types.front());
+    CHECK(catalog.FindType({ "GameAssembly", "Game", "Mover" }) == nullptr);
     CHECK((catalog.Types.front().Flags & ScriptTypeFlags::RunInEditor) != ScriptTypeFlags::None);
 
     String invalid = json;

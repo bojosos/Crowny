@@ -17,7 +17,7 @@ namespace Crowny
     class SceneSerializer
     {
     public:
-        static constexpr uint32_t FORMAT_VERSION = 10;
+        static constexpr uint32_t FORMAT_VERSION = 11;
 
         SceneSerializer(const Ref<Scene>& scene);
 
@@ -32,7 +32,7 @@ namespace Crowny
             return AssetManager::TryGet()->LoadFromUUID<AssetType>(assetUUID);
         }
         bool Deserialize(const Path& filepath);
-        void DeserializeEntities(const YAML::Node& entitiesNode, uint32_t serializedSceneVersion = FORMAT_VERSION);
+        void DeserializeEntities(const YAML::Node& entitiesNode);
         bool DeserializeBinary(const Path& filepath);
 
     private:

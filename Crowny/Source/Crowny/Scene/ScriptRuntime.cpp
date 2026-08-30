@@ -6,7 +6,6 @@
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
-#include "Crowny/Scripting/Managed/LegacyScriptState.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
 
 namespace Crowny
@@ -59,38 +58,38 @@ namespace Crowny
         {
             static Vector<ScriptInvocation> invocations;
             invocations.clear();
-            auto view = scene->GetAllEntitiesWith<MonoScriptComponent>();
+            auto view = scene->GetAllEntitiesWith<ManagedScriptComponent>();
             size_t scriptCount = 0;
-            view.each([&scriptCount](const MonoScriptComponent& component) { scriptCount += component.Scripts.size(); });
+            view.each([&scriptCount](const ManagedScriptComponent& component) { scriptCount += component.Scripts.size(); });
             invocations.reserve(scriptCount);
-            view.each([&](entt::entity handle, const MonoScriptComponent& component) {
+            view.each([&](entt::entity handle, const ManagedScriptComponent& component) {
                 const Entity entity(handle, scene.get());
-                for (const MonoScript& script : component.Scripts)
+                for (const ManagedScript& script : component.Scripts)
                     invocations.push_back({ entity.GetUuid(), script.InstanceId });
             });
             return invocations;
         }
 
-        MonoScript* FindScript(const Ref<Scene>& scene, const ScriptInvocation& invocation, Entity& entity)
+        ManagedScript* FindScript(const Ref<Scene>& scene, const ScriptInvocation& invocation, Entity& entity)
         {
             entity = scene->TryGetEntityFromUuid(invocation.EntityId);
-            if (!entity || !entity.HasComponent<MonoScriptComponent>())
+            if (!entity || !entity.HasComponent<ManagedScriptComponent>())
                 return nullptr;
-            return entity.GetComponent<MonoScriptComponent>().FindScript(invocation.ScriptId);
+            return entity.GetComponent<ManagedScriptComponent>().FindScript(invocation.ScriptId);
         }
 
-        MonoScript* FindScript(Entity entity, uint64_t runtimeInstanceId)
+        ManagedScript* FindScript(Entity entity, uint64_t runtimeInstanceId)
         {
-            if (!entity || !entity.HasComponent<MonoScriptComponent>())
+            if (!entity || !entity.HasComponent<ManagedScriptComponent>())
                 return nullptr;
-            return entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId);
+            return entity.GetComponent<ManagedScriptComponent>().FindScript(runtimeInstanceId);
         }
 
     } // namespace
 
     void ScriptRuntime::Init() {}
 
-    bool ScriptRuntime::CreateScript(Entity entity, MonoScript& script, bool dispatchStart)
+    bool ScriptRuntime::CreateScript(Entity entity, ManagedScript& script, bool dispatchStart)
     {
         ManagedScripting* managed = GetManagedScripting();
         if (managed == nullptr || !managed->IsStarted() || script.GetRuntimeHandle().IsValid())
@@ -110,7 +109,7 @@ namespace Crowny
 
         // Managed construction may append to the script vector. Re-resolve the
         // occurrence before storing its handle or dispatching lifecycle events.
-        MonoScript* current = FindScript(entity, request.RuntimeInstanceId);
+        ManagedScript* current = FindScript(entity, request.RuntimeInstanceId);
         if (current == nullptr)
         {
             ManagedOperationResult destroyed = managed->DestroyScript(created.Handle);
@@ -127,7 +126,7 @@ namespace Crowny
         return true;
     }
 
-    void ScriptRuntime::DestroyScript(Entity entity, MonoScript& script, bool dispatchDestroy)
+    void ScriptRuntime::DestroyScript(Entity entity, ManagedScript& script, bool dispatchDestroy)
     {
         const ScriptInstanceHandle handle = script.GetRuntimeHandle();
         if (!handle.IsValid())
@@ -149,7 +148,7 @@ namespace Crowny
         script.ClearRuntimeHandle();
     }
 
-    void ScriptRuntime::Dispatch(MonoScript& script, const ScriptEvent& event)
+    void ScriptRuntime::Dispatch(ManagedScript& script, const ScriptEvent& event)
     {
         ManagedScripting* managed = GetManagedScripting();
         if (managed == nullptr || !managed->IsStarted() || !script.GetRuntimeHandle().IsValid())
@@ -159,31 +158,22 @@ namespace Crowny
             LogDiagnostics(result, script.GetTypeIdentity(), event.OtherEntity);
     }
 
-    ScriptState ScriptRuntime::CaptureState(MonoScript& script)
+    ScriptState ScriptRuntime::CaptureState(ManagedScript& script)
     {
         ManagedScripting* managed = GetManagedScripting();
         if (managed == nullptr || !managed->IsStarted() || !script.GetRuntimeHandle().IsValid())
-        {
-            ScriptState state = script.GetManagedState();
-            if (!state.Identity.IsValid())
-            {
-                state = ConvertLegacyScriptState(script.CapturePersistedState());
-                if (state.Identity.IsValid())
-                    script.SetManagedState(state);
-            }
-            return state;
-        }
+            return script.GetState();
         ScriptStateResult captured = managed->CaptureState(script.GetRuntimeHandle());
         if (!captured.Result.Succeeded)
         {
             LogDiagnostics(captured.Result, script.GetTypeIdentity(), UUID::EMPTY);
-            return script.GetManagedState();
+            return script.GetState();
         }
-        script.SetManagedState(captured.State);
+        script.SetState(captured.State);
         return std::move(captured.State);
     }
 
-    bool ScriptRuntime::ApplyState(MonoScript& script, const ScriptState& state)
+    bool ScriptRuntime::ApplyState(ManagedScript& script, const ScriptState& state)
     {
         ManagedScripting* managed = GetManagedScripting();
         if (managed != nullptr && managed->IsStarted() && script.GetRuntimeHandle().IsValid())
@@ -195,8 +185,7 @@ namespace Crowny
                 return false;
             }
         }
-        script.SetManagedState(state);
-        return true;
+        return script.SetState(state);
     }
 
     bool ScriptRuntime::RunsInEditor(const ScriptTypeIdentity& identity)
@@ -237,7 +226,7 @@ namespace Crowny
             for (const ScriptInvocation& invocation : invocations)
             {
                 Entity entity;
-                MonoScript* script = FindScript(scene, invocation, entity);
+                ManagedScript* script = FindScript(scene, invocation, entity);
                 if (script != nullptr)
                     CreateScript(entity, *script, true);
             }
@@ -257,7 +246,7 @@ namespace Crowny
             for (const ScriptInvocation& invocation : invocations)
             {
                 Entity entity;
-                MonoScript* script = FindScript(scene, invocation, entity);
+                ManagedScript* script = FindScript(scene, invocation, entity);
                 if (script != nullptr)
                     Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::Update));
             }
@@ -278,7 +267,7 @@ namespace Crowny
         for (const ScriptInvocation& invocation : invocations)
         {
             Entity entity;
-            MonoScript* script = FindScript(scene, invocation, entity);
+            ManagedScript* script = FindScript(scene, invocation, entity);
             if (script != nullptr)
                 DestroyScript(entity, *script, true);
         }

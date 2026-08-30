@@ -218,7 +218,7 @@ namespace Crowny
         m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentDestroy>(this);
 
         m_Registry.on_destroy<TransformComponent>().connect<&Scene::OnTransformComponentDestroy>(this);
-        m_Registry.on_destroy<MonoScriptComponent>().connect<&Scene::OnMonoScriptComponentDestroy>(this);
+        m_Registry.on_destroy<ManagedScriptComponent>().connect<&Scene::OnManagedScriptComponentDestroy>(this);
     }
 
     void Scene::RebuildCopiedRelationships(const Scene& source, const UnorderedMap<UUID, entt::entity>& entityMap)
@@ -827,10 +827,10 @@ namespace Crowny
                 return;
             Entity self{ selfHandle, this };
             Entity other{ otherHandle, this };
-            if (!self.HasComponent<MonoScriptComponent>())
+            if (!self.HasComponent<ManagedScriptComponent>())
                 return;
 
-            auto& scripts = self.GetComponent<MonoScriptComponent>().Scripts;
+            auto& scripts = self.GetComponent<ManagedScriptComponent>().Scripts;
             ScriptEvent scriptEvent;
             scriptEvent.OtherEntity = other.GetUuid();
             if (event.IsTrigger)
@@ -892,10 +892,10 @@ namespace Crowny
 
     bool Scene::HasScriptComponent(Entity entity, const ScriptTypeIdentity& identity) const
     {
-        if (entity.HasComponent<MonoScriptComponent>())
+        if (entity.HasComponent<ManagedScriptComponent>())
         {
-            const MonoScriptComponent& monoScriptComponent = entity.GetComponent<MonoScriptComponent>();
-            for (const MonoScript& script : monoScriptComponent.Scripts)
+            const ManagedScriptComponent& scriptComponent = entity.GetComponent<ManagedScriptComponent>();
+            for (const ManagedScript& script : scriptComponent.Scripts)
             {
                 if (script.GetTypeIdentity() == identity)
                     return true;
@@ -911,10 +911,13 @@ namespace Crowny
 
     bool Scene::AddScriptComponent(Entity entity, const ScriptTypeIdentity& identity, bool initialize)
     {
-        return AddScriptComponent(entity, PersistedScriptState{ identity, nullptr }, initialize);
+        ScriptState state;
+        state.Identity = identity;
+        state.Root = ScriptValue::Object({}, identity);
+        return AddScriptComponent(entity, state, initialize);
     }
 
-    bool Scene::AddScriptComponent(Entity entity, const PersistedScriptState& state, bool initialize)
+    bool Scene::AddScriptComponent(Entity entity, const ScriptState& state, bool initialize)
     {
         if (!entity || entity.GetScene() != this || !state.Identity.IsValid())
         {
@@ -922,12 +925,12 @@ namespace Crowny
             return false;
         }
 
-        MonoScriptComponent* monoScriptComponent = nullptr;
-        if (entity.HasComponent<MonoScriptComponent>())
-            monoScriptComponent = &entity.GetComponent<MonoScriptComponent>();
-        if (monoScriptComponent != nullptr)
+        ManagedScriptComponent* scriptComponent = nullptr;
+        if (entity.HasComponent<ManagedScriptComponent>())
+            scriptComponent = &entity.GetComponent<ManagedScriptComponent>();
+        if (scriptComponent != nullptr)
         {
-            for (const MonoScript& script : monoScriptComponent->Scripts)
+            for (const ManagedScript& script : scriptComponent->Scripts)
             {
                 if (script.GetTypeIdentity() == state.Identity)
                 {
@@ -938,18 +941,18 @@ namespace Crowny
             }
         }
         else
-            monoScriptComponent = &entity.AddComponent<MonoScriptComponent>();
+            scriptComponent = &entity.AddComponent<ManagedScriptComponent>();
 
-        monoScriptComponent->Scripts.emplace_back(state.Identity);
-        MonoScript& script = monoScriptComponent->Scripts.back();
-        script.ApplyPersistedState(state);
+        scriptComponent->Scripts.emplace_back(state.Identity);
+        ManagedScript& script = scriptComponent->Scripts.back();
+        script.SetState(state);
         const uint64_t runtimeInstanceId = script.InstanceId;
         if (initialize)
         {
             ScriptRuntime::CreateScript(entity, script, false);
-            if (!entity.HasComponent<MonoScriptComponent>())
+            if (!entity.HasComponent<ManagedScriptComponent>())
                 return false;
-            MonoScript* current = entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId);
+            ManagedScript* current = entity.GetComponent<ManagedScriptComponent>().FindScript(runtimeInstanceId);
             if (current == nullptr)
                 return false;
             if (m_RuntimeActive || (m_IsEditorScene && ScriptRuntime::RunsInEditor(current->GetTypeIdentity())))
@@ -965,17 +968,17 @@ namespace Crowny
 
     void Scene::RemoveScriptComponent(Entity entity, const ScriptTypeIdentity& identity)
     {
-        if (!entity.HasComponent<MonoScriptComponent>())
+        if (!entity.HasComponent<ManagedScriptComponent>())
             return;
-        auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+        auto& scripts = entity.GetComponent<ManagedScriptComponent>().Scripts;
         const auto script =
-          std::find_if(scripts.begin(), scripts.end(), [&](const MonoScript& candidate) { return candidate.GetTypeIdentity() == identity; });
+          std::find_if(scripts.begin(), scripts.end(), [&](const ManagedScript& candidate) { return candidate.GetTypeIdentity() == identity; });
         if (script == scripts.end())
             return;
         ScriptRuntime::DestroyScript(entity, *script);
         scripts.erase(script);
         if (scripts.empty())
-            entity.RemoveComponent<MonoScriptComponent>();
+            entity.RemoveComponent<ManagedScriptComponent>();
     }
 
     void Scene::RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName)
@@ -1196,10 +1199,10 @@ namespace Crowny
         ScriptRuntime::NotifyEntityDestroyed(e);
     }
 
-    void Scene::OnMonoScriptComponentDestroy(entt::registry& registry, entt::entity entity)
+    void Scene::OnManagedScriptComponentDestroy(entt::registry& registry, entt::entity entity)
     {
         Entity e = { entity, this };
-        auto& msc = e.GetComponent<MonoScriptComponent>();
+        auto& msc = e.GetComponent<ManagedScriptComponent>();
         for (auto& script : msc.Scripts)
         {
             ScriptRuntime::DestroyScript(e, script);

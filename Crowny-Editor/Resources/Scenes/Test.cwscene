@@ -1,4 +1,5 @@
 # Crowny Scene
+Version: 11
 Scene: Editor scene
 Entities:
   - Entity: c207a6b8-d74d-99f0-e29d-42a5f0481181
@@ -74,14 +75,23 @@ Entities:
   - Entity: b3abf689-7749-5dba-6a50-6282e4be6a45
     TagComponent:
       Tag: Sphere
-    MonoScriptComponent:
-      Name: Test
+    ManagedScriptComponent:
+      Scripts:
+        - State: '{"StateVersion":1,"Assembly":"GameAssembly","Namespace":"Sandbox","TypeName":"Test","Metadata":{},"Fields":{}}'
     TransformComponent:
       Position: [0.151727498, -0.214545116, 3.1500001]
       Rotation: [0, 0, 0]
       Scale: [1, 1, 1]
     MeshRendererComponent:
-      Uuid: 1f443d64-3640-304f-a7dc-0cb572a04a53
+      Mesh: 1f443d64-3640-304f-a7dc-0cb572a04a53
+      VisibilityLayers: 4294967295
+      LodBias: 0
+      RenderLayerOrder: 0
+      Visible: true
+      CastShadows: true
+      ReceiveShadows: true
+      MotionVectors: true
+      Materials: []
     RelationshipComponent:
       Children:
         - 42ab2eac-4f44-294c-321a-6cb8f4b0d6d7

@@ -8,6 +8,9 @@
 
 namespace Crowny
 {
+    inline constexpr uint32_t MANAGED_CATALOG_VERSION = 2;
+    inline constexpr uint32_t MANAGED_STATE_VERSION = 1;
+
     enum class ManagedBackendId
     {
         Mono,
@@ -162,7 +165,6 @@ namespace Crowny
     {
         uint64_t StableId = 0;
         String Name;
-        Vector<String> FormerNames;
         ScriptValueKind ValueKind = ScriptValueKind::Null;
         ScriptValueKind ElementKind = ScriptValueKind::Null;
         ScriptValueKind KeyKind = ScriptValueKind::Null;
@@ -190,7 +192,6 @@ namespace Crowny
     {
         uint64_t StableId = 0;
         ScriptTypeIdentity Identity;
-        Vector<ScriptTypeIdentity> FormerIdentities;
         ScriptTypeIdentity BaseType;
         Vector<ScriptFieldSchema> Fields;
         Vector<ScriptEventKind> Events;
@@ -210,7 +211,6 @@ namespace Crowny
     {
         ScriptTypeIdentity Identity;
         ScriptValue Root;
-        Map<String, ScriptValue> OrphanedMembers;
 
         bool operator==(const ScriptState&) const = default;
     };
@@ -306,5 +306,5 @@ namespace Crowny
     const char* ToString(ManagedBackendId backend);
     const char* ToString(ManagedExecutionMode mode);
     ManagedOperationResult ValidateScriptCatalog(const ScriptCatalog& catalog, ManagedBackendId backend);
-    ScriptStateResult MigrateScriptState(const ScriptState& state, const ScriptTypeSchema& target, ManagedBackendId backend);
+    ScriptStateResult NormalizeScriptState(const ScriptState& state, const ScriptTypeSchema& target, ManagedBackendId backend);
 } // namespace Crowny
