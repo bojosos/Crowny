@@ -126,7 +126,9 @@ namespace Crowny
                             if (comp.InputValues.find(input.ID) == comp.InputValues.end())
                                 val = input.DefaultValue;
 
-                            String label = String(input.Name.c_str()) + "##" + input.ID.ToString();
+                            const UUID::TextBuffer inputId = input.ID.ToTextBuffer();
+                            ImGui::PushID(inputId.data(), inputId.data() + UUID::TextLength);
+                            const char* label = input.Name.c_str();
 
                             switch (input.DataType)
                             {
@@ -134,7 +136,7 @@ namespace Crowny
                                 float v = std::holds_alternative<float>(val)
                                             ? std::get<float>(val)
                                             : (std::holds_alternative<float>(input.DefaultValue) ? std::get<float>(input.DefaultValue) : 0.0f);
-                                if (ImGui::DragFloat(label.c_str(), &v, 0.01f))
+                                if (ImGui::DragFloat(label, &v, 0.01f))
                                 {
                                     val = v;
                                     comp.NeedsEvaluation = true;
@@ -145,7 +147,7 @@ namespace Crowny
                                 int32_t v = std::holds_alternative<int32_t>(val)
                                               ? std::get<int32_t>(val)
                                               : (std::holds_alternative<int32_t>(input.DefaultValue) ? std::get<int32_t>(input.DefaultValue) : 0);
-                                if (ImGui::DragInt(label.c_str(), &v))
+                                if (ImGui::DragInt(label, &v))
                                 {
                                     val = v;
                                     comp.NeedsEvaluation = true;
@@ -157,7 +159,7 @@ namespace Crowny
                                                 ? std::get<glm::vec3>(val)
                                                 : (std::holds_alternative<glm::vec3>(input.DefaultValue) ? std::get<glm::vec3>(input.DefaultValue)
                                                                                                          : glm::vec3(0.0f));
-                                if (ImGui::DragFloat3(label.c_str(), &v.x, 0.01f))
+                                if (ImGui::DragFloat3(label, &v.x, 0.01f))
                                 {
                                     val = v;
                                     comp.NeedsEvaluation = true;
@@ -168,7 +170,7 @@ namespace Crowny
                                 bool v = std::holds_alternative<bool>(val)
                                            ? std::get<bool>(val)
                                            : (std::holds_alternative<bool>(input.DefaultValue) ? std::get<bool>(input.DefaultValue) : false);
-                                if (ImGui::Checkbox(label.c_str(), &v))
+                                if (ImGui::Checkbox(label, &v))
                                 {
                                     val = v;
                                     comp.NeedsEvaluation = true;
@@ -178,6 +180,7 @@ namespace Crowny
                             default:
                                 break;
                             }
+                            ImGui::PopID();
                         }
                     }
                 }

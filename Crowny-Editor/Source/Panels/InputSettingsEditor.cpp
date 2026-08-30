@@ -327,7 +327,8 @@ namespace Crowny
         {
             InputAction& action = context.Actions[actionIndex];
             bool changed = false;
-            ImGui::PushID(action.Id.ToString().c_str());
+            const UUID::TextBuffer actionId = action.Id.ToTextBuffer();
+            ImGui::PushID(actionId.data(), actionId.data() + UUID::TextLength);
             const String header = action.Name.empty() ? "Unnamed action" : action.Name;
             const bool open = ImGui::TreeNodeEx("##Action", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth, "%s", header.c_str());
             ImGui::SameLine();
@@ -362,7 +363,8 @@ namespace Crowny
                 for (size_t bindingIndex = 0; bindingIndex < action.Bindings.size(); bindingIndex++)
                 {
                     InputBinding& binding = action.Bindings[bindingIndex];
-                    ImGui::PushID(binding.Id.ToString().c_str());
+                    const UUID::TextBuffer bindingId = binding.Id.ToTextBuffer();
+                    ImGui::PushID(bindingId.data(), bindingId.data() + UUID::TextLength);
                     const String bindingLabel = std::to_string(bindingIndex + 1) + ". " + GetControlName(binding);
                     const bool bindingOpen = ImGui::TreeNodeEx("##Binding", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", bindingLabel.c_str());
                     ImGui::SameLine();
@@ -436,7 +438,8 @@ namespace Crowny
             for (size_t contextIndex = 0; contextIndex < contexts.size(); contextIndex++)
             {
                 InputContext& context = contexts[contextIndex];
-                ImGui::PushID(context.Id.ToString().c_str());
+                const UUID::TextBuffer contextId = context.Id.ToTextBuffer();
+                ImGui::PushID(contextId.data(), contextId.data() + UUID::TextLength);
                 ImGui::Separator();
                 const String header = context.Name.empty() ? "Unnamed context" : context.Name;
                 const bool open =

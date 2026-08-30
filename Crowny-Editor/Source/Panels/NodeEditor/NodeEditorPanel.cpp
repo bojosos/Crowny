@@ -345,7 +345,8 @@ namespace Crowny
         UUID toRemove = UUID::EMPTY;
         for (const GraphInput& input : inputs)
         {
-            ImGui::PushID(input.ID.ToString().c_str());
+            const UUID::TextBuffer inputId = input.ID.ToTextBuffer();
+            ImGui::PushID(inputId.data(), inputId.data() + UUID::TextLength);
 
             String inputName = input.Name.c_str();
             const float removeWidth = ImGui::CalcTextSize("Remove").x + ImGui::GetStyle().FramePadding.x * 2.0f;

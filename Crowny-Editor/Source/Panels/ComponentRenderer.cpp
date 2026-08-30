@@ -129,9 +129,9 @@ namespace Crowny
             case ScriptValueKind::Entity:
             case ScriptValueKind::Asset:
             case ScriptValueKind::Uuid: {
-                const String reference = value.ReferenceValue == UUID::EMPTY ? String("None") : value.ReferenceValue.ToString();
+                const UUID::TextBuffer reference = value.ReferenceValue.ToTextBuffer();
                 UI::Pre(label.c_str());
-                ImGui::TextUnformatted(reference.c_str());
+                ImGui::TextUnformatted(value.ReferenceValue == UUID::EMPTY ? "None" : reference.data());
                 UI::Post();
                 return false;
             }

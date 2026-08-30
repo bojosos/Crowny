@@ -9,10 +9,14 @@ namespace Crowny
     class UUID
     {
     public:
+        static constexpr size_t TextLength = 36;
+        using TextBuffer = Array<char, TextLength + 1>;
+
         UUID() = default;
         UUID(uint32_t data1, uint32_t data2, uint32_t data3, uint32_t data4);
         UUID(const String& uuid);
 
+        TextBuffer ToTextBuffer() const noexcept;
         String ToString() const;
 
         bool operator==(const UUID& rhs) const

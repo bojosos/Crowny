@@ -391,8 +391,8 @@ namespace Crowny
         if (entities.size() == 1u)
         {
             ImGui::TextUnformatted(primary.GetName().c_str());
-            const String uuid = primary.GetUuid().ToString();
-            ImGui::TextDisabled("UUID %s", uuid.c_str());
+            const UUID::TextBuffer uuid = primary.GetUuid().ToTextBuffer();
+            ImGui::TextDisabled("UUID %s", uuid.data());
 
             if (primary.HasComponent<PrefabComponent>())
                 RenderPrefabInstanceHeader(primary);

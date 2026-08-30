@@ -1,5 +1,7 @@
-#include <catch2/catch_test_macros.hpp>
 #include "Crowny/Common/Uuid.h"
+#include "Crowny/Memory/AllocationCounter.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace Crowny;
 
@@ -72,7 +74,7 @@ TEST_CASE("UUID::Comparison", "[UUID]")
 
     CHECK(uuid1 == uuid2);
     CHECK(uuid1 != uuid3);
-    
+
     // Strict weak ordering for containers
     if (uuid1 < uuid3)
     {
@@ -103,10 +105,10 @@ TEST_CASE("UUID::Generator", "[UUID]")
         // where y is one of 8, 9, a, or b.
         UUID uuid = UuidGenerator::Generate();
         String s = uuid.ToString();
-        
+
         // Version digit (the 13th hex digit, or 14th char including hyphen)
         CHECK(s[14] == '4');
-        
+
         // Variant digit (the 17th hex digit, or 19th char)
         char variant = s[19];
         CHECK((variant == '8' || variant == '9' || variant == 'a' || variant == 'b'));
@@ -124,5 +126,37 @@ TEST_CASE("UUID::Hashing", "[UUID]")
     if (uuid1 != uuid3)
     {
         CHECK(hasher(uuid1) != hasher(uuid3));
+    }
+}
+
+TEST_CASE("UUID fixed-buffer formatting is canonical and allocation-free", "[UUID][Memory][Frame]")
+{
+    const UUID uuid(0x12345678, 0x9ABCDEF0, 0x0FEDCBA9, 0x87654321);
+    constexpr StringView expected = "12345678-9abc-def0-0fed-cba987654321";
+
+    const UUID::TextBuffer text = uuid.ToTextBuffer();
+    CHECK(StringView(text.data(), UUID::TextLength) == expected);
+    CHECK(text[UUID::TextLength] == '\0');
+
+    constexpr size_t iterationCounts[] = { 1u, 1000u, 10000u };
+    for (const size_t iterationCount : iterationCounts)
+    {
+        size_t checksum = 0;
+        bool canonical = true;
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        for (size_t iteration = 0; iteration < iterationCount; ++iteration)
+        {
+            const UUID::TextBuffer formatted = uuid.ToTextBuffer();
+            canonical &= StringView(formatted.data(), UUID::TextLength) == expected;
+            canonical &= formatted[UUID::TextLength] == '\0';
+            checksum += static_cast<uint8_t>(formatted[iteration % UUID::TextLength]);
+        }
+        const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+        INFO("Iterations: " << iterationCount);
+        CHECK(canonical);
+        CHECK(checksum != 0u);
+        CHECK(delta.AllocationCount == 0u);
+        CHECK(delta.RequestedBytes == 0u);
     }
 }

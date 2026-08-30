@@ -58,9 +58,9 @@ namespace Crowny
         if (!parseHex(m_Data[3], idx, 7, 0)) { m_Data[0] = m_Data[1] = m_Data[2] = m_Data[3] = 0; return; }
     }
 
-    String UUID::ToString() const
+    UUID::TextBuffer UUID::ToTextBuffer() const noexcept
     {
-        uint8_t out[36];
+        TextBuffer out{};
         uint32_t idx = 0;
 
         for (int32_t i = 7; i >= 0; i--)
@@ -103,7 +103,13 @@ namespace Crowny
             out[idx++] = HEX_TO_LITERAL[hex];
         }
 
-        return String((const char*)out, 36);
+        return out;
+    }
+
+    String UUID::ToString() const
+    {
+        const TextBuffer text = ToTextBuffer();
+        return String(text.data(), TextLength);
     }
 
     UUID UuidGenerator::Generate() { return PlatformUtils::GenerateUUID(); }
