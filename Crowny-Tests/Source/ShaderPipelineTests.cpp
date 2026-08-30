@@ -2,7 +2,7 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/BuiltInResourcePack.h"
 #include "Crowny/Common/Constants.h"
-#include "Crowny/Common/UUID.h"
+#include "Crowny/Common/Uuid.h"
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/Renderer/ShaderVariation.h"
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
