@@ -741,6 +741,11 @@ namespace Crowny
         return true;
     }
 
+    bool MonoScript::ApplyPersistedFields(Ref<SerializableObject> fields)
+    {
+        return ApplyPersistedState({ m_Identity, std::move(fields), m_ManagedState });
+    }
+
     bool MonoScript::ResolveObjectInfo()
     {
         m_ObjectInfo = nullptr;
@@ -1149,6 +1154,9 @@ namespace Crowny
             return;
         }
 
+        const uint64_t runtimeInstanceId = InstanceId;
+        const PersistedScriptState persisted = CapturePersistedState();
+
         if (m_ScriptEntityBehaviour != nullptr)
             ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, this);
 
@@ -1163,19 +1171,30 @@ namespace Crowny
                                m_Identity.GetFullName());
                 return;
             }
-            instance = missingClass->CreateInstance(true);
             CW_ENGINE_WARN("Managed script type '{}:{}' is unavailable. Its persisted fields were retained.", m_Identity.Assembly,
                            m_Identity.GetFullName());
+            instance = missingClass->CreateInstance(true);
         }
         else
         {
-            instance = m_ObjectInfo->m_MonoClass->CreateInstance(true);
             m_MissingType = false;
+            instance = m_ObjectInfo->m_MonoClass->CreateInstance(true);
         }
 
-        ScriptSceneObjectManager::Get().CreateManagedScriptComponent(instance, entity, *this);
+        // A managed constructor can add another script to this entity and relocate
+        // MonoScriptComponent::Scripts. Never dereference this across that boundary.
+        if (!entity || !entity.HasComponent<MonoScriptComponent>())
+            return;
+        MonoScript* current = entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId);
+        if (current == nullptr)
+        {
+            CW_ENGINE_WARN("Managed script '{}:{}' was removed while its constructor was running.", persisted.Identity.Assembly,
+                           persisted.Identity.GetFullName());
+            return;
+        }
 
-        ApplyPersistedState({ m_Identity, m_SerializedObjectData });
+        ScriptSceneObjectManager::Get().CreateManagedScriptComponent(instance, entity, *current);
+        current->ApplyPersistedState(persisted);
     }
 
     void MonoScript::OnInitialize(ScriptEntityBehaviour* entityBehaviour)

@@ -3,6 +3,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "Crowny/Application/Application.h"
+#include "Crowny/Application/EngineRuntime.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/FileSystem.h"
@@ -15,7 +16,9 @@
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Bindings/ScriptBindings.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
@@ -314,6 +317,30 @@ public:
     ~SerializationTestFixture() {}
 };
 
+class ScopedSceneManager
+{
+public:
+    ScopedSceneManager() : m_OwnsInstance(!SceneManager::IsStartedUp())
+    {
+        if (m_OwnsInstance)
+            SceneManager::StartUp();
+        else
+            m_PreviousScene = SceneManager::Get().GetActiveScene();
+    }
+
+    ~ScopedSceneManager()
+    {
+        if (m_OwnsInstance)
+            SceneManager::Shutdown();
+        else
+            SceneManager::Get().SetActiveScene(m_PreviousScene);
+    }
+
+private:
+    bool m_OwnsInstance;
+    Ref<Scene> m_PreviousScene;
+};
+
 TEST_CASE("MonoScript vector moves preserve runtime identity", "[Scene][Scripting][Lifetime]")
 {
     Vector<MonoScript> scripts;
@@ -350,6 +377,23 @@ TEST_CASE("MonoScript retains persisted state without a managed instance", "[Ser
     assigned = script;
     CHECK(assigned.GetTypeIdentity() == identity);
     CHECK(ReadRetainedScriptValue(assigned.CapturePersistedState(), retained.Field) == 37);
+}
+
+TEST_CASE("Applying persisted fields preserves backend-neutral managed state", "[Serialization][Scripting][PersistedState]")
+{
+    const ScriptTypeIdentity identity{ "Missing.Assembly", "Missing.Namespace", "StateCarrier" };
+    const RetainedScriptFields retained = MakeRetainedScriptFields(identity, 23);
+    MonoScript script(identity);
+
+    ScriptState managedState;
+    managedState.Identity = identity;
+    managedState.Root = ScriptValue::Object({ { "Live", ScriptValue::Signed(7) } }, identity);
+    managedState.OrphanedMembers.emplace("Removed", ScriptValue::Text("preserved"));
+    script.SetManagedState(managedState);
+
+    REQUIRE(script.ApplyPersistedFields(retained.Object));
+    CHECK(script.GetManagedState() == managedState);
+    CHECK(ReadRetainedScriptValue(script.CapturePersistedState(), retained.Field) == 23);
 }
 
 TEST_CASE("Missing managed scripts round-trip with exact identity and fields", "[Serialization][Scripting][PersistedState]")
@@ -476,24 +520,40 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     Ref<Scene> scene = CreateRef<Scene>(false);
     Entity entity = scene->CreateEntity("Reload host");
     REQUIRE(scene->AddScriptComponent(entity, PersistedScriptState{ identity, fields }));
-    MonoScript& script = entity.GetComponent<MonoScriptComponent>().Scripts.front();
-    CHECK(script.GetManagedClass() == nullptr);
-    CHECK(script.CapturePersistedState().Fields != nullptr);
+    MonoScript& missingScript = entity.GetComponent<MonoScriptComponent>().Scripts.front();
+    const uint64_t runtimeInstanceId = missingScript.InstanceId;
+    CHECK(missingScript.GetManagedClass() == nullptr);
+    CHECK(missingScript.CapturePersistedState().Fields != nullptr);
+
+    ScriptState managedState;
+    managedState.Identity = identity;
+    managedState.Root = ScriptValue::Object({ { "RuntimeOnly", ScriptValue::Signed(41) } }, identity);
+    managedState.OrphanedMembers.emplace("FormerField", ScriptValue::Float(2.5));
+    missingScript.SetManagedState(managedState);
+    missingScript.Create(entity);
+    REQUIRE(entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId) != nullptr);
+    CHECK(entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId)->GetManagedState() == managedState);
 
     Vector<AssemblyRefreshInfo> withGame;
     withGame.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
     withGame.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
     REQUIRE(ScriptObjectManager::Get().RefreshAssemblies(withGame).Succeeded());
-    script.Create(entity);
-    REQUIRE(script.GetManagedClass() != nullptr);
-    REQUIRE(script.GetManagedInstance() != nullptr);
+    MonoScript* script = entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId);
+    REQUIRE(script != nullptr);
+    CHECK(script->GetManagedState() == managedState);
+    script->Create(entity);
+    script = entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId);
+    REQUIRE(script != nullptr);
+    CHECK(script->GetManagedState() == managedState);
+    REQUIRE(script->GetManagedClass() != nullptr);
+    REQUIRE(script->GetManagedInstance() != nullptr);
 
     Ref<SerializableObjectInfo> reloadedInfo;
     REQUIRE(ScriptInfoManager::Get().GetSerializableObjectInfo(identity.Assembly, identity.Namespace, identity.TypeName, reloadedInfo));
     const auto reloadedFieldId = reloadedInfo->m_FieldNameToId.find("smoothSpeed");
     REQUIRE(reloadedFieldId != reloadedInfo->m_FieldNameToId.end());
     Ref<SerializableMemberInfo> reloadedField = reloadedInfo->m_Fields.at(reloadedFieldId->second);
-    const PersistedScriptState reloadedState = script.CapturePersistedState();
+    const PersistedScriptState reloadedState = script->CapturePersistedState();
     CHECK(ReadRetainedScriptFloat(reloadedState, reloadedField) == Catch::Approx(7.25f));
 
     const auto targetFieldId = reloadedInfo->m_FieldNameToId.find("target");
@@ -502,6 +562,54 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     const Ref<SerializableFieldEntity> target = StaticRefCast<SerializableFieldEntity>(reloadedState.Fields->GetFieldData(targetField));
     REQUIRE(target != nullptr);
     CHECK_FALSE(target->Value);
+
+    // A managed constructor can append to the same script vector. Force the
+    // vector to its current capacity so the nested append must relocate it.
+    ManagedScripting* managedScripting = Application::Get().GetRuntime().GetManagedScripting();
+    REQUIRE(managedScripting != nullptr);
+    ManagedProgramDefinition program;
+    program.Generation = 1;
+    program.Artifacts.push_back({ ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, engineAssemblyPath });
+    program.Artifacts.push_back({ ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, gameAssemblyPath });
+    REQUIRE(managedScripting->LoadProgram(program).Succeeded);
+
+    ScopedSceneManager sceneManagerScope;
+    Ref<Scene> reentryScene = CreateRef<Scene>(false);
+    SceneManager::Get().SetActiveScene(reentryScene);
+    Entity reentryEntity = reentryScene->CreateEntity("Mono constructor reentry");
+    const ScriptTypeIdentity reentryIdentity{ GAME_ASSEMBLY, "Sandbox", "ConstructorReentryProbe" };
+    REQUIRE(reentryScene->AddScriptComponent(reentryEntity, reentryIdentity, false));
+
+    MonoScriptComponent& before = reentryEntity.GetComponent<MonoScriptComponent>();
+    const uint64_t reentryInstanceId = before.Scripts.front().InstanceId;
+    uint32_t paddingIndex = 0;
+    while (before.Scripts.size() < before.Scripts.capacity())
+    {
+        before.Scripts.emplace_back(
+          ScriptTypeIdentity{ "Test.Padding", "Sandbox", "Padding" + std::to_string(paddingIndex++) });
+    }
+    const size_t saturatedSize = before.Scripts.size();
+    REQUIRE(saturatedSize == before.Scripts.capacity());
+    MonoScript* initiatingBeforeCreate = before.FindScript(reentryInstanceId);
+    REQUIRE(initiatingBeforeCreate != nullptr);
+    REQUIRE(ScriptRuntime::CreateScript(reentryEntity, *initiatingBeforeCreate, false));
+
+    MonoScriptComponent& after = reentryEntity.GetComponent<MonoScriptComponent>();
+    REQUIRE(after.Scripts.size() == saturatedSize + 1);
+    MonoScript* initiating = after.FindScript(reentryInstanceId);
+    REQUIRE(initiating != nullptr);
+    CHECK(initiating->GetTypeIdentity() == reentryIdentity);
+    REQUIRE(initiating->GetManagedInstance() != nullptr);
+    REQUIRE(initiating->GetRuntimeHandle().IsValid());
+    const ScriptStateResult captured = managedScripting->CaptureState(initiating->GetRuntimeHandle());
+    REQUIRE(captured.Result.Succeeded);
+
+    const ScriptTypeIdentity nestedIdentity{ GAME_ASSEMBLY, "Sandbox", "CameraFollow" };
+    const auto nested = std::find_if(after.Scripts.begin(), after.Scripts.end(),
+                                     [&](const MonoScript& candidate) { return candidate.GetTypeIdentity() == nestedIdentity; });
+    REQUIRE(nested != after.Scripts.end());
+    REQUIRE(nested->GetManagedInstance() != nullptr);
+    CHECK(nested->GetRuntimeHandle().IsValid());
 }
 
 TEST_CASE("Legacy managed script entries still load", "[Serialization][Scripting][PersistedState][Legacy]")

@@ -621,6 +621,7 @@ namespace Crowny
 
         PersistedScriptState CapturePersistedState() const;
         bool ApplyPersistedState(const PersistedScriptState& state);
+        bool ApplyPersistedFields(Ref<SerializableObject> fields);
 
         const ScriptTypeIdentity& GetTypeIdentity() const { return m_Identity; }
         const String& GetAssemblyName() const { return m_Identity.Assembly; }

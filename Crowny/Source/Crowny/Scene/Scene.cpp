@@ -943,11 +943,17 @@ namespace Crowny
         monoScriptComponent->Scripts.emplace_back(state.Identity);
         MonoScript& script = monoScriptComponent->Scripts.back();
         script.ApplyPersistedState(state);
+        const uint64_t runtimeInstanceId = script.InstanceId;
         if (initialize)
         {
             ScriptRuntime::CreateScript(entity, script, false);
-            if (m_RuntimeActive || (m_IsEditorScene && ScriptRuntime::RunsInEditor(script.GetTypeIdentity())))
-                ScriptRuntime::Dispatch(script, ScriptEvent::Lifecycle(ScriptEventKind::Start));
+            if (!entity.HasComponent<MonoScriptComponent>())
+                return false;
+            MonoScript* current = entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId);
+            if (current == nullptr)
+                return false;
+            if (m_RuntimeActive || (m_IsEditorScene && ScriptRuntime::RunsInEditor(current->GetTypeIdentity())))
+                ScriptRuntime::Dispatch(*current, ScriptEvent::Lifecycle(ScriptEventKind::Start));
         }
         return true;
     }

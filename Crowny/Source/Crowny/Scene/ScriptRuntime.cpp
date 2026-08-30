@@ -76,11 +76,14 @@ namespace Crowny
             entity = scene->TryGetEntityFromUuid(invocation.EntityId);
             if (!entity || !entity.HasComponent<MonoScriptComponent>())
                 return nullptr;
-            Vector<MonoScript>& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-            const auto script = std::find_if(scripts.begin(), scripts.end(), [&](const MonoScript& candidate) {
-                return candidate.InstanceId == invocation.ScriptId;
-            });
-            return script != scripts.end() ? &*script : nullptr;
+            return entity.GetComponent<MonoScriptComponent>().FindScript(invocation.ScriptId);
+        }
+
+        MonoScript* FindScript(Entity entity, uint64_t runtimeInstanceId)
+        {
+            if (!entity || !entity.HasComponent<MonoScriptComponent>())
+                return nullptr;
+            return entity.GetComponent<MonoScriptComponent>().FindScript(runtimeInstanceId);
         }
 
     } // namespace
@@ -105,9 +108,22 @@ namespace Crowny
             return false;
         }
 
-        script.SetRuntimeHandle(created.Handle);
+        // Managed construction may append to the script vector. Re-resolve the
+        // occurrence before storing its handle or dispatching lifecycle events.
+        MonoScript* current = FindScript(entity, request.RuntimeInstanceId);
+        if (current == nullptr)
+        {
+            ManagedOperationResult destroyed = managed->DestroyScript(created.Handle);
+            if (!destroyed.Succeeded)
+                LogDiagnostics(destroyed, request.Identity, request.Entity);
+            CW_ENGINE_ERROR("Managed script '{}:{}' on entity {} disappeared during construction.", request.Identity.Assembly,
+                            request.Identity.TypeName, request.Entity.ToString());
+            return false;
+        }
+
+        current->SetRuntimeHandle(created.Handle);
         if (dispatchStart)
-            Dispatch(script, ScriptEvent::Lifecycle(ScriptEventKind::Start));
+            Dispatch(*current, ScriptEvent::Lifecycle(ScriptEventKind::Start));
         return true;
     }
 

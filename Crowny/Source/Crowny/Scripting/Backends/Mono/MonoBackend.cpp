@@ -750,9 +750,13 @@ namespace Crowny
                 if (script == nullptr)
                     return { Failure("managed.mono.script_occurrence_missing", "The persisted Mono script occurrence was not found."), 0 };
                 const uint64_t runtimeInstanceId = script->InstanceId;
+                const auto findCurrentScript = [&]() { return FindScript(request.Entity, runtimeInstanceId, &request.Identity); };
                 const auto rollbackCreate = [&]() {
                     if (!occurrenceAdded && createAttempted && ScriptSceneObjectManager::IsStartedUp())
-                        ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, script);
+                    {
+                        if (MonoScript* current = findCurrentScript())
+                            ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, current);
+                    }
                     MonoBackendDetail::RollbackAddedScriptOccurrence(entity, runtimeInstanceId, occurrenceAdded, componentAdded);
                 };
                 if (m_NextHandle == 0)
@@ -769,7 +773,8 @@ namespace Crowny
                 }
                 createAttempted = true;
                 script->Create(entity);
-                if (script->GetManagedInstance() == nullptr)
+                script = findCurrentScript();
+                if (script == nullptr || script->GetManagedInstance() == nullptr)
                 {
                     rollbackCreate();
                     return { Failure("managed.mono.create_failed", "Mono could not create the managed script instance."), 0 };
@@ -1032,7 +1037,7 @@ namespace Crowny
                 if (objectInfo == nullptr)
                     return Failure("managed.mono.state_schema_missing", "Mono reflection metadata for the script state is unavailable.");
                 Ref<SerializableObject> fields = WriteLegacyObject(state.Root, objectInfo);
-                if (fields == nullptr || !script.ApplyPersistedState({ state.Identity, fields }))
+                if (fields == nullptr || !script.ApplyPersistedState({ state.Identity, fields, state }))
                 {
                     script.ApplyPersistedState(previous);
                     return Failure("managed.mono.state_apply_failed", "Mono could not apply the script state.");

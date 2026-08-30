@@ -58,7 +58,7 @@ namespace Crowny
             BinaryDataStreamInputArchive archive(stream);
             archive(fields);
         }
-        script->ApplyPersistedState({ script->GetTypeIdentity(), fields });
+        script->ApplyPersistedFields(std::move(fields));
     }
 
     MonoObject* ScriptEntityBehaviour::CreateManagedInstance(bool construct)
