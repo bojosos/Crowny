@@ -186,7 +186,7 @@ namespace Crowny
         public:
             void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
                             const GpuDrawBinLayout* drawBinLayout, const RenderSnapshot& snapshot, const Ref<EnvironmentMap>& environment,
-                            const RenderPipelineSettings& settings)
+                            const RenderPipelineSettings& settings, bool enablePostProcessing)
             {
                 m_View = view;
                 m_Blackboard = &blackboard;
@@ -196,6 +196,7 @@ namespace Crowny
                 m_Snapshot = &snapshot;
                 m_Environment = environment;
                 m_Settings = settings;
+                m_EnablePostProcessing = enablePostProcessing;
                 m_GpuInstanceCullingReady = false;
                 m_GpuMeshletExpansionReady = false;
                 m_GpuMeshletCullingReady = false;
@@ -466,8 +467,10 @@ namespace Crowny
             {
                 float Exposure = 1.0f;
                 float BloomIntensity = 0.0f;
-                glm::vec2 Padding = glm::vec2(0.0f);
+                float SharpeningStrength = 0.0f;
+                float Padding = 0.0f;
             };
+            static_assert(sizeof(ToneMapConstants) == 16u);
 
             struct alignas(16) ToonOutlineConstants
             {
@@ -1488,6 +1491,9 @@ namespace Crowny
                     return;
                 ToneMapConstants constants;
                 constants.BloomIntensity = Resource("Bloom") ? 0.08f : 0.0f;
+                const float requestedSharpening = m_Settings.SharpeningStrength;
+                constants.SharpeningStrength =
+                  m_EnablePostProcessing && std::isfinite(requestedSharpening) ? std::clamp(requestedSharpening, 0.0f, 1.0f) : 0.0f;
                 m_ToneMap.SetTexture(0, 0, TextureResource(context, "ResolvedColor"));
                 m_ToneMap.WriteUniformBlock(0, 1, &constants, sizeof(constants));
                 m_ToneMap.SetTexture(0, 2, TextureResource(context, "ObjectID"));
@@ -1607,6 +1613,7 @@ namespace Crowny
             bool m_GpuMeshletCullingReady = false;
             bool m_GpuDrawCompactionReady = false;
             bool m_WeightedOitReady = false;
+            bool m_EnablePostProcessing = false;
             bool m_BuildClustersAttempted = false;
             bool m_BuildHiZAttempted = false;
             bool m_GtaoAttempted = false;
@@ -2209,6 +2216,7 @@ namespace Crowny
         snapshot.Target = m_RenderTarget;
         snapshot.HistoryOwnerId = m_HistoryOwnerId;
         snapshot.DrawGrid = drawGrid;
+        snapshot.PipelineSettings = m_RenderPipelineSettings;
         AdvanceCameraHistoryEpoch(snapshot.FrameNumber);
         TransferHistoryReleases(snapshot);
         SyncRenderWorld(snapshot);
@@ -2261,6 +2269,7 @@ namespace Crowny
         snapshot.Target = m_RenderTarget;
         snapshot.Environment = m_Scene->GetEnvironment();
         snapshot.DrawGrid = drawGrid;
+        snapshot.PipelineSettings = m_RenderPipelineSettings;
         TransferHistoryReleases(snapshot);
         SyncRenderWorld(snapshot);
 
@@ -2947,6 +2956,7 @@ namespace Crowny
         }
 
         RenderPipelineAsset& pipeline = threadResources.Pipeline;
+        pipeline.SetSettings(snapshot.PipelineSettings);
         RenderBlackboard& blackboard = threadResources.Blackboard;
         RenderView view;
         view.View = snapshot.ViewMatrix;
@@ -3211,7 +3221,7 @@ namespace Crowny
         }
         pipeline.BuildFrameGraph(renderGraph, view, graphDesc, blackboard);
         gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList, gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr,
-                                     snapshot, snapshot.Environment, pipeline.GetSettings());
+                                     snapshot, snapshot.Environment, pipeline.GetSettings(), graphDesc.EnablePostProcessing);
 
         const RenderGraphCompileResult& compiledGraph = renderGraph.Compile();
         const bool resourceFrameBegun = graphResources.BeginFrame(compiledGraph, snapshot.FrameNumber, snapshot.HistoryNamespace, view.CameraCut);

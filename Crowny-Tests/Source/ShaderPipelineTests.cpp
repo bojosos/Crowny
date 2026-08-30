@@ -723,6 +723,13 @@ TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
             CHECK(source.find("alphaMode == maskMode") != String::npos);
             CHECK(source.find("nonuniformEXT(material.textureIndices0.x)") != String::npos);
         }
+        else if (path.filename() == "ToneMap.glsl")
+        {
+            CHECK(source.find("float sharpeningStrength;") != String::npos);
+            CHECK(source.find("contrastAdaptiveSharpen(colorPixel, imageSize, cwToneMap.sharpeningStrength)") != String::npos);
+            CHECK(source.find("clamp(pixel, ivec2(0), imageSize - ivec2(1))") != String::npos);
+            CHECK(source.find("isnan(strength) || isinf(strength)") != String::npos);
+        }
     }
 }
 

@@ -42,6 +42,8 @@ namespace Crowny
         void Render();
         void SetRenderTarget(const Ref<RenderTarget>& renderTarget);
         void SetScene(const Ref<Scene>& scene);
+        void SetRenderPipelineSettings(const RenderPipelineSettings& settings) { m_RenderPipelineSettings = settings; }
+        const RenderPipelineSettings& GetRenderPipelineSettings() const { return m_RenderPipelineSettings; }
 
         // Phase 0: Snapshot-based rendering (decouples scene traversal from GPU commands)
         RenderSnapshot ExtractSnapshot(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid = false) const;
@@ -208,6 +210,7 @@ namespace Crowny
         mutable uint32_t m_NextMaterialResourceIndex = 1;
         mutable UnorderedMap<uint64_t, CameraHistoryState> m_CameraHistory;
         mutable Vector<uint64_t> m_PendingHistoryReleases;
+        RenderPipelineSettings m_RenderPipelineSettings;
         uint64_t m_HistoryOwnerId = 0;
     };
 

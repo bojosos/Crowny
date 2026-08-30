@@ -589,6 +589,149 @@ void main()
             return Capture(color, image, error);
         }
 
+        bool RenderPostSharpening(Image& image, String& error)
+        {
+            AssetManager* assetManager = AssetManager::TryGet();
+            if (assetManager == nullptr)
+            {
+                error = "Asset manager is unavailable for the tone-map sharpening shader";
+                return false;
+            }
+
+            GraphicsMaterial toneMap;
+            if (!toneMap.Initialize(assetManager->Load<Shader>("Resources/Shaders/ToneMap.asset")))
+            {
+                error = "Could not initialize the tone-map sharpening shader: " + toneMap.GetError();
+                return false;
+            }
+
+            const Ref<Texture> hdrColor = CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::RGBA16F, "RenderTests/SharpeningHdr");
+            const Ref<Texture> objectIds = CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::R32I, "RenderTests/SharpeningObjectIds");
+            const Ref<Texture> sceneDepth = CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::DEPTH32F, "RenderTests/SharpeningDepth");
+            const Ref<Texture> bloom = CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::RGBA16F, "RenderTests/SharpeningBloom");
+            if (!hdrColor || !objectIds || !sceneDepth || !bloom)
+            {
+                error = "Could not create tone-map sharpening inputs";
+                return false;
+            }
+
+            PixelData hdrPixels(TEST_WIDTH, TEST_HEIGHT, 1u, TextureFormat::RGBA16F);
+            PixelData objectIdPixels(TEST_WIDTH, TEST_HEIGHT, 1u, TextureFormat::R32I);
+            PixelData bloomPixels(TEST_WIDTH, TEST_HEIGHT, 1u, TextureFormat::RGBA16F);
+            hdrPixels.AllocateInternalBuffer();
+            objectIdPixels.AllocateInternalBuffer();
+            bloomPixels.AllocateInternalBuffer();
+            constexpr std::array<float, 8> levels = { 0.06f, 0.10f, 0.16f, 0.25f, 0.38f, 0.52f, 0.68f, 0.82f };
+            for (uint32_t y = 0u; y < TEST_HEIGHT; ++y)
+            {
+                for (uint32_t x = 0u; x < TEST_WIDTH; ++x)
+                {
+                    const float level = levels[std::min(x / 8u, static_cast<uint32_t>(levels.size() - 1u))];
+                    hdrPixels.SetColorAt(x, y, glm::vec4(level, level * 0.72f, level * 0.45f, 0.6f));
+                    objectIdPixels.SetColorAt(x, y, glm::vec4(17.0f));
+                    bloomPixels.SetColorAt(x, y, glm::vec4(0.0f));
+                }
+            }
+            hdrColor->WriteData(hdrPixels);
+            objectIds->WriteData(objectIdPixels);
+            bloom->WriteData(bloomPixels);
+
+            const Ref<RenderTexture> depthTarget = CreateTarget({}, TEST_WIDTH, TEST_HEIGHT, sceneDepth);
+            if (!depthTarget)
+            {
+                error = "Could not create the tone-map sharpening input depth target";
+                return false;
+            }
+            RenderAPI::Get().SetRenderTarget(depthTarget);
+            RenderAPI::Get().ClearRenderTarget(FBT_DEPTH, glm::vec4(0.0f), 0.35f);
+            RenderAPI::Get().SubmitCommandBuffer(nullptr);
+
+            struct alignas(16) ToneMapConstants
+            {
+                float Exposure = 1.0f;
+                float BloomIntensity = 0.0f;
+                float SharpeningStrength = 0.0f;
+                float Padding = 0.0f;
+            } constants;
+            static_assert(sizeof(ToneMapConstants) == 16u);
+
+            auto renderCapture = [&](float sharpeningStrength, StringView debugName, Image& capture) {
+                const Ref<Texture> color = CreateColorTexture(TEST_WIDTH, TEST_HEIGHT, String(debugName) + "/Color");
+                const Ref<Texture> outputObjectIds =
+                  CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::R32I, String(debugName) + "/ObjectIds");
+                const Ref<Texture> depth = CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::DEPTH32F, String(debugName) + "/Depth");
+                const Ref<RenderTexture> target = CreateTarget({ color, outputObjectIds }, TEST_WIDTH, TEST_HEIGHT, depth);
+                if (!color || !outputObjectIds || !depth || !target)
+                {
+                    error = "Could not create tone-map sharpening output resources";
+                    return false;
+                }
+
+                constants.SharpeningStrength = sharpeningStrength;
+                if (!toneMap.WriteUniformBlock(0u, 1u, &constants, sizeof(constants)) || !toneMap.SetTexture(0u, 0u, hdrColor) ||
+                    !toneMap.SetTexture(0u, 2u, objectIds) || !toneMap.SetTexture(0u, 3u, sceneDepth) || !toneMap.SetTexture(0u, 4u, bloom))
+                {
+                    error = "Could not bind tone-map sharpening inputs";
+                    return false;
+                }
+
+                RenderAPI::Get().SetRenderTarget(target);
+                RenderAPI::Get().SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+                RenderAPI::Get().ClearRenderTarget(FBT_COLOR | FBT_DEPTH, glm::vec4(0.0f), 0.0f, 0u, 1u << 0u);
+                if (!toneMap.Bind())
+                {
+                    error = "Could not bind the tone-map sharpening material";
+                    return false;
+                }
+                RenderAPI::Get().SetVertexLayout(CreateRef<BufferLayout>());
+                RenderAPI::Get().SetDrawMode(DrawMode::TRIANGLE_LIST);
+                RenderAPI::Get().Draw(0u, 3u, 1u);
+                RenderAPI::Get().SubmitCommandBuffer(nullptr);
+                return Capture(color, capture, error);
+            };
+
+            Image baseline;
+            Image sharpened;
+            if (!renderCapture(0.0f, "RenderTests/SharpeningOff", baseline) || !renderCapture(1.0f, "RenderTests/SharpeningOn", sharpened))
+                return false;
+
+            auto edgeEnergy = [](const Image& input) {
+                uint64_t energy = 0u;
+                for (uint32_t y = 0u; y < input.Height; ++y)
+                {
+                    for (uint32_t x = 1u; x < input.Width; ++x)
+                    {
+                        const uint8_t* left = input.Pixel(x - 1u, y);
+                        const uint8_t* right = input.Pixel(x, y);
+                        for (uint32_t channel = 0u; channel < 3u; ++channel)
+                            energy += static_cast<uint64_t>(std::abs(static_cast<int32_t>(right[channel]) - left[channel]));
+                    }
+                }
+                return energy;
+            };
+            if (edgeEnergy(sharpened) <= edgeEnergy(baseline))
+            {
+                error = "Sharpening did not increase deterministic edge contrast";
+                return false;
+            }
+            constexpr uint8_t expectedAlpha = 255u;
+            if (std::abs(static_cast<int32_t>(baseline.Pixel(TEST_WIDTH / 2u, TEST_HEIGHT / 2u)[3]) - expectedAlpha) > 2 ||
+                std::abs(static_cast<int32_t>(sharpened.Pixel(TEST_WIDTH / 2u, TEST_HEIGHT / 2u)[3]) - expectedAlpha) > 2)
+            {
+                error = "Tone-map sharpening changed the established opaque output alpha";
+                return false;
+            }
+
+            Image comparison(TEST_WIDTH * 2u, TEST_HEIGHT);
+            for (uint32_t y = 0u; y < TEST_HEIGHT; ++y)
+            {
+                std::memcpy(comparison.Pixel(0u, y), baseline.Pixel(0u, y), static_cast<size_t>(TEST_WIDTH) * 4u);
+                std::memcpy(comparison.Pixel(TEST_WIDTH, y), sharpened.Pixel(0u, y), static_cast<size_t>(TEST_WIDTH) * 4u);
+            }
+            image = std::move(comparison);
+            return true;
+        }
+
         bool RenderWeightedOit(Image& image, String& error)
         {
             static const String accumulationSource = R"(#lang glsl
@@ -989,6 +1132,7 @@ void main()
                 { "fullscreen-pattern", shaderTolerance, RenderFullscreenPattern },
                 { "texture-mip-selection", shaderTolerance, RenderMipSelection },
                 { "depth-output-matrix", exact, RenderDepthOutputMatrix },
+                { "post-sharpening", shaderTolerance, RenderPostSharpening },
                 { "weighted-oit", shaderTolerance, RenderWeightedOit },
                 { "toon-silhouette", toonTolerance, RenderToonSilhouette },
             };

@@ -136,6 +136,15 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
 - [x] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
 
+## 4. Contrast-adaptive sharpening
+
+Status: implemented and cross-backend validated
+
+- [x] Fuse a bounded five-tap contrast-adaptive sharpen into tone mapping after ACES, without adding another graph pass, full-resolution transient, or draw.
+- [x] Keep sharpening opt-in through per-renderer settings carried by render snapshots, clamp and finite-check strength, clamp taps at image edges, sanitize non-finite HDR values, bound output, preserve the established opaque output alpha, and bypass sharpening when post-processing is disabled.
+- [x] Add a deterministic production ToneMap capture comparing explicit off/on strengths with semantic edge-energy and alpha checks.
+- [x] Cook and pack the updated ToneMap asset, then verify the shared reference on Vulkan and OpenGL without updating unrelated references.
+
 ## Validation
 
 - [x] Focused `[Mips],[Materials],[Resources],[Shader],[Animation]` tests: 28 cases and 277 assertions passed; all 14 GPU-driven and legacy toon shader assets compiled together.
@@ -153,6 +162,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Strict transparent render-layer validation: focused Release render-world/GPU-scene/draw-generation coverage passed 164 assertions in 24 cases; full no-build Release Catch2 passed 29,399 assertions in 574 cases with one optional CoreCLR case skipped; the no-build Vulkan/OpenGL harness passed 5/5 captures per backend and all 5 cross-backend comparisons.
 - [x] Weighted blended OIT validation: focused Release coverage passed 598 assertions in 47 cases for GPU-draw grouping, graph resources/transitions, shader variations, and fallback selection. The 60-resource renderer harness passed 6/6 Vulkan and OpenGL captures, including weighted-OIT pixels through the packed production composite shader, with all 6 cross-backend comparisons matching.
 - [x] Toon-silhouette validation: the full no-build Release harness passed 7/7 Vulkan and OpenGL captures on Intel Iris Xe, including the material-model silhouette through `SceneRenderer`; all seven cross-backend comparisons passed.
+- [x] Contrast-adaptive sharpening validation: focused Release shader coverage passed 101 assertions in 2 cases, snapshot settings propagation passed 4 assertions, and the full suite passed 36,015 assertions in 675 cases with one optional CoreCLR case skipped. The 61-resource built-in pack loaded successfully; Vulkan and OpenGL each passed 8/8 captures on Intel Iris Xe, including the reviewed opt-in sharpening reference, and all eight backend comparisons matched. An explicit Vulkan cook-and-exit shutdown returned 0 with zero VMA leak lines.
 - [x] Add a deterministic overlapping-transparency renderer capture that checks additive accumulation, revealage clear-to-one, the packed production composite shader, analytic band colors, and forward-versus-reversed layer order on Vulkan and compute-capable OpenGL. The capture exposed and fixed an 8-byte reflected uniform-block versus 16-byte CPU-write mismatch that had forced every runtime OIT frame onto its premultiplied fallback.
 - [ ] Add a serialized-scene capture through the full `SceneRenderer` OIT path so Forward+ variations, blend/depth overrides, bindings, indirect-run filtering, and graph transitions are covered together rather than by focused component tests.
 - [ ] Add an OpenGL 4.1 compatibility-path scene capture that proves requested weighted OIT degrades to premultiplied transparency without compute or load/store textures.

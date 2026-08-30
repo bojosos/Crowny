@@ -124,10 +124,15 @@ TEST_CASE("Scene snapshot extraction preserves the frame-context number", "[Memo
     const Ref<Scene> scene = CreateRef<Scene>(false);
     SceneRenderer renderer(scene, nullptr);
     RenderSnapshot snapshot;
+    RenderPipelineSettings settings;
+    settings.SharpeningStrength = 0.75f;
+    renderer.SetRenderPipelineSettings(settings);
 
     snapshot.FrameNumber = 73;
     renderer.ExtractSnapshot(snapshot, false);
     CHECK(snapshot.FrameNumber == 73);
+    CHECK(snapshot.PipelineSettings.SharpeningStrength == 0.75f);
+    CHECK(renderer.GetRenderPipelineSettings().SharpeningStrength == 0.75f);
 
     Camera camera;
     snapshot.FrameNumber = 74;

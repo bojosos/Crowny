@@ -148,6 +148,7 @@ namespace Crowny
         uint32_t MsaaSamples = 1;
         float RenderScale = 1.0f;
         float MinimumDynamicResolutionScale = 0.75f;
+        float SharpeningStrength = 0.0f;
         bool EnableDynamicResolution = true;
         bool EnableTaa = true;
         bool EnableGtao = true;

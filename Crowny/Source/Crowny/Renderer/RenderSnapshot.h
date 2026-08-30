@@ -10,6 +10,7 @@
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/RenderResourceChanges.h"
+#include "Crowny/Renderer/RenderTypes.h"
 #include "Crowny/Renderer/RenderWorld.h"
 #include "Crowny/Renderer/ShadowAtlas.h"
 
@@ -144,6 +145,7 @@ namespace Crowny
         bool EnableMotionVectors = true;
         bool DrawGrid = false;
         GridSettings Grid;
+        RenderPipelineSettings PipelineSettings;
         PolygonMode OverridePolygonMode = PolygonMode::Solid;
 
         static constexpr bool CanAppendMaterials(size_t storedCount, size_t appendCount) noexcept
@@ -226,6 +228,7 @@ namespace Crowny
             PreviousViewProjection = glm::mat4(1.0f);
             DrawGrid = false;
             Grid = {};
+            PipelineSettings = {};
             OverridePolygonMode = PolygonMode::Solid;
         }
     };
