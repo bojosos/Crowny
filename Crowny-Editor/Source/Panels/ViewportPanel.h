@@ -7,7 +7,7 @@
 
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Events/Event.h"
-#include "Crowny/RenderAPI/RenderTarget.h"
+#include "Crowny/RenderAPI/RenderTexture.h"
 
 #include <imgui.h>
 
@@ -30,15 +30,18 @@ namespace Crowny
     {
     public:
         const FileEntry* GetFileEntry() const { return m_FileEntry; }
-        const glm::vec2& GetRelativePosition() const { return m_Coords; }
+        const glm::vec2& GetScreenPosition() const { return m_ScreenPosition; }
 
         EVENT_CLASS_CATEGORY(EventCategoryImGui);
         EVENT_CLASS_TYPE(ImGuiViewportSceneDragged);
 
-        ImGuiViewportSceneDraggedEvent(const FileEntry* fileEntry, const glm::vec2& coords) : m_FileEntry(fileEntry), m_Coords(coords) {}
+        ImGuiViewportSceneDraggedEvent(const FileEntry* fileEntry, const glm::vec2& screenPosition)
+          : m_ScreenPosition(screenPosition), m_FileEntry(fileEntry)
+        {
+        }
 
     private:
-        glm::vec2 m_Coords; // The coordinates relative to the window.
+        glm::vec2 m_ScreenPosition;
         const FileEntry* m_FileEntry;
     };
 
@@ -54,7 +57,7 @@ namespace Crowny
         const glm::vec2& GetViewportSize() const { return m_ViewportSize; }
         const glm::vec4& GetViewportBounds() const { return m_ViewportBounds; }
         void SetEventCallback(const EventCallbackFn& onclicked);
-        void SetEditorRenderTarget(const Ref<RenderTarget>& rt);
+        void SetEditorRenderTarget(const Ref<RenderTexture>& rt);
         void SetShowStatistics(bool show) { m_ShowStatistics = show; }
 
         void SetGizmoMode(GizmoEditMode gizmoMode) { m_GizmoMode = gizmoMode; }
@@ -93,7 +96,7 @@ namespace Crowny
         bool m_SnapEnabled = false;
         bool m_ShowStatistics = true;
         bool m_MouseOverHud = false;
-        Ref<RenderTarget> m_RenderTarget;
+        Ref<RenderTexture> m_RenderTarget;
         EventCallbackFn OnEvent;
         GizmoEditMode m_GizmoMode = GizmoEditMode::Translate;
         glm::vec2 m_ViewportSize = { 1.0f, 1.0f };

@@ -583,17 +583,23 @@ namespace Crowny
         viewportPanelSize.y = std::max(viewportPanelSize.y, 1.0f);
 
         m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
-        RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
-        Ref<Texture> texture = rt->GetColorTexture(0);
-
-        ImTextureID textureID = ImGuiVulkanTexture::Get(texture);
-        ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 }); // The viewport itself
+        const Ref<Texture> texture = m_RenderTarget ? m_RenderTarget->GetColorTexture(0) : nullptr;
+        if (texture)
+        {
+            const ImTextureID textureID = ImGuiVulkanTexture::Get(texture);
+            ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 }); // The viewport itself
+        }
+        else
+        {
+            CancelActiveInteractions();
+            ImGui::Dummy(ImVec2(m_ViewportSize.x, m_ViewportSize.y));
+        }
 
         const ImVec2 imageMin = ImGui::GetItemRectMin();
         const ImVec2 imageMax = ImGui::GetItemRectMax();
         m_ViewportBounds = { imageMin.x, imageMin.y, imageMax.x, imageMax.y };
 
-        if (ImGui::BeginDragDropTarget())
+        if (texture && ImGui::BeginDragDropTarget())
         {
             const FileEntry* draggedAsset = GetDraggedAsset();
             const bool validAsset = IsSupportedViewportAsset(draggedAsset);
@@ -612,11 +618,8 @@ namespace Crowny
 
             if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(IsSupportedViewportAsset))
             {
-                ImVec2 mouseCoords = ImGui::GetMousePos();
-                glm::vec2 coords = { mouseCoords.x - imageMin.x, mouseCoords.y - imageMin.y };
-                coords.y = m_ViewportSize.y - coords.y - 1;
-
-                ImGuiViewportSceneDraggedEvent fileDragEvent(fileEntry, coords);
+                const ImVec2 mousePosition = ImGui::GetMousePos();
+                ImGuiViewportSceneDraggedEvent fileDragEvent(fileEntry, glm::vec2(mousePosition.x, mousePosition.y));
                 if (OnEvent)
                     OnEvent(fileDragEvent);
             }
@@ -772,6 +775,6 @@ namespace Crowny
 
     void ViewportPanel::SetEventCallback(const EventCallbackFn& onEvent) { OnEvent = onEvent; }
 
-    void ViewportPanel::SetEditorRenderTarget(const Ref<RenderTarget>& rt) { m_RenderTarget = rt; }
+    void ViewportPanel::SetEditorRenderTarget(const Ref<RenderTexture>& rt) { m_RenderTarget = rt; }
 
 } // namespace Crowny

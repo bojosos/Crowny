@@ -205,6 +205,8 @@ namespace Crowny
 
             Input::BeginFrame();
             Window::PollEvents();
+            for (const Ref<RenderWindow>& window : m_Windows)
+                window->GetWindow()->OnUpdate();
             Input::UpdateGamepads();
             Input::UpdateActions();
             if (!m_Windows.empty() && m_Windows.front()->GetWindow()->ShouldClose())
@@ -238,7 +240,6 @@ namespace Crowny
 
             for (const Ref<RenderWindow>& window : m_Windows)
             {
-                window->GetWindow()->OnUpdate();
                 rapi.SwapBuffers(window);
             }
 #ifdef MC_WEB
@@ -280,6 +281,6 @@ namespace Crowny
     bool Application::OnWindowMinimized(WindowMinimizeEvent& e)
     {
         m_Minimized = e.IsMinimized();
-        return true;
+        return false;
     }
 } // namespace Crowny

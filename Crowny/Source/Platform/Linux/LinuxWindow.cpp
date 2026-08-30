@@ -53,6 +53,23 @@ namespace Crowny
 
     LinuxWindow::~LinuxWindow() { Shutdown(); }
 
+    void LinuxWindow::OnUpdate()
+    {
+        if (!m_EventState.HasPendingChanges())
+            return;
+
+        RefreshWindowState();
+        const WindowStateSnapshot& state = m_EventState.GetCurrent();
+        if (m_Mode == WindowMode::Windowed && !state.Minimized && !state.Maximized && state.Width > 0 && state.Height > 0)
+        {
+            m_WindowedLeft = state.Left;
+            m_WindowedTop = state.Top;
+            m_WindowedWidth = state.Width;
+            m_WindowedHeight = state.Height;
+        }
+        m_EventState.Flush(m_Data.EventCallback);
+    }
+
     void LinuxWindow::Init(const WindowDesc& windowDesc)
     {
         m_Desc = windowDesc;
@@ -156,46 +173,27 @@ namespace Crowny
 
         SetSizeLimits(m_Desc.MinWidth, m_Desc.MinHeight, m_Desc.MaxWidth, m_Desc.MaxHeight);
         SetAspectRatio(m_Desc.AspectRatioNumerator, m_Desc.AspectRatioDenominator);
-        UpdateDimensions();
-        m_Data.LastEventWidth = m_Data.Width;
-        m_Data.LastEventHeight = m_Data.Height;
-        m_Data.LastEventFramebufferWidth = m_Data.FramebufferWidth;
-        m_Data.LastEventFramebufferHeight = m_Data.FramebufferHeight;
+        m_EventState.Reset(QueryWindowState());
         if (m_Mode == WindowMode::Windowed)
             RememberWindowedRect();
-
-        float xScale = 1.0f;
-        float yScale = 1.0f;
-        glfwGetWindowContentScale(m_Window, &xScale, &yScale);
-        m_Data.ContentScaleX = xScale;
-        m_Data.ContentScaleY = yScale;
 
         if (m_Desc.Modal)
             CW_ENGINE_WARN("GLFW does not support application-modal windows without a parent window");
 
         ApplyCursor();
-        CW_ENGINE_INFO("Created {}x{} window '{}'", m_Data.Width, m_Data.Height, m_Data.Title);
+        CW_ENGINE_INFO("Created {}x{} window '{}'", GetWidth(), GetHeight(), m_Data.Title);
     }
 
     void LinuxWindow::InstallCallbacks()
     {
         glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* nativeWindow, int width, int height) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            window.m_Data.Width = static_cast<uint32_t>(std::max(0, width));
-            window.m_Data.Height = static_cast<uint32_t>(std::max(0, height));
-            if (window.m_Mode == WindowMode::Windowed && width > 0 && height > 0)
-            {
-                window.m_WindowedWidth = static_cast<uint32_t>(width);
-                window.m_WindowedHeight = static_cast<uint32_t>(height);
-            }
-            window.UpdateDimensions();
-            window.DispatchResizeIfChanged();
+            window.m_EventState.SetWindowSize(width, height);
         });
 
-        glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* nativeWindow, int, int) {
+        glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* nativeWindow, int width, int height) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            window.UpdateDimensions();
-            window.DispatchResizeIfChanged();
+            window.m_EventState.SetFramebufferSize(width, height);
         });
 
         glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* nativeWindow) {
@@ -208,21 +206,12 @@ namespace Crowny
 
         glfwSetWindowIconifyCallback(m_Window, [](GLFWwindow* nativeWindow, int iconified) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            WindowMinimizeEvent event(iconified == GLFW_TRUE);
-            window.Dispatch(event);
+            window.m_EventState.SetMinimized(iconified == GLFW_TRUE);
         });
 
         glfwSetWindowPosCallback(m_Window, [](GLFWwindow* nativeWindow, int left, int top) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            window.m_Data.Left = left;
-            window.m_Data.Top = top;
-            if (window.m_Mode == WindowMode::Windowed)
-            {
-                window.m_WindowedLeft = left;
-                window.m_WindowedTop = top;
-            }
-            WindowMoveEvent event(left, top);
-            window.Dispatch(event);
+            window.m_EventState.SetPosition(left, top);
         });
 
         glfwSetWindowFocusCallback(m_Window, [](GLFWwindow* nativeWindow, int focused) {
@@ -230,34 +219,23 @@ namespace Crowny
             if (focused == GLFW_TRUE)
             {
                 Input::OnFocusChanged(true);
-                WindowFocusEvent event;
-                window.Dispatch(event);
+                window.m_EventState.SetFocused(true);
             }
             else
             {
                 Input::OnFocusChanged(false);
-                WindowLostFocusEvent event;
-                window.Dispatch(event);
+                window.m_EventState.SetFocused(false);
             }
         });
 
         glfwSetWindowMaximizeCallback(m_Window, [](GLFWwindow* nativeWindow, int maximized) {
-            if (maximized == GLFW_FALSE)
-            {
-                auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-                if (window.m_Mode == WindowMode::Windowed)
-                    window.RememberWindowedRect();
-            }
+            auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
+            window.m_EventState.SetMaximized(maximized == GLFW_TRUE);
         });
 
         glfwSetWindowContentScaleCallback(m_Window, [](GLFWwindow* nativeWindow, float xScale, float yScale) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            window.m_Data.ContentScaleX = xScale;
-            window.m_Data.ContentScaleY = yScale;
-            WindowContentScaleEvent event(xScale, yScale);
-            window.Dispatch(event);
-            window.UpdateDimensions();
-            window.DispatchResizeIfChanged();
+            window.m_EventState.SetContentScale(xScale, yScale);
         });
 
         glfwSetKeyCallback(m_Window, [](GLFWwindow* nativeWindow, int key, int scanCode, int action, int modifiers) {
@@ -339,10 +317,11 @@ namespace Crowny
             m_Data.EventCallback(event);
     }
 
-    void LinuxWindow::UpdateDimensions()
+    WindowStateSnapshot LinuxWindow::QueryWindowState() const
     {
+        WindowStateSnapshot state = m_EventState.GetCurrent();
         if (m_Window == nullptr)
-            return;
+            return state;
 
         int width = 0;
         int height = 0;
@@ -353,27 +332,20 @@ namespace Crowny
         glfwGetWindowSize(m_Window, &width, &height);
         glfwGetFramebufferSize(m_Window, &framebufferWidth, &framebufferHeight);
         glfwGetWindowPos(m_Window, &left, &top);
-        m_Data.Width = static_cast<uint32_t>(std::max(0, width));
-        m_Data.Height = static_cast<uint32_t>(std::max(0, height));
-        m_Data.FramebufferWidth = static_cast<uint32_t>(std::max(0, framebufferWidth));
-        m_Data.FramebufferHeight = static_cast<uint32_t>(std::max(0, framebufferHeight));
-        m_Data.Left = left;
-        m_Data.Top = top;
+        glfwGetWindowContentScale(m_Window, &state.ContentScaleX, &state.ContentScaleY);
+        state.Width = static_cast<uint32_t>(std::max(0, width));
+        state.Height = static_cast<uint32_t>(std::max(0, height));
+        state.FramebufferWidth = static_cast<uint32_t>(std::max(0, framebufferWidth));
+        state.FramebufferHeight = static_cast<uint32_t>(std::max(0, framebufferHeight));
+        state.Left = left;
+        state.Top = top;
+        state.Focused = glfwGetWindowAttrib(m_Window, GLFW_FOCUSED) == GLFW_TRUE;
+        state.Minimized = glfwGetWindowAttrib(m_Window, GLFW_ICONIFIED) == GLFW_TRUE;
+        state.Maximized = glfwGetWindowAttrib(m_Window, GLFW_MAXIMIZED) == GLFW_TRUE;
+        return state;
     }
 
-    void LinuxWindow::DispatchResizeIfChanged()
-    {
-        if (m_Data.Width == m_Data.LastEventWidth && m_Data.Height == m_Data.LastEventHeight &&
-            m_Data.FramebufferWidth == m_Data.LastEventFramebufferWidth && m_Data.FramebufferHeight == m_Data.LastEventFramebufferHeight)
-            return;
-
-        m_Data.LastEventWidth = m_Data.Width;
-        m_Data.LastEventHeight = m_Data.Height;
-        m_Data.LastEventFramebufferWidth = m_Data.FramebufferWidth;
-        m_Data.LastEventFramebufferHeight = m_Data.FramebufferHeight;
-        WindowResizeEvent event(m_Data.Width, m_Data.Height, m_Data.FramebufferWidth, m_Data.FramebufferHeight);
-        Dispatch(event);
-    }
+    void LinuxWindow::RefreshWindowState() { m_EventState.SetSnapshot(QueryWindowState()); }
 
     void LinuxWindow::RememberWindowedRect()
     {
@@ -559,8 +531,7 @@ namespace Crowny
         m_Desc.Mode = m_Mode;
         glfwSetWindowMonitor(m_Window, monitor, 0, 0, static_cast<int>(width), static_cast<int>(height),
                              refreshRate == 0 ? GLFW_DONT_CARE : static_cast<int>(refreshRate));
-        UpdateDimensions();
-        DispatchResizeIfChanged();
+        RefreshWindowState();
     }
 
     void LinuxWindow::SetBorderlessFullscreen(uint32_t monitorIdx)
@@ -586,8 +557,7 @@ namespace Crowny
         m_Desc.Mode = m_Mode;
         glfwSetWindowAttrib(m_Window, GLFW_DECORATED, GLFW_FALSE);
         glfwSetWindowMonitor(m_Window, nullptr, left, top, videoMode->width, videoMode->height, GLFW_DONT_CARE);
-        UpdateDimensions();
-        DispatchResizeIfChanged();
+        RefreshWindowState();
     }
 
     void LinuxWindow::SetWindowed(uint32_t width, uint32_t height)
@@ -606,9 +576,8 @@ namespace Crowny
         glfwSetWindowAttrib(m_Window, GLFW_DECORATED, m_Desc.ShowTitleBar && m_Desc.ShowBorder ? GLFW_TRUE : GLFW_FALSE);
         SetSizeLimits(m_Desc.MinWidth, m_Desc.MinHeight, m_Desc.MaxWidth, m_Desc.MaxHeight);
         SetAspectRatio(m_Desc.AspectRatioNumerator, m_Desc.AspectRatioDenominator);
-        UpdateDimensions();
+        RefreshWindowState();
         RememberWindowedRect();
-        DispatchResizeIfChanged();
     }
 
     void LinuxWindow::SetSizeLimits(uint32_t minWidth, uint32_t minHeight, uint32_t maxWidth, uint32_t maxHeight)

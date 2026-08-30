@@ -22,6 +22,7 @@
 #include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/PrefabUtils.h"
+#include "Editor/ViewportPicking.h"
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AudioMixerPanel.h"
@@ -322,8 +323,8 @@ namespace Crowny
                 OpenScene(fileEntry->Filepath);
             else if (assetType == AssetType::Material)
             {
-                Entity entity = PickEntity(fileDragEvent.GetRelativePosition());
-                if (entity)
+                Entity entity = PickEntity(fileDragEvent.GetScreenPosition());
+                if (entity && entity.HasComponent<MeshRendererComponent>())
                 {
                     const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
                     entity.GetComponent<MeshRendererComponent>().SetMaterial(0, static_asset_cast<Material>(assetHandle));
@@ -429,63 +430,70 @@ namespace Crowny
 
     Entity EditorLayer::PickEntity()
     {
-        const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
-        const glm::vec4& bounds = m_ViewportPanel->GetViewportBounds();
-        const ImVec2 mouseCoords = ImGui::GetMousePos();
-        glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
-        coords.y = m_ViewportSize.y - coords.y - 1;
-        return PickEntity(coords);
+        const ImVec2 mousePosition = ImGui::GetMousePos();
+        return PickEntity(glm::vec2(mousePosition.x, mousePosition.y));
     }
 
-    Entity EditorLayer::PickEntity(const glm::vec2& coords)
+    Entity EditorLayer::PickEntity(const glm::vec2& screenPosition)
     {
-        const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
-        if (!scene || !m_RenderTarget || !std::isfinite(coords.x) || !std::isfinite(coords.y) || coords.x < 0.0f || coords.y < 0.0f)
-            return Entity(entt::null, scene.get());
+        SceneManager* sceneManager = SceneManager::TryGet();
+        if (sceneManager == nullptr || m_ViewportPanel == nullptr || !m_RenderTarget)
+            return {};
 
-        RenderTexture* renderTexture = static_cast<RenderTexture*>(m_RenderTarget.get());
-        const Ref<Texture> objectIdTexture = renderTexture->GetColorTexture(1);
+        const Ref<Scene> scene = sceneManager->GetActiveScene();
+        if (!scene)
+            return {};
+
+        const Ref<Texture> objectIdTexture = m_RenderTarget->GetColorTexture(1);
         if (!objectIdTexture || objectIdTexture->GetFormat() != TextureFormat::R32I)
-            return Entity(entt::null, scene.get());
+            return {};
 
-        const uint32_t x = static_cast<uint32_t>(coords.x);
-        const uint32_t y = static_cast<uint32_t>(coords.y);
-        if (x >= objectIdTexture->GetWidth() || y >= objectIdTexture->GetHeight())
-            return Entity(entt::null, scene.get());
+        const ViewportTextureExtent textureExtent{ objectIdTexture->GetWidth(), objectIdTexture->GetHeight() };
+        const std::optional<ViewportPickPixel> pixel =
+          ResolveViewportPickPixel(screenPosition, m_ViewportPanel->GetViewportBounds(), textureExtent);
+        if (!pixel)
+            return {};
 
         int32_t objectId = 0;
-        if (!objectIdTexture->ReadPixel(x, y, &objectId, sizeof(objectId)) || objectId <= 0)
-            return Entity(entt::null, scene.get());
+        if (!objectIdTexture->ReadPixel(pixel->X, pixel->Y, &objectId, sizeof(objectId)) || objectId <= 0)
+            return {};
 
         const entt::entity handle = static_cast<entt::entity>(static_cast<uint32_t>(objectId - 1));
         const Entity entity(handle, scene.get());
-        return entity ? entity : Entity(entt::null, scene.get());
+        return entity ? entity : Entity{};
     }
 
     void EditorLayer::HandleRenderTargetResize()
     {
-        Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
-        auto& rapi = *RenderAPI::TryGet();
-        if (m_ViewportPanel->IsShown() &&
-            (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x || m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
+        RenderAPI* renderAPI = RenderAPI::TryGet();
+        if (renderAPI == nullptr || m_ViewportPanel == nullptr || m_SceneRenderer == nullptr)
+            return;
+
+        const glm::vec2 displaySize = m_ViewportPanel->GetViewportSize();
+        const std::optional<ViewportTextureExtent> viewportExtent = ResolveViewportTextureExtent(displaySize);
+        if (!viewportExtent)
+            return;
+
+        const bool resizeRequired = !m_RenderTarget || m_RenderTarget->GetProperties().Width != viewportExtent->Width ||
+                                    m_RenderTarget->GetProperties().Height != viewportExtent->Height;
+        if (m_ViewportPanel->IsShown() && resizeRequired)
         {
-            scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
             TextureDesc colorParams;
-            colorParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
-            colorParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
+            colorParams.Width = viewportExtent->Width;
+            colorParams.Height = viewportExtent->Height;
             colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
             colorParams.DebugName = "EditorLayer/ViewportColor";
 
             TextureDesc objectId;
-            objectId.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
-            objectId.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
+            objectId.Width = viewportExtent->Width;
+            objectId.Height = viewportExtent->Height;
             objectId.Format = TextureFormat::R32I;
             objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
             objectId.DebugName = "EditorLayer/ViewportObjectId";
 
             TextureDesc depthParams;
-            depthParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
-            depthParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
+            depthParams.Width = viewportExtent->Width;
+            depthParams.Height = viewportExtent->Height;
             depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
             depthParams.Format = TextureFormat::DEPTH24STENCIL8;
             depthParams.DebugName = "EditorLayer/ViewportDepth";
@@ -497,16 +505,28 @@ namespace Crowny
             rtProps.ColorSurfaces[0].Texture = color1;
             rtProps.ColorSurfaces[1].Texture = color2;
             rtProps.DepthSurface.Texture = depth;
-            rtProps.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
-            rtProps.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
-            m_RenderTarget = RenderTexture::Create(rtProps);
+            rtProps.Width = viewportExtent->Width;
+            rtProps.Height = viewportExtent->Height;
+            const Ref<RenderTexture> resizedRenderTarget = color1 && color2 && depth ? RenderTexture::Create(rtProps) : nullptr;
+            if (resizedRenderTarget)
+            {
+                m_RenderTarget = resizedRenderTarget;
+                if (SceneManager* sceneManager = SceneManager::TryGet())
+                {
+                    if (const Ref<Scene> scene = sceneManager->GetActiveScene())
+                        scene->OnViewportResize(viewportExtent->Width, viewportExtent->Height);
+                }
+            }
         }
-        m_ViewportSize = m_ViewportPanel->GetViewportSize();
+
+        m_ViewportSize = displaySize;
+        if (!m_RenderTarget)
+            return;
         m_SceneRenderer->SetRenderTarget(m_RenderTarget);
 
-        rapi.SetRenderTarget(m_RenderTarget);
-        rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-        rapi.ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
+        renderAPI->SetRenderTarget(m_RenderTarget);
+        renderAPI->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+        renderAPI->ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
     }
 
     RenderSnapshot& EditorLayer::AcquireSnapshot()

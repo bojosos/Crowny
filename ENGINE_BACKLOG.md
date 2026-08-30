@@ -89,6 +89,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Package built-in shaders, textures, fonts, icons, and fallback assets into a versioned built-in resource pack. Keep source development and hot reload convenient.
 - [ ] Expand rendering statistics: FPS, CPU/GPU frame time, vertices, triangles, draw/dispatch calls, culled instances, shadow work, upload bytes, descriptor use, geometry-heap occupancy, and frame-allocation counts.
 - [ ] Unify entity picking without adding an entity ID output to every material shader. Make readback asynchronous, bounds-safe, generation-checked, and fast for large scenes.
+  - [x] Click and material-drop picking share one finite, half-open display-to-texture coordinate resolver, use the actual object-ID extent, reject invalid targets before synchronous readback, and propagate the new viewport size only after target replacement succeeds.
 - [ ] Finish cameras: projection validation, physical/orthographic controls, viewport/aspect changes, clear modes, culling masks, camera selection, and C# parity.
 - [ ] Add and retain reference-image regression tests across Vulkan and OpenGL, with tolerances, diff artifacts, headless CI policy, and future-backend comparison.
 - [ ] Keep `RENDERER_BACKLOG.md` as the detailed renderer design and verification log.
@@ -151,6 +152,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Finish `PixelUtils` and `PixelData`: validated pitches/sizes, all declared conversions, compression/decompression boundaries, mip generation, color spaces, alpha rules, safe overflow handling, and row-parallel kernels for large images.
   - [x] Alpha-coverage mip scaling preserves premultiplied RGB through the existing unpremultiply/store path, including sparse opaque colors and fully transparent inputs.
 - [ ] Finish the cross-platform window system: multiple windows where supported, DPI, display enumeration, fullscreen modes, resize/minimize/focus, cursor modes, clipboard, drag/drop, icons, input routing, Vulkan/OpenGL surface lifetime, and C# APIs.
+  - [x] GLFW logical-size, framebuffer-size, DPI, position, focus, and minimize callback storms coalesce into one deterministic, allocation-free state batch per poll on Windows and Linux.
 
 ## Performance, quality, and platform support
 

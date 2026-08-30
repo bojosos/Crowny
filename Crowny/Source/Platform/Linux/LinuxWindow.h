@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Window/Window.h"
+#include "Crowny/Window/WindowEventState.h"
 
 #include <GLFW/glfw3.h>
 #include <array>
@@ -16,14 +17,17 @@ namespace Crowny
         explicit LinuxWindow(const WindowDesc& windowDesc);
         ~LinuxWindow() override;
 
-        void OnUpdate() override {}
+        void OnUpdate() override;
 
-        uint32_t GetWidth() const override { return m_Data.Width; }
-        uint32_t GetHeight() const override { return m_Data.Height; }
-        uint32_t GetFramebufferWidth() const override { return m_Data.FramebufferWidth; }
-        uint32_t GetFramebufferHeight() const override { return m_Data.FramebufferHeight; }
-        glm::ivec2 GetPosition() const override { return { m_Data.Left, m_Data.Top }; }
-        glm::vec2 GetContentScale() const override { return { m_Data.ContentScaleX, m_Data.ContentScaleY }; }
+        uint32_t GetWidth() const override { return m_EventState.GetCurrent().Width; }
+        uint32_t GetHeight() const override { return m_EventState.GetCurrent().Height; }
+        uint32_t GetFramebufferWidth() const override { return m_EventState.GetCurrent().FramebufferWidth; }
+        uint32_t GetFramebufferHeight() const override { return m_EventState.GetCurrent().FramebufferHeight; }
+        glm::ivec2 GetPosition() const override { return { m_EventState.GetCurrent().Left, m_EventState.GetCurrent().Top }; }
+        glm::vec2 GetContentScale() const override
+        {
+            return { m_EventState.GetCurrent().ContentScaleX, m_EventState.GetCurrent().ContentScaleY };
+        }
         WindowMode GetMode() const override { return m_Mode; }
         bool IsHidden() const override;
         bool IsFocused() const override;
@@ -57,18 +61,6 @@ namespace Crowny
         struct WindowData
         {
             String Title;
-            uint32_t Width = 0;
-            uint32_t Height = 0;
-            uint32_t FramebufferWidth = 0;
-            uint32_t FramebufferHeight = 0;
-            uint32_t LastEventWidth = 0;
-            uint32_t LastEventHeight = 0;
-            uint32_t LastEventFramebufferWidth = 0;
-            uint32_t LastEventFramebufferHeight = 0;
-            int32_t Left = 0;
-            int32_t Top = 0;
-            float ContentScaleX = 1.0f;
-            float ContentScaleY = 1.0f;
             EventCallbackFn EventCallback;
         };
 
@@ -76,8 +68,8 @@ namespace Crowny
         void Shutdown();
         void InstallCallbacks();
         void Dispatch(Event& event);
-        void UpdateDimensions();
-        void DispatchResizeIfChanged();
+        WindowStateSnapshot QueryWindowState() const;
+        void RefreshWindowState();
         void RememberWindowedRect();
         void ApplyCursor();
         GLFWcursor* GetOrCreateCursor(Cursor cursor);
@@ -87,6 +79,7 @@ namespace Crowny
         std::array<GLFWcursor*, 7> m_Cursors{};
         WindowDesc m_Desc;
         WindowData m_Data;
+        WindowEventState m_EventState;
         WindowMode m_Mode = WindowMode::Windowed;
         Cursor m_CursorType = Cursor::POINTER;
         bool m_CursorGrabbed = false;

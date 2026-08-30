@@ -26,6 +26,7 @@ namespace Crowny
     class NodeEditorPanel;
 #endif
     class RenderTarget;
+    class RenderTexture;
     class ImGuiMenuBar;
     class EditorPanelRegistry;
     class Scene;
@@ -60,7 +61,7 @@ namespace Crowny
     private:
         void ExecuteProjectAssetRefresh();
         Entity PickEntity();
-        Entity PickEntity(const glm::vec2& coords);
+        Entity PickEntity(const glm::vec2& screenPosition);
         void CreateRenderTarget();
         void HandleRenderTargetResize();
         void HandleSceneState(Timestep ts);
@@ -107,7 +108,7 @@ namespace Crowny
         Scope<EditorPanelRegistry> m_Panels;
         Scope<ImGuiMenuBar> m_MenuBar;
         Ref<Scene> m_Temp;
-        Ref<RenderTarget> m_RenderTarget;
+        Ref<RenderTexture> m_RenderTarget;
         Ref<RenderTarget> m_ResizedRenderTarget;
         RenderSnapshot m_FallbackSnapshot;
 
