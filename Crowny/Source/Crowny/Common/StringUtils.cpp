@@ -6,8 +6,55 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        bool NextSearchCharacter(StringView text, size_t& offset, bool caseSensitive, bool stripWhiteSpaces, bool stripUnderscores,
+                                 unsigned char& output)
+        {
+            while (offset < text.size())
+            {
+                unsigned char value = static_cast<unsigned char>(text[offset++]);
+                if (stripUnderscores && value == '_')
+                    value = ' ';
+                if (stripWhiteSpaces && value == ' ')
+                    continue;
 
-    bool StringUtils::IsSearchMathing(const String& item, const String& searchQuery, bool caseSensitive, bool stripWhiteSpaces, bool stripUnderscores)
+                output = caseSensitive ? value : static_cast<unsigned char>(std::tolower(value));
+                return true;
+            }
+            return false;
+        }
+
+        bool ContainsSearchTerm(StringView item, StringView searchTerm, bool caseSensitive, bool stripWhiteSpaces, bool stripUnderscores)
+        {
+            size_t termOffset = 0;
+            unsigned char termCharacter = 0;
+            if (!NextSearchCharacter(searchTerm, termOffset, caseSensitive, stripWhiteSpaces, false, termCharacter))
+                return true;
+
+            for (size_t start = 0; start < item.size(); ++start)
+            {
+                size_t itemOffset = start;
+                termOffset = 0;
+                bool matches = true;
+                while (NextSearchCharacter(searchTerm, termOffset, caseSensitive, stripWhiteSpaces, false, termCharacter))
+                {
+                    unsigned char itemCharacter = 0;
+                    if (!NextSearchCharacter(item, itemOffset, caseSensitive, stripWhiteSpaces, stripUnderscores, itemCharacter) ||
+                        itemCharacter != termCharacter)
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+                if (matches)
+                    return true;
+            }
+            return false;
+        }
+    } // namespace
+
+    bool StringUtils::IsSearchMathing(StringView item, StringView searchQuery, bool caseSensitive, bool stripWhiteSpaces, bool stripUnderscores)
     {
         if (searchQuery.empty())
             return true;
@@ -15,40 +62,30 @@ namespace Crowny
         if (item.empty())
             return false;
 
-        String itemSanitized = stripUnderscores ? StringUtils::Replace(item, "_", " ") : item;
-
-        if (stripWhiteSpaces)
-            itemSanitized = StringUtils::Replace(itemSanitized, " ", "");
-
-        String searchString = stripWhiteSpaces ? StringUtils::Replace(searchQuery, " ", "") : String(searchQuery);
-
-        if (!caseSensitive)
+        if (!stripWhiteSpaces && searchQuery.find(' ') != StringView::npos)
         {
-            StringUtils::ToLower(itemSanitized);
-            StringUtils::ToLower(searchString);
-        }
-
-        bool result = false;
-        if (searchString.find(" ") != String::npos)
-        {
-            const Vector<String> searchTerms = SplitString(searchString, " ");
-            for (const auto& searchTerm : searchTerms)
+            bool foundTerm = false;
+            size_t termBegin = 0;
+            while (termBegin < searchQuery.size())
             {
-                if (!searchTerm.empty() && itemSanitized.find(searchTerm) != String::npos)
-                    result = true;
-                else
-                {
-                    result = false;
+                while (termBegin < searchQuery.size() && searchQuery[termBegin] == ' ')
+                    ++termBegin;
+                if (termBegin == searchQuery.size())
                     break;
-                }
+
+                const size_t termEnd = searchQuery.find(' ', termBegin);
+                const StringView term = searchQuery.substr(termBegin, termEnd - termBegin);
+                foundTerm = true;
+                if (!ContainsSearchTerm(item, term, caseSensitive, false, stripUnderscores))
+                    return false;
+                if (termEnd == StringView::npos)
+                    break;
+                termBegin = termEnd + 1u;
             }
-        }
-        else
-        {
-            result = itemSanitized.find(searchString) != String::npos;
+            return foundTerm;
         }
 
-        return result;
+        return ContainsSearchTerm(item, searchQuery, caseSensitive, stripWhiteSpaces, stripUnderscores);
     }
 
     Vector<String> StringUtils::SplitString(const String& s, const String& separator)

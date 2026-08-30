@@ -21,7 +21,7 @@ namespace Crowny
         static void ToLower(String& string);
         static void ToUpper(String& string);
 
-        static bool IsSearchMathing(const String& item, const String& searchQuery, bool caseSensitive = false, bool stripWhiteSpaces = false,
+        static bool IsSearchMathing(StringView item, StringView searchQuery, bool caseSensitive = false, bool stripWhiteSpaces = false,
                                     bool stripUnderscores = false);
         static bool CaseInsensitiveCompare(const String& l, const String& r);
     };
