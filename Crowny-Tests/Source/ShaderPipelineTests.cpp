@@ -23,8 +23,7 @@ namespace
     {
     public:
         explicit ScopedTemporaryDirectory(StringView prefix)
-          : Root(std::filesystem::temp_directory_path() /
-                 (String(prefix) + UuidGenerator::Generate().ToString()))
+          : Root(std::filesystem::temp_directory_path() / (String(prefix) + UuidGenerator::Generate().ToString()))
         {
         }
 
@@ -260,9 +259,8 @@ void main() { outColor = vec4(1.0); }
     const ShaderCompileResult result = ShaderCompiler::CompileWithDiagnostics("invalid_custom_depth.glsl", source);
     CHECK_FALSE(result.Succeeded());
     CHECK(result.Description.Techniques.empty());
-    CHECK(std::count_if(result.Diagnostics.begin(), result.Diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
-              return diagnostic.Message.find("reverse-Z depth prepass") != String::npos;
-          }) == 3);
+    CHECK(std::count_if(result.Diagnostics.begin(), result.Diagnostics.end(),
+                        [](const ShaderDiagnostic& diagnostic) { return diagnostic.Message.find("reverse-Z depth prepass") != String::npos; }) == 3);
 }
 
 TEST_CASE("Shader compiler rejects malformed blend-state values", "[Shader]")
@@ -274,9 +272,8 @@ TEST_CASE("Shader compiler rejects malformed blend-state values", "[Shader]")
 
     const ShaderCompileResult result = ShaderCompiler::CompileWithDiagnostics("blend.glsl", source);
     CHECK_FALSE(result.Succeeded());
-    CHECK(std::any_of(result.Diagnostics.begin(), result.Diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
-        return diagnostic.Message.find("Invalid color blend equation") != String::npos;
-    }));
+    CHECK(std::any_of(result.Diagnostics.begin(), result.Diagnostics.end(),
+                      [](const ShaderDiagnostic& diagnostic) { return diagnostic.Message.find("Invalid color blend equation") != String::npos; }));
 }
 
 TEST_CASE("Shader compiler applies reverse-Z depth compare pragmas", "[Shader]")
@@ -358,9 +355,8 @@ TEST_CASE("Shader includes expand relative files and reject cycles", "[Shader]")
     const ShaderPreprocessResult cyclic = ShaderCompiler::PreprocessIncludes(shader, "#include \"nested.glslinc\"\n");
     CHECK_FALSE(cyclic.Succeeded());
     CHECK(cyclic.ContentHash == 0);
-    CHECK(std::any_of(cyclic.Diagnostics.begin(), cyclic.Diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
-        return diagnostic.Message.find("cycle") != String::npos;
-    }));
+    CHECK(std::any_of(cyclic.Diagnostics.begin(), cyclic.Diagnostics.end(),
+                      [](const ShaderDiagnostic& diagnostic) { return diagnostic.Message.find("cycle") != String::npos; }));
 }
 
 TEST_CASE("Shader compiler cache invalidates stages that consume a changed include", "[Shader]")
@@ -517,8 +513,8 @@ TEST_CASE("Built-in pack contains current material shader assets", "[Shader][Ass
 
     BuiltInResourcePack pack(copiedPack);
     REQUIRE(pack.IsValid());
-    for (const Path shaderPath :
-         { Path(TOON_SHADER_PATH), Path(UNLIT_SHADER_PATH), Path("Resources/Shaders/GpuMaskedDepth.asset") })
+    for (const Path shaderPath : { Path(TOON_SHADER_PATH), Path(UNLIT_SHADER_PATH), Path("Resources/Shaders/GpuMaskedDepth.asset"),
+                                   Path("Resources/Shaders/ToonSilhouette.asset") })
     {
         INFO(shaderPath.string());
         REQUIRE(pack.Contains(shaderPath));
@@ -651,8 +647,7 @@ void main() { color = texture(textures[nonuniformEXT(0)], vec2(0.5)); }
     for (const ShaderDiagnostic& diagnostic : result.Diagnostics)
         INFO(diagnostic.Message);
     REQUIRE(result.Succeeded());
-    const Ref<BinaryShaderData>& fragment =
-      result.Description.Techniques[0]->GetRenderPasses()[0]->GetPassDesc().FragmentShader;
+    const Ref<BinaryShaderData>& fragment = result.Description.Techniques[0]->GetRenderPasses()[0]->GetPassDesc().FragmentShader;
     REQUIRE(fragment);
     REQUIRE(fragment->Description);
     REQUIRE(fragment->Description->Textures.contains("textures"));
@@ -664,7 +659,7 @@ void main() { color = texture(textures[nonuniformEXT(0)], vec2(0.5)); }
 
 TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
 {
-    const std::array<Path, 21> shaders = {
+    const std::array<Path, 22> shaders = {
         "Crowny-Editor/Resources/Shaders/BinAndCompactIndirectDraws.glsl",
         "Crowny-Editor/Resources/Shaders/GpuDepthOnly.glsl",
         "Crowny-Editor/Resources/Shaders/GpuAnimatedDepthOnly.glsl",
@@ -677,6 +672,7 @@ TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
         "Crowny-Editor/Resources/Shaders/DeferredPlusStandard.glsl",
         "Crowny-Editor/Resources/Shaders/DeferredPlusLighting.glsl",
         "Crowny-Editor/Resources/Shaders/ToonOutlines.glsl",
+        "Crowny-Editor/Resources/Shaders/ToonSilhouette.glsl",
         "Crowny-Editor/Resources/Shaders/Pbribl.glsl",
         "Crowny-Editor/Resources/Shaders/Toon.glsl",
         "Crowny-Editor/Resources/Shaders/Unlit.glsl",
@@ -703,6 +699,29 @@ TEST_CASE("GPU-driven renderer shaders compile together", "[Shader][Renderer]")
             CHECK(result.Description.Techniques.size() == 4);
             CHECK(source.find("CW_WEIGHTED_OIT_ACCUMULATION") != String::npos);
             CHECK(source.find("CW_WEIGHTED_OIT_REVEALAGE") != String::npos);
+        }
+        else if (path.filename() == "BinAndCompactIndirectDraws.glsl")
+        {
+            CHECK(source.find("materials[instance.materialIndex].textureIndices1.w & 0xffu") != String::npos);
+            CHECK(source.find("findBin(key0, standardMaterialTemplate)") != String::npos);
+        }
+        else if (path.filename() == "ToonSilhouette.glsl")
+        {
+            REQUIRE(result.Description.Techniques.size() == 1);
+            const ShaderRenderPassDesc& pass = result.Description.Techniques[0]->GetRenderPasses()[0]->GetPassDesc();
+            REQUIRE(pass.DepthStencilState);
+            CHECK(pass.DepthStencilState->EnableDepthRead);
+            CHECK_FALSE(pass.DepthStencilState->EnableDepthWrite);
+            CHECK(pass.DepthStencilState->DepthCompareFunction == CompareFunction::GREATER_EQUAL);
+            REQUIRE(pass.RasterizationState);
+            CHECK(pass.RasterizationState->CullMode == CullingMode::CULL_CLOCKWISE);
+            REQUIRE(pass.BlendState);
+            CHECK(pass.BlendState->EnableBlending);
+            CHECK(pass.BlendState->SrcBlend == BlendFactor::SourceAlpha);
+            CHECK(pass.BlendState->DstBlend == BlendFactor::InvSourceAlpha);
+            CHECK(source.find("material.toonSilhouette.x") != String::npos);
+            CHECK(source.find("alphaMode == maskMode") != String::npos);
+            CHECK(source.find("nonuniformEXT(material.textureIndices0.x)") != String::npos);
         }
     }
 }

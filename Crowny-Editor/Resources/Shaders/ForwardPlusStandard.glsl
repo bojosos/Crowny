@@ -103,6 +103,7 @@ struct CwMaterialRecord
     vec4 toonPattern;
     vec4 toonOutlineColor;
     vec4 toonOutline;
+    vec4 toonSilhouette;
     vec4 toonStyle;
     uvec4 textureIndices2;
 };

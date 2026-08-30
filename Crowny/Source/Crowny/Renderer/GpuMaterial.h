@@ -3,6 +3,8 @@
 #include "Crowny/Common/Types.h"
 #include "Crowny/Renderer/RenderTypes.h"
 
+#include <cstddef>
+
 namespace Crowny
 {
     class Material;
@@ -30,6 +32,7 @@ namespace Crowny
         bool UsesStandardGpuRecord() const { return Route == MaterialRenderRoute::StandardGpu; }
         bool IsForwardOnlyOpaque() const { return Route == MaterialRenderRoute::ForwardOnly && Alpha == AlphaMode::Opaque; }
         bool IsUnsupported() const { return Route == MaterialRenderRoute::Unsupported; }
+        uint32_t GetMaterialTemplate() const { return UsesStandardGpuRecord() ? static_cast<uint32_t>(Model) : 0u; }
     };
 
     // Converts explicit shader metadata into one deterministic render route.
@@ -38,8 +41,7 @@ namespace Crowny
     class MaterialRenderClassifier
     {
     public:
-        static MaterialRenderClassification Classify(StringView shaderName, const Vector<String>& techniqueTags, bool hasBlending,
-                                                     bool alphaMasked);
+        static MaterialRenderClassification Classify(StringView shaderName, const Vector<String>& techniqueTags, bool hasBlending, bool alphaMasked);
         static MaterialRenderClassification Classify(const Material& material);
     };
 
@@ -116,6 +118,7 @@ namespace Crowny
         float ToonOutlineDepthThreshold = 0.002f;
         float ToonOutlineNormalThreshold = 0.2f;
         float ToonOutlineDistanceFade = 100.0f;
+        float ToonSilhouetteWidth = 0.0f;
     };
 
     // Shared std430 record used by depth, shadow, Forward+, and G-buffer
@@ -135,11 +138,16 @@ namespace Crowny
         glm::vec4 ToonPattern = glm::vec4(16.0f, 0.0f, 0.1f, 50.0f);
         glm::vec4 ToonOutlineColor = glm::vec4(0.02f, 0.02f, 0.025f, 1.0f);
         glm::vec4 ToonOutline = glm::vec4(1.5f, 0.002f, 0.2f, 100.0f);
+        glm::vec4 ToonSilhouette = glm::vec4(0.0f);
         glm::vec4 ToonStyle = glm::vec4(0.0f);
         glm::uvec4 TextureIndices2 = glm::uvec4(0u);
     };
 
-    static_assert(sizeof(GpuMaterialData) == 240, "GPU material records must preserve std430 float4 alignment");
+    static_assert(sizeof(GpuMaterialData) == 256, "GPU material records must preserve std430 float4 alignment");
+    static_assert(offsetof(GpuMaterialData, ToonOutline) == 192);
+    static_assert(offsetof(GpuMaterialData, ToonSilhouette) == 208);
+    static_assert(offsetof(GpuMaterialData, ToonStyle) == 224);
+    static_assert(offsetof(GpuMaterialData, TextureIndices2) == 240);
 
     class GpuMaterialPacker
     {

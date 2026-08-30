@@ -2,6 +2,7 @@
 
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/GpuDrivenDraw.h"
+#include "Crowny/Renderer/GpuMaterial.h"
 
 using namespace Crowny;
 
@@ -169,6 +170,25 @@ TEST_CASE("GPU draw generation batches material records sharing a template", "[R
     CHECK(output.Instances[1].InstanceID == 7);
     CHECK(output.Instances[1].MaterialIndex == 9);
     CHECK(output.Runs[0].CommandCount == 2);
+}
+
+TEST_CASE("GPU draw generation keeps material models in separate submission bins", "[Renderer][GpuDriven][Materials][Toon]")
+{
+    Vector<GpuDrawCandidate> candidates = {
+        Candidate(1, 0, 1, static_cast<uint32_t>(MaterialModel::Standard), 0, 2.0f),
+        Candidate(2, 0, 1, static_cast<uint32_t>(MaterialModel::Toon), 0, 1.0f),
+    };
+
+    GpuDrawListBuilder builder;
+    GpuDrawList output;
+    builder.Build(candidates.data(), static_cast<uint32_t>(candidates.size()), output);
+
+    REQUIRE(output.Runs.size() == 2);
+    CHECK(output.Runs[0].Bin.MaterialTemplate == static_cast<uint32_t>(MaterialModel::Standard));
+    CHECK(output.Runs[1].Bin.MaterialTemplate == static_cast<uint32_t>(MaterialModel::Toon));
+    CHECK(output.Commands.size() == 2);
+    CHECK(output.Commands[0].InstanceCount == 1);
+    CHECK(output.Commands[1].InstanceCount == 1);
 }
 
 TEST_CASE("Forward-only opaque draws remain outside standard opaque runs", "[Renderer][GpuDriven][Materials]")

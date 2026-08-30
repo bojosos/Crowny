@@ -74,6 +74,7 @@ namespace Crowny
         DeferredPlusLighting,
         ForwardPlusOpaque,
         SkyAndForwardOnlyOpaque,
+        ToonSilhouettes,
         ToonOutlines,
         WeightedOitAccumulation,
         WeightedOitComposite,
@@ -117,6 +118,8 @@ namespace Crowny
         bool EnableGpuDrawBins = false;
         bool EnableTransparency = true;
         bool EnableWeightedOIT = false;
+        bool EnableToonSilhouettes = true;
+        bool EnableToonOutlines = true;
         bool EnablePostProcessing = true;
     };
 

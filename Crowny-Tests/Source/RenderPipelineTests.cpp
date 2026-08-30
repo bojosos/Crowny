@@ -173,6 +173,14 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     CHECK(std::find(passNames.begin(), passNames.end(), "BuildClusteredLightLists") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "GTAO") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "ForwardPlusOpaque") != passNames.end());
+    const auto skyPass = std::find(passNames.begin(), passNames.end(), "SkyAndForwardOnlyOpaque");
+    const auto silhouettePass = std::find(passNames.begin(), passNames.end(), "ToonSilhouettes");
+    const auto outlinePass = std::find(passNames.begin(), passNames.end(), "ToonOutlines");
+    REQUIRE(skyPass != passNames.end());
+    REQUIRE(silhouettePass != passNames.end());
+    REQUIRE(outlinePass != passNames.end());
+    CHECK(skyPass < silhouettePass);
+    CHECK(silhouettePass < outlinePass);
     CHECK(std::find(passNames.begin(), passNames.end(), "ForwardPlusTransparencyAndWorld2D") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "TemporalResolve") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "Bloom") != passNames.end());
@@ -194,8 +202,7 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     CHECK(transitionsToIndirect(commands));
     CHECK(transitionsToIndirect(counts));
     CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
-        return barrier.Resource == output.ObjectID &&
-               barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
+        return barrier.Resource == output.ObjectID && barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
                graph.GetPassName(barrier.BeforePass) == "ForwardPlusOpaque";
     }));
 }
@@ -248,10 +255,52 @@ TEST_CASE("Weighted OIT allocates transient accumulation targets only when reque
                barrier.DestinationState == RenderGraphResourceState::ShaderRead;
     }));
     CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
-        return barrier.Resource == output.HdrColor &&
-               barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
+        return barrier.Resource == output.HdrColor && barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
                graph.GetPassName(barrier.BeforePass) == "ForwardPlusTransparencyAndWorld2D";
     }));
+}
+
+TEST_CASE("Toon passes are omitted when no toon material is resident", "[Renderer][Pipeline][Materials][Toon]")
+{
+    struct ToonGraphResult
+    {
+        Vector<String> PassNames;
+        bool HasMaterialId = false;
+    };
+    const auto buildGraph = [](bool enableSilhouettes, bool enableOutlines) {
+        RenderGraph graph;
+        RenderBlackboard blackboard;
+        RenderView view;
+        RenderPipelineAsset pipeline;
+        RenderPipelineGraphDesc desc;
+        desc.Width = 1280;
+        desc.Height = 720;
+        desc.Path = RenderingPath::ForwardPlus;
+        desc.OutputTarget = ImportOutput(graph, desc.Width, desc.Height);
+        desc.EnableToonSilhouettes = enableSilhouettes;
+        desc.EnableToonOutlines = enableOutlines;
+
+        pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+        const RenderGraphCompileResult& compiled = graph.Compile();
+        INFO(compiled.Error);
+        REQUIRE(compiled.Succeeded);
+
+        ToonGraphResult result;
+        for (RenderGraphPassHandle pass : compiled.PassOrder)
+            result.PassNames.push_back(graph.GetPassName(pass));
+        result.HasMaterialId = blackboard.Contains("MaterialID");
+        return result;
+    };
+
+    const ToonGraphResult outlinesOnly = buildGraph(false, true);
+    CHECK(std::find(outlinesOnly.PassNames.begin(), outlinesOnly.PassNames.end(), "ToonSilhouettes") == outlinesOnly.PassNames.end());
+    CHECK(std::find(outlinesOnly.PassNames.begin(), outlinesOnly.PassNames.end(), "ToonOutlines") != outlinesOnly.PassNames.end());
+    CHECK(outlinesOnly.HasMaterialId);
+
+    const ToonGraphResult noToonPasses = buildGraph(false, false);
+    CHECK(std::find(noToonPasses.PassNames.begin(), noToonPasses.PassNames.end(), "ToonSilhouettes") == noToonPasses.PassNames.end());
+    CHECK(std::find(noToonPasses.PassNames.begin(), noToonPasses.PassNames.end(), "ToonOutlines") == noToonPasses.PassNames.end());
+    CHECK_FALSE(noToonPasses.HasMaterialId);
 }
 
 TEST_CASE("Weighted OIT falls back to forward transparency until composited", "[Renderer][Pipeline][Transparency]")
@@ -397,8 +446,7 @@ TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency"
     CHECK(blackboard.Contains("GBufferEmissive"));
     CHECK(blackboard.Contains("GBufferMaterialFlags"));
     CHECK(std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
-        return barrier.Resource == output.ObjectID &&
-               barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
+        return barrier.Resource == output.ObjectID && barrier.DestinationState == RenderGraphResourceState::ColorAttachmentReadWrite &&
                graph.GetPassName(barrier.BeforePass) == "DeferredGBuffer";
     }));
 }

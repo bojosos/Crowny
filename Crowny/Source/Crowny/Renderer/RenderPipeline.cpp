@@ -92,8 +92,7 @@ namespace Crowny
     RenderGraphResourceHandle RenderBlackboard::Get(StringView name) const
     {
         const auto entry = m_Resources.find(name);
-        return entry != m_Resources.end() && entry->second.Generation == m_Generation ? entry->second.Resource
-                                                                                     : RenderGraphResourceHandle{};
+        return entry != m_Resources.end() && entry->second.Generation == m_Generation ? entry->second.Resource : RenderGraphResourceHandle{};
     }
 
     void RenderBlackboard::Clear()
@@ -253,7 +252,9 @@ namespace Crowny
           desc.EnablePostProcessing && m_Settings.EnableGtao
             ? graph.CreateTexture("AmbientOcclusion", Texture2D((width + 1u) / 2u, (height + 1u) / 2u, TextureFormat::R8))
             : RenderGraphResourceHandle{};
-        const RenderGraphResourceHandle materialId = graph.CreateTexture("MaterialID", Texture2D(width, height, TextureFormat::R32I));
+        const RenderGraphResourceHandle materialId = m_Settings.EnableToonOutlines && desc.EnableToonOutlines
+                                                       ? graph.CreateTexture("MaterialID", Texture2D(width, height, TextureFormat::R32I))
+                                                       : RenderGraphResourceHandle{};
 
         blackboard.Clear();
         blackboard.Set("OutputTarget", desc.OutputTarget);
@@ -557,7 +558,24 @@ namespace Crowny
               builder.Write(output.HdrColor, RenderGraphResourceState::ColorAttachmentReadWrite);
           },
           desc.CompatibilityRenderer ? desc.CompatibilityRenderer : executePass(RenderPipelinePass::SkyAndForwardOnlyOpaque));
-        if (m_Settings.EnableToonOutlines)
+        if (m_Settings.EnableToonOutlines && desc.EnableToonSilhouettes)
+        {
+            graph.AddPass(
+              "ToonSilhouettes", RenderGraphQueue::Graphics,
+              [&](RenderGraphPassBuilder& builder) {
+                  builder.Read(instances);
+                  builder.Read(materials);
+                  builder.Read(depthCommands, RenderGraphResourceState::IndirectArgument);
+                  builder.Read(depthInstanceIds);
+                  builder.Read(finalCommands, RenderGraphResourceState::IndirectArgument);
+                  builder.Read(drawCounts, RenderGraphResourceState::IndirectArgument);
+                  builder.Read(visibleDrawInstances);
+                  builder.Read(output.SceneDepth, RenderGraphResourceState::DepthRead);
+                  builder.Write(output.HdrColor, RenderGraphResourceState::ColorAttachmentReadWrite);
+              },
+              executePass(RenderPipelinePass::ToonSilhouettes));
+        }
+        if (m_Settings.EnableToonOutlines && desc.EnableToonOutlines)
         {
             graph.AddPass(
               "ToonOutlines", RenderGraphQueue::Compute,
@@ -578,8 +596,7 @@ namespace Crowny
         {
             const RenderGraphResourceHandle oitAccumulation =
               graph.CreateTexture("OitAccumulation", Texture2D(width, height, TextureFormat::RGBA16F));
-            const RenderGraphResourceHandle oitRevealage =
-              graph.CreateTexture("OitRevealage", Texture2D(width, height, TextureFormat::R32F));
+            const RenderGraphResourceHandle oitRevealage = graph.CreateTexture("OitRevealage", Texture2D(width, height, TextureFormat::R32F));
             blackboard.Set("OitAccumulation", oitAccumulation);
             blackboard.Set("OitRevealage", oitRevealage);
 

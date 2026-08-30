@@ -92,6 +92,8 @@ namespace Crowny
         const Ref<GenericGpuBuffer>& GetMaterialBuffer() const { return m_MaterialBuffer; }
         uint32_t GetMaterialCount() const { return static_cast<uint32_t>(m_Materials.size()); }
         bool HasForwardOnlyOpaqueMaterials() const { return m_ForwardOnlyOpaqueMaterialCount != 0; }
+        bool HasToonOutlineMaterials() const { return m_ToonOutlineMaterialCount != 0; }
+        bool HasToonSilhouetteMaterials() const { return m_ToonSilhouetteMaterialCount != 0; }
         Ref<VertexBuffer> GetGeometryVertexBuffer(uint32_t geometryBinding) const;
         Ref<IndexBuffer> GetGeometryIndexBuffer(uint32_t geometryBinding) const;
         DrawMode GetGeometryDrawMode(uint32_t geometryBinding) const;
@@ -202,6 +204,8 @@ namespace Crowny
         Vector<GpuMaterialData> m_Materials;
         Vector<MaterialRenderClassification> m_MaterialClassifications;
         uint32_t m_ForwardOnlyOpaqueMaterialCount = 0;
+        uint32_t m_ToonOutlineMaterialCount = 0;
+        uint32_t m_ToonSilhouetteMaterialCount = 0;
         Vector<Ref<IndexBuffer>> m_MeshIndexBuffers;
         Vector<Ref<Texture>> m_BindlessTextureResources;
         uint64_t m_BindlessTextureVersion = 0;
