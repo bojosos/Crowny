@@ -728,8 +728,12 @@ namespace Crowny
         archive(mesh.m_GpuGeometry.MeshletIndices);
         SaveMeshMorph(archive, mesh.m_MeshMorph);
         SaveSkeleton(archive, mesh.m_Skeleton);
-        Ref<MeshData> meshData = mesh.AllocBuffer();
-        mesh.ReadData(meshData);
+        Ref<MeshData> meshData = mesh.m_Usage.IsSet(MeshUsage::CpuCached) ? mesh.m_CPUMeshData : nullptr;
+        if (meshData == nullptr)
+        {
+            meshData = mesh.AllocBuffer();
+            mesh.ReadData(meshData);
+        }
         archive(meshData);
     }
 

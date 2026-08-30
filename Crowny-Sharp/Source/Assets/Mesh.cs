@@ -131,6 +131,12 @@ namespace Crowny
                 ManagedRuntimeContext.MeshCreatePlane(width, height, subdivisionsX, subdivisionsY), true);
         }
 
+        /// <summary>Creates a single XZ quad centered at the origin.</summary>
+        public static Mesh CreateQuad(float width = 1.0f, float height = 1.0f)
+        {
+            return CreatePlane(width, height, 1, 1);
+        }
+
         /// <summary>Creates a box centered at the origin.</summary>
         public static Mesh CreateBox(Vector3 dimensions)
         {

@@ -102,7 +102,10 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Expand mesh import and parsing: attributes, index widths, submeshes, topology, tangents, skin data, morph targets, bounds, LODs, meshlets, validation, corrupt-input diagnostics, and round-trip asset serialization.
 - [x] Validate mesh-processing submesh ranges, triangle alignment, vertex references, and finite positions before passing imported or deserialized geometry to meshoptimizer.
 - [x] Expand static Assimp scene mesh instances through their accumulated node transforms, including non-uniform normal transforms, mirrored winding and tangent handedness, bounds, morph deltas, and material-slot duplication. Reject transformed skinned instances until per-instance bind transforms exist.
-- [ ] Add asset-backed and runtime mesh primitives: cube, plane, sphere, cylinder, cone, capsule, quad, and configurable tessellation with safe upper bounds.
+- [ ] Add asset-backed and runtime mesh primitives.
+  - [x] Generate cube, box, plane, quad, sphere, cylinder, cone, and capsule data through one CPU factory with bounded tessellation, complete render attributes, native runtime meshes, and managed factories.
+  - [x] Serialize CPU-cached generated meshes from their authoritative CPU data instead of reading them back from the GPU.
+  - [ ] Add editable primitive source assets and editor creation controls. Persisting a generated `Mesh` already uses the standard mesh asset codec.
 - [ ] Finish morph animation, then implement skeletal animation: skeleton assets, bones, bind/inverse-bind poses, clips, channels, interpolation, blending, layers, masks, root motion, events, retarget-ready IDs, GPU/CPU skinning, bounds, serialization, import, editor inspection, and C# APIs.
 - [x] Compose transient skeletal override and additive layers in deterministic stack order with independent speed/wrap settings, reusable poses, layer weights, and per-bone masks. Layer events, morphs, root motion, serialization, and C# control remain separate work.
 - [x] Dispatch ping-pong animation events in traversal order across both reflected clip boundaries without double-firing endpoint events.

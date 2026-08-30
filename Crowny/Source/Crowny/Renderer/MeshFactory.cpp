@@ -207,6 +207,11 @@ namespace Crowny
         return BuildMeshData(positions, normals, tangents, bitangents, uvs, indices);
     }
 
+    Ref<MeshData> MeshFactory::CreateQuadData(float width, float height, const glm::vec3& normal)
+    {
+        return CreatePlaneData(width, height, normal, 1u, 1u);
+    }
+
     Ref<MeshData> MeshFactory::CreateBoxData(const glm::vec3& dimensions)
     {
         if (!IsPositiveFinite(dimensions.x) || !IsPositiveFinite(dimensions.y) || !IsPositiveFinite(dimensions.z))
@@ -579,6 +584,11 @@ namespace Crowny
                                        uint32_t subdivisionsY, MeshUsageFlags usage)
     {
         return BuildMesh(CreatePlaneData(width, height, normal, subdivisionsX, subdivisionsY), usage, "Plane");
+    }
+
+    Ref<Mesh> MeshFactory::CreateQuad(float width, float height, const glm::vec3& normal, MeshUsageFlags usage)
+    {
+        return BuildMesh(CreateQuadData(width, height, normal), usage, "Quad");
     }
 
     Ref<Mesh> MeshFactory::CreateBox(const glm::vec3& dimensions, MeshUsageFlags usage)

@@ -102,6 +102,26 @@ namespace
         }
     }
 
+    void CheckWrappedColumns(const Ref<MeshData>& data, uint32_t segments, uint32_t verticesPerColumn)
+    {
+        const Vector<glm::vec3> positions = data->GetPositions();
+        const Vector<glm::vec3> normals = data->GetNormals();
+        const Vector<glm::vec3> tangents = data->GetTangents();
+        const Vector<glm::vec2> uvs = data->GetUVs();
+        const uint32_t lastColumn = segments * verticesPerColumn;
+        REQUIRE(positions.size() >= static_cast<size_t>(lastColumn + verticesPerColumn));
+
+        for (uint32_t vertex = 0; vertex < verticesPerColumn; ++vertex)
+        {
+            CHECK(glm::length2(positions[vertex] - positions[lastColumn + vertex]) < EPSILON * EPSILON);
+            CHECK(glm::length2(normals[vertex] - normals[lastColumn + vertex]) < EPSILON * EPSILON);
+            CHECK(glm::length2(tangents[vertex] - tangents[lastColumn + vertex]) < EPSILON * EPSILON);
+            CHECK(std::abs(uvs[vertex].x) < EPSILON);
+            CHECK(std::abs(uvs[lastColumn + vertex].x - 1.0f) < EPSILON);
+            CHECK(std::abs(uvs[vertex].y - uvs[lastColumn + vertex].y) < EPSILON);
+        }
+    }
+
     void CheckBounds(const Ref<MeshData>& data, const glm::vec3& expectedMin, const glm::vec3& expectedMax)
     {
         AABox bounds;
@@ -122,6 +142,17 @@ TEST_CASE("MeshFactory creates render-ready primitive data", "[Renderer][MeshFac
         CHECK(data->GetIndexCount() == 36);
         for (const glm::vec3& normal : data->GetNormals())
             CHECK(glm::length2(normal - glm::vec3(0.0f, 0.0f, 1.0f)) < EPSILON * EPSILON);
+    }
+
+    SECTION("Single quad")
+    {
+        const Ref<MeshData> data = MeshFactory::CreateQuadData(2.0f, 4.0f);
+        CheckPrimitiveData(data);
+        CHECK(data->GetVertexCount() == 4);
+        CHECK(data->GetIndexCount() == 6);
+        const Vector<uint32_t> expectedIndices{ 0, 1, 3, 0, 3, 2 };
+        CHECK(data->GetIndices() == expectedIndices);
+        CheckBounds(data, { -1.0f, 0.0f, -2.0f }, { 1.0f, 0.0f, 2.0f });
     }
 
     SECTION("Box and cube")
@@ -155,12 +186,14 @@ TEST_CASE("MeshFactory creates render-ready primitive data", "[Renderer][MeshFac
         CheckPrimitiveData(capped);
         CHECK(capped->GetVertexCount() == 38);
         CHECK(capped->GetIndexCount() == 96);
+        CheckWrappedColumns(capped, 8, 2);
         CheckBounds(capped, glm::vec3(-1.0f), glm::vec3(1.0f));
 
         const Ref<MeshData> open = MeshFactory::CreateCylinderData(1.0f, 2.0f, 8, false);
         CheckPrimitiveData(open);
         CHECK(open->GetVertexCount() == 18);
         CHECK(open->GetIndexCount() == 48);
+        CheckWrappedColumns(open, 8, 2);
     }
 
     SECTION("Cone")
@@ -169,6 +202,7 @@ TEST_CASE("MeshFactory creates render-ready primitive data", "[Renderer][MeshFac
         CheckPrimitiveData(data);
         CHECK(data->GetVertexCount() == 28);
         CHECK(data->GetIndexCount() == 48);
+        CheckWrappedColumns(data, 8, 2);
         CheckBounds(data, glm::vec3(-1.0f), glm::vec3(1.0f));
     }
 
@@ -193,6 +227,7 @@ TEST_CASE("MeshFactory rejects invalid dimensions", "[Renderer][MeshFactory]")
     const float infinity = std::numeric_limits<float>::infinity();
     const float nan = std::numeric_limits<float>::quiet_NaN();
     CHECK(MeshFactory::CreateCubeData(0.0f) == nullptr);
+    CHECK(MeshFactory::CreateQuadData(-1.0f, 1.0f) == nullptr);
     CHECK(MeshFactory::CreateBoxData({ 1.0f, nan, 1.0f }) == nullptr);
     CHECK(MeshFactory::CreateSphereData(-1.0f) == nullptr);
     CHECK(MeshFactory::CreateSphereData(1.0f, 2, 8) == nullptr);
@@ -212,7 +247,14 @@ TEST_CASE("MeshFactory bounds tessellation allocations and selects index width",
     REQUIRE(!indices.empty());
     CHECK(*std::max_element(indices.begin(), indices.end()) > std::numeric_limits<uint16_t>::max());
 
+    const Ref<MeshData> maximumSingleAxis = MeshFactory::CreatePlaneData(1.0f, 1.0f, glm::vec3(0.0f, 1.0f, 0.0f), 4096, 1);
+    REQUIRE(maximumSingleAxis != nullptr);
+    CHECK(maximumSingleAxis->GetVertexCount() == 8194);
+    CHECK(maximumSingleAxis->GetIndexCount() == 24576);
+
     CHECK(MeshFactory::CreatePlaneData(1.0f, 1.0f, glm::vec3(0.0f, 1.0f, 0.0f), 4096, 4096) == nullptr);
+    CHECK(MeshFactory::CreatePlaneData(1.0f, 1.0f, glm::vec3(0.0f, 1.0f, 0.0f), 4097, 1) == nullptr);
+    CHECK(MeshFactory::CreatePlaneData(1.0f, 1.0f, glm::vec3(0.0f, 1.0f, 0.0f), std::numeric_limits<uint32_t>::max(), 1) == nullptr);
     CHECK(MeshFactory::CreateSphereData(1.0f, 4096, 4096) == nullptr);
     CHECK(MeshFactory::CreateCapsuleData(0.5f, 2.0f, 4096, 4096) == nullptr);
 }
