@@ -42,6 +42,20 @@ TEST_CASE("Mono runtime discovery prefers a complete candidate", "[Scripting][Re
     fs::remove_all(base);
 }
 
+#if defined(CW_PLATFORM_LINUX)
+TEST_CASE("Explicit Linux Mono root preserves the distribution etc directory", "[Scripting][Reload][Linux]")
+{
+    if (!fs::is_directory("/usr/lib") || !fs::is_directory("/etc"))
+        SKIP("The host does not expose the system Mono directory layout.");
+
+    const MonoRuntimePaths paths = ResolveMonoRuntimePaths(Vector<Path>{ Path("/usr") });
+    CHECK(paths.Root == Path("/usr"));
+    CHECK(paths.LibraryDirectory == Path("/usr/lib"));
+    CHECK(paths.EtcDirectory == Path("/etc"));
+    CHECK(paths.HasRuntime());
+}
+#endif
+
 TEST_CASE("Managed assembly publishing replaces DLL and symbols", "[Scripting][Reload]")
 {
     const Path base =

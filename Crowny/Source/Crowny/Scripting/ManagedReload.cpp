@@ -69,7 +69,14 @@ namespace Crowny
             MonoRuntimePaths paths;
             paths.Root = normalizedRoot;
             paths.LibraryDirectory = normalizedRoot / "lib";
+#if defined(CW_PLATFORM_LINUX)
+            // Distribution packages split Mono's runtime between /usr/lib and
+            // /etc. Preserve that layout when /usr is supplied explicitly,
+            // including the second resolution performed by MonoBackend.
+            paths.EtcDirectory = normalizedRoot == Path("/usr") ? Path("/etc") : normalizedRoot / "etc";
+#else
             paths.EtcDirectory = normalizedRoot / "etc";
+#endif
             paths.Compiler = FirstExistingFile({ normalizedRoot / "bin/csc.bat", normalizedRoot / "bin/csc", normalizedRoot / "bin/mcs.bat",
                                                  normalizedRoot / "bin/mcs", normalizedRoot / "compiler/mcs" });
 
