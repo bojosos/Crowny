@@ -193,6 +193,16 @@ namespace Crowny
 
     Vector<Ref<Asset>> Importer::ImportAll(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
+        return ImportAllInternal(filepath, std::move(importOptions), true);
+    }
+
+    Vector<Ref<Asset>> Importer::ImportAllDeferred(const Path& filepath, Ref<const ImportOptions> importOptions)
+    {
+        return ImportAllInternal(filepath, std::move(importOptions), false);
+    }
+
+    Vector<Ref<Asset>> Importer::ImportAllInternal(const Path& filepath, Ref<const ImportOptions> importOptions, bool initializeAssets)
+    {
         SpecificImporter* const importer = PrepareForImport(filepath, importOptions);
         if (importer == nullptr)
             return {};
@@ -200,37 +210,27 @@ namespace Crowny
         try
         {
             Vector<Ref<Asset>> assets = importer->ImportAll(filepath, importOptions);
-            assets.erase(std::remove(assets.begin(), assets.end(), nullptr), assets.end());
-            for (const auto& asset : assets)
-                asset->Init();
             if (assets.empty())
+            {
                 CW_ENGINE_ERROR("Importer returned no assets for '{}'.", filepath);
+                return {};
+            }
+            if (std::any_of(assets.begin(), assets.end(), [](const Ref<Asset>& asset) { return asset == nullptr; }))
+            {
+                CW_ENGINE_ERROR("Importer returned an incomplete asset batch for '{}'.", filepath);
+                return {};
+            }
+            if (initializeAssets)
+            {
+                for (const Ref<Asset>& asset : assets)
+                    asset->Init();
+            }
             return assets;
         }
         catch (const std::exception& error)
         {
             CW_ENGINE_ERROR("Import failed for '{}': {}", filepath, error.what());
             return {};
-        }
-    }
-
-    Ref<Asset> Importer::ImportDeferred(const Path& filepath, Ref<const ImportOptions> importOptions)
-    {
-        SpecificImporter* const importer = PrepareForImport(filepath, importOptions);
-        if (importer == nullptr)
-            return nullptr;
-
-        try
-        {
-            const Ref<Asset> asset = importer->Import(filepath, importOptions);
-            if (!asset)
-                CW_ENGINE_ERROR("Deferred importer returned no asset for '{}'.", filepath);
-            return asset;
-        }
-        catch (const std::exception& error)
-        {
-            CW_ENGINE_ERROR("Deferred import failed for '{}': {}", filepath, error.what());
-            return nullptr;
         }
     }
 

@@ -71,7 +71,9 @@ namespace Crowny
     struct ImportResult
     {
         ImportTask Task;
-        Ref<Asset> Asset;
+        // Complete ordered importer output. Element zero is the primary asset.
+        // Failed and canceled results carry no assets.
+        Vector<Ref<Asset>> Assets;
         ImportResultStatus Status = ImportResultStatus::Failed;
     };
 

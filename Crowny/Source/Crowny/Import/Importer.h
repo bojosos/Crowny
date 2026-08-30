@@ -18,7 +18,7 @@ namespace Crowny
         ~Importer();
         Ref<Asset> Import(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
         Vector<Ref<Asset>> ImportAll(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
-        Ref<Asset> ImportDeferred(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
+        Vector<Ref<Asset>> ImportAllDeferred(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
 
         template <class T> Ref<T> Import(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr)
         {
@@ -39,8 +39,9 @@ namespace Crowny
         SpecificImporter* GetImporterForFile(const Path& path) const;
 
     private:
-        SpecificImporter* PrepareForImport(const Path& path, Ref<const ImportOptions>& impotyOptions) const;
+        SpecificImporter* PrepareForImport(const Path& path, Ref<const ImportOptions>& importOptions) const;
         SpecificImporter* FindImporterForExtension(const String& normalizedExtension) const;
+        Vector<Ref<Asset>> ImportAllInternal(const Path& filepath, Ref<const ImportOptions> importOptions, bool initializeAssets);
 
     private:
         Vector<SpecificImporter*> m_Importers;

@@ -168,6 +168,56 @@ namespace
         Vector<std::thread::id> m_CallThreads;
     };
 
+    class MultiOutputImporter final : public SpecificImporter
+    {
+    public:
+        using Handler = std::function<Vector<Ref<Asset>>(const Path&)>;
+
+        MultiOutputImporter(String extension, ImporterThreadingPolicy policy, Handler handler)
+          : m_Extension(std::move(extension)), m_Policy(policy), m_Handler(std::move(handler))
+        {
+        }
+
+        bool IsExtensionSupported(const String& extension) const override { return extension == m_Extension; }
+        bool IsMagicNumSupported(uint8_t*, uint32_t) const override { return false; }
+
+        Ref<Asset> Import(const Path&, Ref<const ImportOptions>) override
+        {
+            m_SingleImportCalls.fetch_add(1, std::memory_order_relaxed);
+            return nullptr;
+        }
+
+        Vector<Ref<Asset>> ImportAll(const Path& path, Ref<const ImportOptions>) override
+        {
+            m_MultiImportCalls.fetch_add(1, std::memory_order_relaxed);
+            {
+                std::lock_guard lock(m_ThreadMutex);
+                m_ImportThread = std::this_thread::get_id();
+            }
+            return m_Handler(path);
+        }
+
+        Ref<ImportOptions> CreateImportOptions() const override { return CreateRef<ImportOptions>(); }
+        ImporterThreadingPolicy GetThreadingPolicy() const override { return m_Policy; }
+
+        uint32_t GetSingleImportCalls() const { return m_SingleImportCalls.load(std::memory_order_acquire); }
+        uint32_t GetMultiImportCalls() const { return m_MultiImportCalls.load(std::memory_order_acquire); }
+        std::thread::id GetImportThread() const
+        {
+            std::lock_guard lock(m_ThreadMutex);
+            return m_ImportThread;
+        }
+
+    private:
+        String m_Extension;
+        ImporterThreadingPolicy m_Policy;
+        Handler m_Handler;
+        std::atomic<uint32_t> m_SingleImportCalls{ 0 };
+        std::atomic<uint32_t> m_MultiImportCalls{ 0 };
+        mutable std::mutex m_ThreadMutex;
+        std::thread::id m_ImportThread;
+    };
+
     class SchedulerFixture
     {
     public:
@@ -226,6 +276,13 @@ namespace
             return importer;
         }
 
+        MultiOutputImporter* RegisterMultiOutputImporter(String extension, ImporterThreadingPolicy policy, MultiOutputImporter::Handler handler)
+        {
+            auto* importer = new MultiOutputImporter(extension, policy, std::move(handler));
+            Importer::Get().RegisterImporter(importer, { extension });
+            return importer;
+        }
+
         static void Drain(ImportScheduler& scheduler, const ImportScheduler::CompletionHandler& completionHandler)
         {
             const auto deadline = std::chrono::steady_clock::now() + 5s;
@@ -260,6 +317,7 @@ TEST_CASE_METHOD(SchedulerFixture, "Main-thread-only imports use main-thread imp
     Drain(scheduler, [&](const ImportResult& result) {
         CHECK(result.Task.RunOnMainThread);
         CHECK(result.Status == ImportResultStatus::Succeeded);
+        REQUIRE(result.Assets.size() == 1);
         CHECK(std::this_thread::get_id() == mainThread);
         CHECK(initCount.load(std::memory_order_acquire) == 1);
         completionCount++;
@@ -269,6 +327,101 @@ TEST_CASE_METHOD(SchedulerFixture, "Main-thread-only imports use main-thread imp
     CHECK(importer->GetCallThreads().front() == mainThread);
     CHECK(initThread == mainThread);
     CHECK(completionCount == 1);
+}
+
+TEST_CASE_METHOD(SchedulerFixture, "Import scheduler preserves complete ordered importer output", "[Editor][ImportScheduler][MultiOutput]")
+{
+    const std::thread::id mainThread = std::this_thread::get_id();
+    std::atomic<uint32_t> initCount{ 0 };
+    const auto makeAsset = [&](String name) -> Ref<Asset> {
+        Ref<TestAsset> asset = CreateRef<TestAsset>(&initCount);
+        asset->SetName(std::move(name));
+        return asset;
+    };
+
+    SECTION("main-thread import initializes the complete batch")
+    {
+        MultiOutputImporter* importer = RegisterMultiOutputImporter("multimain", ImporterThreadingPolicy::MainThreadOnly, [&](const Path&) {
+            return Vector<Ref<Asset>>{ makeAsset("Primary"), makeAsset("Body"), makeAsset("Walk") };
+        });
+        ImportScheduler scheduler;
+        scheduler.Schedule({ CreateTask(CreateFile("character.multimain")) });
+
+        Drain(scheduler, [&](const ImportResult& result) {
+            REQUIRE(result.Status == ImportResultStatus::Succeeded);
+            REQUIRE(result.Assets.size() == 3);
+            CHECK(result.Assets[0]->GetName() == "Primary");
+            CHECK(result.Assets[1]->GetName() == "Body");
+            CHECK(result.Assets[2]->GetName() == "Walk");
+            CHECK(result.Task.RunOnMainThread);
+            CHECK(initCount.load(std::memory_order_acquire) == 3);
+        });
+
+        CHECK(importer->GetSingleImportCalls() == 0);
+        CHECK(importer->GetMultiImportCalls() == 1);
+        CHECK(importer->GetImportThread() == mainThread);
+    }
+
+    SECTION("worker import defers initialization for publication on the main thread")
+    {
+        MultiOutputImporter* importer = RegisterMultiOutputImporter("multiworker", ImporterThreadingPolicy::ParallelWorker, [&](const Path&) {
+            return Vector<Ref<Asset>>{ makeAsset("Primary"), makeAsset("Body"), makeAsset("Walk") };
+        });
+        ImportScheduler scheduler;
+        scheduler.Schedule({ CreateTask(CreateFile("character.multiworker")) });
+
+        Drain(scheduler, [&](const ImportResult& result) {
+            REQUIRE(result.Status == ImportResultStatus::Succeeded);
+            REQUIRE(result.Assets.size() == 3);
+            CHECK(result.Assets[0]->GetName() == "Primary");
+            CHECK(result.Assets[1]->GetName() == "Body");
+            CHECK(result.Assets[2]->GetName() == "Walk");
+            CHECK_FALSE(result.Task.RunOnMainThread);
+            CHECK(initCount.load(std::memory_order_acquire) == 0);
+        });
+
+        CHECK(importer->GetSingleImportCalls() == 0);
+        CHECK(importer->GetMultiImportCalls() == 1);
+        CHECK(importer->GetImportThread() != mainThread);
+    }
+}
+
+TEST_CASE_METHOD(SchedulerFixture, "Empty multi-output imports publish one failed result", "[Editor][ImportScheduler][MultiOutput]")
+{
+    MultiOutputImporter* importer =
+      RegisterMultiOutputImporter("multiempty", ImporterThreadingPolicy::ParallelWorker, [](const Path&) { return Vector<Ref<Asset>>{}; });
+    ImportScheduler scheduler;
+    scheduler.Schedule({ CreateTask(CreateFile("empty.multiempty")) });
+
+    uint32_t completionCount = 0;
+    Drain(scheduler, [&](const ImportResult& result) {
+        CHECK(result.Status == ImportResultStatus::Failed);
+        CHECK(result.Assets.empty());
+        completionCount++;
+    });
+
+    CHECK(importer->GetSingleImportCalls() == 0);
+    CHECK(importer->GetMultiImportCalls() == 1);
+    CHECK(completionCount == 1);
+}
+
+TEST_CASE_METHOD(SchedulerFixture, "Incomplete multi-output imports fail as one batch", "[Editor][ImportScheduler][MultiOutput]")
+{
+    std::atomic<uint32_t> initCount{ 0 };
+    MultiOutputImporter* importer = RegisterMultiOutputImporter("multiincomplete", ImporterThreadingPolicy::MainThreadOnly, [&](const Path&) {
+        return Vector<Ref<Asset>>{ CreateRef<TestAsset>(&initCount), nullptr, CreateRef<TestAsset>(&initCount) };
+    });
+    ImportScheduler scheduler;
+    scheduler.Schedule({ CreateTask(CreateFile("incomplete.multiincomplete")) });
+
+    Drain(scheduler, [&](const ImportResult& result) {
+        CHECK(result.Status == ImportResultStatus::Failed);
+        CHECK(result.Assets.empty());
+    });
+
+    CHECK(importer->GetSingleImportCalls() == 0);
+    CHECK(importer->GetMultiImportCalls() == 1);
+    CHECK(initCount.load(std::memory_order_acquire) == 0);
 }
 
 TEST_CASE_METHOD(SchedulerFixture, "Parallel imports obey the configured worker-lane cap", "[Editor][ImportScheduler]")

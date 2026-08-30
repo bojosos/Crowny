@@ -176,7 +176,7 @@ namespace Crowny
                 BatchState::Item& item = batch->Items[sequence];
                 if (item.State != ScheduledImportState::Ready)
                     batch->Progress.CompletedFiles++;
-                item.Result.Asset = nullptr;
+                item.Result.Assets.clear();
                 item.Result.Status = ImportResultStatus::Failed;
                 item.State = ScheduledImportState::Ready;
             }
@@ -212,7 +212,7 @@ namespace Crowny
                 item.State = ScheduledImportState::RunningWorker;
             }
 
-            Ref<Asset> asset;
+            Vector<Ref<Asset>> assets;
             bool importFailed = false;
             const String sourcePath = item.Result.Task.SourcePath.string();
             const auto queueTime = std::chrono::steady_clock::now() - item.QueuedAt;
@@ -229,10 +229,10 @@ namespace Crowny
                     {
                         Lock importerLock(*item.SerializedImporterMutex);
                         if (!batch.CancelRequested.load(std::memory_order_acquire))
-                            asset = Importer::Get().ImportDeferred(item.Result.Task.SourcePath, item.Result.Task.Options);
+                            assets = Importer::Get().ImportAllDeferred(item.Result.Task.SourcePath, item.Result.Task.Options);
                     }
                     else
-                        asset = Importer::Get().ImportDeferred(item.Result.Task.SourcePath, item.Result.Task.Options);
+                        assets = Importer::Get().ImportAllDeferred(item.Result.Task.SourcePath, item.Result.Task.Options);
                 }
             }
             catch (...)
@@ -243,13 +243,21 @@ namespace Crowny
             Lock lock(batch.Mutex);
             if (item.State != ScheduledImportState::RunningWorker)
                 continue;
-            item.Result.Asset = std::move(asset);
             if (batch.CancelRequested.load(std::memory_order_acquire))
+            {
+                item.Result.Assets.clear();
                 item.Result.Status = ImportResultStatus::Canceled;
+            }
             else if (importFailed)
+            {
+                item.Result.Assets.clear();
                 item.Result.Status = ImportResultStatus::Failed;
+            }
             else
-                item.Result.Status = item.Result.Asset != nullptr ? ImportResultStatus::Succeeded : ImportResultStatus::Failed;
+            {
+                item.Result.Assets = std::move(assets);
+                item.Result.Status = !item.Result.Assets.empty() ? ImportResultStatus::Succeeded : ImportResultStatus::Failed;
+            }
             item.State = ScheduledImportState::Ready;
             batch.Progress.CompletedFiles++;
         }
@@ -289,7 +297,7 @@ namespace Crowny
                 else if (item.State == ScheduledImportState::Ready)
                 {
                     completedResult = item.Result;
-                    item.Result.Asset = nullptr;
+                    item.Result.Assets.clear();
                     item.State = ScheduledImportState::Published;
                     batch->NextPublishSequence++;
                     publish = true;
@@ -306,14 +314,14 @@ namespace Crowny
                 TracyPlot("Editor import queue time us",
                           static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(queueTime).count()));
 
-                Ref<Asset> asset;
+                Vector<Ref<Asset>> assets;
                 bool importFailed = false;
                 {
                     ZoneScopedN("ImportScheduler::ImportFile");
                     ZoneText(sourcePath.c_str(), sourcePath.size());
                     try
                     {
-                        asset = Importer::Get().Import(mainThreadTask.SourcePath, mainThreadTask.Options);
+                        assets = Importer::Get().ImportAll(mainThreadTask.SourcePath, mainThreadTask.Options);
                     }
                     catch (...)
                     {
@@ -325,8 +333,11 @@ namespace Crowny
                 BatchState::Item& item = batch->Items[mainThreadTask.Sequence];
                 if (item.State == ScheduledImportState::RunningMainThread)
                 {
-                    item.Result.Asset = std::move(asset);
-                    item.Result.Status = !importFailed && item.Result.Asset != nullptr ? ImportResultStatus::Succeeded : ImportResultStatus::Failed;
+                    if (!importFailed)
+                        item.Result.Assets = std::move(assets);
+                    else
+                        item.Result.Assets.clear();
+                    item.Result.Status = !item.Result.Assets.empty() ? ImportResultStatus::Succeeded : ImportResultStatus::Failed;
                     item.State = ScheduledImportState::Ready;
                     batch->Progress.CompletedFiles++;
                 }
@@ -371,7 +382,7 @@ namespace Crowny
             {
                 if (item.State != ScheduledImportState::PendingWorker && item.State != ScheduledImportState::RunningWorker)
                     continue;
-                item.Result.Asset = nullptr;
+                item.Result.Assets.clear();
                 item.Result.Status = ImportResultStatus::Failed;
                 item.State = ScheduledImportState::Ready;
                 batch->Progress.CompletedFiles++;
@@ -427,7 +438,7 @@ namespace Crowny
                 if (item.State == ScheduledImportState::PendingWorker || item.State == ScheduledImportState::RunningWorker ||
                     item.State == ScheduledImportState::PendingMainThread || item.State == ScheduledImportState::RunningMainThread)
                 {
-                    item.Result.Asset = nullptr;
+                    item.Result.Assets.clear();
                     item.Result.Status = ImportResultStatus::Canceled;
                     item.State = ScheduledImportState::Published;
                     batch->Progress.CompletedFiles++;

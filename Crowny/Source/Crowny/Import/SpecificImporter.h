@@ -32,8 +32,7 @@ namespace Crowny
         virtual Vector<Ref<Asset>> ImportAll(const Path& path, Ref<const ImportOptions> importOptions);
         virtual Ref<ImportOptions> CreateImportOptions() const;
 
-        // Worker policies are opt-in. Importers with multiple outputs must remain on the
-        // main thread until the deferred result can represent every asset from ImportAll.
+        // Worker policies are opt-in. ImportAll must be safe under the selected policy.
         virtual ImporterThreadingPolicy GetThreadingPolicy() const { return ImporterThreadingPolicy::MainThreadOnly; }
 
         Ref<const ImportOptions> GetDefaultImportOptions() const;

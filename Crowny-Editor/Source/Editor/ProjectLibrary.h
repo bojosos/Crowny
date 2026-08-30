@@ -67,6 +67,8 @@ namespace Crowny
         Ref<DirectoryEntry> AddDirectoryInternal(DirectoryEntry* parent, const Path& path);
         void DeleteAssetInternal(Ref<FileEntry> asset);
         void DeleteDirectoryInternal(Ref<DirectoryEntry> directory);
+        bool EnsureMetadataLoaded(FileEntry* entry);
+        bool CommitImportedAssets(FileEntry* entry, const Vector<Ref<Asset>>& assets, const Ref<ImportOptions>& importOptions);
         bool ReimportAssetInternal(FileEntry* entry, const Ref<ImportOptions>& importOptions = nullptr, bool forceReimport = false);
         void CreateInternalParentHierarchy(const Path& fullPath, DirectoryEntry** newHierarchyRoot, DirectoryEntry** newHierarchyLeaf);
 
