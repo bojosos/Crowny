@@ -49,7 +49,8 @@ namespace Crowny
     {
         UV,
         Triplanar,
-        Screen
+        Screen,
+        ProceduralHatch
     };
 
     enum class GpuMaterialFlags : uint32_t

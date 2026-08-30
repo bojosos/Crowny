@@ -54,7 +54,7 @@ namespace Crowny
 
     void VulkanGenericGpuBuffer::UpdateViews()
     {
-        if (m_BufferType == GpuBufferType::Structured)
+        if (m_BufferType == GpuBufferType::Structured || m_BufferType == GpuBufferType::IndirectDraw)
             return;
         VulkanBuffer* buffer = m_Buffer->GetBuffer();
         VkBuffer newBufferHandle = VK_NULL_HANDLE;

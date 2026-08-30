@@ -699,7 +699,7 @@ namespace Crowny
 
             VulkanAccessFlags useFlags = VulkanAccessFlagBits::Read;
             VulkanBuffer* vkBuffer = nullptr;
-            if (m_Buffers[i] != nullptr)
+            if (UniformParams::m_Buffers[i] != nullptr)
             {
                 VulkanGenericGpuBuffer* vulkanBuffer = static_cast<VulkanGenericGpuBuffer*>(UniformParams::m_Buffers[i].get());
                 vkBuffer = vulkanBuffer->GetBuffer();

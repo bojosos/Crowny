@@ -87,7 +87,8 @@ Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-dri
 - [x] Keep successfully cooked or content-hash-valid built-in shader, icon, and font asset timestamps synchronized with their sources, including future-dated inputs, and allow explicit Dist cooker runs so strict packaging works after a fresh checkout.
 - [ ] Complete the toon silhouette and public-tooling path.
   - [x] Move inverted-hull silhouettes onto material-model bins and GPU-driven indirect submission, retaining CPU submission for rejected bins and baseline hardware.
-  - [ ] Add managed convenience APIs/editor presets, asset migration, and dedicated toon golden images.
+  - [ ] Add managed convenience APIs/editor presets and asset migration.
+  - [x] Add a dedicated toon-silhouette golden image through the full `SceneRenderer` path, with semantic outline checks and Vulkan/OpenGL comparison.
 
 ## 3. GPU resource allocation and caches
 
@@ -151,6 +152,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Standard masked-depth validation: the focused Release renderer/shader batch passed 256 assertions in 12 cases; full no-build Release Catch2 passed 29,389 assertions in 572 cases with one optional CoreCLR case skipped; the 59-resource pack loaded on Vulkan and OpenGL, which each passed 5/5 captures with all 5 cross-backend comparisons matching.
 - [x] Strict transparent render-layer validation: focused Release render-world/GPU-scene/draw-generation coverage passed 164 assertions in 24 cases; full no-build Release Catch2 passed 29,399 assertions in 574 cases with one optional CoreCLR case skipped; the no-build Vulkan/OpenGL harness passed 5/5 captures per backend and all 5 cross-backend comparisons.
 - [x] Weighted blended OIT validation: focused Release coverage passed 598 assertions in 47 cases for GPU-draw grouping, graph resources/transitions, shader variations, and fallback selection. The 60-resource renderer harness passed 6/6 Vulkan and OpenGL captures, including weighted-OIT pixels through the packed production composite shader, with all 6 cross-backend comparisons matching.
+- [x] Toon-silhouette validation: the full no-build Release harness passed 7/7 Vulkan and OpenGL captures on Intel Iris Xe, including the material-model silhouette through `SceneRenderer`; all seven cross-backend comparisons passed.
 - [x] Add a deterministic overlapping-transparency renderer capture that checks additive accumulation, revealage clear-to-one, the packed production composite shader, analytic band colors, and forward-versus-reversed layer order on Vulkan and compute-capable OpenGL. The capture exposed and fixed an 8-byte reflected uniform-block versus 16-byte CPU-write mismatch that had forced every runtime OIT frame onto its premultiplied fallback.
 - [ ] Add a serialized-scene capture through the full `SceneRenderer` OIT path so Forward+ variations, blend/depth overrides, bindings, indirect-run filtering, and graph transitions are covered together rather than by focused component tests.
 - [ ] Add an OpenGL 4.1 compatibility-path scene capture that proves requested weighted OIT degrades to premultiplied transparency without compute or load/store textures.

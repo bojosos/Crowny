@@ -2,6 +2,7 @@
 
 #include "RenderTestImage.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/Constants.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
@@ -11,6 +12,15 @@
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/RenderAPI/UniformParams.h"
 #include "Crowny/Renderer/ComputeMaterial.h"
+#include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/GpuScene.h"
+#include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/MeshFactory.h"
+#include "Crowny/Renderer/MeshProcessing.h"
+#include "Crowny/Renderer/Renderer.h"
+#include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Scene/SceneCamera.h"
+#include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Utils/PixelUtils.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
@@ -20,6 +30,8 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Crowny::RenderTests
 {
@@ -799,6 +811,162 @@ void main()
             return true;
         }
 
+        bool RenderToonSilhouette(Image& image, String& error)
+        {
+            constexpr uint32_t toonTestSize = 256u;
+            struct CompatibilityRendererScope
+            {
+                CompatibilityRendererScope()
+                {
+                    Renderer2D::Init();
+                    ForwardRenderer::Init();
+                }
+
+                ~CompatibilityRendererScope()
+                {
+                    Renderer2D::Shutdown();
+                    ForwardRenderer::Shutdown();
+                }
+            } compatibilityRenderers;
+
+            AssetManager* assetManager = AssetManager::TryGet();
+            if (assetManager == nullptr)
+            {
+                error = "The asset manager is unavailable";
+                return false;
+            }
+
+            const AssetHandle<Shader> toonShader = assetManager->Load<Shader>(TOON_SHADER_PATH);
+            const Ref<Material> material = toonShader ? Material::CreateToon(toonShader) : nullptr;
+            if (!material)
+            {
+                error = "Could not create the built-in toon material";
+                return false;
+            }
+            material->SetColor("tint", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            material->SetColor("outlineColor", glm::vec4(1.0f, 0.0f, 0.75f, 1.0f));
+            material->SetFloat("thickness", 0.0f);
+            material->SetFloat("toonSilhouetteWidth", 1.2f);
+            material->SetFloat("toonSpecularStrength", 0.0f);
+            material->SetFloat("toonRimStrength", 0.0f);
+            material->SetFloat("toonPatternStrength", 0.0f);
+            material->SetInt("toonPatternMapping", static_cast<int>(ToonPatternMapping::ProceduralHatch));
+
+            const Ref<MeshData> sphereData = MeshFactory::CreateSphereData(0.75f, 32u, 16u);
+            if (!sphereData)
+            {
+                error = "Could not create the toon test sphere";
+                return false;
+            }
+            MeshDesc meshDesc;
+            meshDesc.Data = sphereData;
+            meshDesc.Usage = MeshUsage::Dynamic;
+            meshDesc.SubMeshes.emplace_back(0u, sphereData->GetIndexCount(), DrawMode::TRIANGLE_LIST);
+            meshDesc.GpuGeometry = MeshProcessing::BuildGpuGeometry(*sphereData, meshDesc.SubMeshes);
+            if (meshDesc.GpuGeometry.IsEmpty())
+            {
+                error = "Could not build GPU geometry for the toon test sphere";
+                return false;
+            }
+
+            const Ref<Mesh> mesh = Mesh::Create(meshDesc);
+            const AssetHandle<Mesh> meshHandle = static_asset_cast<Mesh>(assetManager->CreateAssetHandle(mesh));
+            const AssetHandle<Material> materialHandle = static_asset_cast<Material>(assetManager->CreateAssetHandle(material));
+            if (!meshHandle || !materialHandle)
+            {
+                error = "Could not create toon test asset handles";
+                return false;
+            }
+
+            const Ref<Texture> color = CreateColorTexture(toonTestSize, toonTestSize, "RenderTests/ToonSilhouetteColor");
+            const Ref<Texture> depth =
+              CreateRenderTexture(toonTestSize, toonTestSize, TextureFormat::DEPTH32F, "RenderTests/ToonSilhouetteDepth");
+            const Ref<RenderTexture> target = CreateTarget({ color }, toonTestSize, toonTestSize, depth);
+            if (!color || !depth || !target)
+            {
+                error = "Could not create the toon silhouette render target";
+                return false;
+            }
+
+            const Ref<Scene> scene = CreateRef<Scene>("Toon silhouette render test");
+            MeshRendererComponent& component = scene->CreateEntity("Toon sphere").AddComponent<MeshRendererComponent>();
+            component.MeshHandle = meshHandle;
+            component.SetMaterial(0u, materialHandle);
+            component.CastShadows = false;
+            component.MotionVectors = false;
+
+            SceneCamera camera;
+            camera.SetPerspective(glm::radians(40.0f), 0.1f, 20.0f);
+            camera.SetViewportSize(toonTestSize, toonTestSize);
+            camera.SetBackgroundColor(glm::vec3(0.0f));
+            camera.SetOcclusionCulling(false);
+            const glm::mat4 view =
+              glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+            SceneRenderer renderer(scene, target);
+            renderer.Init();
+            const bool vulkan = RenderAPI::GetAPI() == RenderAPI::API::Vulkan;
+            if (vulkan)
+            {
+                RenderThread* renderThread = Application::Get().GetRenderThread();
+                if (renderThread == nullptr)
+                {
+                    error = "The Vulkan render thread is unavailable";
+                    return false;
+                }
+                RenderSnapshot& snapshot = renderThread->BeginFrame();
+                snapshot.FrameNumber = 1u;
+                renderer.ExtractSnapshot(snapshot, camera, view, false);
+                renderThread->SubmitFrame();
+                renderThread->WaitForFrameDone();
+                RenderAPI::Get().SubmitCommandBuffer(nullptr);
+            }
+            else
+            {
+                RenderSnapshot snapshot;
+                snapshot.FrameNumber = 1u;
+                renderer.ExtractSnapshot(snapshot, camera, view, false);
+                SceneRenderer::RenderFromSnapshot(snapshot);
+                RenderAPI::Get().SubmitCommandBuffer(nullptr);
+            }
+
+            const GpuScene& gpuScene = Renderer::GetGpuScene();
+            if (!gpuScene.HasToonSilhouetteMaterials())
+            {
+                error = "The toon silhouette material was not registered in the GPU scene";
+                return false;
+            }
+            if (vulkan)
+            {
+                const GpuSceneUploadStats& stats = gpuScene.GetStats();
+                if (stats.VisibleInstances == 0u || stats.IndirectCommands == 0u)
+                {
+                    error = "The Vulkan GPU scene produced no visible toon draw commands";
+                    return false;
+                }
+            }
+
+            if (!Capture(color, image, error))
+                return false;
+            uint32_t outlinePixels = 0u;
+            for (uint32_t y = 0u; y < image.Height; ++y)
+            {
+                for (uint32_t x = 0u; x < image.Width; ++x)
+                {
+                    const uint8_t* pixel = image.Pixel(x, y);
+                    if (pixel[0] > 48u && pixel[2] > 32u && pixel[1] * 2u < std::max(pixel[0], pixel[2]))
+                        ++outlinePixels;
+                }
+            }
+            const uint8_t* center = image.Pixel(image.Width / 2u, image.Height / 2u);
+            if (outlinePixels < 12u || center[0] > 32u || center[1] > 32u || center[2] > 32u)
+            {
+                error = "The toon silhouette did not produce a colored hull around a dark interior";
+                return false;
+            }
+            return true;
+        }
+
         Vector<TestCase> BuildCases()
         {
             const Tolerance exact{};
@@ -807,6 +975,14 @@ void main()
             shaderTolerance.MaxChannelError = 1u;
             shaderTolerance.MaxMeanAbsoluteError = 0.01;
             shaderTolerance.MaxFailingPixelRatio = 0.001;
+            Tolerance toonTolerance;
+            // The legacy OpenGL inverted hull is slightly wider than the pixel-scaled GPU-driven Vulkan path.
+            // Ignore target-alpha differences and allow only the measured one-pixel silhouette fringe.
+            toonTolerance.PixelThreshold = 8u;
+            toonTolerance.MaxChannelError = 255u;
+            toonTolerance.MaxMeanAbsoluteError = 8.0;
+            toonTolerance.MaxFailingPixelRatio = 0.02;
+            toonTolerance.CompareAlpha = false;
             return {
                 { "solid-clear", exact, RenderSolidClear },
                 { "mrt-clear", exact, RenderMrtClear },
@@ -814,6 +990,7 @@ void main()
                 { "texture-mip-selection", shaderTolerance, RenderMipSelection },
                 { "depth-output-matrix", exact, RenderDepthOutputMatrix },
                 { "weighted-oit", shaderTolerance, RenderWeightedOit },
+                { "toon-silhouette", toonTolerance, RenderToonSilhouette },
             };
         }
 
@@ -1017,7 +1194,8 @@ void main()
         fs::create_directories(artifacts);
         uint32_t compared = 0u;
         uint32_t failed = 0u;
-        const Tolerance tolerance{ 1u, 1u, 0.01, 0.001, true };
+        const Vector<TestCase> cases = BuildCases();
+        const Tolerance defaultTolerance{ 1u, 1u, 0.01, 0.001, true };
         for (const fs::directory_entry& entry : fs::directory_iterator(first))
         {
             const String suffix = ".actual.bmp";
@@ -1035,6 +1213,10 @@ void main()
                 std::cout << "[  FAILED  ] " << filename << ": " << error << '\n';
                 continue;
             }
+            const String testName = filename.substr(0u, filename.size() - suffix.size());
+            const auto test = std::find_if(cases.begin(), cases.end(),
+                                           [&](const TestCase& candidate) { return candidate.Name == testName; });
+            const Tolerance& tolerance = test != cases.end() ? test->AllowedDifference : defaultTolerance;
             const Comparison comparison = Compare(firstImage, secondImage, tolerance);
             if (!comparison.Passed)
             {

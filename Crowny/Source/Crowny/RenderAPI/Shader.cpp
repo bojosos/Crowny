@@ -20,6 +20,9 @@ namespace Crowny
 
     bool ShaderRenderPass::HasBlending() const
     {
+        if (!m_ShaderDesc.BlendState)
+            return false;
+
         bool transparent = false;
         for (uint32_t i = 0; i < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; i++)
         {

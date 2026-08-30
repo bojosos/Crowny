@@ -1078,7 +1078,8 @@ namespace Crowny
                 ReadMaterialValue(material, { "toonMatcapRotation", "matcapRotation" }, desc.ToonMatcapRotation);
                 int patternMapping = static_cast<int>(desc.ToonPatternMappingMode);
                 if (ReadMaterialValue(material, { "toonPatternMapping", "patternMapping", "patternUvMode" }, patternMapping))
-                    desc.ToonPatternMappingMode = static_cast<ToonPatternMapping>(glm::clamp(patternMapping, 0, 2));
+                    desc.ToonPatternMappingMode = static_cast<ToonPatternMapping>(
+                      glm::clamp(patternMapping, 0, static_cast<int>(ToonPatternMapping::ProceduralHatch)));
                 color = desc.ToonOutlineColor;
                 if (ReadMaterialValue(material, { "toonOutlineColor", "outlineColor" }, color))
                     desc.ToonOutlineColor = color;
