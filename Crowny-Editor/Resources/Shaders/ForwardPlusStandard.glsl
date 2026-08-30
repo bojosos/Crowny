@@ -2,6 +2,8 @@
 #pragma depth_read true
 #pragma depth_write true
 #pragma depth_compare greater_equal
+#pragma variation CW_WEIGHTED_OIT_ACCUMULATION
+#pragma variation CW_WEIGHTED_OIT_REVEALAGE
 #type vertex
 #version 450
 
@@ -101,6 +103,7 @@ struct CwMaterialRecord
     vec4 toonPattern;
     vec4 toonOutlineColor;
     vec4 toonOutline;
+    vec4 toonSilhouette;
     vec4 toonStyle;
     uvec4 textureIndices2;
 };
@@ -180,8 +183,10 @@ layout(std430, set = 1, binding = 0) readonly buffer CwMaterialTable
 layout(set = 1, binding = 1) uniform sampler2D cwTextures[];
 
 layout(location = 0) out vec4 cwHdrColor;
+#if !defined(CW_WEIGHTED_OIT_ACCUMULATION) && !defined(CW_WEIGHTED_OIT_REVEALAGE)
 layout(location = 1) out int cwMaterialId;
 layout(location = 2) out int cwObjectId;
+#endif
 
 vec3 sampleNormal(CwMaterialRecord material, vec3 geometricNormal)
 {
@@ -234,6 +239,26 @@ vec3 sampleToonMatcap(CwMaterialRecord material, vec3 worldNormal)
     return texture(cwTextures[nonuniformEXT(material.textureIndices2.z)], coordinate * 0.5 + 0.5).rgb;
 }
 
+void writeFragment(vec3 color, float alpha, uint alphaMode)
+{
+    alpha = clamp(alpha, 0.0, 1.0);
+#ifdef CW_WEIGHTED_OIT_ACCUMULATION
+    // McGuire/Bavoil weighted blended OIT, adjusted for Crowny's reverse-Z depth.
+    float alphaWeight = pow(min(1.0, alpha * 10.0) + 0.01, 3.0);
+    float depthWeight = pow(0.1 + gl_FragCoord.z * 0.9, 3.0);
+    float weight = clamp(alphaWeight * 1e8 * depthWeight, 1e-2, 3e3);
+    cwHdrColor = vec4(color * alpha, alpha) * weight;
+#elif defined(CW_WEIGHTED_OIT_REVEALAGE)
+    cwHdrColor = vec4(alpha);
+#else
+    if (alphaMode >= 2u)
+        color *= alpha;
+    cwHdrColor = vec4(color, alpha);
+    cwMaterialId = int(inputData.materialIndex);
+    cwObjectId = int(inputData.objectId);
+#endif
+}
+
 void main()
 {
     CwMaterialRecord material = materials[inputData.materialIndex];
@@ -262,11 +287,7 @@ void main()
     if (model == 1u)
     {
         vec3 unlit = surface.baseColor * preExposure + emissive;
-        if (alphaMode >= 2u)
-            unlit *= baseColor.a;
-        cwHdrColor = vec4(unlit, baseColor.a);
-        cwMaterialId = int(inputData.materialIndex);
-        cwObjectId = int(inputData.objectId);
+        writeFragment(unlit, baseColor.a, alphaMode);
         return;
     }
 
@@ -328,9 +349,5 @@ void main()
         vec3 matcapColor = surface.baseColor * matcap * preExposure + emissive;
         outputColor = mix(outputColor, matcapColor, material.toonStyle.z);
     }
-    if (alphaMode >= 2u)
-        outputColor *= baseColor.a;
-    cwHdrColor = vec4(outputColor, baseColor.a);
-    cwMaterialId = int(inputData.materialIndex);
-    cwObjectId = int(inputData.objectId);
+    writeFragment(outputColor, baseColor.a, alphaMode);
 }

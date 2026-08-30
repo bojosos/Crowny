@@ -16,6 +16,10 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetVector3", (void*)&Internal_SetVector3);
         MetaData.ScriptClass->AddInternalCall("Internal_SetMatrix", (void*)&Internal_SetMatrix);
         MetaData.ScriptClass->AddInternalCall("Internal_SetTexture", (void*)&Internal_SetTexture);
+        MetaData.ScriptClass->AddInternalCall("Internal_HasAlphaModeOverride", (void*)&Internal_HasAlphaModeOverride);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetAlphaMode", (void*)&Internal_GetAlphaMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetAlphaMode", (void*)&Internal_SetAlphaMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_ClearAlphaModeOverride", (void*)&Internal_ClearAlphaModeOverride);
     }
 
     void ScriptMaterial::Internal_SetFloat(ScriptMaterial* thisPtr, MonoString* name, float value)
@@ -55,5 +59,29 @@ namespace Crowny
             thisPtr->GetHandle()->SetTexture(MonoUtils::FromMonoString(name), scriptTexture->GetHandle());
         else
             thisPtr->GetHandle()->SetTexture(MonoUtils::FromMonoString(name), AssetHandle<Texture>());
+    }
+
+    bool ScriptMaterial::Internal_HasAlphaModeOverride(ScriptMaterial* thisPtr)
+    {
+        return thisPtr != nullptr && thisPtr->GetHandle() && thisPtr->GetHandle()->HasAlphaModeOverride();
+    }
+
+    int32_t ScriptMaterial::Internal_GetAlphaMode(ScriptMaterial* thisPtr)
+    {
+        return thisPtr != nullptr && thisPtr->GetHandle() ? static_cast<int32_t>(thisPtr->GetHandle()->GetAlphaMode())
+                                                          : static_cast<int32_t>(AlphaMode::Opaque);
+    }
+
+    void ScriptMaterial::Internal_SetAlphaMode(ScriptMaterial* thisPtr, int32_t alphaMode)
+    {
+        if (thisPtr != nullptr && thisPtr->GetHandle() && alphaMode >= static_cast<int32_t>(AlphaMode::Opaque) &&
+            alphaMode <= static_cast<int32_t>(AlphaMode::WeightedOIT))
+            thisPtr->GetHandle()->SetAlphaMode(static_cast<AlphaMode>(alphaMode));
+    }
+
+    void ScriptMaterial::Internal_ClearAlphaModeOverride(ScriptMaterial* thisPtr)
+    {
+        if (thisPtr != nullptr && thisPtr->GetHandle())
+            thisPtr->GetHandle()->ClearAlphaModeOverride();
     }
 } // namespace Crowny

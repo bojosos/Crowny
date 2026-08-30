@@ -302,6 +302,8 @@ namespace Crowny
                 }
             }
             appendCommand(candidate);
+            if (candidate.Bin.Alpha == AlphaMode::WeightedOIT)
+                output.WeightedOitCommandCount++;
         }
 
         for (const SortEntry& entry : m_StrictTransparent)

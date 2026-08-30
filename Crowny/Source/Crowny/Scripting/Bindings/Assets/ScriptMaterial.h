@@ -20,5 +20,9 @@ namespace Crowny
         static void Internal_SetVector3(ScriptMaterial* thisPtr, MonoString* name, glm::vec3* value);
         static void Internal_SetMatrix(ScriptMaterial* thisPtr, MonoString* name, glm::mat4* matrix);
         static void Internal_SetTexture(ScriptMaterial* thisPtr, MonoString* name, MonoObject* texture);
+        static bool Internal_HasAlphaModeOverride(ScriptMaterial* thisPtr);
+        static int32_t Internal_GetAlphaMode(ScriptMaterial* thisPtr);
+        static void Internal_SetAlphaMode(ScriptMaterial* thisPtr, int32_t alphaMode);
+        static void Internal_ClearAlphaModeOverride(ScriptMaterial* thisPtr);
     };
 } // namespace Crowny

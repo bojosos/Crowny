@@ -55,6 +55,7 @@ TEST_CASE("RenderWorld coalesces changes before render-thread consumption", "[Re
     desc.MeshHandle = 17;
     desc.MaterialHandle = 23;
     desc.LodBias = -1.25f;
+    desc.RenderLayerOrder = 12;
 
     const RenderInstanceHandle handle = world.CreateInstance(desc);
     REQUIRE(handle.IsValid());
@@ -69,10 +70,36 @@ TEST_CASE("RenderWorld coalesces changes before render-thread consumption", "[Re
     CHECK(RenderWorld::GetMeshHandle(changes[0].Data.Draw) == 17);
     CHECK(RenderWorld::GetMaterialHandle(changes[0].Data.Draw) == 23);
     CHECK(RenderWorld::GetLodBias(changes[0].Data.Draw) == -1.25f);
+    CHECK(changes[0].RenderLayerOrder == 12);
     CHECK(changes[0].Data.Culling.BoundingSphere.w == 2.0f);
 
     world.DrainChanges(changes);
     CHECK(changes.empty());
+}
+
+TEST_CASE("RenderWorld keeps render-layer ordering outside the fixed GPU instance record", "[Renderer][RenderWorld][Transparency]")
+{
+    RenderWorld world;
+    RenderInstanceDesc desc;
+    desc.RenderLayerOrder = 7;
+    const RenderInstanceHandle handle = world.CreateInstance(desc);
+
+    Vector<RenderWorldChange> changes;
+    world.DrainChanges(changes);
+    REQUIRE(changes.size() == 1);
+    CHECK(changes[0].RenderLayerOrder == 7);
+
+    RenderInstanceData data;
+    int32_t renderLayerOrder = 0;
+    REQUIRE(world.TryGetInstance(handle, data, &renderLayerOrder));
+    CHECK(renderLayerOrder == 7);
+    CHECK(sizeof(RenderInstanceData) == 128);
+
+    desc.RenderLayerOrder = -4;
+    REQUIRE(world.UpdateInstance(handle, desc));
+    world.DrainChanges(changes);
+    REQUIRE(changes.size() == 1);
+    CHECK(changes[0].RenderLayerOrder == -4);
 }
 
 TEST_CASE("RenderWorld settles previous transforms one frame after movement", "[Renderer][RenderWorld][MotionVectors]")

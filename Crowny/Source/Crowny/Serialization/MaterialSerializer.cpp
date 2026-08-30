@@ -10,7 +10,39 @@
 
 namespace Crowny
 {
-    static const uint32_t MATERIAL_YAML_VERSION = 1;
+    static const uint32_t MATERIAL_YAML_VERSION = 2;
+
+    static StringView AlphaModeName(AlphaMode alphaMode)
+    {
+        switch (alphaMode)
+        {
+        case AlphaMode::Opaque:
+            return "Opaque";
+        case AlphaMode::Mask:
+            return "Mask";
+        case AlphaMode::Premultiplied:
+            return "Premultiplied";
+        case AlphaMode::Additive:
+            return "Additive";
+        case AlphaMode::WeightedOIT:
+            return "WeightedOIT";
+        }
+        return "Inferred";
+    }
+
+    static bool ParseAlphaMode(StringView name, AlphaMode& output)
+    {
+        static constexpr std::array<StringView, 5> names = { "Opaque", "Mask", "Premultiplied", "Additive", "WeightedOIT" };
+        for (uint32_t index = 0; index < names.size(); ++index)
+        {
+            if (name == names[index])
+            {
+                output = static_cast<AlphaMode>(index);
+                return true;
+            }
+        }
+        return false;
+    }
 
     MaterialSerializer::MaterialSerializer(const Ref<Material>& material) : m_Material(material) {}
 
@@ -108,6 +140,8 @@ namespace Crowny
 
         // Material name
         SerializeValueYAML(out, "Name", m_Material->GetName());
+        const String alphaMode = String(m_Material->HasAlphaModeOverride() ? AlphaModeName(m_Material->GetAlphaMode()) : StringView("Inferred"));
+        SerializeValueYAML(out, "AlphaMode", alphaMode);
 
         // Data parameters — only user-editable ones (skip cw_ blocks)
         out << YAML::Key << "Parameters" << YAML::Value << YAML::BeginSeq;
@@ -167,6 +201,32 @@ namespace Crowny
 
         if (!data || !data.IsMap())
             return false;
+
+        const uint32_t version = data["Version"].as<uint32_t>(1u);
+        if (version > MATERIAL_YAML_VERSION)
+        {
+            CW_ENGINE_ERROR("Material YAML version {} is newer than supported version {}", version, MATERIAL_YAML_VERSION);
+            return false;
+        }
+
+        if (data["AlphaMode"])
+        {
+            const String alphaModeName = data["AlphaMode"].as<String>();
+            if (alphaModeName == "Inferred")
+                m_Material->ClearAlphaModeOverride();
+            else
+            {
+                AlphaMode alphaMode;
+                if (!ParseAlphaMode(alphaModeName, alphaMode))
+                {
+                    CW_ENGINE_ERROR("Material has invalid AlphaMode '{}'", alphaModeName);
+                    return false;
+                }
+                m_Material->SetAlphaMode(alphaMode);
+            }
+        }
+        else
+            m_Material->ClearAlphaModeOverride();
 
         // Load shader
         UUID shaderUuid;

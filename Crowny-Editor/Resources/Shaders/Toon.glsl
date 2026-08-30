@@ -25,6 +25,8 @@ layout (binding = 1) uniform OutlineParams
     vec4 outlineColor;
     // @range(0.0, 5.0) @name("Thickness") @default(1.0)
     float thickness;
+    // @range(0.0, 5.0) @name("Inverted Hull Width") @default(1.0)
+    float toonSilhouetteWidth;
     // @range(0.0, 0.1) @name("Depth Threshold") @default(0.002)
     float toonOutlineDepthThreshold;
     // @range(0.0, 1.0) @name("Normal Threshold") @default(0.2)
@@ -40,7 +42,7 @@ void main()
     vec3 clipNormal = mat3(mvpMatrix) * cw_Normal;
 
     vec2 screenNormal = normalize(clipNormal.xy);
-    clipPos.xy += screenNormal * outline.thickness * clipPos.w * 0.01;
+    clipPos.xy += screenNormal * outline.toonSilhouetteWidth * clipPos.w * 0.01;
 
     gl_Position = clipPos;
 }
@@ -56,6 +58,7 @@ layout (binding = 1) uniform OutlineParams
     vec4 outlineColor;
     // @range(0.0, 5.0) @name("Thickness") @default(1.0)
     float thickness;
+    float toonSilhouetteWidth;
     float toonOutlineDepthThreshold;
     float toonOutlineNormalThreshold;
     float toonOutlineDistanceFade;

@@ -1,6 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Renderer/GpuMaterial.h"
+#include "Crowny/Renderer/Material.h"
+#include "Crowny/Serialization/MaterialSerializer.h"
 
 using namespace Crowny;
 
@@ -48,6 +51,7 @@ TEST_CASE("GPU toon materials pack bounded artistic controls", "[Renderer][Mater
     desc.ToonRampOffset = -2.0f;
     desc.ToonMatcapStrength = -1.0f;
     desc.ToonOutlineWidth = -2.0f;
+    desc.ToonSilhouetteWidth = -3.0f;
 
     const GpuMaterialData packed = GpuMaterialPacker::Pack(desc);
     CHECK((packed.TextureIndices1.w & 0xffu) == static_cast<uint32_t>(MaterialModel::Toon));
@@ -64,35 +68,32 @@ TEST_CASE("GPU toon materials pack bounded artistic controls", "[Renderer][Mater
     CHECK(packed.ToonStyle.y == -1.0f);
     CHECK(packed.ToonStyle.z == 0.0f);
     CHECK(packed.ToonOutline.x == 0.0f);
+    CHECK(packed.ToonSilhouette.x == 0.0f);
 }
 
 TEST_CASE("Material render classification is explicit and fails closed", "[Renderer][Materials][Routing]")
 {
-    const MaterialRenderClassification standard =
-      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=standard" }, false, false);
+    const MaterialRenderClassification standard = MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=standard" }, false, false);
     CHECK(standard.UsesStandardGpuRecord());
     CHECK(standard.Model == MaterialModel::Standard);
     CHECK(standard.Alpha == AlphaMode::Opaque);
 
-    const MaterialRenderClassification unlit =
-      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=unlit" }, true, false);
+    const MaterialRenderClassification unlit = MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=unlit" }, true, false);
     CHECK(unlit.UsesStandardGpuRecord());
     CHECK(unlit.Model == MaterialModel::Unlit);
     CHECK(unlit.Alpha == AlphaMode::Premultiplied);
 
-    const MaterialRenderClassification toon =
-      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=toon" }, true, true);
+    const MaterialRenderClassification toon = MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=toon" }, true, true);
     CHECK(toon.UsesStandardGpuRecord());
     CHECK(toon.Model == MaterialModel::Toon);
+    CHECK(toon.GetMaterialTemplate() == static_cast<uint32_t>(MaterialModel::Toon));
     CHECK(toon.Alpha == AlphaMode::Mask);
 
-    const MaterialRenderClassification custom =
-      MaterialRenderClassifier::Classify("Pbribl.glsl", { "material_model=custom" }, false, false);
+    const MaterialRenderClassification custom = MaterialRenderClassifier::Classify("Pbribl.glsl", { "material_model=custom" }, false, false);
     CHECK_FALSE(custom.UsesStandardGpuRecord());
     CHECK(custom.IsForwardOnlyOpaque());
 
-    const MaterialRenderClassification customMask =
-      MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=custom" }, false, true);
+    const MaterialRenderClassification customMask = MaterialRenderClassifier::Classify("Anything.glsl", { "material_model=custom" }, false, true);
     CHECK(customMask.Alpha == AlphaMode::Mask);
     CHECK_FALSE(customMask.IsForwardOnlyOpaque());
 
@@ -116,4 +117,66 @@ TEST_CASE("Only exact built-in shader names use the compatibility material route
     const GpuMaterialData unsupported = GpuMaterialPacker::PackUnsupported();
     CHECK(unsupported.TextureIndices1.w == GpuMaterialPacker::UnsupportedModelAndAlpha);
     CHECK(((unsupported.TextureIndices1.w >> 8u) & 0xffu) > static_cast<uint32_t>(AlphaMode::WeightedOIT));
+}
+
+TEST_CASE("Materials can explicitly request and persist weighted OIT routing", "[Renderer][Materials][Routing]")
+{
+    const Path assetPath = fs::temp_directory_path() / "crowny-weighted-oit-material.asset";
+    fs::remove(assetPath);
+
+    struct ScopedAssetManager
+    {
+        ScopedAssetManager()
+        {
+            AssetListenerManager::StartUp();
+            AssetManager::StartUp();
+        }
+        ~ScopedAssetManager()
+        {
+            AssetManager::Shutdown();
+            AssetListenerManager::Shutdown();
+        }
+    } scopedAssetManager;
+    AssetManager& manager = AssetManager::Get();
+    const Ref<ShaderTechnique> technique = ShaderTechnique::Create({ "material_model=standard" }, {}, {});
+    ShaderDesc shaderDesc;
+    shaderDesc.Techniques = { technique };
+    const AssetHandle<Shader> shader = static_asset_cast<Shader>(manager.CreateAssetHandle(Shader::Create(shaderDesc)));
+    const Ref<Material> material = Material::Create(shader);
+
+    CHECK_FALSE(material->HasAlphaModeOverride());
+    CHECK(MaterialRenderClassifier::Classify(*material).Alpha == AlphaMode::Opaque);
+    const uint64_t initialVersion = material->GetParamVersion();
+
+    material->SetAlphaMode(AlphaMode::WeightedOIT);
+    CHECK(material->HasAlphaModeOverride());
+    CHECK(material->GetAlphaMode() == AlphaMode::WeightedOIT);
+    CHECK(material->GetParamVersion() == initialVersion + 1u);
+    CHECK(MaterialRenderClassifier::Classify(*material).Alpha == AlphaMode::WeightedOIT);
+    material->SetAlphaMode(AlphaMode::WeightedOIT);
+    CHECK(material->GetParamVersion() == initialVersion + 1u);
+
+    manager.Save(material, assetPath);
+    const AssetHandle<Material> restored = manager.Load<Material>(assetPath, false);
+    REQUIRE(restored);
+    CHECK(restored->HasAlphaModeOverride());
+    CHECK(restored->GetAlphaMode() == AlphaMode::WeightedOIT);
+    CHECK(MaterialRenderClassifier::Classify(*restored).Alpha == AlphaMode::WeightedOIT);
+
+    MaterialSerializer serializer(material);
+    const String yaml = serializer.SerializeToString();
+    CHECK(yaml.find("AlphaMode: WeightedOIT") != String::npos);
+
+    material->ClearAlphaModeOverride();
+    REQUIRE(serializer.DeserializeFromString("Version: 2\nAlphaMode: WeightedOIT\n"));
+    CHECK(material->HasAlphaModeOverride());
+    CHECK(material->GetAlphaMode() == AlphaMode::WeightedOIT);
+    CHECK_FALSE(serializer.DeserializeFromString("Version: 2\nAlphaMode: Sorted\n"));
+    CHECK_FALSE(serializer.DeserializeFromString("Version: 999\nAlphaMode: Opaque\n"));
+
+    REQUIRE(serializer.DeserializeFromString("Version: 1\n"));
+    CHECK_FALSE(material->HasAlphaModeOverride());
+    CHECK(MaterialRenderClassifier::Classify(*material).Alpha == AlphaMode::Opaque);
+
+    fs::remove(assetPath);
 }

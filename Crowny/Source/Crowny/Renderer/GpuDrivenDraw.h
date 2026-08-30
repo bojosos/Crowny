@@ -141,6 +141,7 @@ namespace Crowny
         Vector<DrawIndexedIndirectCommand> Commands;
         Vector<GpuDrawRun> Runs;
         uint32_t StrictTransparentCommandCount = 0;
+        uint32_t WeightedOitCommandCount = 0;
 
         void Clear()
         {
@@ -148,6 +149,7 @@ namespace Crowny
             Commands.clear();
             Runs.clear();
             StrictTransparentCommandCount = 0;
+            WeightedOitCommandCount = 0;
         }
     };
 

@@ -2,6 +2,7 @@
 
 #include "RenderTestImage.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/Constants.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/RenderCapabilities.h"
@@ -9,6 +10,7 @@
 #include "Crowny/RenderAPI/SamplerState.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/RenderAPI/UniformParams.h"
+#include "Crowny/Renderer/ComputeMaterial.h"
 #include "Crowny/Utils/PixelUtils.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
@@ -75,17 +77,51 @@ namespace Crowny::RenderTests
             return result;
         }
 
-        Ref<Texture> CreateRenderTexture(uint32_t width, uint32_t height, TextureFormat format, StringView debugName)
+        Ref<Texture> CreateRenderTexture(uint32_t width, uint32_t height, TextureFormat format, StringView debugName,
+                                         bool loadStore = false)
         {
             TextureDesc textureDesc;
             textureDesc.Width = width;
             textureDesc.Height = height;
             textureDesc.Format = format;
             textureDesc.Usage = PixelUtils::IsDepthFormat(format) ? TextureUsage::TEXTURE_DEPTHSTENCIL : TextureUsage::TEXTURE_RENDERTARGET;
+            if (loadStore)
+                textureDesc.Usage = static_cast<TextureUsage>(textureDesc.Usage | TextureUsage::TEXTURE_LOADSTORE);
             textureDesc.sRGB = false;
             textureDesc.ReadWrite = true;
             textureDesc.DebugName = String(debugName);
             return Texture::Create(textureDesc);
+        }
+
+        bool CompileGraphicsPass(StringView name, const String& source, Ref<ShaderRenderPass>& output, String& error)
+        {
+            const ShaderCompileResult result = ShaderCompiler::CompileWithDiagnostics(String(name), source, ShaderLanguage::VKSL);
+            if (!result.Succeeded())
+            {
+                for (const ShaderDiagnostic& diagnostic : result.Diagnostics)
+                {
+                    if (!error.empty())
+                        error += "; ";
+                    error += diagnostic.Message;
+                }
+                if (error.empty())
+                    error = String(name) + " failed without diagnostics";
+                return false;
+            }
+            if (result.Description.Techniques.empty() || result.Description.Techniques.front()->GetRenderPasses().empty())
+            {
+                error = String(name) + " produced no graphics pass";
+                return false;
+            }
+            const Ref<ShaderTechnique>& technique = result.Description.Techniques.front();
+            technique->Compile();
+            output = technique->GetRenderPasses().front();
+            if (!output || !output->GetGraphicsPipeline())
+            {
+                error = String(name) + " produced no graphics pipeline";
+                return false;
+            }
+            return true;
         }
 
         Ref<Texture> CreateColorTexture(uint32_t width, uint32_t height, StringView debugName)
@@ -541,6 +577,228 @@ void main()
             return Capture(color, image, error);
         }
 
+        bool RenderWeightedOit(Image& image, String& error)
+        {
+            static const String accumulationSource = R"(#lang glsl
+#pragma depth_read false
+#pragma depth_write false
+#pragma cull none
+blend_state { enabled = true; color = { one, one, add }; alpha = { one, one, add }; };
+#type vertex
+#version 450
+
+layout(location = 0) flat out int cwLayer;
+
+void main()
+{
+    vec2 uv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+    gl_Position = vec4(uv * 2.0 - 1.0, 0.0, 1.0);
+    cwLayer = gl_InstanceIndex;
+}
+
+#type fragment
+#version 450
+
+layout(location = 0) flat in int cwLayer;
+layout(location = 0) out vec4 cwAccumulation;
+
+void main()
+{
+    bool reverseOrder = gl_FragCoord.y >= 32.0;
+    bool redLayer = (cwLayer == 0) != reverseOrder;
+    if ((redLayer && gl_FragCoord.x >= 48.0) || (!redLayer && gl_FragCoord.x < 16.0))
+        discard;
+    vec3 color = redLayer ? vec3(0.9, 0.1, 0.05) : vec3(0.05, 0.2, 0.95);
+    float alpha = redLayer ? 0.5 : 0.25;
+    float alphaWeight = pow(min(1.0, alpha * 10.0) + 0.01, 3.0);
+    float depthWeight = pow(0.1 + gl_FragCoord.z * 0.9, 3.0);
+    float weight = clamp(alphaWeight * 1e8 * depthWeight, 1e-2, 3e3);
+    cwAccumulation = vec4(color * alpha, alpha) * weight;
+}
+)";
+            static const String revealageSource = R"(#lang glsl
+#pragma depth_read false
+#pragma depth_write false
+#pragma cull none
+blend_state { enabled = true; color = { zero, srcia, add }; alpha = { zero, srcia, add }; };
+#type vertex
+#version 450
+
+layout(location = 0) flat out int cwLayer;
+
+void main()
+{
+    vec2 uv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+    gl_Position = vec4(uv * 2.0 - 1.0, 0.0, 1.0);
+    cwLayer = gl_InstanceIndex;
+}
+
+#type fragment
+#version 450
+
+layout(location = 0) flat in int cwLayer;
+layout(location = 0) out vec4 cwRevealage;
+
+void main()
+{
+    bool reverseOrder = gl_FragCoord.y >= 32.0;
+    bool redLayer = (cwLayer == 0) != reverseOrder;
+    if ((redLayer && gl_FragCoord.x >= 48.0) || (!redLayer && gl_FragCoord.x < 16.0))
+        discard;
+    float alpha = redLayer ? 0.5 : 0.25;
+    cwRevealage = vec4(alpha);
+}
+)";
+            static const String copySource = R"(#lang glsl
+#pragma depth_read false
+#pragma depth_write false
+#pragma cull none
+#type vertex
+#version 450
+
+layout(location = 0) out vec2 cwUv;
+
+void main()
+{
+    cwUv = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+    gl_Position = vec4(cwUv * 2.0 - 1.0, 0.0, 1.0);
+}
+
+#type fragment
+#version 450
+
+layout(location = 0) in vec2 cwUv;
+layout(set = 0, binding = 0) uniform sampler2D cwHdrColor;
+layout(location = 0) out vec4 cwOutput;
+
+void main()
+{
+    cwOutput = texture(cwHdrColor, cwUv);
+}
+)";
+
+            Ref<ShaderRenderPass> accumulationPass;
+            Ref<ShaderRenderPass> revealagePass;
+            Ref<ShaderRenderPass> copyPass;
+            if (!CompileGraphicsPass("Crowny-RenderTests/WeightedOitAccumulation.glsl", accumulationSource, accumulationPass, error) ||
+                !CompileGraphicsPass("Crowny-RenderTests/WeightedOitRevealage.glsl", revealageSource, revealagePass, error) ||
+                !CompileGraphicsPass("Crowny-RenderTests/WeightedOitCopy.glsl", copySource, copyPass, error))
+                return false;
+
+            const Ref<Texture> accumulation =
+              CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::RGBA16F, "RenderTests/OitAccumulation");
+            const Ref<Texture> revealage =
+              CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::R32F, "RenderTests/OitRevealage");
+            const Ref<Texture> hdrColor =
+              CreateRenderTexture(TEST_WIDTH, TEST_HEIGHT, TextureFormat::RGBA16F, "RenderTests/OitHdrColor", true);
+            const Ref<Texture> output = CreateColorTexture(TEST_WIDTH, TEST_HEIGHT, "RenderTests/OitOutput");
+            const Ref<RenderTexture> accumulationTarget = CreateTarget({ accumulation }, TEST_WIDTH, TEST_HEIGHT);
+            const Ref<RenderTexture> revealageTarget = CreateTarget({ revealage }, TEST_WIDTH, TEST_HEIGHT);
+            const Ref<RenderTexture> hdrTarget = CreateTarget({ hdrColor }, TEST_WIDTH, TEST_HEIGHT);
+            const Ref<RenderTexture> outputTarget = CreateTarget({ output }, TEST_WIDTH, TEST_HEIGHT);
+            if (!accumulation || !revealage || !hdrColor || !output || !accumulationTarget || !revealageTarget || !hdrTarget || !outputTarget)
+            {
+                error = "Could not create weighted-OIT textures or render targets";
+                return false;
+            }
+
+            RenderAPI::Get().SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+            RenderAPI::Get().SetVertexLayout(CreateRef<BufferLayout>());
+            RenderAPI::Get().SetDrawMode(DrawMode::TRIANGLE_LIST);
+            RenderAPI::Get().SetRenderTarget(hdrTarget);
+            RenderAPI::Get().ClearRenderTarget(FBT_COLOR, glm::vec4(0.1f, 0.2f, 0.3f, 1.0f));
+            RenderAPI::Get().SetRenderTarget(accumulationTarget);
+            RenderAPI::Get().ClearRenderTarget(FBT_COLOR, glm::vec4(0.0f));
+            RenderAPI::Get().SetGraphicsPipeline(accumulationPass->GetGraphicsPipeline());
+            RenderAPI::Get().Draw(0u, 3u, 2u);
+            RenderAPI::Get().SetRenderTarget(revealageTarget);
+            RenderAPI::Get().ClearRenderTarget(FBT_COLOR, glm::vec4(1.0f));
+            RenderAPI::Get().SetGraphicsPipeline(revealagePass->GetGraphicsPipeline());
+            RenderAPI::Get().Draw(0u, 3u, 2u);
+
+            if (AssetManager::TryGet() == nullptr)
+            {
+                error = "Asset manager is unavailable for the weighted-OIT composite shader";
+                return false;
+            }
+            ComputeMaterial composite;
+            if (!composite.Initialize(AssetManager::TryGet()->Load<Shader>("Resources/Shaders/WeightedOitComposite.asset")))
+            {
+                error = "Could not initialize the weighted-OIT composite shader: " + composite.GetError();
+                return false;
+            }
+            struct CompositeConstants
+            {
+                glm::uvec2 Resolution = glm::uvec2(TEST_WIDTH, TEST_HEIGHT);
+            } constants;
+            if (!composite.WriteUniformBlock(0u, 0u, &constants, sizeof(constants)))
+            {
+                error = "Could not write weighted-OIT composite constants";
+                return false;
+            }
+            if (!composite.SetLoadStoreTexture(0u, 1u, hdrColor) || !composite.SetTexture(0u, 2u, accumulation) ||
+                !composite.SetTexture(0u, 3u, revealage))
+            {
+                error = "Could not bind weighted-OIT composite textures";
+                return false;
+            }
+            if (!composite.Dispatch(TEST_WIDTH / 8u, TEST_HEIGHT / 8u))
+            {
+                error = "Could not dispatch the weighted-OIT composite shader";
+                return false;
+            }
+
+            SamplerStateDesc samplerDesc;
+            samplerDesc.MinFilter = TextureFilter::NEAREST;
+            samplerDesc.MagFilter = TextureFilter::NEAREST;
+            samplerDesc.MipFilter = TextureFilter::NEAREST;
+            samplerDesc.AddressMode = { TextureWrap::CLAMP_TO_EDGE, TextureWrap::CLAMP_TO_EDGE, TextureWrap::CLAMP_TO_EDGE };
+            const Ref<SamplerState> sampler = SamplerState::Create(samplerDesc);
+            const Ref<UniformParams> copyUniforms = UniformParams::Create(copyPass->GetGraphicsPipeline());
+            if (!sampler || !copyUniforms)
+            {
+                error = "Could not create weighted-OIT copy resources";
+                return false;
+            }
+            copyUniforms->SetTexture(0u, 0u, hdrColor);
+            copyUniforms->SetSamplerState(0u, 0u, sampler);
+            RenderAPI::Get().SetRenderTarget(outputTarget);
+            RenderAPI::Get().ClearRenderTarget(FBT_COLOR, glm::vec4(0.0f));
+            RenderAPI::Get().SetGraphicsPipeline(copyPass->GetGraphicsPipeline());
+            RenderAPI::Get().SetUniforms(copyUniforms);
+            RenderAPI::Get().Draw(0u, 3u, 1u);
+            RenderAPI::Get().SubmitCommandBuffer(nullptr);
+            if (!Capture(output, image, error))
+                return false;
+
+            struct ExpectedPixel
+            {
+                uint32_t X;
+                std::array<uint8_t, 4> Color;
+            };
+            constexpr std::array expected = {
+                ExpectedPixel{ 8u, { 127u, 38u, 45u, 255u } },
+                ExpectedPixel{ 32u, { 108u, 40u, 84u, 255u } },
+                ExpectedPixel{ 56u, { 22u, 51u, 118u, 255u } },
+            };
+            for (const ExpectedPixel& sample : expected)
+            {
+                const uint8_t* forwardOrder = image.Pixel(sample.X, 8u);
+                const uint8_t* reverseOrder = image.Pixel(sample.X, 56u);
+                for (uint32_t channel = 0; channel < sample.Color.size(); ++channel)
+                {
+                    if (std::abs(static_cast<int32_t>(forwardOrder[channel]) - sample.Color[channel]) > 2 ||
+                        std::abs(static_cast<int32_t>(reverseOrder[channel]) - sample.Color[channel]) > 2 ||
+                        std::abs(static_cast<int32_t>(forwardOrder[channel]) - reverseOrder[channel]) > 1)
+                    {
+                        error = "Weighted-OIT result failed analytic color or order-independence validation";
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
         Vector<TestCase> BuildCases()
         {
             const Tolerance exact{};
@@ -555,6 +813,7 @@ void main()
                 { "fullscreen-pattern", shaderTolerance, RenderFullscreenPattern },
                 { "texture-mip-selection", shaderTolerance, RenderMipSelection },
                 { "depth-output-matrix", exact, RenderDepthOutputMatrix },
+                { "weighted-oit", shaderTolerance, RenderWeightedOit },
             };
         }
 

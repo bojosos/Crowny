@@ -34,6 +34,7 @@ struct MaterialRecord
     vec4 toonPattern;
     vec4 toonOutlineColor;
     vec4 toonOutline;
+    vec4 toonSilhouette;
     vec4 toonStyle;
     uvec4 textureIndices2;
 };
@@ -152,7 +153,7 @@ void main()
 
     const uint opaquePhase = 2u;
     const uint standardPipeline = 0u;
-    const uint standardMaterialTemplate = 0u;
+    uint standardMaterialTemplate = materials[instance.materialIndex].textureIndices1.w & 0xffu;
     uvec4 key0 = uvec4(opaquePhase, alpha, standardPipeline, sortKeys[sourceIndex].x);
     uint lookupIndex = findBin(key0, standardMaterialTemplate);
     if (lookupIndex == 0xffffffffu)

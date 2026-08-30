@@ -7,9 +7,17 @@ namespace Crowny
 {
     AssetListener::AssetListener() { AssetListenerManager::Get().RegisterListener(this); }
 
-    AssetListener::~AssetListener() { AssetListenerManager::Get().UnregisterListener(this); }
+    AssetListener::~AssetListener()
+    {
+        if (AssetListenerManager* manager = AssetListenerManager::TryGet())
+            manager->UnregisterListener(this);
+    }
 
-    void AssetListener::MarkAssetsDirty() { AssetListenerManager::Get().MarkListenerDirty(this); }
+    void AssetListener::MarkAssetsDirty()
+    {
+        if (AssetListenerManager* manager = AssetListenerManager::TryGet())
+            manager->MarkListenerDirty(this);
+    }
 
     void AssetListenerManager::RegisterListener(AssetListener* assetListener)
     {

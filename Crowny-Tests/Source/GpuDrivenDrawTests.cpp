@@ -2,6 +2,7 @@
 
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/GpuDrivenDraw.h"
+#include "Crowny/Renderer/GpuMaterial.h"
 
 using namespace Crowny;
 
@@ -171,6 +172,25 @@ TEST_CASE("GPU draw generation batches material records sharing a template", "[R
     CHECK(output.Runs[0].CommandCount == 2);
 }
 
+TEST_CASE("GPU draw generation keeps material models in separate submission bins", "[Renderer][GpuDriven][Materials][Toon]")
+{
+    Vector<GpuDrawCandidate> candidates = {
+        Candidate(1, 0, 1, static_cast<uint32_t>(MaterialModel::Standard), 0, 2.0f),
+        Candidate(2, 0, 1, static_cast<uint32_t>(MaterialModel::Toon), 0, 1.0f),
+    };
+
+    GpuDrawListBuilder builder;
+    GpuDrawList output;
+    builder.Build(candidates.data(), static_cast<uint32_t>(candidates.size()), output);
+
+    REQUIRE(output.Runs.size() == 2);
+    CHECK(output.Runs[0].Bin.MaterialTemplate == static_cast<uint32_t>(MaterialModel::Standard));
+    CHECK(output.Runs[1].Bin.MaterialTemplate == static_cast<uint32_t>(MaterialModel::Toon));
+    CHECK(output.Commands.size() == 2);
+    CHECK(output.Commands[0].InstanceCount == 1);
+    CHECK(output.Commands[1].InstanceCount == 1);
+}
+
 TEST_CASE("Forward-only opaque draws remain outside standard opaque runs", "[Renderer][GpuDriven][Materials]")
 {
     Vector<GpuDrawCandidate> candidates = {
@@ -228,6 +248,28 @@ TEST_CASE("Weighted OIT draws are binned and instanced", "[Renderer][GpuDriven]"
     REQUIRE(output.Commands.size() == 1);
     CHECK(output.Commands[0].InstanceCount == 2);
     CHECK(output.StrictTransparentCommandCount == 0);
+    CHECK(output.WeightedOitCommandCount == 1);
+
+    output.Clear();
+    CHECK(output.WeightedOitCommandCount == 0);
+}
+
+TEST_CASE("Weighted OIT uses a fixed group before strict transparency across render layers", "[Renderer][GpuDriven]")
+{
+    Vector<GpuDrawCandidate> candidates = {
+        Candidate(1, 1, 1, 1, 0, 3.0f, AlphaMode::Premultiplied, -5),
+        Candidate(2, 1, 1, 1, 0, 2.0f, AlphaMode::WeightedOIT, 20),
+    };
+
+    GpuDrawListBuilder builder;
+    GpuDrawList output;
+    builder.Build(candidates.data(), static_cast<uint32_t>(candidates.size()), output);
+
+    REQUIRE(output.Instances.size() == 2);
+    CHECK(output.Instances[0].InstanceID == 2);
+    CHECK(output.Instances[1].InstanceID == 1);
+    CHECK(output.WeightedOitCommandCount == 1);
+    CHECK(output.StrictTransparentCommandCount == 1);
 }
 
 TEST_CASE("GPU draw-list preparation allocates nothing after warm-up", "[Renderer][GpuDriven][Memory][Frame]")

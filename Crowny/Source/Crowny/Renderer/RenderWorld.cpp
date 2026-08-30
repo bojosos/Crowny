@@ -49,6 +49,7 @@ namespace Crowny
         Slot& slot = m_Slots[slotIndex];
         const RenderInstanceHandle handle = RenderInstanceHandle::FromParts(slotIndex, slot.Generation);
         slot.Data = BuildInstanceData(desc, { handle.GetValue() });
+        slot.RenderLayerOrder = desc.RenderLayerOrder;
         slot.TransformSettleQueued = false;
         slot.Alive = true;
         m_ActiveInstances++;
@@ -68,6 +69,7 @@ namespace Crowny
         const AffineTransform3x4 previous =
           slot.PendingChange == InvalidChangeIndex ? slot.Data.Transforms.Current : slot.Data.Transforms.Previous;
         slot.Data = BuildInstanceData(desc, { handle.GetValue() });
+        slot.RenderLayerOrder = desc.RenderLayerOrder;
         slot.Data.Transforms.Previous = pendingCreate ? slot.Data.Transforms.Current : previous;
         SetTransformSettleRequired(handle.GetIndex(), !pendingCreate && !TransformsEqual(slot.Data.Transforms.Current, previous));
         QueueChange(handle.GetIndex(), handle, RenderWorldChangeType::Update, RenderWorldDirtyFlags::All);
@@ -126,12 +128,15 @@ namespace Crowny
         return ValidateHandle(handle);
     }
 
-    bool RenderWorld::TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output) const
+    bool RenderWorld::TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output, int32_t* renderLayerOrder) const
     {
         ScopedLock lock(m_Mutex);
         if (!ValidateHandle(handle))
             return false;
-        output = m_Slots[handle.GetIndex()].Data;
+        const Slot& slot = m_Slots[handle.GetIndex()];
+        output = slot.Data;
+        if (renderLayerOrder != nullptr)
+            *renderLayerOrder = slot.RenderLayerOrder;
         return true;
     }
 
@@ -177,6 +182,7 @@ namespace Crowny
         for (uint32_t slotIndex : m_DeferredFreeSlots)
         {
             m_Slots[slotIndex].Data = {};
+            m_Slots[slotIndex].RenderLayerOrder = 0;
             m_Slots[slotIndex].TransformSettleQueued = false;
             m_FreeSlots.push_back(slotIndex);
         }
@@ -254,6 +260,7 @@ namespace Crowny
         {
             RenderWorldChange& pending = m_PendingChanges[slot.PendingChange];
             pending.Data = slot.Data;
+            pending.RenderLayerOrder = slot.RenderLayerOrder;
             pending.DirtyFlags = pending.DirtyFlags | dirtyFlags;
             if (pending.Type != RenderWorldChangeType::Create)
                 pending.Type = type;
@@ -261,7 +268,7 @@ namespace Crowny
         }
 
         slot.PendingChange = static_cast<uint32_t>(m_PendingChanges.size());
-        m_PendingChanges.push_back({ handle, type, dirtyFlags, slot.Data });
+        m_PendingChanges.push_back({ handle, type, dirtyFlags, slot.Data, slot.RenderLayerOrder });
     }
 
     bool RenderWorld::ValidateHandle(RenderInstanceHandle handle) const

@@ -20,6 +20,7 @@
 
 #include "Crowny/Import/AudioClipImporter.h"
 #include "Crowny/Import/FontImporter.h"
+#include "Crowny/Import/MaterialImporter.h"
 #include "Crowny/Import/MeshImporter.h"
 #include "Crowny/Import/ScriptImporter.h"
 #include "Crowny/Import/ShaderImporter.h"
@@ -396,6 +397,14 @@ namespace Crowny
         if (!mat)
             return;
 
+        using clock = std::chrono::steady_clock;
+        if (m_MaterialLastSavePath != m_InspectedAssetPath)
+        {
+            m_MaterialLastSavePath = m_InspectedAssetPath;
+            m_MaterialLastSaveVersion = mat->GetParamVersion();
+            m_MaterialLastSaveTime = clock::now();
+        }
+
         UI::BeginPropertyGrid();
 
         // Shader selector — allows changing the shader (like Unity's material type)
@@ -403,6 +412,16 @@ namespace Crowny
         if (UIUtils::AssetSearch<Shader>("Shader", currentShader))
         {
             mat->SetShader(currentShader);
+        }
+
+        int32_t alphaMode = mat->HasAlphaModeOverride() ? static_cast<int32_t>(mat->GetAlphaMode()) + 1 : 0;
+        if (UI::PropertyDropdown("Alpha Mode", { "Inferred (Shader)", "Opaque", "Alpha Mask", "Premultiplied", "Additive", "Weighted OIT" },
+                                 alphaMode))
+        {
+            if (alphaMode == 0)
+                mat->ClearAlphaModeOverride();
+            else
+                mat->SetAlphaMode(static_cast<AlphaMode>(alphaMode - 1));
         }
 
         ImGui::Separator();
@@ -483,7 +502,6 @@ namespace Crowny
         UI::EndPropertyGrid();
 
         // Auto-save: if params changed, write .cwmat after a short debounce
-        using clock = std::chrono::steady_clock;
         uint64_t currentVersion = mat->GetParamVersion();
         auto now = clock::now();
         if (m_MaterialLastSaveVersion != currentVersion && now - m_MaterialLastSaveTime >= std::chrono::seconds(2))
@@ -493,6 +511,25 @@ namespace Crowny
             m_MaterialLastSaveVersion = currentVersion;
             m_MaterialLastSaveTime = now;
         }
+    }
+
+    void InspectorPanel::FlushPendingMaterialSave()
+    {
+        if (m_MaterialLastSavePath.empty() || m_MaterialLastSavePath != m_InspectedAssetPath)
+            return;
+
+        AssetManager* assetManager = AssetManager::TryGet();
+        if (assetManager == nullptr)
+            return;
+
+        AssetHandle<Material> material = assetManager->Load<Material>(m_MaterialLastSavePath);
+        if (!material || material->GetParamVersion() == m_MaterialLastSaveVersion)
+            return;
+
+        MaterialSerializer serializer(material.GetInternalPtr());
+        serializer.Serialize(m_MaterialLastSavePath);
+        m_MaterialLastSaveVersion = material->GetParamVersion();
+        m_MaterialLastSaveTime = std::chrono::steady_clock::now();
     }
 
     void InspectorPanel::RenderPhysicsMaterialInspector()
@@ -1123,7 +1160,10 @@ namespace Crowny
     void InspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
         if (m_InspectedAssetPath != filepath)
+        {
+            FlushPendingMaterialSave();
             m_MaterialSchemaCache.Reset();
+        }
 
         if (filepath.empty())
         {
@@ -1176,6 +1216,8 @@ namespace Crowny
                 m_InspectorMode = InspectorMode::ShaderImport;
             else if (dynamic_cast<FontImporter*>(importer))
                 m_InspectorMode = InspectorMode::FontImport;
+            else if (dynamic_cast<MaterialImporter*>(importer))
+                m_InspectorMode = InspectorMode::Material;
             else if (dynamic_cast<MeshImporter*>(importer))
                 m_InspectorMode = InspectorMode::MeshImport;
             else
@@ -1206,6 +1248,9 @@ namespace Crowny
 
     void InspectorPanel::SetSelectedEntities(Entity primary, const Vector<Entity>& entities)
     {
+        if (m_InspectorMode == InspectorMode::Material)
+            FlushPendingMaterialSave();
+
         const bool sameScene = m_InspectedEntity && primary && m_InspectedEntity.GetScene() == primary.GetScene();
         const bool sameSelection = m_InspectedEntity == primary && m_InspectedEntities == entities;
         if (!sameSelection)
@@ -1221,6 +1266,8 @@ namespace Crowny
     {
         if (m_InspectorMode != mode)
         {
+            if (m_InspectorMode == InspectorMode::Material)
+                FlushPendingMaterialSave();
             m_ComponentEditor.ResetUndoTransactions(true);
             m_MaterialSchemaCache.Reset();
         }

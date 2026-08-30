@@ -85,7 +85,9 @@ Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-dri
 - [x] Preserve the existing opt-in inverted-hull pass in the legacy toon shader and expose its outline controls.
 - [x] Cook and pack the legacy `Toon.asset` and `Unlit.asset` with the material-model-aware compiler. Their sources are now language-tagged so the built-in cooker no longer skips them.
 - [x] Keep successfully cooked or content-hash-valid built-in shader, icon, and font asset timestamps synchronized with their sources, including future-dated inputs, and allow explicit Dist cooker runs so strict packaging works after a fresh checkout.
-- [ ] Move inverted-hull silhouettes onto GPU-driven indirect submission, then add managed convenience APIs/editor presets, asset migration, and dedicated toon golden images.
+- [ ] Complete the toon silhouette and public-tooling path.
+  - [x] Move inverted-hull silhouettes onto material-model bins and GPU-driven indirect submission, retaining CPU submission for rejected bins and baseline hardware.
+  - [ ] Add managed convenience APIs/editor presets, asset migration, and dedicated toon golden images.
 
 ## 3. GPU resource allocation and caches
 
@@ -106,6 +108,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Invalidate cached spot and point shadows when a shadow caster is created, destroyed, transformed, reconfigured, animated, or has relevant mesh/material residency changes.
 - [x] Reject zero-sized or otherwise invalid transient texture descriptors from the reuse pool so they cannot alias valid one-valued descriptors.
 - [ ] Extend GPU draw generation beyond this bounded path. Vulkan baseline, OpenGL, early depth, shadow views, dynamic/skinned/morphed/per-mesh geometry, rejected bins, and strict transparency intentionally retain CPU submission until their ordering and fallback contracts are proven. Transparent GPU radix sorting and toon inverted-hull submission remain separate work.
+  - [x] Carry `MeshRendererComponent::RenderLayerOrder` through the persistent render-world mirror into strict transparent draw generation without increasing the 128-byte GPU instance record.
 - [x] Add pooled transient images where render-graph lifetime aliasing cannot reuse an allocation.
 - [x] Route explicitly classified custom opaque materials through the post-lighting forward-only pass; keep standard GPU bins separate and reject unsupported records during GPU compaction.
 - [x] Require explicit `#pragma material_model custom` metadata before using the reverse-Z forward-only contract; unmarked shaders remain unsupported instead of inheriting an incompatible depth state.
@@ -125,6 +128,9 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Reject custom forward-only depth pragmas that violate the reverse-Z depth-prepass contract before expanding shader variations.
 - [ ] Add material-aware masked depth/shadow passes and transparent ordering before routing custom masked or transparent materials through the new renderer.
 - [x] Alpha-test standard GPU-record masked materials in the static and animated main depth variants, including motion-vector and object-ID output layouts; retain the material-aware shadow alpha test.
+- [x] Render requested weighted blended OIT materials into conditional accumulation/revealage targets, composite them as one fixed group before strict transparency, fall back to premultiplied drawing when OIT setup fails, and avoid allocating their 24 MB at 1080p when the view has no OIT draws. Render layers currently order within weighted and strict groups rather than interleaving the two modes.
+- [x] Make weighted OIT reachable from real native materials through an explicit alpha-mode override, with shader inference as the compatibility default, GPU-resource invalidation, and backward-compatible binary/YAML persistence.
+- [x] Expose the explicit material alpha-mode override in the C# API and material inspector, including `Inferred` and weighted-OIT presets.
 - [x] Match masked main-depth coverage to Forward+/Deferred+ by including interpolated vertex alpha, and guard the compiled masked shader in the built-in pack.
 - [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
 - [x] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
@@ -143,4 +149,9 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Run the focused renderer/shader regression batch for the temporal-history, custom-material, and motion-settling repairs. The final isolated ASan suite passed 29,142 assertions in 558 cases, and the Vulkan/OpenGL render harness passed 4/4 captures per backend with all 4 cross-backend comparisons matching.
 - [x] Depth-output matrix validation: focused Release `[Renderer][Pipeline]` passed 180 assertions in 9 cases; full no-build Release Catch2 passed 29,351 assertions in 570 cases with one optional CoreCLR case skipped; Vulkan and OpenGL each passed 5/5 captures on Intel Iris Xe, and all 5 cross-backend captures matched.
 - [x] Standard masked-depth validation: the focused Release renderer/shader batch passed 256 assertions in 12 cases; full no-build Release Catch2 passed 29,389 assertions in 572 cases with one optional CoreCLR case skipped; the 59-resource pack loaded on Vulkan and OpenGL, which each passed 5/5 captures with all 5 cross-backend comparisons matching.
+- [x] Strict transparent render-layer validation: focused Release render-world/GPU-scene/draw-generation coverage passed 164 assertions in 24 cases; full no-build Release Catch2 passed 29,399 assertions in 574 cases with one optional CoreCLR case skipped; the no-build Vulkan/OpenGL harness passed 5/5 captures per backend and all 5 cross-backend comparisons.
+- [x] Weighted blended OIT validation: focused Release coverage passed 598 assertions in 47 cases for GPU-draw grouping, graph resources/transitions, shader variations, and fallback selection. The 60-resource renderer harness passed 6/6 Vulkan and OpenGL captures, including weighted-OIT pixels through the packed production composite shader, with all 6 cross-backend comparisons matching.
+- [x] Add a deterministic overlapping-transparency renderer capture that checks additive accumulation, revealage clear-to-one, the packed production composite shader, analytic band colors, and forward-versus-reversed layer order on Vulkan and compute-capable OpenGL. The capture exposed and fixed an 8-byte reflected uniform-block versus 16-byte CPU-write mismatch that had forced every runtime OIT frame onto its premultiplied fallback.
+- [ ] Add a serialized-scene capture through the full `SceneRenderer` OIT path so Forward+ variations, blend/depth overrides, bindings, indirect-run filtering, and graph transitions are covered together rather than by focused component tests.
+- [ ] Add an OpenGL 4.1 compatibility-path scene capture that proves requested weighted OIT degrades to premultiplied transparency without compute or load/store textures.
 - [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.

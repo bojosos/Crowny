@@ -61,8 +61,7 @@ namespace Crowny
             return nullptr;
         }
 
-        const MaterialRenderClassification& GetMaterialClassification(const Vector<MaterialRenderClassification>& materials,
-                                                                      uint32_t materialIndex)
+        const MaterialRenderClassification& GetMaterialClassification(const Vector<MaterialRenderClassification>& materials, uint32_t materialIndex)
         {
             static const MaterialRenderClassification fallback;
             if (materialIndex >= materials.size())
@@ -74,10 +73,11 @@ namespace Crowny
         {
             GpuDrawBinKey key;
             const bool opaque = material.Alpha == AlphaMode::Opaque || material.Alpha == AlphaMode::Mask;
-            key.Phase = opaque ? (material.UsesStandardGpuRecord() ? RenderDrawPhase::Opaque : RenderDrawPhase::ForwardOpaque)
-                               : RenderDrawPhase::Transparent;
+            key.Phase =
+              opaque ? (material.UsesStandardGpuRecord() ? RenderDrawPhase::Opaque : RenderDrawPhase::ForwardOpaque) : RenderDrawPhase::Transparent;
             key.Alpha = material.Alpha;
             key.GeometryHeap = geometryHeap;
+            key.MaterialTemplate = material.GetMaterialTemplate();
             return key;
         }
     } // namespace
@@ -135,6 +135,7 @@ namespace Crowny
                 {
                     m_DrawBinsDirty = true;
                     state.Alive = false;
+                    state.RenderLayerOrder = 0;
                     m_Instances[slotIndex] = {};
                     m_Stats.ActiveInstances--;
                     m_DirtyInstanceIndices.push_back(slotIndex);
@@ -150,6 +151,7 @@ namespace Crowny
                 m_DrawBinsDirty = true;
             state.Alive = true;
             state.Generation = change.Handle.GetGeneration();
+            state.RenderLayerOrder = change.RenderLayerOrder;
             m_Instances[slotIndex] = change.Data;
             m_DirtyInstanceIndices.push_back(slotIndex);
         }
@@ -299,6 +301,8 @@ namespace Crowny
         m_Materials.clear();
         m_MaterialClassifications.clear();
         m_ForwardOnlyOpaqueMaterialCount = 0;
+        m_ToonOutlineMaterialCount = 0;
+        m_ToonSilhouetteMaterialCount = 0;
         m_MeshIndexBuffers.clear();
         m_BindlessTextureResources.clear();
         m_BindlessTextures.reset();
@@ -367,7 +371,7 @@ namespace Crowny
         m_Stats.ShadowViewCapacity = m_ShadowViewBuffer ? m_ShadowViewBuffer->GetSize() / sizeof(GpuShadowViewData) : 0;
     }
 
-    bool GpuScene::TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output) const
+    bool GpuScene::TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output, int32_t* renderLayerOrder) const
     {
         if (!handle.IsValid() || handle.GetIndex() >= m_InstanceStates.size())
             return false;
@@ -375,6 +379,8 @@ namespace Crowny
         if (!state.Alive || state.Generation != handle.GetGeneration())
             return false;
         output = m_Instances[handle.GetIndex()];
+        if (renderLayerOrder != nullptr)
+            *renderLayerOrder = state.RenderLayerOrder;
         return true;
     }
 
@@ -508,8 +514,7 @@ namespace Crowny
                 if (meshlet.Draw.y == 0)
                     continue;
                 const uint32_t materialIndex = RenderWorld::GetMaterialHandle(instance.Draw) + meshlet.Draw.z;
-                const MaterialRenderClassification& material =
-                  GetMaterialClassification(m_MaterialClassifications, materialIndex);
+                const MaterialRenderClassification& material = GetMaterialClassification(m_MaterialClassifications, materialIndex);
                 if (!material.UsesStandardGpuRecord() || (material.Alpha != AlphaMode::Opaque && material.Alpha != AlphaMode::Mask))
                     continue;
                 output.push_back(DrawBinForMaterial(material, meshlet.Geometry.z));
@@ -580,8 +585,7 @@ namespace Crowny
                 if (meshlet.Draw.y == 0)
                     continue;
                 const uint32_t materialIndex = RenderWorld::GetMaterialHandle(instance.Draw) + meshlet.Draw.z;
-                const MaterialRenderClassification& material =
-                  GetMaterialClassification(m_MaterialClassifications, materialIndex);
+                const MaterialRenderClassification& material = GetMaterialClassification(m_MaterialClassifications, materialIndex);
                 if (!material.UsesStandardGpuRecord() && !material.IsForwardOnlyOpaque())
                     continue;
                 GpuDrawCandidate candidate;
@@ -591,6 +595,7 @@ namespace Crowny
                 candidate.IndexCount = meshlet.Draw.y;
                 candidate.FirstIndex = meshlet.Draw.x;
                 candidate.VertexOffset = static_cast<int32_t>(meshlet.Geometry.x);
+                candidate.RenderLayer = m_InstanceStates[instanceIndex].RenderLayerOrder;
                 candidate.ViewDepth = viewDepth;
                 m_DrawCandidates.push_back(candidate);
             }
@@ -968,6 +973,8 @@ namespace Crowny
         m_MaterialClassifications.clear();
         m_MaterialClassifications.resize(m_Materials.size());
         m_ForwardOnlyOpaqueMaterialCount = 0;
+        m_ToonOutlineMaterialCount = 0;
+        m_ToonSilhouetteMaterialCount = 0;
         const Ref<Texture> fallback = Texture::MISSING ? Texture::MISSING : Texture::WHITE;
         const uint32_t capacity = std::min<uint32_t>(BindlessResourceHandle::MaxResources,
                                                      std::max<uint32_t>(1024u, static_cast<uint32_t>(m_MaterialResources.size() * 5u + 4u)));
@@ -1002,7 +1009,9 @@ namespace Crowny
             if (!materialHandle)
                 continue;
             const Material& material = *materialHandle;
-            const MaterialRenderClassification classification = MaterialRenderClassifier::Classify(material);
+            MaterialRenderClassification classification = MaterialRenderClassifier::Classify(material);
+            if (classification.UsesStandardGpuRecord() && material.GetVariation().Has("TOON") && material.GetVariation().GetBool("TOON"))
+                classification.Model = MaterialModel::Toon;
             m_MaterialClassifications[materialIndex] = classification;
             if (classification.IsForwardOnlyOpaque())
                 m_ForwardOnlyOpaqueMaterialCount++;
@@ -1027,9 +1036,6 @@ namespace Crowny
             ReadMaterialValue(material, { "roughness" }, desc.Roughness);
             ReadMaterialValue(material, { "normalScale", "normalStrength" }, desc.NormalScale);
             ReadMaterialValue(material, { "ambientOcclusion", "ao" }, desc.AmbientOcclusion);
-
-            if (material.GetVariation().Has("TOON") && material.GetVariation().GetBool("TOON"))
-                desc.Model = MaterialModel::Toon;
 
             desc.BaseColorTexture =
               registerTexture(FindMaterialTexture(material, { "baseColorTexture", "baseColorMap", "albedoMap", "mainTexture" }), Texture::WHITE);
@@ -1080,12 +1086,18 @@ namespace Crowny
                 ReadMaterialValue(material, { "toonOutlineDepthThreshold", "outlineDepthThreshold" }, desc.ToonOutlineDepthThreshold);
                 ReadMaterialValue(material, { "toonOutlineNormalThreshold", "outlineNormalThreshold" }, desc.ToonOutlineNormalThreshold);
                 ReadMaterialValue(material, { "toonOutlineDistanceFade", "outlineDistanceFade" }, desc.ToonOutlineDistanceFade);
+                ReadMaterialValue(material, { "toonSilhouetteWidth", "silhouetteWidth", "invertedHullWidth" }, desc.ToonSilhouetteWidth);
                 desc.ToonPatternTexture = registerTexture(
                   FindMaterialTexture(material, { "toonPatternTexture", "patternTexture", "hatchingTexture", "scratchTexture" }), Texture::WHITE);
                 desc.ToonRampTexture =
                   registerTexture(FindMaterialTexture(material, { "toonRampTexture", "rampTexture", "diffuseRamp" }), Texture::WHITE);
                 desc.ToonMatcapTexture =
                   registerTexture(FindMaterialTexture(material, { "toonMatcapTexture", "matcapTexture", "matcap" }), Texture::WHITE);
+                const bool drawsInOpaquePass = classification.Alpha == AlphaMode::Opaque || classification.Alpha == AlphaMode::Mask;
+                if (drawsInOpaquePass && desc.ToonOutlineWidth > 0.0f && desc.ToonOutlineColor.a > 0.0f)
+                    m_ToonOutlineMaterialCount++;
+                if (drawsInOpaquePass && desc.ToonSilhouetteWidth > 0.0f && desc.ToonOutlineColor.a > 0.0f)
+                    m_ToonSilhouetteMaterialCount++;
             }
             m_Materials[materialIndex] = GpuMaterialPacker::Pack(desc);
         }

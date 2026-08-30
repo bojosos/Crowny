@@ -92,6 +92,8 @@ namespace Crowny
         const Ref<GenericGpuBuffer>& GetMaterialBuffer() const { return m_MaterialBuffer; }
         uint32_t GetMaterialCount() const { return static_cast<uint32_t>(m_Materials.size()); }
         bool HasForwardOnlyOpaqueMaterials() const { return m_ForwardOnlyOpaqueMaterialCount != 0; }
+        bool HasToonOutlineMaterials() const { return m_ToonOutlineMaterialCount != 0; }
+        bool HasToonSilhouetteMaterials() const { return m_ToonSilhouetteMaterialCount != 0; }
         Ref<VertexBuffer> GetGeometryVertexBuffer(uint32_t geometryBinding) const;
         Ref<IndexBuffer> GetGeometryIndexBuffer(uint32_t geometryBinding) const;
         DrawMode GetGeometryDrawMode(uint32_t geometryBinding) const;
@@ -109,7 +111,7 @@ namespace Crowny
         const GpuSceneUploadStats& GetStats() const { return m_Stats; }
         bool HasGpuBuffers() const { return m_InstanceBuffer != nullptr && m_LightBuffer != nullptr; }
 
-        bool TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output) const;
+        bool TryGetInstance(RenderInstanceHandle handle, RenderInstanceData& output, int32_t* renderLayerOrder = nullptr) const;
         bool TryGetLight(RenderLightHandle handle, RenderLightData& output) const;
         uint32_t GetShadowLightCount() const { return static_cast<uint32_t>(m_ShadowLights.size()); }
         uint32_t GetShadowViewCount() const { return static_cast<uint32_t>(m_ShadowViews.size()); }
@@ -118,6 +120,7 @@ namespace Crowny
         struct SlotState
         {
             uint32_t Generation = 0;
+            int32_t RenderLayerOrder = 0;
             bool Alive = false;
         };
 
@@ -201,6 +204,8 @@ namespace Crowny
         Vector<GpuMaterialData> m_Materials;
         Vector<MaterialRenderClassification> m_MaterialClassifications;
         uint32_t m_ForwardOnlyOpaqueMaterialCount = 0;
+        uint32_t m_ToonOutlineMaterialCount = 0;
+        uint32_t m_ToonSilhouetteMaterialCount = 0;
         Vector<Ref<IndexBuffer>> m_MeshIndexBuffers;
         Vector<Ref<Texture>> m_BindlessTextureResources;
         uint64_t m_BindlessTextureVersion = 0;
