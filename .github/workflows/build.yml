@@ -113,21 +113,11 @@ jobs:
           "CROWNY_MONO_ROOT=$monoRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install Vulkan SDK
-        run: |
-          $ver = $env:VULKAN_SDK_VERSION
-          $installer = "vulkansdk-windows-X64-$ver.exe"
-          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$ver/windows/$installer" -OutFile $installer
-          Start-Process -FilePath ".\$installer" -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait
-          $sdkPath = "C:\VulkanSDK\$ver"
-          echo "VULKAN_SDK=$sdkPath" >> $env:GITHUB_ENV
-          echo "$sdkPath\Bin" >> $env:GITHUB_PATH
         shell: powershell
-
-      - name: Setup CI Environment
         run: |
-          mkdir -p .deps/VulkanSDK/Include/vma
-          Invoke-WebRequest -Uri https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/v3.4.0/include/vk_mem_alloc.h -OutFile .deps/VulkanSDK/Include/vma/vk_mem_alloc.h
-        shell: powershell
+          & Scripts/setup-vulkan.ps1 -VulkanVersion $env:VULKAN_SDK_VERSION
+          "VULKAN_SDK=$env:VULKAN_SDK" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "$env:VULKAN_SDK\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Generate projects
         shell: powershell
