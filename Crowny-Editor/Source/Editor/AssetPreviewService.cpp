@@ -30,6 +30,7 @@ namespace Crowny
         uint64_t SourceRevision = 0;
         uint32_t PreviewSize = 0;
         uint64_t LastAccess = 0;
+        size_t ReservedBytes = 0;
         AssetPreviewResult Result;
         Ref<PixelData> Pixels;
         Ref<Task> TaskHandle;
@@ -413,6 +414,72 @@ namespace Crowny
                type == AssetType::AudioClip;
     }
 
+    AssetPreviewCacheStats AssetPreviewService::GetStats() const
+    {
+        return { m_Cache.size(), m_ReservedBytes, m_Pending.size(), m_Running.size() };
+    }
+
+    bool AssetPreviewService::IsRunning(const Ref<WorkItem>& work) const
+    {
+        return std::find(m_Running.begin(), m_Running.end(), work) != m_Running.end();
+    }
+
+    void AssetPreviewService::RemovePendingWork(const Ref<WorkItem>& work)
+    {
+        m_Pending.erase(std::remove(m_Pending.begin(), m_Pending.end(), work), m_Pending.end());
+    }
+
+    void AssetPreviewService::ReleaseReservation(const Ref<WorkItem>& work)
+    {
+        if (work->ReservedBytes == 0)
+            return;
+        m_ReservedBytes = work->ReservedBytes <= m_ReservedBytes ? m_ReservedBytes - work->ReservedBytes : 0;
+        work->ReservedBytes = 0;
+    }
+
+    void AssetPreviewService::EraseCacheEntry(const UUID& uuid, bool cancel)
+    {
+        const auto entry = m_Cache.find(uuid);
+        if (entry == m_Cache.end())
+            return;
+
+        const Ref<WorkItem> work = entry->second;
+        if (cancel)
+            CancelPreviewWork(work);
+        RemovePendingWork(work);
+        ImGuiVulkanTexture::Release(work->Result.Image);
+        work->Result.Image = nullptr;
+        m_Cache.erase(entry);
+        if (!IsRunning(work))
+            ReleaseReservation(work);
+    }
+
+    bool AssetPreviewService::MakeRoomFor(size_t reservedBytes)
+    {
+        if (reservedBytes > m_CacheBudgetBytes)
+            return false;
+
+        const auto hasRoom = [this, reservedBytes]() {
+            return m_Cache.size() < MAX_CACHE_ENTRIES && m_ReservedBytes <= m_CacheBudgetBytes - reservedBytes;
+        };
+        while (!hasRoom())
+        {
+            auto oldest = m_Cache.end();
+            for (auto entry = m_Cache.begin(); entry != m_Cache.end(); ++entry)
+            {
+                const AssetPreviewStatus status = entry->second->Result.Status;
+                if ((status == AssetPreviewStatus::Ready || status == AssetPreviewStatus::Failed) &&
+                    (oldest == m_Cache.end() || entry->second->LastAccess < oldest->second->LastAccess))
+                    oldest = entry;
+            }
+            if (oldest == m_Cache.end())
+                return false;
+            const UUID oldestUuid = oldest->first;
+            EraseCacheEntry(oldestUuid, false);
+        }
+        return true;
+    }
+
     const AssetPreviewResult* AssetPreviewService::Request(const FileEntry& entry, uint32_t size)
     {
         if (!entry.Metadata || entry.Metadata->Uuid.Empty() || !Supports(entry.Metadata->Type) || size == 0)
@@ -424,19 +491,21 @@ namespace Crowny
         if (existing != m_Cache.end())
         {
             Ref<WorkItem>& work = existing->second;
-            if (work->Source == entry.Filepath && work->SourceTime == entry.LastUpdateTime && work->SourceSize == entry.Filesize &&
+            if (work->Source == entry.Filepath && work->Type == entry.Metadata->Type && work->SourceTime == entry.LastUpdateTime &&
+                work->SourceSize == entry.Filesize &&
                 work->SourceRevision == entry.Revision && work->PreviewSize == size)
             {
                 work->LastAccess = ++m_AccessTick;
                 return &work->Result;
             }
-            CancelPreviewWork(work);
-            ImGuiVulkanTexture::Release(work->Result.Image);
-            m_Cache.erase(existing);
+            EraseCacheEntry(uuid, true);
         }
 
         if (m_Pending.size() + m_Running.size() >= MAX_PENDING)
             return &m_QueueFullResult;
+        const size_t reservedBytes = static_cast<size_t>(size) * size * 4u;
+        if (!MakeRoomFor(reservedBytes))
+            return &m_BudgetFullResult;
 
         Ref<WorkItem> work = CreateRef<WorkItem>();
         work->Uuid = uuid;
@@ -447,7 +516,9 @@ namespace Crowny
         work->SourceRevision = entry.Revision;
         work->PreviewSize = size;
         work->LastAccess = ++m_AccessTick;
+        work->ReservedBytes = reservedBytes;
         work->Result.Status = AssetPreviewStatus::Queued;
+        m_ReservedBytes += reservedBytes;
         m_Cache.emplace(uuid, work);
         m_Pending.push_back(work);
         return &work->Result;
@@ -457,7 +528,6 @@ namespace Crowny
     {
         FinalizeCompletedWork();
         StartPendingWork();
-        EvictOldEntries();
     }
 
     void AssetPreviewService::StartPendingWork()
@@ -508,8 +578,15 @@ namespace Crowny
             m_Running.erase(m_Running.begin() + static_cast<std::ptrdiff_t>(index));
 
             const auto cached = m_Cache.find(work->Uuid);
-            if (work->Cancellation.load(std::memory_order_acquire) || cached == m_Cache.end() || cached->second != work)
+            const bool isCurrent = cached != m_Cache.end() && cached->second == work;
+            if (work->Cancellation.load(std::memory_order_acquire) || !isCurrent)
+            {
+                if (isCurrent)
+                    EraseCacheEntry(work->Uuid, false);
+                else
+                    ReleaseReservation(work);
                 continue;
+            }
             if (!work->Pixels)
             {
                 work->Result.Status = AssetPreviewStatus::Failed;
@@ -528,6 +605,13 @@ namespace Crowny
                 desc.sRGB = true;
                 desc.DebugName = "Asset preview";
                 work->Result.Image = Texture::CreateDeferred(desc, work->Pixels);
+                if (!work->Result.Image)
+                {
+                    work->Pixels = nullptr;
+                    work->Result.Status = AssetPreviewStatus::Failed;
+                    work->Result.Error = "Preview texture creation returned no texture";
+                    continue;
+                }
                 work->Result.Image->Init();
                 work->Pixels = nullptr;
                 work->Result.Status = AssetPreviewStatus::Ready;
@@ -535,8 +619,16 @@ namespace Crowny
             catch (const std::exception& exception)
             {
                 work->Result.Image = nullptr;
+                work->Pixels = nullptr;
                 work->Result.Status = AssetPreviewStatus::Failed;
                 work->Result.Error = exception.what();
+            }
+            catch (...)
+            {
+                work->Result.Image = nullptr;
+                work->Pixels = nullptr;
+                work->Result.Status = AssetPreviewStatus::Failed;
+                work->Result.Error = "Preview texture creation failed with an unknown renderer error";
             }
         }
     }
@@ -549,23 +641,20 @@ namespace Crowny
         for (const Ref<WorkItem>& work : m_Running)
             CancelPreviewWork(work);
 
-        for (auto entry = m_Cache.begin(); entry != m_Cache.end();)
+        Vector<UUID> canceled;
+        canceled.reserve(m_Cache.size());
+        for (const auto& [uuid, work] : m_Cache)
         {
-            if (entry->second->Result.Status == AssetPreviewStatus::Ready || entry->second->Result.Status == AssetPreviewStatus::Failed)
-                ++entry;
-            else
-                entry = m_Cache.erase(entry);
+            if (work->Result.Status != AssetPreviewStatus::Ready && work->Result.Status != AssetPreviewStatus::Failed)
+                canceled.push_back(uuid);
         }
+        for (const UUID& uuid : canceled)
+            EraseCacheEntry(uuid, false);
     }
 
     void AssetPreviewService::Invalidate(const UUID& uuid)
     {
-        const auto entry = m_Cache.find(uuid);
-        if (entry == m_Cache.end())
-            return;
-        CancelPreviewWork(entry->second);
-        ImGuiVulkanTexture::Release(entry->second->Result.Image);
-        m_Cache.erase(entry);
+        EraseCacheEntry(uuid, true);
     }
 
     void AssetPreviewService::Clear()
@@ -584,29 +673,15 @@ namespace Crowny
                 // Clearing owns no result reporting. It only needs every worker to leave the asset and decoder modules.
             }
         }
+        for (const Ref<WorkItem>& work : m_Running)
+            ReleaseReservation(work);
         m_Running.clear();
+        Vector<UUID> cached;
+        cached.reserve(m_Cache.size());
         for (const auto& [uuid, work] : m_Cache)
-            ImGuiVulkanTexture::Release(work->Result.Image);
-        m_Cache.clear();
-    }
-
-    void AssetPreviewService::EvictOldEntries()
-    {
-        while (m_Cache.size() > MAX_CACHE_ENTRIES)
-        {
-            auto oldest = m_Cache.end();
-            for (auto entry = m_Cache.begin(); entry != m_Cache.end(); ++entry)
-            {
-                const AssetPreviewStatus status = entry->second->Result.Status;
-                if ((status == AssetPreviewStatus::Ready || status == AssetPreviewStatus::Failed) &&
-                    (oldest == m_Cache.end() || entry->second->LastAccess < oldest->second->LastAccess))
-                    oldest = entry;
-            }
-            if (oldest == m_Cache.end())
-                break;
-            ImGuiVulkanTexture::Release(oldest->second->Result.Image);
-            m_Cache.erase(oldest);
-        }
+            cached.push_back(uuid);
+        for (const UUID& uuid : cached)
+            EraseCacheEntry(uuid, false);
     }
 
 } // namespace Crowny

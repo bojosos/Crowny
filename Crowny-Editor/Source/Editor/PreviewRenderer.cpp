@@ -1,7 +1,6 @@
 #include "cwepch.h"
 
 #include "Editor/PreviewRenderer.h"
-#include "EditorLayer.h"
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/Constants.h"
@@ -12,52 +11,111 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        Ref<RenderTexture> CreatePreviewTarget(uint32_t width, uint32_t height, StringView debugName)
+        {
+            TextureDesc textureParams;
+            textureParams.Width = width;
+            textureParams.Height = height;
+            textureParams.Format = TextureFormat::RGBA8;
+            textureParams.Usage = TEXTURE_RENDERTARGET;
+            textureParams.DebugName = String(debugName);
+            Ref<Texture> texture = Texture::Create(textureParams);
+            if (!texture)
+                return nullptr;
+
+            RenderTextureDesc renderTextureParams;
+            renderTextureParams.ColorSurfaces[0].Texture = texture;
+            renderTextureParams.Width = width;
+            renderTextureParams.Height = height;
+            return RenderTexture::Create(renderTextureParams);
+        }
+    } // namespace
+
     // =========================================================================
     // PreviewObjectRenderer
     // =========================================================================
 
-    PreviewObjectRenderer::PreviewObjectRenderer(const AssetHandle<Mesh>& mesh) : m_Mesh(mesh), m_SceneRenderer(nullptr) {}
+    PreviewObjectRenderer::PreviewObjectRenderer(const AssetHandle<Mesh>& mesh) : m_Mesh(mesh) {}
 
-    void PreviewObjectRenderer::Setup(uint32_t width, uint32_t height)
+    bool PreviewObjectRenderer::Setup(uint32_t width, uint32_t height)
     {
-        static const AssetHandle<Shader> unlitShader = AssetManager::TryGet()->Load<Shader>(UNLIT_SHADER_PATH);
-        m_Material = Material::CreateUnlit(unlitShader);
-        static const AssetHandle<Material> materialHandle = static_asset_cast<Material>(AssetManager::TryGet()->CreateAssetHandle(m_Material));
-        m_MatHandle = materialHandle;
-        m_Scene = CreateRef<Scene>("Object Preview");
+        Shutdown();
+        AssetManager* assets = AssetManager::TryGet();
+        if (width == 0 || height == 0 || !m_Mesh || assets == nullptr || RenderAPI::TryGet() == nullptr)
+            return false;
 
-        MeshRendererComponent& component = m_Scene->CreateEntity("Object").AddComponent<MeshRendererComponent>();
-        component.SetMaterial(0, m_MatHandle);
-        component.MeshHandle = m_Mesh;
+        m_Width = std::min(width, MAX_PREVIEW_DIMENSION);
+        m_Height = std::min(height, MAX_PREVIEW_DIMENSION);
+        try
+        {
+            const AssetHandle<Shader> unlitShader = assets->Load<Shader>(UNLIT_SHADER_PATH, false);
+            if (!unlitShader)
+            {
+                Shutdown();
+                return false;
+            }
+            m_Material = Material::CreateUnlit(unlitShader);
+            if (!m_Material)
+            {
+                Shutdown();
+                return false;
+            }
+            m_MatHandle = static_asset_cast<Material>(assets->CreateAssetHandle(m_Material));
+            if (!m_MatHandle)
+            {
+                Shutdown();
+                return false;
+            }
 
-        TextureDesc textureParams;
-        textureParams.Width = width;
-        textureParams.Height = height;
-        textureParams.Format = TextureFormat::RGBA8;
-        textureParams.Usage = TEXTURE_RENDERTARGET;
-        textureParams.DebugName = "Preview texture";
-        Ref<Texture> texture = Texture::Create(textureParams);
+            m_Scene = CreateRef<Scene>("Object Preview");
+            MeshRendererComponent& component = m_Scene->CreateEntity("Object").AddComponent<MeshRendererComponent>();
+            component.SetMaterial(0, m_MatHandle);
+            component.MeshHandle = m_Mesh;
 
-        RenderTextureDesc renderTextureParams;
-        renderTextureParams.ColorSurfaces[0].Texture = texture;
-        renderTextureParams.Width = width;
-        renderTextureParams.Height = height;
-        m_RenderTexture = RenderTexture::Create(renderTextureParams);
-
-        m_SceneRenderer = new SceneRenderer(m_Scene, m_RenderTexture);
+            m_RenderTexture = CreatePreviewTarget(m_Width, m_Height, "Preview texture");
+            if (!m_RenderTexture)
+            {
+                Shutdown();
+                return false;
+            }
+            m_SceneRenderer = CreateScope<SceneRenderer>(m_Scene, m_RenderTexture);
+            return true;
+        }
+        catch (...)
+        {
+            Shutdown();
+            return false;
+        }
     }
 
-    PreviewObjectRenderer::~PreviewObjectRenderer() { delete m_SceneRenderer; }
+    PreviewObjectRenderer::~PreviewObjectRenderer() { Shutdown(); }
+
+    void PreviewObjectRenderer::Shutdown()
+    {
+        m_SceneRenderer.reset();
+        m_RenderTexture = nullptr;
+        m_Scene = nullptr;
+        m_MatHandle = {};
+        m_Material = nullptr;
+        m_Width = 0;
+        m_Height = 0;
+    }
 
     Ref<Texture> PreviewObjectRenderer::RenderPreview()
     {
+        RenderAPI* renderAPI = RenderAPI::TryGet();
+        if (!m_SceneRenderer || !m_RenderTexture || m_Width == 0 || m_Height == 0 || renderAPI == nullptr)
+            return nullptr;
+
         EditorCamera camera;
-        camera.SetViewportSize(256, 256);
+        camera.SetViewportSize(m_Width, m_Height);
         camera.SetDistance(5);
         camera.Focus(glm::vec3(0.0f));
         m_SceneRenderer->RenderEditor(camera, false);
-        RenderAPI::TryGet()->SubmitCommandBuffer(nullptr);
-        RenderAPI::TryGet()->SetRenderTarget(nullptr);
+        renderAPI->SubmitCommandBuffer(nullptr);
+        renderAPI->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);
     }
 
@@ -66,62 +124,86 @@ namespace Crowny
     // =========================================================================
 
     PreviewMaterialRenderer::PreviewMaterialRenderer(const AssetHandle<Material>& material, const AssetHandle<Mesh>& previewMesh)
-      : m_Material(material), m_PreviewMesh(previewMesh), m_SceneRenderer(nullptr)
+      : m_Material(material), m_PreviewMesh(previewMesh)
     {
     }
 
-    PreviewMaterialRenderer::~PreviewMaterialRenderer() { delete m_SceneRenderer; }
+    PreviewMaterialRenderer::~PreviewMaterialRenderer() { Shutdown(); }
 
-    void PreviewMaterialRenderer::Setup(uint32_t width, uint32_t height)
+    bool PreviewMaterialRenderer::Setup(uint32_t width, uint32_t height)
     {
-        m_Scene = CreateRef<Scene>("Material Preview");
+        Shutdown();
+        if (width == 0 || height == 0 || !m_Material || RenderAPI::TryGet() == nullptr)
+            return false;
 
-        // Generate the fallback locally so previews do not depend on a loose source mesh.
-        if (!m_PreviewMesh)
+        m_Width = std::min(width, MAX_PREVIEW_DIMENSION);
+        m_Height = std::min(height, MAX_PREVIEW_DIMENSION);
+        try
         {
-            static AssetHandle<Mesh> sphereMesh;
-            if (!sphereMesh)
+            m_RenderMesh = m_PreviewMesh;
+            if (!m_RenderMesh)
             {
+                AssetManager* assets = AssetManager::TryGet();
+                if (assets == nullptr)
+                {
+                    Shutdown();
+                    return false;
+                }
                 const Ref<Mesh> generated = MeshFactory::CreateSphere(0.5f, 32, 16);
                 if (generated)
-                    sphereMesh = static_asset_cast<Mesh>(AssetManager::TryGet()->CreateAssetHandle(generated));
+                    m_RenderMesh = static_asset_cast<Mesh>(assets->CreateAssetHandle(generated));
             }
-            m_PreviewMesh = sphereMesh;
-        }
 
-        if (m_PreviewMesh)
-        {
+            if (!m_RenderMesh)
+            {
+                Shutdown();
+                return false;
+            }
+
+            m_Scene = CreateRef<Scene>("Material Preview");
             MeshRendererComponent& component = m_Scene->CreateEntity("Preview").AddComponent<MeshRendererComponent>();
             component.SetMaterial(0, m_Material);
-            component.MeshHandle = m_PreviewMesh;
+            component.MeshHandle = m_RenderMesh;
+
+            m_RenderTexture = CreatePreviewTarget(m_Width, m_Height, "Material preview texture");
+            if (!m_RenderTexture)
+            {
+                Shutdown();
+                return false;
+            }
+            m_SceneRenderer = CreateScope<SceneRenderer>(m_Scene, m_RenderTexture);
+            return true;
         }
+        catch (...)
+        {
+            Shutdown();
+            return false;
+        }
+    }
 
-        TextureDesc textureParams;
-        textureParams.Width = width;
-        textureParams.Height = height;
-        textureParams.Format = TextureFormat::RGBA8;
-        textureParams.Usage = TEXTURE_RENDERTARGET;
-        textureParams.DebugName = "Material preview texture";
-        Ref<Texture> texture = Texture::Create(textureParams);
-
-        RenderTextureDesc renderTextureParams;
-        renderTextureParams.ColorSurfaces[0].Texture = texture;
-        renderTextureParams.Width = width;
-        renderTextureParams.Height = height;
-        m_RenderTexture = RenderTexture::Create(renderTextureParams);
-
-        m_SceneRenderer = new SceneRenderer(m_Scene, m_RenderTexture);
+    void PreviewMaterialRenderer::Shutdown()
+    {
+        m_SceneRenderer.reset();
+        m_RenderTexture = nullptr;
+        m_Scene = nullptr;
+        m_RenderMesh = {};
+        m_Width = 0;
+        m_Height = 0;
     }
 
     Ref<Texture> PreviewMaterialRenderer::RenderPreview()
     {
+        RenderAPI* renderAPI = RenderAPI::TryGet();
+        if (!m_SceneRenderer || !m_RenderTexture || m_Width == 0 || m_Height == 0 || renderAPI == nullptr)
+            return nullptr;
+
         EditorCamera camera;
-        camera.SetViewportSize(256, 256);
+        camera.SetViewportSize(m_Width, m_Height);
         camera.SetDistance(3);
         camera.Focus(glm::vec3(0.0f));
         m_SceneRenderer->RenderEditor(camera, false);
-        RenderAPI::TryGet()->SubmitCommandBuffer(nullptr);
-        RenderAPI::TryGet()->SetRenderTarget(nullptr);
+        renderAPI->SubmitCommandBuffer(nullptr);
+        renderAPI->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);
     }
 
