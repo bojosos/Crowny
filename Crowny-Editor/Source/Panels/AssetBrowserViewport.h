@@ -19,13 +19,15 @@ namespace Crowny
         uint32_t ControlRowCount = 2u;
         bool SearchSharesControlRow = false;
         bool ShowsThumbnailSize = false;
+        bool NavigationSharesControlRow = false;
 
         bool operator==(const AssetBrowserToolbarLayout&) const = default;
     };
 
-    constexpr AssetBrowserToolbarLayout GetAssetBrowserToolbarLayout(float availableWidth, bool gridView)
+    constexpr AssetBrowserToolbarLayout GetAssetBrowserToolbarLayout(float availableWidth, bool gridView, float navigationWidth = 146.0f)
     {
         constexpr float minimumSearchWidth = 220.0f;
+        constexpr float minimumBreadcrumbWidth = 120.0f;
         constexpr float typeWidth = 120.0f;
         constexpr float sortWidth = 108.0f;
         constexpr float viewWidth = 92.0f;
@@ -35,14 +37,15 @@ namespace Crowny
         const uint32_t controlCount = gridView ? 4u : 3u;
         const float fixedControlWidth = typeWidth + sortWidth + viewWidth + (gridView ? thumbnailWidth : 0.0f);
         const float wideMinimum = minimumSearchWidth + fixedControlWidth + columnSpacing * static_cast<float>(controlCount);
+        const float singleRowMinimum = wideMinimum + std::max(navigationWidth, 0.0f) + minimumBreadcrumbWidth + columnSpacing * 2.0f;
         if (availableWidth >= wideMinimum)
-            return { AssetBrowserToolbarMode::Wide, controlCount + 1u, 1u, true, gridView };
+            return { AssetBrowserToolbarMode::Wide, controlCount + 1u, 1u, true, gridView, availableWidth >= singleRowMinimum };
 
         const float compactMinimum = gridView ? 430.0f : 330.0f;
         if (availableWidth >= compactMinimum)
-            return { AssetBrowserToolbarMode::Compact, controlCount, 1u, false, gridView };
+            return { AssetBrowserToolbarMode::Compact, controlCount, 1u, false, gridView, false };
 
-        return { AssetBrowserToolbarMode::Narrow, 2u, 2u, false, gridView };
+        return { AssetBrowserToolbarMode::Narrow, 2u, 2u, false, gridView, false };
     }
 
     constexpr float GetAssetBrowserNavigationWidth(float frameHeight, float reloadLabelWidth, float itemSpacing, float framePaddingX)
@@ -75,7 +78,7 @@ namespace Crowny
     };
 
     constexpr bool NeedsAssetBrowserPresentationRefresh(const AssetBrowserPresentationFingerprint& cached,
-                                                         const AssetBrowserPresentationFingerprint& current)
+                                                        const AssetBrowserPresentationFingerprint& current)
     {
         return cached != current;
     }
