@@ -1,5 +1,7 @@
 #include "cwpch.h"
 
+#include "Crowny/Common/Constants.h"
+#include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/Vulkan/VulkanVertexBuffer.h"
 
 namespace Crowny
@@ -19,10 +21,26 @@ namespace Crowny
                 return 5;
             return fallback;
         }
+
+        bool IsVertexTypeCompatible(ShaderDataType meshType, ShaderDataType shaderType)
+        {
+            if (meshType == ShaderDataType::None || meshType == ShaderDataType::Mat3 || meshType == ShaderDataType::Mat4 ||
+                shaderType == ShaderDataType::None || shaderType == ShaderDataType::Mat3 || shaderType == ShaderDataType::Mat4)
+                return false;
+
+            return meshType == shaderType || (meshType == ShaderDataType::Color && shaderType == ShaderDataType::Float4);
+        }
     } // namespace
 
-    VulkanBufferLayout::VulkanBufferLayout(uint32_t id, const VkPipelineVertexInputStateCreateInfo& createInfo) : m_Id(id), m_CreateInfo(createInfo)
+    VulkanBufferLayout::VulkanBufferLayout(uint32_t id, Vector<VkVertexInputAttributeDescription> attributes,
+                                           Vector<VkVertexInputBindingDescription> bindings, uint32_t fallbackColorBinding)
+      : m_Id(id), m_Attributes(std::move(attributes)), m_Bindings(std::move(bindings)), m_FallbackColorBinding(fallbackColorBinding)
     {
+        m_CreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        m_CreateInfo.pVertexBindingDescriptions = m_Bindings.data();
+        m_CreateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(m_Bindings.size());
+        m_CreateInfo.pVertexAttributeDescriptions = m_Attributes.data();
+        m_CreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_Attributes.size());
     }
 
     size_t VulkanBufferLayoutManager::HashFunc::operator()(const BufferLayoutKey& key) const
@@ -45,10 +63,37 @@ namespace Crowny
         m_LastUsedCounter = 0;
     }
 
+    VulkanBufferLayoutManager::VulkanBufferLayoutManager(const VkPhysicalDeviceLimits& limits) : VulkanBufferLayoutManager()
+    {
+        ApplyLimits(limits);
+    }
+
+    void VulkanBufferLayoutManager::OnStartUp()
+    {
+        ApplyLimits(gVulkanRenderAPI().GetPresentDevice()->GetDeviceProperties().limits);
+
+        const glm::vec4 white(1.0f);
+        VertexBufferDesc desc;
+        desc.Size = sizeof(white);
+        desc.Usage = BufferUsage::BU_STATIC_DRAW;
+        desc.Data = &white;
+        m_FallbackColorBuffer = StaticRefCast<VulkanVertexBuffer>(VertexBuffer::Create(desc));
+        CW_ENGINE_ASSERT(m_FallbackColorBuffer != nullptr, "Failed to create the Vulkan fallback vertex-color buffer");
+    }
+
+    void VulkanBufferLayoutManager::ApplyLimits(const VkPhysicalDeviceLimits& limits)
+    {
+        m_MaxVertexInputAttributes = limits.maxVertexInputAttributes;
+        m_MaxVertexInputBindings = limits.maxVertexInputBindings;
+        m_MaxVertexInputAttributeOffset = limits.maxVertexInputAttributeOffset;
+        m_MaxVertexInputBindingStride = limits.maxVertexInputBindingStride;
+    }
+
     VulkanBufferLayoutManager::~VulkanBufferLayoutManager()
     {
         Lock lock(m_Mutex);
         m_BufferLayoutMap.clear();
+        m_FallbackColorBuffer = nullptr;
     }
 
     Ref<VulkanBufferLayout> VulkanBufferLayoutManager::GetBufferLayout(const Ref<BufferLayout>& meshLayout, const Ref<BufferLayout>& shaderLayout)
@@ -77,65 +122,109 @@ namespace Crowny
         const auto& meshElements = meshLayout->GetElements();
         const auto& shaderElements = shaderLayout->GetElements();
 
-        uint32_t numAttrs = 0;
-        uint32_t numBindings = 0;
-        for (const BufferElement& meshElement : meshElements)
+        const uint32_t bindingLimit = std::min(m_MaxVertexInputBindings, static_cast<uint32_t>(MAX_BOUND_VERTEX_BUFFERS));
+        uint32_t numBindings = meshLayout->GetStreamCount();
+        bool valid = numBindings <= bindingLimit && shaderElements.size() <= m_MaxVertexInputAttributes;
+        if (numBindings > bindingLimit)
         {
-            bool semantic = false;
-            for (const BufferElement& shaderElement : shaderElements)
-            {
-                if (shaderElement.Attribute == meshElement.Attribute ||
-                    (shaderElement.Name == meshElement.Name && shaderElement.Type == meshElement.Type))
-                {
-                    semantic = true;
-                    break;
-                }
-            }
-            if (!semantic)
-                continue;
-
-            numAttrs++;
-            numBindings = std::max(numBindings, meshElement.StreamIdx + 1); // For now always 1, weee neeeed stream idx.
+            CW_ENGINE_ERROR("Vertex layout uses {} streams, exceeding the Vulkan binding limit of {}", numBindings,
+                            bindingLimit);
+            numBindings = bindingLimit;
+        }
+        if (shaderElements.size() > m_MaxVertexInputAttributes)
+        {
+            CW_ENGINE_ERROR("Vertex shader uses {} inputs, exceeding the Vulkan attribute limit of {}", shaderElements.size(),
+                            m_MaxVertexInputAttributes);
         }
 
         BufferLayoutEntry newEntry;
-        newEntry.Attributes = new VkVertexInputAttributeDescription[numAttrs];
-        newEntry.Bindings = new VkVertexInputBindingDescription[numBindings];
-        // CW_ENGINE_ASSERT(numBindings == 1, "Not supported currently");
-        // CW_ENGINE_ASSERT(numAttrs == shaderElements.size() && numAttrs == meshElements.size());
+        Vector<VkVertexInputBindingDescription> bindings(numBindings);
         for (uint32_t i = 0; i < numBindings; i++)
         {
-            VkVertexInputBindingDescription& binding = newEntry.Bindings[i];
+            VkVertexInputBindingDescription& binding = bindings[i];
             binding.binding = i;
             binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
             binding.stride = meshLayout->GetStride(i);
+            if (binding.stride > m_MaxVertexInputBindingStride)
+            {
+                CW_ENGINE_ERROR("Vertex stream {} has stride {}, exceeding the Vulkan limit of {}", i, binding.stride,
+                                m_MaxVertexInputBindingStride);
+                valid = false;
+            }
         }
 
-        uint32_t attrIdx = 0;
+        Vector<VkVertexInputAttributeDescription> attributes;
+        attributes.reserve(shaderElements.size());
         Vector<bool> bindingRateInitialized(numBindings, false);
-        for (const auto& meshElement : meshElements)
+        uint32_t fallbackColorBinding = UINT32_MAX;
+        for (const BufferElement& shaderElement : shaderElements)
         {
-            VkVertexInputAttributeDescription& attr = newEntry.Attributes[attrIdx];
-            bool semantic = false;
-            for (const auto& shaderElement : shaderElements)
+            const auto meshElement = std::find_if(meshElements.begin(), meshElements.end(), [&](const BufferElement& candidate) {
+                const bool semanticMatch = shaderElement.Attribute != VertexAttribute::None && candidate.Attribute == shaderElement.Attribute;
+                const bool nameMatch = shaderElement.Attribute == VertexAttribute::None && !shaderElement.Name.empty() &&
+                                       candidate.Name == shaderElement.Name;
+                return semanticMatch || nameMatch;
+            });
+
+            const uint32_t location = ResolveVertexLocation(shaderElement, static_cast<uint32_t>(attributes.size()));
+            if (location >= m_MaxVertexInputAttributes)
             {
-                if (meshElement.Attribute == shaderElement.Attribute ||
-                    (shaderElement.Name == meshElement.Name && shaderElement.Type == meshElement.Type))
-                {
-                    semantic = true;
-                    attr.location = ResolveVertexLocation(shaderElement, attrIdx);
-                    break;
-                }
-            }
-            if (!semantic)
+                CW_ENGINE_ERROR("Vertex input '{}' uses location {}, exceeding the Vulkan limit of {}", shaderElement.Name, location,
+                                m_MaxVertexInputAttributes - 1);
+                valid = false;
                 continue;
+            }
 
-            attr.binding = meshElement.StreamIdx;
-            attr.format = VulkanUtils::GetVertexFormat(meshElement.Type);
-            attr.offset = meshElement.Offset;
+            if (meshElement == meshElements.end())
+            {
+                if (shaderElement.Attribute != VertexAttribute::Color || shaderElement.Type != ShaderDataType::Float4 ||
+                    numBindings >= bindingLimit)
+                {
+                    CW_ENGINE_ERROR("Vertex layout is missing required shader input '{}' at location {}", shaderElement.Name, location);
+                    valid = false;
+                    continue;
+                }
 
-            VkVertexInputBindingDescription& binding = newEntry.Bindings[attr.binding];
-            const bool isPerVertex = meshElement.InstanceRate == 0;
+                if (fallbackColorBinding == UINT32_MAX)
+                {
+                    fallbackColorBinding = numBindings++;
+                    bindings.push_back({ fallbackColorBinding, 0u, VK_VERTEX_INPUT_RATE_VERTEX });
+                }
+                attributes.push_back({ location, fallbackColorBinding, VK_FORMAT_R32G32B32A32_SFLOAT, 0u });
+                continue;
+            }
+
+            if (!IsVertexTypeCompatible(meshElement->Type, shaderElement.Type))
+            {
+                CW_ENGINE_ERROR("Vertex input '{}' at location {} has incompatible mesh type {} and shader type {}", shaderElement.Name,
+                                location, static_cast<uint32_t>(meshElement->Type), static_cast<uint32_t>(shaderElement.Type));
+                valid = false;
+                continue;
+            }
+
+            if (meshElement->StreamIdx >= bindings.size())
+            {
+                CW_ENGINE_ERROR("Vertex input '{}' uses unavailable stream {}", shaderElement.Name, meshElement->StreamIdx);
+                valid = false;
+                continue;
+            }
+            if (meshElement->Offset > m_MaxVertexInputAttributeOffset)
+            {
+                CW_ENGINE_ERROR("Vertex input '{}' has offset {}, exceeding the Vulkan limit of {}", shaderElement.Name,
+                                meshElement->Offset, m_MaxVertexInputAttributeOffset);
+                valid = false;
+                continue;
+            }
+
+            VkVertexInputAttributeDescription attr{};
+            attr.location = location;
+            attr.binding = meshElement->StreamIdx;
+            attr.format = VulkanUtils::GetVertexFormat(meshElement->Type);
+            attr.offset = meshElement->Offset;
+            attributes.push_back(attr);
+
+            VkVertexInputBindingDescription& binding = bindings[attr.binding];
+            const bool isPerVertex = meshElement->InstanceRate == 0;
             if (!bindingRateInitialized[attr.binding])
             {
                 binding.inputRate = isPerVertex ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
@@ -146,34 +235,21 @@ namespace Crowny
                 if ((binding.inputRate == VK_VERTEX_INPUT_RATE_VERTEX && !isPerVertex) ||
                     (binding.inputRate == VK_VERTEX_INPUT_RATE_INSTANCE && isPerVertex))
                 {
-                    CW_ENGINE_WARN("This here bad");
-                    CW_ENGINE_ASSERT(false);
+                    CW_ENGINE_ERROR("Vertex stream {} mixes per-vertex and per-instance inputs", attr.binding);
+                    valid = false;
                 }
             }
-            attrIdx++;
         }
-
-        numAttrs = attrIdx;
-        VkPipelineVertexInputStateCreateInfo vertexInputCI{};
-        vertexInputCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputCI.pNext = nullptr;
-        vertexInputCI.flags = 0;
-        vertexInputCI.pVertexBindingDescriptions = newEntry.Bindings;
-        vertexInputCI.vertexBindingDescriptionCount = numBindings;
-#if 0
-        for (uint32_t i = 0; i < numAttrs; i++)
-        {
-            CW_ENGINE_INFO("{}: offset: {}, format: {}", newEntry.Attributes[i].location, newEntry.Attributes[i].offset, newEntry.Attributes[i].format);
-        }
-#endif
-        vertexInputCI.pVertexAttributeDescriptions = newEntry.Attributes;
-        vertexInputCI.vertexAttributeDescriptionCount = numAttrs;
 
         BufferLayoutKey key;
         key.BufferId = meshLayout->GetId();
         key.ShaderId = shaderLayout->GetId();
 
-        newEntry.BufferLayout = CreateRef<VulkanBufferLayout>(m_NextId++, vertexInputCI);
+        if (valid)
+        {
+            newEntry.BufferLayout =
+              CreateRef<VulkanBufferLayout>(m_NextId++, std::move(attributes), std::move(bindings), fallbackColorBinding);
+        }
         newEntry.LastUsedIdx = ++m_LastUsedCounter;
         return m_BufferLayoutMap.emplace(key, std::move(newEntry)).first;
     }

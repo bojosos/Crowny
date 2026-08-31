@@ -6,17 +6,27 @@
 
 namespace Crowny
 {
+    class VulkanVertexBuffer;
 
     class VulkanBufferLayout : public RefCounted
     {
     public:
-        VulkanBufferLayout(uint32_t id, const VkPipelineVertexInputStateCreateInfo& createInfo);
+        VulkanBufferLayout(uint32_t id, Vector<VkVertexInputAttributeDescription> attributes,
+                           Vector<VkVertexInputBindingDescription> bindings, uint32_t fallbackColorBinding);
+        VulkanBufferLayout(const VulkanBufferLayout&) = delete;
+        VulkanBufferLayout(VulkanBufferLayout&&) = delete;
+        VulkanBufferLayout& operator=(const VulkanBufferLayout&) = delete;
+        VulkanBufferLayout& operator=(VulkanBufferLayout&&) = delete;
         const VkPipelineVertexInputStateCreateInfo& GetVkCreateInfo() const { return m_CreateInfo; }
         uint32_t GetId() const { return m_Id; }
+        uint32_t GetFallbackColorBinding() const { return m_FallbackColorBinding; }
 
     private:
         uint32_t m_Id;
-        VkPipelineVertexInputStateCreateInfo m_CreateInfo;
+        Vector<VkVertexInputAttributeDescription> m_Attributes;
+        Vector<VkVertexInputBindingDescription> m_Bindings;
+        VkPipelineVertexInputStateCreateInfo m_CreateInfo{};
+        uint32_t m_FallbackColorBinding = UINT32_MAX;
     };
 
     class VulkanBufferLayoutManager : public Module<VulkanBufferLayoutManager>
@@ -40,23 +50,26 @@ namespace Crowny
 
         struct BufferLayoutEntry
         {
-            VkVertexInputAttributeDescription* Attributes;
-            VkVertexInputBindingDescription* Bindings;
             Ref<VulkanBufferLayout> BufferLayout;
             uint32_t LastUsedIdx;
-            // Allocator maybe?
         };
 
     public:
         VulkanBufferLayoutManager();
+        explicit VulkanBufferLayoutManager(const VkPhysicalDeviceLimits& limits);
         ~VulkanBufferLayoutManager();
 
         Ref<VulkanBufferLayout> GetBufferLayout(const Ref<BufferLayout>& meshLayout, const Ref<BufferLayout>& shaderLayout);
+        const Ref<VulkanVertexBuffer>& GetFallbackColorBuffer() const { return m_FallbackColorBuffer; }
+
+    protected:
+        void OnStartUp() override;
 
     private:
         using BufferLayoutMap = UnorderedMap<BufferLayoutKey, BufferLayoutEntry, HashFunc, EqualFunc>;
         BufferLayoutMap::iterator AddNew(const Ref<BufferLayout>& meshLayout, const Ref<BufferLayout>& shaderLayout);
 
+        void ApplyLimits(const VkPhysicalDeviceLimits& limits);
         void RemoveLeastUsed();
 
     private:
@@ -68,6 +81,11 @@ namespace Crowny
         uint32_t m_NextId;
         bool m_WarningShown;
         uint32_t m_LastUsedCounter;
+        uint32_t m_MaxVertexInputAttributes = 16;
+        uint32_t m_MaxVertexInputBindings = 16;
+        uint32_t m_MaxVertexInputAttributeOffset = 2047;
+        uint32_t m_MaxVertexInputBindingStride = 2048;
+        Ref<VulkanVertexBuffer> m_FallbackColorBuffer;
         Mutex m_Mutex;
     };
 

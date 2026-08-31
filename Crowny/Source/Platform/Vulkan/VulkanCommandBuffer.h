@@ -12,6 +12,7 @@ namespace Crowny
 #define MAX_VULKAN_CB_PER_QUEUE_FAMILY MAX_QUEUES_PER_TYPE * 32
 
     class VulkanBuffer;
+    class VulkanBufferLayout;
     class VulkanCmdBuffer;
     class VulkanCommandBuffer;
     class VulkanGraphicsPipeline;
@@ -313,6 +314,7 @@ namespace Crowny
 
         void BindUniforms();
         bool BindGraphicsPipeline();
+        bool BindGraphicsPipelineAndVertexInputs();
         bool IsReadyForRender() const;
         void BindDynamicStates(bool force);
         void ClearViewport(const Rect2I& area, uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask);
@@ -393,6 +395,7 @@ namespace Crowny
         Ref<VulkanGraphicsPipeline> m_GraphicsPipeline;
         Ref<VulkanComputePipeline> m_ComputePipeline;
         Ref<VulkanRayTracingPipeline> m_RayTracingPipeline;
+        Ref<VulkanBufferLayout> m_ResolvedVertexLayout;
         VulkanDevice& m_Device;
         Set<VulkanSwapChain*> m_ActiveSwapChains;
         Ref<BufferLayout> m_VertexLayout;

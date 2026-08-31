@@ -100,6 +100,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Connect the buffer pool to render-graph physical resource acquisition/release so transient buffers are reused automatically.
 - [x] Add a complete-descriptor immutable sampler cache and clear it during renderer shutdown.
 - [x] Test frame-delayed reuse and object identity after the safe retirement window.
+- [ ] Make Vulkan vertex-layout cache entries own their declarations and bind one constant white color when a shader requires `Color` but the mesh omits it.
 - [x] Add fixed-capacity vertex/index geometry heaps with aligned best-fit suballocation, generational handles, frames-in-flight deferred frees, range coalescing, uploads, and allocation/high-water/fragmentation telemetry.
 - [x] Back immutable Vulkan meshes with persistent vertex/index heap pages grouped by structural vertex layout, index width, and topology. Use stable heap binding IDs, GPU-to-GPU buffer copies, meshlet-index uploads, delayed allocation reuse, per-mesh fallbacks for dynamic/skinned/morphed/OpenGL geometry, and capacity/live/high-water telemetry.
 - [x] Add GPU-only draw-run compaction for heap-resident opaque and masked main shading. Persistent CPU-known bins own deterministic command segments and count offsets; compute compacts visible meshlets into those segments and Vulkan submits them with indirect counts without visibility readback or per-object CPU draws.
