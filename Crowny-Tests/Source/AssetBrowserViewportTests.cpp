@@ -12,6 +12,12 @@ TEST_CASE("Asset browser toolbar keeps its table shape stable for the rendered f
     CHECK(wideGrid.ColumnCount == 5u);
     CHECK(wideGrid.SearchSharesControlRow);
     CHECK(wideGrid.ShowsThumbnailSize);
+    CHECK_FALSE(wideGrid.NavigationSharesControlRow);
+
+    const AssetBrowserToolbarLayout singleRowGrid = GetAssetBrowserToolbarLayout(1180.0f, true, 146.0f);
+    CHECK(singleRowGrid.NavigationSharesControlRow);
+    CHECK_FALSE(GetAssetBrowserToolbarLayout(978.9f, true, 146.0f).NavigationSharesControlRow);
+    CHECK(GetAssetBrowserToolbarLayout(979.0f, true, 146.0f).NavigationSharesControlRow);
 
     const AssetBrowserToolbarLayout wideList = GetAssetBrowserToolbarLayout(900.0f, false);
     CHECK(wideList.Mode == AssetBrowserToolbarMode::Wide);

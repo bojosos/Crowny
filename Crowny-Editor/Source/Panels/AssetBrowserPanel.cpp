@@ -305,128 +305,8 @@ namespace Crowny
         const ImGuiTableFlags tableFlags =
           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoBordersInBody;
         const bool focusSearch = ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_RouteFocused);
-        const float navigationWidth =
-          GetAssetBrowserNavigationWidth(ImGui::GetFrameHeight(), ImGui::CalcTextSize("Reload").x, ImGui::GetStyle().ItemSpacing.x,
-                                         ImGui::GetStyle().FramePadding.x);
-
-        if (!ImGui::BeginTable("##assetBrowserNavigation", 2, tableFlags))
-            return;
-        ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, navigationWidth);
-        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-
-        if (!m_BackwardHistory.empty())
-        {
-            if (ImGui::ArrowButton("##assetBack", ImGuiDir_Left))
-                GoBackward();
-        }
-        else
-        {
-            ImGui::BeginDisabled();
-            ImGui::ArrowButton("##assetBack", ImGuiDir_Left);
-            ImGui::EndDisabled();
-        }
-        UI::SetTooltip("Back");
-        ImGui::SameLine();
-
-        if (!m_ForwardHistory.empty())
-        {
-            if (ImGui::ArrowButton("##assetForward", ImGuiDir_Right))
-                GoForward();
-        }
-        else
-        {
-            ImGui::BeginDisabled();
-            ImGui::ArrowButton("##assetForward", ImGuiDir_Right);
-            ImGui::EndDisabled();
-        }
-        UI::SetTooltip("Forward");
-        ImGui::SameLine();
-
-        if (m_CurrentDirectoryEntry == ProjectLibrary::Get().GetRoot().get())
-        {
-            ImGui::BeginDisabled();
-            ImGui::ArrowButton("##assetUp", ImGuiDir_Up);
-            ImGui::EndDisabled();
-        }
-        else
-        {
-            if (ImGui::ArrowButton("##assetUp", ImGuiDir_Up))
-                SetCurrentDirectory(m_CurrentDirectoryEntry->Parent);
-        }
-        UI::SetTooltip("Parent folder");
-        ImGui::SameLine();
-
-        const bool importing = ProjectLibrary::Get().IsImporting();
-        if (importing)
-            ImGui::BeginDisabled();
-        if (ImGui::Button("Reload##assets"))
-            ProjectLibrary::Get().RefreshAsync(m_CurrentDirectoryEntry->Filepath);
-        if (importing)
-            ImGui::EndDisabled();
-        UI::SetTooltip(importing ? "An import is already running" : "Rescan this folder");
-
-        if (importing)
-            UpdateDisplayList(); // Show newly imported assets as they complete
-
-        ImGui::TableSetColumnIndex(1);
-        float breadcrumbContentWidth = 0.0f;
-        for (size_t i = 0; i < m_DirectoryPathEntries.size(); i++)
-        {
-            if (i > 0)
-                breadcrumbContentWidth += ImGui::CalcTextSize(">").x + ImGui::GetStyle().ItemSpacing.x;
-
-            const bool current = i + 1 == m_DirectoryPathEntries.size();
-            breadcrumbContentWidth += ImGui::CalcTextSize(m_DirectoryPathEntries[i]->ElementName.c_str()).x;
-            if (!current)
-                breadcrumbContentWidth += ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
-        }
-
-        const bool breadcrumbScrolls =
-          NeedsAssetBrowserBreadcrumbScrollbar(breadcrumbContentWidth, ImGui::GetContentRegionAvail().x);
-        const float breadcrumbHeight = ImGui::GetFrameHeight() + (breadcrumbScrolls ? ImGui::GetStyle().ScrollbarSize : 0.0f);
-        DirectoryEntry* requestedDirectory = nullptr;
-        if (ImGui::BeginChild("##assetBreadcrumbs", ImVec2(0.0f, breadcrumbHeight), false, ImGuiWindowFlags_HorizontalScrollbar))
-        {
-            for (size_t i = 0; i < m_DirectoryPathEntries.size(); i++)
-            {
-                DirectoryEntry* dirEntry = m_DirectoryPathEntries[i];
-                ImGui::PushID(static_cast<int>(i));
-                if (i > 0)
-                {
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextDisabled(">");
-                    ImGui::SameLine();
-                }
-
-                const bool current = i + 1 == m_DirectoryPathEntries.size();
-                if (current)
-                {
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted(dirEntry->ElementName.c_str());
-                }
-                else if (ImGui::SmallButton(dirEntry->ElementName.c_str()))
-                    requestedDirectory = dirEntry;
-                UI::SetTooltip(dirEntry->Filepath.string());
-                if (!current)
-                    ImGui::SameLine();
-                ImGui::PopID();
-
-                if (requestedDirectory != nullptr)
-                    break;
-            }
-            if (m_ScrollBreadcrumbToEnd)
-            {
-                ImGui::SetScrollHereX(1.0f);
-                m_ScrollBreadcrumbToEnd = false;
-            }
-        }
-        ImGui::EndChild();
-        ImGui::EndTable();
-        if (requestedDirectory != nullptr)
-            SetCurrentDirectory(requestedDirectory);
-
+        const float navigationWidth = GetAssetBrowserNavigationWidth(ImGui::GetFrameHeight(), ImGui::CalcTextSize("Reload").x,
+                                                                     ImGui::GetStyle().ItemSpacing.x, ImGui::GetStyle().FramePadding.x);
         static const char* filterLabels[] = { "All assets", "Scenes", "Images", "Materials", "Models", "Audio", "Code" };
         static const char* sortingLabels[] = { "Name", "Size", "Date" };
         const auto drawSearch = [&]() {
@@ -503,7 +383,156 @@ namespace Crowny
 
         const float availableWidth = ImGui::GetContentRegionAvail().x;
         const bool gridLayout = m_View == AssetBrowserView::Grid;
-        const AssetBrowserToolbarLayout toolbarLayout = GetAssetBrowserToolbarLayout(availableWidth, gridLayout);
+        const AssetBrowserToolbarLayout toolbarLayout = GetAssetBrowserToolbarLayout(availableWidth, gridLayout, navigationWidth);
+        const auto drawNavigation = [&]() {
+            if (!m_BackwardHistory.empty())
+            {
+                if (ImGui::ArrowButton("##assetBack", ImGuiDir_Left))
+                    GoBackward();
+            }
+            else
+            {
+                ImGui::BeginDisabled();
+                ImGui::ArrowButton("##assetBack", ImGuiDir_Left);
+                ImGui::EndDisabled();
+            }
+            UI::SetTooltip("Back");
+            ImGui::SameLine();
+
+            if (!m_ForwardHistory.empty())
+            {
+                if (ImGui::ArrowButton("##assetForward", ImGuiDir_Right))
+                    GoForward();
+            }
+            else
+            {
+                ImGui::BeginDisabled();
+                ImGui::ArrowButton("##assetForward", ImGuiDir_Right);
+                ImGui::EndDisabled();
+            }
+            UI::SetTooltip("Forward");
+            ImGui::SameLine();
+
+            if (m_CurrentDirectoryEntry == ProjectLibrary::Get().GetRoot().get())
+            {
+                ImGui::BeginDisabled();
+                ImGui::ArrowButton("##assetUp", ImGuiDir_Up);
+                ImGui::EndDisabled();
+            }
+            else if (ImGui::ArrowButton("##assetUp", ImGuiDir_Up))
+                SetCurrentDirectory(m_CurrentDirectoryEntry->Parent);
+            UI::SetTooltip("Parent folder");
+            ImGui::SameLine();
+
+            const bool importing = ProjectLibrary::Get().IsImporting();
+            if (importing)
+                ImGui::BeginDisabled();
+            if (ImGui::Button("Reload##assets"))
+                ProjectLibrary::Get().RefreshAsync(m_CurrentDirectoryEntry->Filepath);
+            if (importing)
+                ImGui::EndDisabled();
+            UI::SetTooltip(importing ? "An import is already running" : "Rescan this folder");
+
+            if (importing)
+                UpdateDisplayList(); // Show newly imported assets as they complete
+        };
+
+        DirectoryEntry* requestedDirectory = nullptr;
+        const auto drawBreadcrumbs = [&]() {
+            float breadcrumbContentWidth = 0.0f;
+            for (size_t i = 0; i < m_DirectoryPathEntries.size(); i++)
+            {
+                if (i > 0)
+                    breadcrumbContentWidth += ImGui::CalcTextSize(">").x + ImGui::GetStyle().ItemSpacing.x;
+
+                const bool current = i + 1 == m_DirectoryPathEntries.size();
+                breadcrumbContentWidth += ImGui::CalcTextSize(m_DirectoryPathEntries[i]->ElementName.c_str()).x;
+                if (!current)
+                    breadcrumbContentWidth += ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
+            }
+
+            const bool breadcrumbScrolls = NeedsAssetBrowserBreadcrumbScrollbar(breadcrumbContentWidth, ImGui::GetContentRegionAvail().x);
+            const float breadcrumbHeight = ImGui::GetFrameHeight() + (breadcrumbScrolls ? ImGui::GetStyle().ScrollbarSize : 0.0f);
+            if (ImGui::BeginChild("##assetBreadcrumbs", ImVec2(0.0f, breadcrumbHeight), false, ImGuiWindowFlags_HorizontalScrollbar))
+            {
+                for (size_t i = 0; i < m_DirectoryPathEntries.size(); i++)
+                {
+                    DirectoryEntry* dirEntry = m_DirectoryPathEntries[i];
+                    ImGui::PushID(static_cast<int>(i));
+                    if (i > 0)
+                    {
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextDisabled(">");
+                        ImGui::SameLine();
+                    }
+
+                    const bool current = i + 1 == m_DirectoryPathEntries.size();
+                    if (current)
+                    {
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextUnformatted(dirEntry->ElementName.c_str());
+                    }
+                    else if (ImGui::SmallButton(dirEntry->ElementName.c_str()))
+                        requestedDirectory = dirEntry;
+                    UI::SetTooltip(dirEntry->Filepath.string());
+                    if (!current)
+                        ImGui::SameLine();
+                    ImGui::PopID();
+
+                    if (requestedDirectory != nullptr)
+                        break;
+                }
+                if (m_ScrollBreadcrumbToEnd)
+                {
+                    ImGui::SetScrollHereX(1.0f);
+                    m_ScrollBreadcrumbToEnd = false;
+                }
+            }
+            ImGui::EndChild();
+        };
+
+        const int headerColumnCount = toolbarLayout.NavigationSharesControlRow ? static_cast<int>(toolbarLayout.ColumnCount) + 2 : 2;
+        if (!ImGui::BeginTable("##assetBrowserNavigation", headerColumnCount, tableFlags))
+            return;
+        ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, navigationWidth);
+        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
+        if (toolbarLayout.NavigationSharesControlRow)
+        {
+            ImGui::TableSetupColumn("Search", ImGuiTableColumnFlags_WidthFixed, 220.0f);
+            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+            ImGui::TableSetupColumn("Sort", ImGuiTableColumnFlags_WidthFixed, 108.0f);
+            ImGui::TableSetupColumn("View", ImGuiTableColumnFlags_WidthFixed, 92.0f);
+            if (toolbarLayout.ShowsThumbnailSize)
+                ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 125.0f);
+        }
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        drawNavigation();
+        ImGui::TableSetColumnIndex(1);
+        drawBreadcrumbs();
+        if (toolbarLayout.NavigationSharesControlRow)
+        {
+            ImGui::TableSetColumnIndex(2);
+            drawSearch();
+            ImGui::TableSetColumnIndex(3);
+            drawFilter();
+            ImGui::TableSetColumnIndex(4);
+            drawSort();
+            ImGui::TableSetColumnIndex(5);
+            drawView();
+            if (toolbarLayout.ShowsThumbnailSize)
+            {
+                ImGui::TableSetColumnIndex(6);
+                drawThumbnailSize();
+            }
+        }
+        ImGui::EndTable();
+
+        if (requestedDirectory != nullptr)
+            SetCurrentDirectory(requestedDirectory);
+        if (toolbarLayout.NavigationSharesControlRow)
+            return;
+
         if (toolbarLayout.SearchSharesControlRow)
         {
             if (ImGui::BeginTable("##assetBrowserToolbar", static_cast<int>(toolbarLayout.ColumnCount), tableFlags))
@@ -790,8 +819,7 @@ namespace Crowny
         for (const Ref<LibraryEntry>& entry : m_DisplayList)
             m_DisplayEntryPaths.push_back(&entry->Filepath);
         m_SortedDisplayEntryPaths = m_DisplayEntryPaths;
-        std::sort(m_SortedDisplayEntryPaths.begin(), m_SortedDisplayEntryPaths.end(),
-                  [](const Path* lhs, const Path* rhs) { return *lhs < *rhs; });
+        std::sort(m_SortedDisplayEntryPaths.begin(), m_SortedDisplayEntryPaths.end(), [](const Path* lhs, const Path* rhs) { return *lhs < *rhs; });
 
         const uint32_t previousStartIndex = m_SelectionStartIndex;
         const bool hadSelection = !m_SelectionSet.empty();
@@ -875,8 +903,7 @@ namespace Crowny
     }
 
     // Currently the search is performed again. Since we kinda know the changes this might not be necessary.
-    void AssetBrowserPanel::UpdateDisplayList(const std::optional<Path>& preferredStartPath,
-                                              const std::optional<Path>& preferredEndPath)
+    void AssetBrowserPanel::UpdateDisplayList(const std::optional<Path>& preferredStartPath, const std::optional<Path>& preferredEndPath)
     {
         if (m_CurrentDirectoryEntry == nullptr)
             return;
@@ -976,8 +1003,7 @@ namespace Crowny
             ProjectLibrary::Get().MoveEntry(operation.Source, operation.Destination);
 
             const bool moveSucceeded = movingEntry != nullptr && movingEntry->Filepath == operation.Destination;
-            const std::optional<Path> remappedSelection =
-              RemapAssetBrowserSelectionAfterMove(m_SelectionSet, operation, moveSucceeded);
+            const std::optional<Path> remappedSelection = RemapAssetBrowserSelectionAfterMove(m_SelectionSet, operation, moveSucceeded);
             if (remappedSelection)
                 preferredSelection = remappedSelection;
         }
@@ -1020,10 +1046,10 @@ namespace Crowny
             const bool searching = !m_SearchString.empty();
             const bool filtering = m_AssetFilter != AssetBrowserFilter::All;
             const bool constrained = searching || filtering;
-            const char* message = searching && filtering   ? "No assets match this search and type filter."
-                                  : searching              ? "No assets match this search."
-                                  : filtering              ? "No assets match this type filter."
-                                                           : "This folder is empty.";
+            const char* message = searching && filtering ? "No assets match this search and type filter."
+                                  : searching            ? "No assets match this search."
+                                  : filtering            ? "No assets match this type filter."
+                                                         : "This folder is empty.";
             const float messageWidth = ImGui::CalcTextSize(message).x;
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (panelWidth - messageWidth) * 0.5f));
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 24.0f);
