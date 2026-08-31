@@ -423,8 +423,8 @@ namespace Crowny
                 textWidth = std::max(textWidth, ImGui::CalcTextSize(lines[line]).x);
 
             const float lineHeight = ImGui::GetTextLineHeight();
-            const ImVec2 statisticsMin(imageMax.x - textWidth - 24.0f, imageMin.y + 8.0f);
-            const ImVec2 statisticsMax(imageMax.x - 8.0f, statisticsMin.y + lineHeight * lineCount + 16.0f);
+            const ImVec2 statisticsMin(imageMin.x + 8.0f, imageMin.y + 8.0f);
+            const ImVec2 statisticsMax(statisticsMin.x + textWidth + 16.0f, statisticsMin.y + lineHeight * lineCount + 16.0f);
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             drawList->AddRectFilled(statisticsMin, statisticsMax, IM_COL32(27, 24, 22, 224), 5.0f);
             drawList->AddRect(statisticsMin, statisticsMax, IM_COL32(76, 68, 61, 210), 5.0f);
