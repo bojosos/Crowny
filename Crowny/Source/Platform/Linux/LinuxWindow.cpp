@@ -131,6 +131,14 @@ namespace Crowny
             Shutdown();
             return;
         }
+        m_NativeWindowRegistered = RegisterNativeWindow();
+        if (!m_NativeWindowRegistered)
+        {
+            CW_ENGINE_ERROR("Created GLFW window '{}' without an initialized window system", m_Data.Title);
+            glfwDestroyWindow(m_Window);
+            m_Window = nullptr;
+            return;
+        }
 
         glfwSetWindowUserPointer(m_Window, this);
         InstallCallbacks();
@@ -638,6 +646,11 @@ namespace Crowny
             glfwSetWindowUserPointer(m_Window, nullptr);
             glfwDestroyWindow(m_Window);
             m_Window = nullptr;
+        }
+        if (m_NativeWindowRegistered)
+        {
+            UnregisterNativeWindow();
+            m_NativeWindowRegistered = false;
         }
     }
 

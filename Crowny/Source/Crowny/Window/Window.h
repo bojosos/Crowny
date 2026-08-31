@@ -109,5 +109,9 @@ namespace Crowny
         static bool IsInitialized();
         static void PollEvents();
         static Scope<Window> Create(const WindowDesc& windowDesc);
+
+    protected:
+        static bool RegisterNativeWindow();
+        static void UnregisterNativeWindow();
     };
 } // namespace Crowny

@@ -83,6 +83,7 @@ namespace Crowny
         WindowMode m_Mode = WindowMode::Windowed;
         Cursor m_CursorType = Cursor::POINTER;
         bool m_CursorGrabbed = false;
+        bool m_NativeWindowRegistered = false;
         int32_t m_WindowedLeft = 0;
         int32_t m_WindowedTop = 0;
         uint32_t m_WindowedWidth = 1280;

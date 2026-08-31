@@ -6,6 +6,7 @@
 #include "Crowny/Events/MouseEvent.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/Window/Window.h"
+#include "Crowny/Window/WindowSystemState.h"
 
 #include "Platform/Linux/LinuxWindow.h"
 
@@ -15,7 +16,7 @@ namespace Crowny
 {
     namespace
     {
-        bool s_WindowSystemInitialized = false;
+        Detail::WindowSystemState s_WindowSystemState;
 
         void GLFWErrorCallback(int error, const char* description)
         {
@@ -25,30 +26,44 @@ namespace Crowny
 
     bool Window::Initialize()
     {
-        if (s_WindowSystemInitialized)
+        if (s_WindowSystemState.IsInitialized())
+        {
+            s_WindowSystemState.CancelPendingShutdown();
             return true;
+        }
 
         glfwSetErrorCallback(GLFWErrorCallback);
-        s_WindowSystemInitialized = glfwInit() == GLFW_TRUE;
-        if (!s_WindowSystemInitialized)
+        if (glfwInit() != GLFW_TRUE)
+        {
+            s_WindowSystemState.MarkInitializationFailed();
             CW_ENGINE_ERROR("Could not initialize GLFW");
-        return s_WindowSystemInitialized;
+            return false;
+        }
+
+        s_WindowSystemState.MarkInitialized();
+        return true;
     }
 
     void Window::Shutdown()
     {
-        if (!s_WindowSystemInitialized)
-            return;
-        glfwTerminate();
-        s_WindowSystemInitialized = false;
+        if (s_WindowSystemState.RequestShutdown() == Detail::WindowSystemAction::TerminateBackend)
+            glfwTerminate();
     }
 
-    bool Window::IsInitialized() { return s_WindowSystemInitialized; }
+    bool Window::IsInitialized() { return s_WindowSystemState.IsInitialized(); }
 
     void Window::PollEvents()
     {
-        if (s_WindowSystemInitialized)
+        if (s_WindowSystemState.IsInitialized())
             glfwPollEvents();
+    }
+
+    bool Window::RegisterNativeWindow() { return s_WindowSystemState.RegisterWindow(); }
+
+    void Window::UnregisterNativeWindow()
+    {
+        if (s_WindowSystemState.UnregisterWindow() == Detail::WindowSystemAction::TerminateBackend)
+            glfwTerminate();
     }
 
     Scope<Window> Window::Create(const WindowDesc& windowDesc)
