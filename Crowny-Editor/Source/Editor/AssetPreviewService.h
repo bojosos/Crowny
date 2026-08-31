@@ -3,7 +3,6 @@
 #include "Crowny/Common/StdHeaders.h"
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/Threading/TaskSystem.h"
 
 #include "Editor/ProjectLibrary.h"
 
@@ -32,8 +31,6 @@ namespace Crowny
     class AssetPreviewService
     {
     public:
-        struct WorkItem;
-
         AssetPreviewService() = default;
         ~AssetPreviewService();
 
@@ -46,10 +43,15 @@ namespace Crowny
         static bool Supports(AssetType type);
 
     private:
+        struct WorkItem;
+
+        static void ExecutePreviewWork(const Ref<WorkItem>& work);
+        static void CancelPreviewWork(const Ref<WorkItem>& work);
         void StartPendingWork();
         void FinalizeCompletedWork();
         void EvictOldEntries();
 
+        static constexpr uint32_t MAX_PREVIEW_DIMENSION = 256;
         static constexpr size_t MAX_PENDING = 128;
         static constexpr size_t MAX_CACHE_ENTRIES = 256;
         static constexpr size_t MAX_CONCURRENT = 2;

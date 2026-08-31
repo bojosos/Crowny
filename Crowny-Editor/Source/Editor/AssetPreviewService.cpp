@@ -11,6 +11,7 @@
 #include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include "Crowny/Import/ImageLoader.h"
 #include "Crowny/Import/MeshImporter.h"
+#include "Crowny/Threading/TaskSystem.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <spdlog/fmt/fmt.h>
@@ -354,54 +355,55 @@ namespace Crowny
             return output;
         }
 
-        void ExecutePreviewWork(const Ref<AssetPreviewService::WorkItem>& work)
-        {
-            if (work->Cancellation.load(std::memory_order_acquire))
-                return;
-
-            try
-            {
-                if (work->Type == AssetType::Texture || work->Type == AssetType::EnvironmentMap)
-                {
-                    ImageLoadOptions options;
-                    options.FlipVertically = true;
-                    options.Preserve16Bit = true;
-                    options.Cancellation = &work->Cancellation;
-                    const ImageLoadResult image = ImageLoader::Decode(work->Source, options);
-                    if (image.Canceled)
-                        work->Cancellation.store(true, std::memory_order_release);
-                    else if (!image)
-                        work->Result.Error = image.Error;
-                    else
-                    {
-                        work->Pixels = MakeImagePreview(image, work->PreviewSize, work->Cancellation);
-                        work->Result.Details = fmt::format("{} x {}, {} channel{}, {}-bit{}{}", image.Info.Width, image.Info.Height,
-                                                           image.Info.Channels, image.Info.Channels == 1 ? "" : "s", image.Info.BitDepth,
-                                                           image.Info.IsHDR ? ", HDR" : "", image.Info.Faces == 6 ? ", cubemap" : "");
-                    }
-                }
-                else if (work->Type == AssetType::AudioClip)
-                    work->Pixels = MakeAudioPreview(work->Source, work->PreviewSize, work->Result, work->Cancellation, work->Result.Error);
-                else if (work->Type == AssetType::Mesh || work->Type == AssetType::MeshSource)
-                    work->Pixels = MakeMeshPreview(work->Source, work->PreviewSize, work->Result, work->Cancellation, work->Result.Error);
-            }
-            catch (const std::exception& exception)
-            {
-                work->Result.Error = exception.what();
-            }
-            catch (...)
-            {
-                work->Result.Error = "Preview generation failed with an unknown error";
-            }
-        }
-
-        void CancelPreviewWork(const Ref<AssetPreviewService::WorkItem>& work)
-        {
-            work->Cancellation.store(true, std::memory_order_release);
-            if (work->TaskHandle)
-                work->TaskHandle->Cancel();
-        }
     } // namespace
+
+    void AssetPreviewService::ExecutePreviewWork(const Ref<WorkItem>& work)
+    {
+        if (work->Cancellation.load(std::memory_order_acquire))
+            return;
+
+        try
+        {
+            if (work->Type == AssetType::Texture || work->Type == AssetType::EnvironmentMap)
+            {
+                ImageLoadOptions options;
+                options.FlipVertically = true;
+                options.Preserve16Bit = true;
+                options.Cancellation = &work->Cancellation;
+                const ImageLoadResult image = ImageLoader::Decode(work->Source, options);
+                if (image.Canceled)
+                    work->Cancellation.store(true, std::memory_order_release);
+                else if (!image)
+                    work->Result.Error = image.Error;
+                else
+                {
+                    work->Pixels = MakeImagePreview(image, work->PreviewSize, work->Cancellation);
+                    work->Result.Details = fmt::format("{} x {}, {} channel{}, {}-bit{}{}", image.Info.Width, image.Info.Height,
+                                                       image.Info.Channels, image.Info.Channels == 1 ? "" : "s", image.Info.BitDepth,
+                                                       image.Info.IsHDR ? ", HDR" : "", image.Info.Faces == 6 ? ", cubemap" : "");
+                }
+            }
+            else if (work->Type == AssetType::AudioClip)
+                work->Pixels = MakeAudioPreview(work->Source, work->PreviewSize, work->Result, work->Cancellation, work->Result.Error);
+            else if (work->Type == AssetType::Mesh || work->Type == AssetType::MeshSource)
+                work->Pixels = MakeMeshPreview(work->Source, work->PreviewSize, work->Result, work->Cancellation, work->Result.Error);
+        }
+        catch (const std::exception& exception)
+        {
+            work->Result.Error = exception.what();
+        }
+        catch (...)
+        {
+            work->Result.Error = "Preview generation failed with an unknown error";
+        }
+    }
+
+    void AssetPreviewService::CancelPreviewWork(const Ref<WorkItem>& work)
+    {
+        work->Cancellation.store(true, std::memory_order_release);
+        if (work->TaskHandle)
+            work->TaskHandle->Cancel();
+    }
 
     AssetPreviewService::~AssetPreviewService() { Clear(); }
 
@@ -415,6 +417,7 @@ namespace Crowny
     {
         if (!entry.Metadata || entry.Metadata->Uuid.Empty() || !Supports(entry.Metadata->Type) || size == 0)
             return nullptr;
+        size = std::min(size, MAX_PREVIEW_DIMENSION);
 
         const UUID uuid = entry.Metadata->Uuid;
         auto existing = m_Cache.find(uuid);

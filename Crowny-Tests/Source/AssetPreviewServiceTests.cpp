@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <limits>
 #include <mutex>
 
 using namespace Crowny;
@@ -121,4 +122,17 @@ TEST_CASE("Stale queued previews release their scheduler slots", "[Editor][Asset
     TaskOptions markerOptions;
     markerOptions.Priority = TaskPriority::Low;
     TaskSystem::Get().Submit("Asset preview test queue marker", []() {}, markerOptions)->Wait();
+}
+
+TEST_CASE("Oversized preview requests share the bounded cache entry", "[Editor][Assets][Preview]")
+{
+    AssetPreviewService previews;
+    const FileEntry entry = MakeAudioEntry();
+
+    const AssetPreviewResult* oversized = previews.Request(entry, std::numeric_limits<uint32_t>::max());
+    const AssetPreviewResult* maximum = previews.Request(entry, 256);
+
+    REQUIRE(oversized != nullptr);
+    CHECK(maximum == oversized);
+    CHECK(oversized->Status == AssetPreviewStatus::Queued);
 }
