@@ -9,7 +9,7 @@ namespace Crowny
     public:
         MaterialSerializer(const Ref<Material>& material);
 
-        void Serialize(const Path& filepath);
+        bool Serialize(const Path& filepath);
         void Deserialize(const Path& filepath);
 
         String SerializeToString();

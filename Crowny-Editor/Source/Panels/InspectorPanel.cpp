@@ -8,7 +8,6 @@
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Scene/SceneManager.h"
-#include "Crowny/Serialization/MaterialSerializer.h"
 
 #include "Panels/ComponentEditor.h"
 #include "Panels/InspectorPanel.h"
@@ -219,6 +218,8 @@ namespace Crowny
         m_ComponentEditor.RegisterComponent<ManagedScriptComponent>("C# Script");
     }
 
+    InspectorPanel::~InspectorPanel() { FlushPendingAssetSaves(); }
+
     void InspectorPanel::HandleInspectorDragDrop(Entity selectedEntity)
     {
         if (ImGui::BeginDragDropTarget()) // Add components when files are dropped on entities in the inspector (C#
@@ -400,32 +401,28 @@ namespace Crowny
         if (!mat)
             return;
 
-        using clock = std::chrono::steady_clock;
-        if (m_MaterialLastSavePath != m_InspectedAssetPath)
-        {
-            m_MaterialLastSavePath = m_InspectedAssetPath;
-            m_MaterialLastSaveVersion = mat->GetParamVersion();
-            m_MaterialLastSaveTime = clock::now();
-        }
+        const Ref<Asset> inspectedAsset = StaticRefCast<Asset>(mat.GetInternalPtr());
+        const auto applyEdit = [this, &inspectedAsset](bool changed, auto&& apply) {
+            if (changed)
+                apply();
+            ObserveAssetEdit(inspectedAsset, changed);
+        };
 
         UI::BeginPropertyGrid();
 
         // Shader selector — allows changing the shader (like Unity's material type)
         AssetHandle<Shader> currentShader = mat->GetShader();
-        if (UIUtils::AssetSearch<Shader>("Shader", currentShader))
-        {
-            mat->SetShader(currentShader);
-        }
+        applyEdit(UIUtils::AssetSearch<Shader>("Shader", currentShader), [&]() { mat->SetShader(currentShader); });
 
         int32_t alphaMode = mat->HasAlphaModeOverride() ? static_cast<int32_t>(mat->GetAlphaMode()) + 1 : 0;
-        if (UI::PropertyDropdown("Alpha Mode", { "Inferred (Shader)", "Opaque", "Alpha Mask", "Premultiplied", "Additive", "Weighted OIT" },
-                                 alphaMode))
-        {
+        const bool alphaModeChanged =
+          UI::PropertyDropdown("Alpha Mode", { "Inferred (Shader)", "Opaque", "Alpha Mask", "Premultiplied", "Additive", "Weighted OIT" }, alphaMode);
+        applyEdit(alphaModeChanged, [&]() {
             if (alphaMode == 0)
                 mat->ClearAlphaModeOverride();
             else
                 mat->SetAlphaMode(static_cast<AlphaMode>(alphaMode - 1));
-        }
+        });
 
         ImGui::Separator();
 
@@ -439,62 +436,61 @@ namespace Crowny
                 float value = mat->GetDataParam<float>(param.Identifier);
                 bool modified = param.HasRange ? UI::PropertySlider(param.DisplayName.c_str(), value, param.RangeMin, param.RangeMax)
                                                : UI::Property(param.DisplayName.c_str(), value);
-                if (modified)
-                    mat->SetFloat(param.Identifier, value);
+                applyEdit(modified, [&]() { mat->SetFloat(param.Identifier, value); });
                 break;
             }
             case ShaderParamType::Float2: {
                 glm::vec2 value = mat->GetDataParam<glm::vec2>(param.Identifier);
-                if (UI::Property(param.DisplayName.c_str(), value))
-                    mat->SetFloat2(param.Identifier, value);
+                const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                applyEdit(modified, [&]() { mat->SetFloat2(param.Identifier, value); });
                 break;
             }
             case ShaderParamType::Float3: {
                 glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
-                if (UI::Property(param.DisplayName.c_str(), value))
-                    mat->SetVector3(param.Identifier, value);
+                const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                applyEdit(modified, [&]() { mat->SetVector3(param.Identifier, value); });
                 break;
             }
             case ShaderParamType::Float4: {
                 glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
-                if (UI::Property(param.DisplayName.c_str(), value))
-                    mat->SetColor(param.Identifier, value);
+                const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                applyEdit(modified, [&]() { mat->SetColor(param.Identifier, value); });
                 break;
             }
             case ShaderParamType::Color3: {
                 // Read as vec3, display with color picker
                 glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
                 ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
-                if (UI::PropertyColor(param.DisplayName.c_str(), value, flags))
-                    mat->SetVector3(param.Identifier, value);
+                const bool modified = UI::PropertyColor(param.DisplayName.c_str(), value, flags);
+                applyEdit(modified, [&]() { mat->SetVector3(param.Identifier, value); });
                 break;
             }
             case ShaderParamType::Color4: {
                 // Read as vec4, display with color picker
                 glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
                 ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
-                if (UI::PropertyColor(param.DisplayName.c_str(), value, flags))
-                    mat->SetColor(param.Identifier, value);
+                const bool modified = UI::PropertyColor(param.DisplayName.c_str(), value, flags);
+                applyEdit(modified, [&]() { mat->SetColor(param.Identifier, value); });
                 break;
             }
             case ShaderParamType::Int: {
                 int value = mat->GetDataParam<int>(param.Identifier);
-                if (UI::Property(param.DisplayName.c_str(), value))
-                    mat->SetInt(param.Identifier, value);
+                const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                applyEdit(modified, [&]() { mat->SetInt(param.Identifier, value); });
                 break;
             }
             case ShaderParamType::Bool: {
                 bool value = mat->GetDataParam<bool>(param.Identifier);
-                if (UI::Property(param.DisplayName.c_str(), value))
-                    mat->SetBool(param.Identifier, value);
+                const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                applyEdit(modified, [&]() { mat->SetBool(param.Identifier, value); });
                 break;
             }
             case ShaderParamType::Texture2D:
             case ShaderParamType::Texture3D:
             case ShaderParamType::TextureCube: {
                 AssetHandle<Texture> texHandle = mat->GetTextureHandle(param.Identifier);
-                if (UIUtils::AssetSearch<Texture>(param.DisplayName, texHandle))
-                    mat->SetTexture(param.Identifier, texHandle);
+                const bool modified = UIUtils::AssetSearch<Texture>(param.DisplayName, texHandle);
+                applyEdit(modified, [&]() { mat->SetTexture(param.Identifier, texHandle); });
                 break;
             }
             default:
@@ -503,36 +499,7 @@ namespace Crowny
         }
 
         UI::EndPropertyGrid();
-
-        // Auto-save: if params changed, write .cwmat after a short debounce
-        uint64_t currentVersion = mat->GetParamVersion();
-        auto now = clock::now();
-        if (m_MaterialLastSaveVersion != currentVersion && now - m_MaterialLastSaveTime >= std::chrono::seconds(2))
-        {
-            MaterialSerializer serializer(mat.GetInternalPtr());
-            serializer.Serialize(m_InspectedAssetPath);
-            m_MaterialLastSaveVersion = currentVersion;
-            m_MaterialLastSaveTime = now;
-        }
-    }
-
-    void InspectorPanel::FlushPendingMaterialSave()
-    {
-        if (m_MaterialLastSavePath.empty() || m_MaterialLastSavePath != m_InspectedAssetPath)
-            return;
-
-        AssetManager* assetManager = AssetManager::TryGet();
-        if (assetManager == nullptr)
-            return;
-
-        AssetHandle<Material> material = assetManager->Load<Material>(m_MaterialLastSavePath);
-        if (!material || material->GetParamVersion() == m_MaterialLastSaveVersion)
-            return;
-
-        MaterialSerializer serializer(material.GetInternalPtr());
-        serializer.Serialize(m_MaterialLastSavePath);
-        m_MaterialLastSaveVersion = material->GetParamVersion();
-        m_MaterialLastSaveTime = std::chrono::steady_clock::now();
+        SaveReadyAssets();
     }
 
     void InspectorPanel::RenderPhysicsMaterialInspector()
@@ -544,10 +511,15 @@ namespace Crowny
             return;
         }
 
+        const Ref<Asset> inspectedAsset = asset.GetInternalPtr();
+        const auto applyEdit = [this, &inspectedAsset](bool changed, auto&& apply) {
+            if (changed)
+                apply();
+            ObserveAssetEdit(inspectedAsset, changed);
+        };
         const auto drawMaterial = [&](auto material) {
             if (!material)
-                return false;
-            bool changed = false;
+                return;
             float density = material->GetDensity();
             float friction = material->GetFriction();
             float restitution = material->GetRestitution();
@@ -556,50 +528,52 @@ namespace Crowny
             PhysicsCombineMode restitutionCombine = material->GetRestitutionCombine();
 
             UI::BeginPropertyGrid();
-            if (UI::Property("Density", density, 0.05f, 0.0f, 0.0f))
-            {
-                material->SetDensity(density);
-                changed = true;
-            }
-            if (UI::Property("Friction", friction, 0.05f, 0.0f, 0.0f))
-            {
-                material->SetFriction(friction);
-                changed = true;
-            }
-            if (UI::Property("Restitution", restitution, 0.05f, 0.0f, 1.0f))
-            {
-                material->SetRestitution(restitution);
-                changed = true;
-            }
-            if (UI::Property("Restitution Threshold", threshold, 0.05f, 0.0f, 0.0f))
-            {
-                material->SetRestitutionThreshold(threshold);
-                changed = true;
-            }
-            if (UI::PropertyDropdown("Friction Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, frictionCombine))
-            {
-                material->SetFrictionCombine(frictionCombine);
-                changed = true;
-            }
-            if (UI::PropertyDropdown("Restitution Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, restitutionCombine))
-            {
-                material->SetRestitutionCombine(restitutionCombine);
-                changed = true;
-            }
+            applyEdit(UI::Property("Density", density, 0.05f, 0.0f, 0.0f), [&]() { material->SetDensity(density); });
+            applyEdit(UI::Property("Friction", friction, 0.05f, 0.0f, 0.0f), [&]() { material->SetFriction(friction); });
+            applyEdit(UI::Property("Restitution", restitution, 0.05f, 0.0f, 1.0f), [&]() { material->SetRestitution(restitution); });
+            applyEdit(UI::Property("Restitution Threshold", threshold, 0.05f, 0.0f, 0.0f),
+                      [&]() { material->SetRestitutionThreshold(threshold); });
+            applyEdit(UI::PropertyDropdown("Friction Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, frictionCombine),
+                      [&]() { material->SetFrictionCombine(frictionCombine); });
+            const bool restitutionCombineChanged = UI::PropertyDropdown(
+              "Restitution Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, restitutionCombine);
+            applyEdit(restitutionCombineChanged, [&]() { material->SetRestitutionCombine(restitutionCombine); });
             UI::EndPropertyGrid();
-            return changed;
         };
 
-        bool changed = false;
         if (asset->GetAssetType() == AssetType::PhysicsMaterial2D)
-            changed = drawMaterial(static_asset_cast<PhysicsMaterial2D>(asset));
+            drawMaterial(static_asset_cast<PhysicsMaterial2D>(asset));
         else if (asset->GetAssetType() == AssetType::PhysicsMaterial)
-            changed = drawMaterial(static_asset_cast<PhysicsMaterial3D>(asset));
+            drawMaterial(static_asset_cast<PhysicsMaterial3D>(asset));
         else
             ImGui::TextDisabled("The selected asset is not a physics material.");
 
-        if (changed)
-            AssetManager::TryGet()->Save(asset.GetInternalPtr(), m_InspectedAssetPath);
+        SaveReadyAssets();
+    }
+
+    void InspectorPanel::ObserveAssetEdit(const Ref<Asset>& asset, bool changed)
+    {
+        m_AssetSaveTracker.Observe(m_InspectedAssetPath, asset, changed, ImGui::IsItemActive(),
+                                   ImGui::IsItemDeactivatedAfterEdit());
+    }
+
+    void InspectorPanel::SaveReadyAssets()
+    {
+        ProjectLibrary* library = ProjectLibrary::TryGet();
+        if (library == nullptr)
+            return;
+
+        while (const std::optional<AssetSaveRequest> request = m_AssetSaveTracker.TakeReady())
+        {
+            const bool saved = library->SaveEntry(request->Value, request->Filepath);
+            m_AssetSaveTracker.Resolve(request->Filepath, saved);
+        }
+    }
+
+    void InspectorPanel::FlushPendingAssetSaves()
+    {
+        m_AssetSaveTracker.Flush();
+        SaveReadyAssets();
     }
 
     void InspectorPanel::RenderAudioClipImportInspector()
@@ -1162,15 +1136,24 @@ namespace Crowny
 
     void InspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
-        if (m_InspectedAssetPath != filepath)
+        const bool selectionChanged = m_InspectedAssetPath != filepath;
+        if (selectionChanged)
         {
-            FlushPendingMaterialSave();
+            FlushPendingAssetSaves();
             m_MaterialSchemaCache.Reset();
         }
 
         if (filepath.empty())
         {
-            SetInspectorMode(InspectorMode::Default);
+            if (m_InspectorMode != InspectorMode::Default)
+            {
+                if (!selectionChanged)
+                    FlushPendingAssetSaves();
+                m_ComponentEditor.ResetUndoTransactions(true);
+                m_MaterialSchemaCache.Reset();
+            }
+            m_InspectorMode = InspectorMode::Default;
+            m_HasPropertyChanged = false;
             m_InspectedAssetPath.clear();
             return;
         }
@@ -1251,11 +1234,10 @@ namespace Crowny
 
     void InspectorPanel::SetSelectedEntities(Entity primary, const Vector<Entity>& entities)
     {
-        if (m_InspectorMode == InspectorMode::Material)
-            FlushPendingMaterialSave();
-
         const bool sameScene = m_InspectedEntity && primary && m_InspectedEntity.GetScene() == primary.GetScene();
         const bool sameSelection = m_InspectedEntity == primary && m_InspectedEntities == entities;
+        if (m_InspectorMode != InspectorMode::GameObject || !sameSelection)
+            FlushPendingAssetSaves();
         if (!sameSelection)
             m_ComponentEditor.ResetUndoTransactions(sameScene);
         m_MaterialSchemaCache.Reset();
@@ -1269,8 +1251,7 @@ namespace Crowny
     {
         if (m_InspectorMode != mode)
         {
-            if (m_InspectorMode == InspectorMode::Material)
-                FlushPendingMaterialSave();
+            FlushPendingAssetSaves();
             m_ComponentEditor.ResetUndoTransactions(true);
             m_MaterialSchemaCache.Reset();
         }

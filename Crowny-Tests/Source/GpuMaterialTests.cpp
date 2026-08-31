@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Serialization/MaterialSerializer.h"
@@ -180,6 +181,22 @@ TEST_CASE("Materials can explicitly request and persist weighted OIT routing", "
     const String yaml = serializer.SerializeToString();
     CHECK(yaml.find("AlphaMode: WeightedOIT") != String::npos);
 
+    const Path yamlPath = fs::temp_directory_path() / "crowny-weighted-oit-material.cwmat";
+    String writeError;
+    REQUIRE(FileSystem::WriteTextFileAtomic(yamlPath, "stale material", &writeError));
+    REQUIRE(serializer.Serialize(yamlPath));
+    const String publishedYaml = FileSystem::ReadTextFile(yamlPath);
+    CHECK(publishedYaml.find("AlphaMode: WeightedOIT") != String::npos);
+    CHECK(publishedYaml.find("stale material") == String::npos);
+    CHECK_FALSE(serializer.Serialize({}));
+
+    const Path blockedPath = fs::temp_directory_path() / "crowny-material-write-failure";
+    std::error_code filesystemError;
+    fs::remove_all(blockedPath, filesystemError);
+    REQUIRE(fs::create_directory(blockedPath));
+    CHECK_FALSE(serializer.Serialize(blockedPath));
+    CHECK(fs::is_directory(blockedPath));
+
     material->ClearAlphaModeOverride();
     REQUIRE(serializer.DeserializeFromString("Version: 2\nAlphaMode: WeightedOIT\n"));
     CHECK(material->HasAlphaModeOverride());
@@ -192,4 +209,6 @@ TEST_CASE("Materials can explicitly request and persist weighted OIT routing", "
     CHECK(MaterialRenderClassifier::Classify(*material).Alpha == AlphaMode::Opaque);
 
     fs::remove(assetPath);
+    fs::remove(yamlPath);
+    fs::remove_all(blockedPath, filesystemError);
 }

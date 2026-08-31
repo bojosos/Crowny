@@ -40,7 +40,7 @@ namespace Crowny
         bool TryGetAssetId(const Path& sourcePath, AssetType expectedType, UUID& outUuid) const;
         bool TryGetSourcePath(const UUID& uuid, AssetType expectedType, Path& outSourcePath) const;
 
-        void SaveEntry(const Ref<Asset>& asset);
+        bool SaveEntry(const Ref<Asset>& asset, const Path& path);
         void SetIncludeInBuild(const Path& path, bool force);
         Vector<Ref<FileEntry>> GetAssetsForBuild() const;
         AssetHandle<Asset> Load(const Path& path);

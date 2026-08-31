@@ -173,12 +173,40 @@ namespace Crowny
         return String(out.c_str());
     }
 
-    void MaterialSerializer::Serialize(const Path& filepath)
+    bool MaterialSerializer::Serialize(const Path& filepath)
     {
-        const String str = SerializeToString();
-        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
-        stream->Write(str.c_str(), str.size());
-        stream->Close();
+        if (m_Material == nullptr)
+        {
+            CW_ENGINE_ERROR("Cannot save a null material to '{}'.", filepath);
+            return false;
+        }
+        if (filepath.empty())
+        {
+            CW_ENGINE_ERROR("Cannot save material '{}' without a destination path.", m_Material->GetName());
+            return false;
+        }
+
+        try
+        {
+            const String text = SerializeToString();
+            String writeError;
+            if (!FileSystem::WriteTextFileAtomic(filepath, text, &writeError))
+            {
+                CW_ENGINE_ERROR("Failed to publish material '{}': {}", filepath, writeError);
+                return false;
+            }
+            return true;
+        }
+        catch (const std::exception& error)
+        {
+            CW_ENGINE_ERROR("Failed to serialize material '{}': {}", filepath, error.what());
+            return false;
+        }
+        catch (...)
+        {
+            CW_ENGINE_ERROR("Failed to serialize material '{}' because of an unknown error.", filepath);
+            return false;
+        }
     }
 
     // --- Deserialize ---

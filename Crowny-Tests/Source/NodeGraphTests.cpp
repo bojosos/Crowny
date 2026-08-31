@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Crowny/Application/Application.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/NodeGraph/BuiltinNodeTypes.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
 #include "Crowny/NodeGraph/NodeRegistry.h"
@@ -69,6 +70,41 @@ TEST_CASE("Node graph serialization preserves identity", "[NodeGraph]")
 
     NodeGraphSerializer loadedSerializer(loaded);
     CHECK(loadedSerializer.SerializeToString() == firstYaml);
+}
+
+TEST_CASE("Node graph serialization publishes atomically", "[NodeGraph][Serialization]")
+{
+    RegisterNodesOnce();
+    Ref<BoxNode> box;
+    Ref<GeometryOutputNode> output;
+    Ref<NodeGraph> graph = MakeBoxGraph(box, output, UuidGenerator::Generate());
+    NodeGraphSerializer serializer(graph);
+
+    const String uniqueName = UuidGenerator::Generate().ToString();
+    const Path graphPath = fs::temp_directory_path() / ("crowny-node-graph-" + uniqueName + ".cwng");
+    const Path blockedPath = fs::temp_directory_path() / ("crowny-node-graph-blocked-" + uniqueName);
+    std::error_code filesystemError;
+    fs::remove(graphPath, filesystemError);
+    fs::remove_all(blockedPath, filesystemError);
+
+    String writeError;
+    REQUIRE(FileSystem::WriteTextFileAtomic(graphPath, "stale graph", &writeError));
+    REQUIRE(serializer.Serialize(graphPath));
+    const String publishedGraph = FileSystem::ReadTextFile(graphPath);
+    CHECK(publishedGraph == serializer.SerializeToString());
+    CHECK_FALSE(serializer.Serialize({}));
+
+    REQUIRE(fs::create_directory(blockedPath));
+    CHECK_FALSE(serializer.Serialize(blockedPath));
+    CHECK(fs::is_directory(blockedPath));
+
+    Ref<NodeGraph> nullGraph;
+    NodeGraphSerializer nullSerializer(nullGraph);
+    CHECK_FALSE(nullSerializer.Serialize(graphPath));
+    CHECK(FileSystem::ReadTextFile(graphPath) == publishedGraph);
+
+    fs::remove(graphPath, filesystemError);
+    fs::remove_all(blockedPath, filesystemError);
 }
 
 TEST_CASE("Node graphs reject invalid connections and cycles", "[NodeGraph]")

@@ -5,6 +5,8 @@
 #include "ImGuiPanel.h"
 #include "MaterialInspectorSchemaCache.h"
 
+#include "Editor/AssetSaveTracker.h"
+
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
 
@@ -37,7 +39,7 @@ namespace Crowny
         inline static constexpr EditorPanelRegistration<InspectorPanel> Registration{ "Inspector", "View/Inspector" };
 
         InspectorPanel(const String& name);
-        ~InspectorPanel() = default;
+        ~InspectorPanel() override;
 
         virtual void Render() override;
 
@@ -70,7 +72,9 @@ namespace Crowny
 
         void DrawApplyRevert(float xOffset, float width);
         void DrawHeader();
-        void FlushPendingMaterialSave();
+        void ObserveAssetEdit(const Ref<Asset>& asset, bool changed);
+        void SaveReadyAssets();
+        void FlushPendingAssetSaves();
 
     private:
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
@@ -91,11 +95,8 @@ namespace Crowny
 
         ComponentEditor m_ComponentEditor; // Helper object for rendering components of entities
 
-        // Material inspector auto-save state
         MaterialInspectorSchemaCache m_MaterialSchemaCache;
-        Path m_MaterialLastSavePath;
-        uint64_t m_MaterialLastSaveVersion = 0;
-        std::chrono::steady_clock::time_point m_MaterialLastSaveTime;
+        AssetSaveTracker m_AssetSaveTracker;
 
         std::function<void(AssetHandle<NodeGraphAsset>)> m_OpenNodeEditorCallback;
     };

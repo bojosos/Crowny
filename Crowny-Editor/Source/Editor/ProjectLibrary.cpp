@@ -815,24 +815,22 @@ namespace Crowny
             return;
         }
 
-        DeleteEntry(absPath);
+        const Ref<LibraryEntry> replacedEntry = FindEntry(absPath);
         asset->SetName(path.filename().replace_extension("").string());
 
-        if (asset->GetAssetType() == AssetType::NodeGraph)
+        if (!SaveEntry(asset, absPath))
+            return;
+
+        const Path metadataPath = AssetFileSystemScanner::GetMetadataPath(absPath);
+        if (fs::is_regular_file(metadataPath) && !m_Filesystem.Remove(metadataPath))
+            CW_ENGINE_WARN("Published asset '{}' but could not retire its previous metadata '{}'.", absPath, metadataPath);
+
+        if (replacedEntry != nullptr)
         {
-            auto graph = StaticRefCast<NodeGraphAsset>(asset)->GetGraph();
-            NodeGraphSerializer serializer(graph);
-            serializer.Serialize(absPath);
-        }
-        else if (asset->GetAssetType() == AssetType::Material)
-        {
-            auto material = StaticRefCast<Material>(asset);
-            MaterialSerializer serializer(material);
-            serializer.Serialize(absPath);
-        }
-        else
-        {
-            AssetManager::TryGet()->Save(asset, absPath);
+            if (replacedEntry->Type == LibraryEntryType::File)
+                DeleteAssetInternal(StaticRefCast<FileEntry>(replacedEntry));
+            else
+                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(replacedEntry));
         }
 
         Path parentDirPath = absPath.parent_path();
@@ -844,6 +842,43 @@ namespace Crowny
         else
             entryParent = static_cast<DirectoryEntry*>(parentEntry.get());
         AddAssetInternal(entryParent, absPath, nullptr, true);
+    }
+
+    bool ProjectLibrary::SaveEntry(const Ref<Asset>& asset, const Path& path)
+    {
+        if (asset == nullptr)
+        {
+            CW_ENGINE_ERROR("Cannot save a null project asset.");
+            return false;
+        }
+
+        const Path absPath = AssetFileSystemScanner::ResolvePath(m_AssetFolder, path);
+        if (!AssetFileSystemScanner::IsPathWithin(m_AssetFolder, absPath))
+        {
+            CW_ENGINE_WARN("Attempted to save an entry outside of asset folder: {0}", absPath);
+            return false;
+        }
+
+        if (asset->GetAssetType() == AssetType::NodeGraph)
+        {
+            auto graph = StaticRefCast<NodeGraphAsset>(asset)->GetGraph();
+            NodeGraphSerializer serializer(graph);
+            return serializer.Serialize(absPath);
+        }
+        if (asset->GetAssetType() == AssetType::Material)
+        {
+            auto material = StaticRefCast<Material>(asset);
+            MaterialSerializer serializer(material);
+            return serializer.Serialize(absPath);
+        }
+
+        AssetManager* assetManager = AssetManager::TryGet();
+        if (assetManager == nullptr)
+        {
+            CW_ENGINE_ERROR("Cannot save asset '{}' because the asset manager is unavailable.", absPath);
+            return false;
+        }
+        return assetManager->Save(asset, absPath);
     }
 
     void ProjectLibrary::Reimport(const Path& path, const Ref<ImportOptions>& importOptions, bool forceReimport)

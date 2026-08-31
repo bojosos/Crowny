@@ -155,15 +155,38 @@ namespace Crowny
 
     bool NodeGraphSerializer::Serialize(const Path& filepath)
     {
-        if (!m_Graph || filepath.empty())
+        if (!m_Graph)
+        {
+            CW_ENGINE_ERROR("Cannot save a null node graph to '{}'.", filepath);
             return false;
-        const String text = SerializeToString();
-        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
-        if (!stream)
+        }
+        if (filepath.empty())
+        {
+            CW_ENGINE_ERROR("Cannot save node graph '{}' without a destination path.", m_Graph->GetName());
             return false;
-        const bool success = stream->Write(text.data(), text.size()) == text.size();
-        stream->Close();
-        return success;
+        }
+
+        try
+        {
+            const String text = SerializeToString();
+            String writeError;
+            if (!FileSystem::WriteTextFileAtomic(filepath, text, &writeError))
+            {
+                CW_ENGINE_ERROR("Failed to publish node graph '{}': {}", filepath, writeError);
+                return false;
+            }
+            return true;
+        }
+        catch (const std::exception& error)
+        {
+            CW_ENGINE_ERROR("Failed to serialize node graph '{}': {}", filepath, error.what());
+            return false;
+        }
+        catch (...)
+        {
+            CW_ENGINE_ERROR("Failed to serialize node graph '{}' because of an unknown error.", filepath);
+            return false;
+        }
     }
 
     bool NodeGraphSerializer::DeserializeFromString(const String& yamlString)
