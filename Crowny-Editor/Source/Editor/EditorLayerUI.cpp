@@ -69,15 +69,14 @@ namespace Crowny
 {
     void EditorLayer::OnImGuiRender()
     {
-        SetupImGuiRender();
-
         // When no project is loaded, show the project hub and skip the editor UI
         if (!Editor::Get().IsProjectLoaded())
         {
             UI_ProjectManager();
-            ImGui::End();
             return;
         }
+
+        SetupImGuiRender();
 
         m_MenuBar->Render();
         if (m_ShowDemoWindow)
