@@ -50,6 +50,7 @@ namespace Crowny
 
         uint32_t GetNumElements(ParamType type) const { return m_NumElementsPerType[(int)type]; }
 
+        bool HasBinding(ParamType type, uint32_t set, uint32_t slot) const;
         uint32_t GetSequentialSlot(ParamType type, uint32_t set, uint32_t slot) const;
 
         void GetBinding(ParamType type, uint32_t seqSlot, uint32_t& set, uint32_t& slot) const;

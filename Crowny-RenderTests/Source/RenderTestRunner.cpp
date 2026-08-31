@@ -600,7 +600,9 @@ void main()
             }
 
             GraphicsMaterial toneMap;
-            if (!toneMap.Initialize(assetManager->Load<Shader>("Resources/Shaders/ToneMap.asset")))
+            ShaderVariation variation;
+            variation.Set("CW_TONEMAP_OBJECT_ID", true);
+            if (!toneMap.Initialize(assetManager->Load<Shader>("Resources/Shaders/ToneMap.asset"), variation))
             {
                 error = "Could not initialize the tone-map sharpening shader: " + toneMap.GetError();
                 return false;

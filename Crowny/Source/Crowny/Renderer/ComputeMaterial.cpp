@@ -112,13 +112,13 @@ namespace Crowny
         const auto resource = desc->Buffers.find(String(name));
         if (resource == desc->Buffers.end())
             return false;
-        m_Uniforms->SetBuffer(resource->second.Set, resource->second.Slot, buffer);
-        return true;
+        return SetBuffer(resource->second.Set, resource->second.Slot, buffer);
     }
 
     bool ComputeMaterial::SetBuffer(uint32_t set, uint32_t slot, const Ref<GenericGpuBuffer>& buffer)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, set, slot))
             return false;
         m_Uniforms->SetBuffer(set, slot, buffer);
         return true;
@@ -134,14 +134,14 @@ namespace Crowny
         const auto resource = desc->Textures.find(String(name));
         if (resource == desc->Textures.end())
             return false;
-        m_Uniforms->SetTexture(resource->second.Set, resource->second.Slot, texture, surface);
-        return true;
+        return SetTexture(resource->second.Set, resource->second.Slot, texture, surface);
     }
 
     bool ComputeMaterial::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
                                      const TextureSurface& surface)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Texture, set, slot))
             return false;
         m_Uniforms->SetTexture(set, slot, texture, surface);
         return true;
@@ -150,7 +150,8 @@ namespace Crowny
     bool ComputeMaterial::SetTextureArray(uint32_t set, uint32_t slot, const Ref<Texture>* textures, uint32_t count,
                                           const TextureSurface* surfaces)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Texture, set, slot))
             return false;
         m_Uniforms->SetTextureArray(set, slot, textures, count, surfaces);
         return true;
@@ -158,7 +159,8 @@ namespace Crowny
 
     bool ComputeMaterial::SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::SamplerState, set, slot))
             return false;
         m_Uniforms->SetSamplerState(set, slot, sampler);
         return true;
@@ -175,14 +177,14 @@ namespace Crowny
         const auto resource = desc->LoadStoreTextures.find(String(name));
         if (resource == desc->LoadStoreTextures.end())
             return false;
-        m_Uniforms->SetLoadStoreTexture(resource->second.Set, resource->second.Slot, texture, surface);
-        return true;
+        return SetLoadStoreTexture(resource->second.Set, resource->second.Slot, texture, surface);
     }
 
     bool ComputeMaterial::SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
                                               const TextureSurface& surface)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::LoadStoreTexture, set, slot))
             return false;
         m_Uniforms->SetLoadStoreTexture(set, slot, texture, surface);
         return true;
@@ -319,7 +321,8 @@ namespace Crowny
 
     bool GraphicsMaterial::SetBuffer(uint32_t set, uint32_t slot, const Ref<GenericGpuBuffer>& buffer)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, set, slot))
             return false;
         m_Uniforms->SetBuffer(set, slot, buffer);
         return true;
@@ -328,7 +331,8 @@ namespace Crowny
     bool GraphicsMaterial::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
                                       const TextureSurface& surface)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Texture, set, slot))
             return false;
         m_Uniforms->SetTexture(set, slot, texture, surface);
         return true;
@@ -337,7 +341,8 @@ namespace Crowny
     bool GraphicsMaterial::SetTextureArray(uint32_t set, uint32_t slot, const Ref<Texture>* textures,
                                            uint32_t count, const TextureSurface* surfaces)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Texture, set, slot))
             return false;
         m_Uniforms->SetTextureArray(set, slot, textures, count, surfaces);
         return true;
@@ -345,7 +350,8 @@ namespace Crowny
 
     bool GraphicsMaterial::SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler)
     {
-        if (!m_Uniforms)
+        if (!m_Pipeline || !m_Uniforms ||
+            !m_Pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::SamplerState, set, slot))
             return false;
         m_Uniforms->SetSamplerState(set, slot, sampler);
         return true;
