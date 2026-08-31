@@ -40,6 +40,31 @@ TEST_CASE("Discrete asset edits are ready immediately", "[Editor][Assets][SaveTr
     CHECK_FALSE(tracker.IsPending(material));
 }
 
+TEST_CASE("Undo-driven asset saves enter the same retained queue", "[Editor][Assets][SaveTracker]")
+{
+    AssetSaveTracker tracker;
+    const Path material = "Assets/Material.pmat";
+    const Ref<Asset> asset = CreateRef<Asset>();
+
+    tracker.Queue(material, asset);
+    const std::optional<AssetSaveRequest> first = tracker.TakeReady();
+    REQUIRE(first.has_value());
+    CHECK(first->Filepath == material);
+    CHECK(first->Value == asset);
+
+    tracker.Resolve(material, false);
+    CHECK(tracker.IsPending(material));
+    CHECK_FALSE(tracker.TakeReady().has_value());
+
+    tracker.Flush();
+    const std::optional<AssetSaveRequest> retry = tracker.TakeReady();
+    REQUIRE(retry.has_value());
+    CHECK(retry->Filepath == material);
+    CHECK(retry->Value == asset);
+    tracker.Resolve(material, true);
+    CHECK_FALSE(tracker.IsPending(material));
+}
+
 TEST_CASE("Failed asset saves wait for a later retry and retain other assets", "[Editor][Assets][SaveTracker]")
 {
     AssetSaveTracker tracker;

@@ -23,6 +23,7 @@ project "Crowny-Tests"
 		"%{wks.location}/Crowny-Editor/Source/Editor/AssetLibraryServices.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/ImportScheduler.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/BoxCollider2DBoundsTransaction.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Editor/PhysicsMaterialInspectorTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/ScriptInspectorTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/UndoRedo.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/ViewportTransformInteraction.cpp",
