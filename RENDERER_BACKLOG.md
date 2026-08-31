@@ -87,7 +87,7 @@ Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-dri
 - [x] Keep successfully cooked or content-hash-valid built-in shader, icon, and font asset timestamps synchronized with their sources, including future-dated inputs, and allow explicit Dist cooker runs so strict packaging works after a fresh checkout.
 - [ ] Complete the toon silhouette and public-tooling path.
   - [x] Move inverted-hull silhouettes onto material-model bins and GPU-driven indirect submission, retaining CPU submission for rejected bins and baseline hardware.
-  - [ ] Add managed convenience APIs/editor presets and asset migration.
+  - [x] Add managed convenience APIs and editor presets for Classic, Soft, and Hatched looks, with binary/YAML migration from legacy hull thickness to the independent silhouette width.
   - [x] Add a dedicated toon-silhouette golden image through the full `SceneRenderer` path, with semantic outline checks and Vulkan/OpenGL comparison.
 
 ## 3. GPU resource allocation and caches

@@ -22,6 +22,13 @@ namespace Crowny
 {
     class Material;
 
+    enum class ToonMaterialPreset : uint8_t
+    {
+        Classic,
+        Soft,
+        Hatched
+    };
+
     // Cached handle to a data parameter in a Material. Avoids repeated string lookups.
     // Obtain via Material::GetParam<T>(name). Invalidated when the Material's shader changes.
     template <typename T> class MaterialParamHandle
@@ -92,6 +99,9 @@ namespace Crowny
         static Ref<Material> CreatePBR(const AssetHandle<Shader>& shader);
         static Ref<Material> CreateToon(const AssetHandle<Shader>& shader);
         static Ref<Material> CreateUnlit(const AssetHandle<Shader>& shader);
+
+        /** Applies a built-in toon look while preserving the material's texture assignments. */
+        bool ApplyToonPreset(ToonMaterialPreset preset);
 
         AssetHandle<Shader> GetShader() const { return m_Shader; }
         virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }

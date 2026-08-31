@@ -280,6 +280,7 @@ namespace Crowny
         internal IntPtr MaterialGetAlphaMode;
         internal IntPtr MaterialSetAlphaMode;
         internal IntPtr MaterialClearAlphaModeOverride;
+        internal IntPtr MaterialApplyToonPreset;
         internal IntPtr PhysicsMaterial2DCreate;
         internal IntPtr PhysicsMaterial3DCreate;
         internal IntPtr Rigidbody3DAddForce;
@@ -668,7 +669,7 @@ namespace Crowny
                 api = value;
                 return;
             }
-            if (value.AbiVersion != 12 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
+            if (value.AbiVersion != 13 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
                 throw new InvalidOperationException("The native host uses an incompatible managed scripting ABI.");
             bool complete =
                 value.GetEntityName != IntPtr.Zero &&
@@ -820,6 +821,7 @@ namespace Crowny
                    value.MaterialGetAlphaMode != IntPtr.Zero &&
                    value.MaterialSetAlphaMode != IntPtr.Zero &&
                    value.MaterialClearAlphaModeOverride != IntPtr.Zero &&
+                   value.MaterialApplyToonPreset != IntPtr.Zero &&
                    value.PhysicsMaterial2DCreate != IntPtr.Zero &&
                    value.PhysicsMaterial3DCreate != IntPtr.Zero &&
                    value.Rigidbody3DAddForce != IntPtr.Zero &&
@@ -1341,57 +1343,58 @@ namespace Crowny
             MaterialGetAlphaModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.MaterialGetAlphaMode);
             MaterialSetAlphaModeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall59>(value.MaterialSetAlphaMode);
             MaterialClearAlphaModeOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MaterialClearAlphaModeOverride);
-            PhysicsMaterial2DCreateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.PhysicsMaterial2DCreate);
-            PhysicsMaterial3DCreateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.PhysicsMaterial3DCreate);
-            Rigidbody3DAddForceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall61>(value.Rigidbody3DAddForce);
-            Rigidbody3DAddForceAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall62>(value.Rigidbody3DAddForceAt);
-            Rigidbody3DAddTorqueCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall63>(value.Rigidbody3DAddTorque);
-            CompressionCompressCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall64>(value.CompressionCompress);
-            CompressionDecompressCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall65>(value.CompressionDecompress);
-            FileDialogOpenFileCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall66>(value.FileDialogOpenFile);
-            FileDialogOpenFolderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall67>(value.FileDialogOpenFolder);
-            FileDialogSaveFileCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall68>(value.FileDialogSaveFile);
-            FileDialogSaveFolderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall69>(value.FileDialogSaveFolder);
-            FontHasCharacterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall70>(value.FontHasCharacter);
-            FontGetIsValidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall71>(value.FontGetIsValid);
-            FontGetGlyphCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetGlyphCount);
-            FontGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetTabWidth);
-            FontGetAtlasWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetAtlasWidth);
-            FontGetAtlasHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetAtlasHeight);
-            FontGetAtlasPixelRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall73>(value.FontGetAtlasPixelRange);
-            FontGetFallbackCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetFallbackCount);
-            FontHasGlyphCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall74>(value.FontHasGlyph);
-            FontGetCharacterInfoCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall75>(value.FontGetCharacterInfo);
-            FontGetFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall76>(value.FontGetFallback);
-            FontAddFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall77>(value.FontAddFallback);
-            FontClearFallbacksCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall78>(value.FontClearFallbacks);
+            MaterialApplyToonPresetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.MaterialApplyToonPreset);
+            PhysicsMaterial2DCreateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall61>(value.PhysicsMaterial2DCreate);
+            PhysicsMaterial3DCreateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall61>(value.PhysicsMaterial3DCreate);
+            Rigidbody3DAddForceCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall62>(value.Rigidbody3DAddForce);
+            Rigidbody3DAddForceAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall63>(value.Rigidbody3DAddForceAt);
+            Rigidbody3DAddTorqueCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall64>(value.Rigidbody3DAddTorque);
+            CompressionCompressCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall65>(value.CompressionCompress);
+            CompressionDecompressCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall66>(value.CompressionDecompress);
+            FileDialogOpenFileCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall67>(value.FileDialogOpenFile);
+            FileDialogOpenFolderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall68>(value.FileDialogOpenFolder);
+            FileDialogSaveFileCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall69>(value.FileDialogSaveFile);
+            FileDialogSaveFolderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall70>(value.FileDialogSaveFolder);
+            FontHasCharacterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall71>(value.FontHasCharacter);
+            FontGetIsValidCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall72>(value.FontGetIsValid);
+            FontGetGlyphCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall73>(value.FontGetGlyphCount);
+            FontGetTabWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall73>(value.FontGetTabWidth);
+            FontGetAtlasWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall73>(value.FontGetAtlasWidth);
+            FontGetAtlasHeightCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall73>(value.FontGetAtlasHeight);
+            FontGetAtlasPixelRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall74>(value.FontGetAtlasPixelRange);
+            FontGetFallbackCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall73>(value.FontGetFallbackCount);
+            FontHasGlyphCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall75>(value.FontHasGlyph);
+            FontGetCharacterInfoCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall76>(value.FontGetCharacterInfo);
+            FontGetFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall77>(value.FontGetFallback);
+            FontAddFallbackCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall78>(value.FontAddFallback);
+            FontClearFallbacksCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall79>(value.FontClearFallbacks);
             FontGetSystemFontCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.FontGetSystemFontCount);
-            FontGetSystemFontPathCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall79>(value.FontGetSystemFontPath);
-            FontGetSystemFontNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall79>(value.FontGetSystemFontName);
+            FontGetSystemFontPathCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall80>(value.FontGetSystemFontPath);
+            FontGetSystemFontNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall80>(value.FontGetSystemFontName);
             AnimationClipGetLengthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.AnimationClipGetLength);
             AnimationClipGetSampleRateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.AnimationClipGetSampleRate);
             AnimationClipGetIsAdditiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall44>(value.AnimationClipGetIsAdditive);
             AnimationComponentPlayCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AnimationComponentPlay);
             AnimationComponentPauseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AnimationComponentPause);
             AnimationComponentStopCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall5>(value.AnimationComponentStop);
-            TextHitTestCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall80>(value.TextHitTest);
-            DebugWriteLogCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall81>(value.DebugWriteLog);
-            RandomInitializeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall82>(value.RandomInitialize);
+            TextHitTestCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall81>(value.TextHitTest);
+            DebugWriteLogCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall82>(value.DebugWriteLog);
+            RandomInitializeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall83>(value.RandomInitialize);
             RandomGetValueCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall15>(value.RandomGetValue);
-            RandomGetRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall83>(value.RandomGetRange);
+            RandomGetRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall84>(value.RandomGetRange);
             RandomGetInsideUnitCircleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall16>(value.RandomGetInsideUnitCircle);
-            RandomGetInsideUnitSphereCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall84>(value.RandomGetInsideUnitSphere);
-            NoiseGetPerlin2DCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall85>(value.NoiseGetPerlin2D);
-            LayerMaskGetNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall86>(value.LayerMaskGetName);
-            LayerMaskGetLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall87>(value.LayerMaskGetLayer);
-            SceneGetActiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.SceneGetActive);
-            SceneGetExecutionStateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall88>(value.SceneGetExecutionState);
+            RandomGetInsideUnitSphereCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall85>(value.RandomGetInsideUnitSphere);
+            NoiseGetPerlin2DCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall86>(value.NoiseGetPerlin2D);
+            LayerMaskGetNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall87>(value.LayerMaskGetName);
+            LayerMaskGetLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall88>(value.LayerMaskGetLayer);
+            SceneGetActiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall61>(value.SceneGetActive);
+            SceneGetExecutionStateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall89>(value.SceneGetExecutionState);
             SceneGetLoadedCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.SceneGetLoadedCount);
-            SceneGetLoadedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall89>(value.SceneGetLoaded);
-            SceneLoadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall90>(value.SceneLoad);
-            SceneUnloadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall91>(value.SceneUnload);
-            SceneReloadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall91>(value.SceneReload);
-            SceneSetActiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall91>(value.SceneSetActive);
+            SceneGetLoadedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall90>(value.SceneGetLoaded);
+            SceneLoadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall91>(value.SceneLoad);
+            SceneUnloadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.SceneUnload);
+            SceneReloadCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.SceneReload);
+            SceneSetActiveCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.SceneSetActive);
             CameraGetFieldOfViewCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.CameraGetFieldOfView);
             CameraSetFieldOfViewCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CameraSetFieldOfView);
             CameraGetProjectionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.CameraGetProjection);
@@ -1406,8 +1409,8 @@ namespace Crowny
             CameraSetAspectRatioCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.CameraSetAspectRatio);
             CameraGetBackgroundColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.CameraGetBackgroundColor);
             CameraSetBackgroundColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.CameraSetBackgroundColor);
-            CameraGetViewportRectangleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.CameraGetViewportRectangle);
-            CameraSetViewportRectangleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.CameraSetViewportRectangle);
+            CameraGetViewportRectangleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.CameraGetViewportRectangle);
+            CameraSetViewportRectangleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.CameraSetViewportRectangle);
             CameraGetHdrCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.CameraGetHdr);
             CameraSetHdrCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.CameraSetHdr);
             CameraGetMsaaCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.CameraGetMsaa);
@@ -1416,16 +1419,16 @@ namespace Crowny
             CameraSetOcclusionCullingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.CameraSetOcclusionCulling);
             SpriteRendererGetTextureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.SpriteRendererGetTexture);
             SpriteRendererSetTextureCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.SpriteRendererSetTexture);
-            SpriteRendererGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.SpriteRendererGetColor);
-            SpriteRendererSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.SpriteRendererSetColor);
+            SpriteRendererGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.SpriteRendererGetColor);
+            SpriteRendererSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.SpriteRendererSetColor);
             SpriteRendererGetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.SpriteRendererGetSortingLayer);
             SpriteRendererSetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.SpriteRendererSetSortingLayer);
             SpriteRendererGetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.SpriteRendererGetOrderInLayer);
             SpriteRendererSetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.SpriteRendererSetOrderInLayer);
             LightGetTypeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.LightGetType);
             LightSetTypeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.LightSetType);
-            LightGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.LightGetColor);
-            LightSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.LightSetColor);
+            LightGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.LightGetColor);
+            LightSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.LightSetColor);
             LightGetIntensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetIntensity);
             LightSetIntensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.LightSetIntensity);
             LightGetRangeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.LightGetRange);
@@ -1464,79 +1467,79 @@ namespace Crowny
             LightSetShadowResolutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.LightSetShadowResolution);
             LightGetCacheStaticShadowCastersCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.LightGetCacheStaticShadowCasters);
             LightSetCacheStaticShadowCastersCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.LightSetCacheStaticShadowCasters);
-            Physics2DGetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall88>(value.Physics2DGetBackend);
-            Physics2DGetIsSimulatingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.Physics2DGetIsSimulating);
+            Physics2DGetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall89>(value.Physics2DGetBackend);
+            Physics2DGetIsSimulatingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall95>(value.Physics2DGetIsSimulating);
             Physics2DGetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall16>(value.Physics2DGetGravity);
-            Physics2DSetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall95>(value.Physics2DSetGravity);
+            Physics2DSetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall96>(value.Physics2DSetGravity);
             Physics2DGetVelocityIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.Physics2DGetVelocityIterations);
-            Physics2DSetVelocityIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall96>(value.Physics2DSetVelocityIterations);
+            Physics2DSetVelocityIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall97>(value.Physics2DSetVelocityIterations);
             Physics2DGetPositionIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.Physics2DGetPositionIterations);
-            Physics2DSetPositionIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall96>(value.Physics2DSetPositionIterations);
-            Physics2DGetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.Physics2DGetDefaultMaterial);
-            Physics2DSetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall97>(value.Physics2DSetDefaultMaterial);
-            Physics2DGetLayerNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall86>(value.Physics2DGetLayerName);
-            Physics2DSetLayerNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall98>(value.Physics2DSetLayerName);
-            Physics2DGetLayerMaskCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall99>(value.Physics2DGetLayerMask);
-            Physics2DSetLayerMaskCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall100>(value.Physics2DSetLayerMask);
-            Physics2DResolveEntityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall101>(value.Physics2DResolveEntity);
-            Physics2DRaycastCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall102>(value.Physics2DRaycast);
-            Physics3DGetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall88>(value.Physics3DGetBackend);
-            Physics3DGetBackendNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall103>(value.Physics3DGetBackendName);
-            Physics3DGetIsSimulatingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.Physics3DGetIsSimulating);
-            Physics3DGetCapabilitiesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall104>(value.Physics3DGetCapabilities);
-            Physics3DGetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall84>(value.Physics3DGetGravity);
-            Physics3DSetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall105>(value.Physics3DSetGravity);
+            Physics2DSetPositionIterationsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall97>(value.Physics2DSetPositionIterations);
+            Physics2DGetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall61>(value.Physics2DGetDefaultMaterial);
+            Physics2DSetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall98>(value.Physics2DSetDefaultMaterial);
+            Physics2DGetLayerNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall87>(value.Physics2DGetLayerName);
+            Physics2DSetLayerNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall99>(value.Physics2DSetLayerName);
+            Physics2DGetLayerMaskCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall100>(value.Physics2DGetLayerMask);
+            Physics2DSetLayerMaskCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall101>(value.Physics2DSetLayerMask);
+            Physics2DResolveEntityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall102>(value.Physics2DResolveEntity);
+            Physics2DRaycastCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall103>(value.Physics2DRaycast);
+            Physics3DGetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall89>(value.Physics3DGetBackend);
+            Physics3DGetBackendNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall104>(value.Physics3DGetBackendName);
+            Physics3DGetIsSimulatingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall95>(value.Physics3DGetIsSimulating);
+            Physics3DGetCapabilitiesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall105>(value.Physics3DGetCapabilities);
+            Physics3DGetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall85>(value.Physics3DGetGravity);
+            Physics3DSetGravityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall106>(value.Physics3DSetGravity);
             Physics3DGetSubstepsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall25>(value.Physics3DGetSubsteps);
-            Physics3DSetSubstepsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall96>(value.Physics3DSetSubsteps);
-            Physics3DGetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall60>(value.Physics3DGetDefaultMaterial);
-            Physics3DSetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall97>(value.Physics3DSetDefaultMaterial);
-            Physics3DTrySetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall106>(value.Physics3DTrySetBackend);
-            Physics3DIsBackendAvailableCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall106>(value.Physics3DIsBackendAvailable);
-            Physics3DResolveEntityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall107>(value.Physics3DResolveEntity);
-            Physics3DRaycastCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall108>(value.Physics3DRaycast);
-            Physics3DSweepCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall109>(value.Physics3DSweep);
-            Physics3DOverlapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall110>(value.Physics3DOverlap);
+            Physics3DSetSubstepsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall97>(value.Physics3DSetSubsteps);
+            Physics3DGetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall61>(value.Physics3DGetDefaultMaterial);
+            Physics3DSetDefaultMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall98>(value.Physics3DSetDefaultMaterial);
+            Physics3DTrySetBackendCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall107>(value.Physics3DTrySetBackend);
+            Physics3DIsBackendAvailableCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall107>(value.Physics3DIsBackendAvailable);
+            Physics3DResolveEntityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall108>(value.Physics3DResolveEntity);
+            Physics3DRaycastCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall109>(value.Physics3DRaycast);
+            Physics3DSweepCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall110>(value.Physics3DSweep);
+            Physics3DOverlapCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.Physics3DOverlap);
             MeshGetVertexCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.MeshGetVertexCount);
             MeshGetIndexCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.MeshGetIndexCount);
-            MeshCopyVerticesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.MeshCopyVertices);
-            MeshSetVerticesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshSetVertices);
-            MeshCopyNormalsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.MeshCopyNormals);
-            MeshSetNormalsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshSetNormals);
-            MeshCopyUvsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall113>(value.MeshCopyUvs);
-            MeshSetUvsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall114>(value.MeshSetUvs);
-            MeshCopyColorsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.MeshCopyColors);
-            MeshSetColorsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshSetColors);
-            MeshCopyIndicesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall111>(value.MeshCopyIndices);
-            MeshSetIndicesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshSetIndices);
+            MeshCopyVerticesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshCopyVertices);
+            MeshSetVerticesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall113>(value.MeshSetVertices);
+            MeshCopyNormalsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshCopyNormals);
+            MeshSetNormalsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall113>(value.MeshSetNormals);
+            MeshCopyUvsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall114>(value.MeshCopyUvs);
+            MeshSetUvsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall115>(value.MeshSetUvs);
+            MeshCopyColorsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshCopyColors);
+            MeshSetColorsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall113>(value.MeshSetColors);
+            MeshCopyIndicesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall112>(value.MeshCopyIndices);
+            MeshSetIndicesCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall113>(value.MeshSetIndices);
             MeshRecalculateBoundsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshRecalculateBounds);
             MeshRecalculateNormalsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshRecalculateNormals);
             MeshRecalculateTangentsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshRecalculateTangents);
             MeshUploadDataCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshUploadData);
             MeshClearCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall41>(value.MeshClear);
-            MeshGetBoundsMinCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall115>(value.MeshGetBoundsMin);
-            MeshGetBoundsMaxCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall115>(value.MeshGetBoundsMax);
-            MeshSetVertexBufferParamsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall116>(value.MeshSetVertexBufferParams);
-            MeshSetVertexBufferDataCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall117>(value.MeshSetVertexBufferData);
-            MeshGetVertexBufferDataCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall118>(value.MeshGetVertexBufferData);
+            MeshGetBoundsMinCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall116>(value.MeshGetBoundsMin);
+            MeshGetBoundsMaxCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall116>(value.MeshGetBoundsMax);
+            MeshSetVertexBufferParamsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall117>(value.MeshSetVertexBufferParams);
+            MeshSetVertexBufferDataCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall118>(value.MeshSetVertexBufferData);
+            MeshGetVertexBufferDataCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall119>(value.MeshGetVertexBufferData);
             MeshGetVertexStrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.MeshGetVertexStride);
             MeshGetVertexAttributeCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall47>(value.MeshGetVertexAttributeCount);
-            MeshHasVertexAttributeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall119>(value.MeshHasVertexAttribute);
-            MeshGetVertexAttributeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall120>(value.MeshGetVertexAttribute);
-            MeshCreatePlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall121>(value.MeshCreatePlane);
-            MeshCreateBoxCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall122>(value.MeshCreateBox);
-            MeshCreateCubeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall123>(value.MeshCreateCube);
-            MeshCreateSphereCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall124>(value.MeshCreateSphere);
-            MeshCreateCylinderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall125>(value.MeshCreateCylinder);
-            MeshCreateConeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall125>(value.MeshCreateCone);
-            MeshCreateCapsuleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall126>(value.MeshCreateCapsule);
-            MeshRendererGetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall127>(value.MeshRendererGetMaterial);
-            MeshRendererSetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall128>(value.MeshRendererSetMaterial);
-            MathMatrixDeterminantCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall129>(value.MathMatrixDeterminant);
-            MathMatrixInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall130>(value.MathMatrixInverse);
-            MathMatrixAffineInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall130>(value.MathMatrixAffineInverse);
-            MathLookAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall131>(value.MathLookAt);
-            AddScriptComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall132>(value.AddScriptComponent);
-            RemoveScriptComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall132>(value.RemoveScriptComponent);
+            MeshHasVertexAttributeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall120>(value.MeshHasVertexAttribute);
+            MeshGetVertexAttributeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall121>(value.MeshGetVertexAttribute);
+            MeshCreatePlaneCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall122>(value.MeshCreatePlane);
+            MeshCreateBoxCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall123>(value.MeshCreateBox);
+            MeshCreateCubeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall124>(value.MeshCreateCube);
+            MeshCreateSphereCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall125>(value.MeshCreateSphere);
+            MeshCreateCylinderCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall126>(value.MeshCreateCylinder);
+            MeshCreateConeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall126>(value.MeshCreateCone);
+            MeshCreateCapsuleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall127>(value.MeshCreateCapsule);
+            MeshRendererGetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall128>(value.MeshRendererGetMaterial);
+            MeshRendererSetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall129>(value.MeshRendererSetMaterial);
+            MathMatrixDeterminantCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall130>(value.MathMatrixDeterminant);
+            MathMatrixInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall131>(value.MathMatrixInverse);
+            MathMatrixAffineInverseCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall131>(value.MathMatrixAffineInverse);
+            MathLookAtCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall132>(value.MathLookAt);
+            AddScriptComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall133>(value.AddScriptComponent);
+            RemoveScriptComponentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall133>(value.RemoveScriptComponent);
             MeshRendererGetMeshCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.MeshRendererGetMesh);
             MeshRendererSetMeshCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.MeshRendererSetMesh);
             MeshRendererGetMaterialCountCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.MeshRendererGetMaterialCount);
@@ -1559,8 +1562,8 @@ namespace Crowny
             Collider3DSetRotationCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall11>(value.Collider3DSetRotation);
             Collider3DGetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.Collider3DGetMaterial);
             Collider3DSetMaterialCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.Collider3DSetMaterial);
-            Collider3DGetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall133>(value.Collider3DGetCollisionFilter);
-            Collider3DSetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall134>(value.Collider3DSetCollisionFilter);
+            Collider3DGetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall134>(value.Collider3DGetCollisionFilter);
+            Collider3DSetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall135>(value.Collider3DSetCollisionFilter);
             BoxCollider3DGetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.BoxCollider3DGetSize);
             BoxCollider3DSetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.BoxCollider3DSetSize);
             SphereCollider3DGetRadiusCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.SphereCollider3DGetRadius);
@@ -1591,39 +1594,39 @@ namespace Crowny
             Rigidbody3DSetContinuousCollisionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody3DSetContinuousCollision);
             Rigidbody3DGetConstraintsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall34>(value.Rigidbody3DGetConstraints);
             Rigidbody3DSetConstraintsCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall35>(value.Rigidbody3DSetConstraints);
-            Rigidbody3DGetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall133>(value.Rigidbody3DGetCollisionFilter);
-            Rigidbody3DSetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall134>(value.Rigidbody3DSetCollisionFilter);
+            Rigidbody3DGetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall134>(value.Rigidbody3DGetCollisionFilter);
+            Rigidbody3DSetCollisionFilterCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall135>(value.Rigidbody3DSetCollisionFilter);
             Rigidbody3DGetLinearVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.Rigidbody3DGetLinearVelocity);
             Rigidbody3DSetLinearVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.Rigidbody3DSetLinearVelocity);
             Rigidbody3DGetAngularVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall8>(value.Rigidbody3DGetAngularVelocity);
             Rigidbody3DSetAngularVelocityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall9>(value.Rigidbody3DSetAngularVelocity);
             Rigidbody3DGetAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.Rigidbody3DGetAwake);
             Rigidbody3DSetAwakeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.Rigidbody3DSetAwake);
-            Rigidbody3DGetBodyHandleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall135>(value.Rigidbody3DGetBodyHandle);
+            Rigidbody3DGetBodyHandleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.Rigidbody3DGetBodyHandle);
             PhysicsMaterial2DGetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial2DGetDensity);
-            PhysicsMaterial2DSetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial2DSetDensity);
+            PhysicsMaterial2DSetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial2DSetDensity);
             PhysicsMaterial2DGetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial2DGetFriction);
-            PhysicsMaterial2DSetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial2DSetFriction);
+            PhysicsMaterial2DSetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial2DSetFriction);
             PhysicsMaterial2DGetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial2DGetRestitution);
-            PhysicsMaterial2DSetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial2DSetRestitution);
+            PhysicsMaterial2DSetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial2DSetRestitution);
             PhysicsMaterial2DGetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial2DGetRestitutionThreshold);
-            PhysicsMaterial2DSetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial2DSetRestitutionThreshold);
+            PhysicsMaterial2DSetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial2DSetRestitutionThreshold);
             PhysicsMaterial2DGetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.PhysicsMaterial2DGetFrictionCombine);
-            PhysicsMaterial2DSetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial2DSetFrictionCombine);
+            PhysicsMaterial2DSetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall138>(value.PhysicsMaterial2DSetFrictionCombine);
             PhysicsMaterial2DGetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.PhysicsMaterial2DGetRestitutionCombine);
-            PhysicsMaterial2DSetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial2DSetRestitutionCombine);
+            PhysicsMaterial2DSetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall138>(value.PhysicsMaterial2DSetRestitutionCombine);
             PhysicsMaterial3DGetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial3DGetDensity);
-            PhysicsMaterial3DSetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial3DSetDensity);
+            PhysicsMaterial3DSetDensityCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial3DSetDensity);
             PhysicsMaterial3DGetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial3DGetFriction);
-            PhysicsMaterial3DSetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial3DSetFriction);
+            PhysicsMaterial3DSetFrictionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial3DSetFriction);
             PhysicsMaterial3DGetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial3DGetRestitution);
-            PhysicsMaterial3DSetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial3DSetRestitution);
+            PhysicsMaterial3DSetRestitutionCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial3DSetRestitution);
             PhysicsMaterial3DGetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall46>(value.PhysicsMaterial3DGetRestitutionThreshold);
-            PhysicsMaterial3DSetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall136>(value.PhysicsMaterial3DSetRestitutionThreshold);
+            PhysicsMaterial3DSetRestitutionThresholdCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial3DSetRestitutionThreshold);
             PhysicsMaterial3DGetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.PhysicsMaterial3DGetFrictionCombine);
-            PhysicsMaterial3DSetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial3DSetFrictionCombine);
+            PhysicsMaterial3DSetFrictionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall138>(value.PhysicsMaterial3DSetFrictionCombine);
             PhysicsMaterial3DGetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall45>(value.PhysicsMaterial3DGetRestitutionCombine);
-            PhysicsMaterial3DSetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall137>(value.PhysicsMaterial3DSetRestitutionCombine);
+            PhysicsMaterial3DSetRestitutionCombineCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall138>(value.PhysicsMaterial3DSetRestitutionCombine);
             AnimationComponentGetClipCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.AnimationComponentGetClip);
             AnimationComponentSetClipCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.AnimationComponentSetClip);
             AnimationComponentGetSpeedCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.AnimationComponentGetSpeed);
@@ -1640,11 +1643,11 @@ namespace Crowny
             AnimationComponentSetNormalizedTimeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.AnimationComponentSetNormalizedTime);
             AnimationComponentGetStateCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.AnimationComponentGetState);
             TextGetTextCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall0>(value.TextGetText);
-            TextSetTextCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall138>(value.TextSetText);
+            TextSetTextCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall139>(value.TextSetText);
             TextGetFontCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall3>(value.TextGetFont);
             TextSetFontCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall39>(value.TextSetFont);
-            TextGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.TextGetColor);
-            TextSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextSetColor);
+            TextGetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextGetColor);
+            TextSetColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.TextSetColor);
             TextGetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetSize);
             TextSetSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetSize);
             TextGetAutoSizeCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetAutoSize);
@@ -1671,12 +1674,12 @@ namespace Crowny
             TextSetVerticalAlignmentCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetVerticalAlignment);
             TextGetFontStyleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetFontStyle);
             TextSetFontStyleCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetFontStyle);
-            TextGetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.TextGetOutlineColor);
-            TextSetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextSetOutlineColor);
+            TextGetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextGetOutlineColor);
+            TextSetOutlineColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.TextSetOutlineColor);
             TextGetOutlineWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetOutlineWidth);
             TextSetOutlineWidthCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetOutlineWidth);
-            TextGetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.TextGetShadowColor);
-            TextSetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextSetShadowColor);
+            TextGetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextGetShadowColor);
+            TextSetShadowColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.TextSetShadowColor);
             TextGetShadowOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall32>(value.TextGetShadowOffset);
             TextSetShadowOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall33>(value.TextSetShadowOffset);
             TextGetShadowSoftnessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetShadowSoftness);
@@ -1691,8 +1694,8 @@ namespace Crowny
             TextSetParagraphSpacingCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetParagraphSpacing);
             TextGetUseCustomDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall30>(value.TextGetUseCustomDecorationColor);
             TextSetUseCustomDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall31>(value.TextSetUseCustomDecorationColor);
-            TextGetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall92>(value.TextGetDecorationColor);
-            TextSetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextSetDecorationColor);
+            TextGetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall93>(value.TextGetDecorationColor);
+            TextSetDecorationColorCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall94>(value.TextSetDecorationColor);
             TextGetDecorationThicknessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetDecorationThickness);
             TextSetDecorationThicknessCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall27>(value.TextSetDecorationThickness);
             TextGetUnderlineOffsetCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall26>(value.TextGetUnderlineOffset);
@@ -1707,10 +1710,10 @@ namespace Crowny
             TextSetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetSortingLayer);
             TextGetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetOrderInLayer);
             TextSetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetOrderInLayer);
-            Collider2DGetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall139>(value.Collider2DGetMaterialOverride);
-            Collider2DSetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall140>(value.Collider2DSetMaterialOverride);
-            Collider3DGetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall139>(value.Collider3DGetMaterialOverride);
-            Collider3DSetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall140>(value.Collider3DSetMaterialOverride);
+            Collider2DGetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall140>(value.Collider2DGetMaterialOverride);
+            Collider2DSetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall141>(value.Collider2DSetMaterialOverride);
+            Collider3DGetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall140>(value.Collider3DGetMaterialOverride);
+            Collider3DSetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall141>(value.Collider3DSetMaterialOverride);
             api = value;
         }
 
@@ -1835,167 +1838,169 @@ namespace Crowny
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int ManagedHostCall59(void* context, ManagedNativeUuid asset, int alphaMode);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall60(void* context, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall60(void* context, ManagedNativeUuid asset, int preset, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall61(void* context, ManagedNativeUuid entity, ManagedNativeVec3* force, int mode);
+        private delegate int ManagedHostCall61(void* context, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall62(void* context, ManagedNativeUuid entity, ManagedNativeVec3* force, ManagedNativeVec3* position, int mode);
+        private delegate int ManagedHostCall62(void* context, ManagedNativeUuid entity, ManagedNativeVec3* force, int mode);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall63(void* context, ManagedNativeUuid entity, ManagedNativeVec3* torque, int mode);
+        private delegate int ManagedHostCall63(void* context, ManagedNativeUuid entity, ManagedNativeVec3* force, ManagedNativeVec3* position, int mode);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall64(void* context, ManagedNativeMutableBlob destination, ManagedNativeBlob source, int method, int level, ulong* result);
+        private delegate int ManagedHostCall64(void* context, ManagedNativeUuid entity, ManagedNativeVec3* torque, int mode);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall65(void* context, ManagedNativeMutableBlob destination, ulong maximumDestinationSize, ManagedNativeBlob source, ulong sourceSize, int method, ulong* result);
+        private delegate int ManagedHostCall65(void* context, ManagedNativeMutableBlob destination, ManagedNativeBlob source, int method, int level, ulong* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall66(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView extensions, ManagedNativeStringView* result);
+        private delegate int ManagedHostCall66(void* context, ManagedNativeMutableBlob destination, ulong maximumDestinationSize, ManagedNativeBlob source, ulong sourceSize, int method, ulong* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall67(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView* result);
+        private delegate int ManagedHostCall67(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView extensions, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall68(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView defaultName, ManagedNativeStringView extensions, ManagedNativeStringView* result);
+        private delegate int ManagedHostCall68(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall69(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView defaultName, ManagedNativeStringView* result);
+        private delegate int ManagedHostCall69(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView defaultName, ManagedNativeStringView extensions, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall70(void* context, ManagedNativeUuid asset, uint codePoint, byte* result);
+        private delegate int ManagedHostCall70(void* context, ManagedNativeStringView title, ManagedNativeStringView directory, ManagedNativeStringView defaultName, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall71(void* context, ManagedNativeUuid font, byte* result);
+        private delegate int ManagedHostCall71(void* context, ManagedNativeUuid asset, uint codePoint, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall72(void* context, ManagedNativeUuid font, uint* result);
+        private delegate int ManagedHostCall72(void* context, ManagedNativeUuid font, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall73(void* context, ManagedNativeUuid font, float* result);
+        private delegate int ManagedHostCall73(void* context, ManagedNativeUuid font, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall74(void* context, ManagedNativeUuid font, uint codePoint, byte* result);
+        private delegate int ManagedHostCall74(void* context, ManagedNativeUuid font, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall75(void* context, ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result);
+        private delegate int ManagedHostCall75(void* context, ManagedNativeUuid font, uint codePoint, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall76(void* context, ManagedNativeUuid font, uint index, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall76(void* context, ManagedNativeUuid font, uint codePoint, byte useFallbacks, ManagedNativeFontCharacterInfo* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall77(void* context, ManagedNativeUuid font, ManagedNativeUuid value, byte* result);
+        private delegate int ManagedHostCall77(void* context, ManagedNativeUuid font, uint index, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall78(void* context, ManagedNativeUuid font);
+        private delegate int ManagedHostCall78(void* context, ManagedNativeUuid font, ManagedNativeUuid value, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall79(void* context, uint index, ManagedNativeStringView* result);
+        private delegate int ManagedHostCall79(void* context, ManagedNativeUuid font);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall80(void* context, ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result);
+        private delegate int ManagedHostCall80(void* context, uint index, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall81(void* context, int severity, ManagedNativeStringView message);
+        private delegate int ManagedHostCall81(void* context, ManagedNativeUuid entity, ManagedNativeVec2* position, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall82(void* context, int seed);
+        private delegate int ManagedHostCall82(void* context, int severity, ManagedNativeStringView message);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall83(void* context, float minimum, float maximum, float* result);
+        private delegate int ManagedHostCall83(void* context, int seed);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall84(void* context, ManagedNativeVec3* result);
+        private delegate int ManagedHostCall84(void* context, float minimum, float maximum, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall85(void* context, float x, float y, float* result);
+        private delegate int ManagedHostCall85(void* context, ManagedNativeVec3* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall86(void* context, int layer, ManagedNativeStringView* result);
+        private delegate int ManagedHostCall86(void* context, float x, float y, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall87(void* context, ManagedNativeStringView name, int* result);
+        private delegate int ManagedHostCall87(void* context, int layer, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall88(void* context, int* result);
+        private delegate int ManagedHostCall88(void* context, ManagedNativeStringView name, int* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall89(void* context, uint index, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall89(void* context, int* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall90(void* context, ManagedNativeUuid scene, byte makeActive, int* result);
+        private delegate int ManagedHostCall90(void* context, uint index, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall91(void* context, ManagedNativeUuid scene, int* result);
+        private delegate int ManagedHostCall91(void* context, ManagedNativeUuid scene, byte makeActive, int* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall92(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
+        private delegate int ManagedHostCall92(void* context, ManagedNativeUuid scene, int* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall93(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
+        private delegate int ManagedHostCall93(void* context, ManagedNativeUuid entity, ManagedNativeVec4* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall94(void* context, byte* result);
+        private delegate int ManagedHostCall94(void* context, ManagedNativeUuid entity, ManagedNativeVec4* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall95(void* context, ManagedNativeVec2* value);
+        private delegate int ManagedHostCall95(void* context, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall96(void* context, uint value);
+        private delegate int ManagedHostCall96(void* context, ManagedNativeVec2* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall97(void* context, ManagedNativeUuid material);
+        private delegate int ManagedHostCall97(void* context, uint value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall98(void* context, int layer, ManagedNativeStringView name);
+        private delegate int ManagedHostCall98(void* context, ManagedNativeUuid material);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall99(void* context, int layer, uint* result);
+        private delegate int ManagedHostCall99(void* context, int layer, ManagedNativeStringView name);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall100(void* context, int layer, uint mask);
+        private delegate int ManagedHostCall100(void* context, int layer, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall101(void* context, uint runtimeId, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall101(void* context, int layer, uint mask);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall102(void* context, ManagedNativeVec2* origin, ManagedNativeVec2* direction, float distance, uint layerMask, void* destination, uint capacity, uint* result);
+        private delegate int ManagedHostCall102(void* context, uint runtimeId, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall103(void* context, ManagedNativeStringView* result);
+        private delegate int ManagedHostCall103(void* context, ManagedNativeVec2* origin, ManagedNativeVec2* direction, float distance, uint layerMask, void* destination, uint capacity, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall104(void* context, ulong* result);
+        private delegate int ManagedHostCall104(void* context, ManagedNativeStringView* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall105(void* context, ManagedNativeVec3* value);
+        private delegate int ManagedHostCall105(void* context, ulong* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall106(void* context, int value, byte* result);
+        private delegate int ManagedHostCall106(void* context, ManagedNativeVec3* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall107(void* context, ulong runtimeId, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall107(void* context, int value, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall108(void* context, ManagedNativeVec3* origin, ManagedNativeVec3* direction, float distance, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
+        private delegate int ManagedHostCall108(void* context, ulong runtimeId, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall109(void* context, int shapeType, ManagedNativeVec3* size, float radius, float height, ManagedNativeVec3* position, ManagedNativeQuaternion* rotation, ManagedNativeVec3* direction, float distance, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
+        private delegate int ManagedHostCall109(void* context, ManagedNativeVec3* origin, ManagedNativeVec3* direction, float distance, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall110(void* context, int shapeType, ManagedNativeVec3* size, float radius, float height, ManagedNativeVec3* position, ManagedNativeQuaternion* rotation, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
+        private delegate int ManagedHostCall110(void* context, int shapeType, ManagedNativeVec3* size, float radius, float height, ManagedNativeVec3* position, ManagedNativeQuaternion* rotation, ManagedNativeVec3* direction, float distance, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall111(void* context, ManagedNativeUuid asset, void* destination, uint capacity, uint* result);
+        private delegate int ManagedHostCall111(void* context, int shapeType, ManagedNativeVec3* size, float radius, float height, ManagedNativeVec3* position, ManagedNativeQuaternion* rotation, uint layerMask, byte includeTriggers, ulong ignoreBodyHandle, void* destination, uint capacity, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall112(void* context, ManagedNativeUuid asset, void* source, uint count);
+        private delegate int ManagedHostCall112(void* context, ManagedNativeUuid asset, void* destination, uint capacity, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall113(void* context, ManagedNativeUuid asset, uint channel, void* destination, uint capacity, uint* result);
+        private delegate int ManagedHostCall113(void* context, ManagedNativeUuid asset, void* source, uint count);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall114(void* context, ManagedNativeUuid asset, uint channel, void* source, uint count);
+        private delegate int ManagedHostCall114(void* context, ManagedNativeUuid asset, uint channel, void* destination, uint capacity, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall115(void* context, ManagedNativeUuid asset, ManagedNativeVec3* result);
+        private delegate int ManagedHostCall115(void* context, ManagedNativeUuid asset, uint channel, void* source, uint count);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall116(void* context, ManagedNativeUuid asset, uint vertexCount, void* layout, uint layoutCount);
+        private delegate int ManagedHostCall116(void* context, ManagedNativeUuid asset, ManagedNativeVec3* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall117(void* context, ManagedNativeUuid asset, void* source, uint meshBufferStart, uint count, uint stride);
+        private delegate int ManagedHostCall117(void* context, ManagedNativeUuid asset, uint vertexCount, void* layout, uint layoutCount);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall118(void* context, ManagedNativeUuid asset, void* destination, uint capacity, uint stride, uint* result);
+        private delegate int ManagedHostCall118(void* context, ManagedNativeUuid asset, void* source, uint meshBufferStart, uint count, uint stride);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall119(void* context, ManagedNativeUuid asset, int attribute, byte* result);
+        private delegate int ManagedHostCall119(void* context, ManagedNativeUuid asset, void* destination, uint capacity, uint stride, uint* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall120(void* context, ManagedNativeUuid asset, int index, void* destination);
+        private delegate int ManagedHostCall120(void* context, ManagedNativeUuid asset, int attribute, byte* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall121(void* context, float width, float height, uint subdivisionsX, uint subdivisionsY, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall121(void* context, ManagedNativeUuid asset, int index, void* destination);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall122(void* context, ManagedNativeVec3* dimensions, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall122(void* context, float width, float height, uint subdivisionsX, uint subdivisionsY, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall123(void* context, float size, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall123(void* context, ManagedNativeVec3* dimensions, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall124(void* context, float radius, uint segments, uint rings, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall124(void* context, float size, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall125(void* context, float radius, float height, uint segments, byte capped, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall125(void* context, float radius, uint segments, uint rings, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall126(void* context, float radius, float height, uint segments, uint hemisphereRings, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall126(void* context, float radius, float height, uint segments, byte capped, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall127(void* context, ManagedNativeUuid entity, uint index, ManagedNativeUuid* result);
+        private delegate int ManagedHostCall127(void* context, float radius, float height, uint segments, uint hemisphereRings, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall128(void* context, ManagedNativeUuid entity, uint index, ManagedNativeUuid material);
+        private delegate int ManagedHostCall128(void* context, ManagedNativeUuid entity, uint index, ManagedNativeUuid* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall129(void* context, ManagedNativeMatrix4* matrix, float* result);
+        private delegate int ManagedHostCall129(void* context, ManagedNativeUuid entity, uint index, ManagedNativeUuid material);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall130(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
+        private delegate int ManagedHostCall130(void* context, ManagedNativeMatrix4* matrix, float* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall131(void* context, ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result);
+        private delegate int ManagedHostCall131(void* context, ManagedNativeMatrix4* matrix, ManagedNativeMatrix4* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall132(void* context, ManagedNativeUuid entity, ManagedNativeStringView assemblyName, ManagedNativeStringView namespaceName, ManagedNativeStringView typeName);
+        private delegate int ManagedHostCall132(void* context, ManagedNativeVec3* from, ManagedNativeVec3* to, ManagedNativeVec3* up, ManagedNativeMatrix4* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall133(void* context, ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* result);
+        private delegate int ManagedHostCall133(void* context, ManagedNativeUuid entity, ManagedNativeStringView assemblyName, ManagedNativeStringView namespaceName, ManagedNativeStringView typeName);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall134(void* context, ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* value);
+        private delegate int ManagedHostCall134(void* context, ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall135(void* context, ManagedNativeUuid entity, ulong* result);
+        private delegate int ManagedHostCall135(void* context, ManagedNativeUuid entity, ManagedNativePhysicsFilter3D* value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall136(void* context, ManagedNativeUuid asset, float value);
+        private delegate int ManagedHostCall136(void* context, ManagedNativeUuid entity, ulong* result);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall137(void* context, ManagedNativeUuid asset, int value);
+        private delegate int ManagedHostCall137(void* context, ManagedNativeUuid asset, float value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall138(void* context, ManagedNativeUuid entity, ManagedNativeStringView value);
+        private delegate int ManagedHostCall138(void* context, ManagedNativeUuid asset, int value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall139(void* context, ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* result);
+        private delegate int ManagedHostCall139(void* context, ManagedNativeUuid entity, ManagedNativeStringView value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int ManagedHostCall140(void* context, ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* value);
+        private delegate int ManagedHostCall140(void* context, ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall141(void* context, ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* value);
 
         private static ManagedHostCall0 GetEntityNameCallback;
         private static ManagedHostCall1 SetEntityNameCallback;
@@ -2146,57 +2151,58 @@ namespace Crowny
         private static ManagedHostCall45 MaterialGetAlphaModeCallback;
         private static ManagedHostCall59 MaterialSetAlphaModeCallback;
         private static ManagedHostCall41 MaterialClearAlphaModeOverrideCallback;
-        private static ManagedHostCall60 PhysicsMaterial2DCreateCallback;
-        private static ManagedHostCall60 PhysicsMaterial3DCreateCallback;
-        private static ManagedHostCall61 Rigidbody3DAddForceCallback;
-        private static ManagedHostCall62 Rigidbody3DAddForceAtCallback;
-        private static ManagedHostCall63 Rigidbody3DAddTorqueCallback;
-        private static ManagedHostCall64 CompressionCompressCallback;
-        private static ManagedHostCall65 CompressionDecompressCallback;
-        private static ManagedHostCall66 FileDialogOpenFileCallback;
-        private static ManagedHostCall67 FileDialogOpenFolderCallback;
-        private static ManagedHostCall68 FileDialogSaveFileCallback;
-        private static ManagedHostCall69 FileDialogSaveFolderCallback;
-        private static ManagedHostCall70 FontHasCharacterCallback;
-        private static ManagedHostCall71 FontGetIsValidCallback;
-        private static ManagedHostCall72 FontGetGlyphCountCallback;
-        private static ManagedHostCall72 FontGetTabWidthCallback;
-        private static ManagedHostCall72 FontGetAtlasWidthCallback;
-        private static ManagedHostCall72 FontGetAtlasHeightCallback;
-        private static ManagedHostCall73 FontGetAtlasPixelRangeCallback;
-        private static ManagedHostCall72 FontGetFallbackCountCallback;
-        private static ManagedHostCall74 FontHasGlyphCallback;
-        private static ManagedHostCall75 FontGetCharacterInfoCallback;
-        private static ManagedHostCall76 FontGetFallbackCallback;
-        private static ManagedHostCall77 FontAddFallbackCallback;
-        private static ManagedHostCall78 FontClearFallbacksCallback;
+        private static ManagedHostCall60 MaterialApplyToonPresetCallback;
+        private static ManagedHostCall61 PhysicsMaterial2DCreateCallback;
+        private static ManagedHostCall61 PhysicsMaterial3DCreateCallback;
+        private static ManagedHostCall62 Rigidbody3DAddForceCallback;
+        private static ManagedHostCall63 Rigidbody3DAddForceAtCallback;
+        private static ManagedHostCall64 Rigidbody3DAddTorqueCallback;
+        private static ManagedHostCall65 CompressionCompressCallback;
+        private static ManagedHostCall66 CompressionDecompressCallback;
+        private static ManagedHostCall67 FileDialogOpenFileCallback;
+        private static ManagedHostCall68 FileDialogOpenFolderCallback;
+        private static ManagedHostCall69 FileDialogSaveFileCallback;
+        private static ManagedHostCall70 FileDialogSaveFolderCallback;
+        private static ManagedHostCall71 FontHasCharacterCallback;
+        private static ManagedHostCall72 FontGetIsValidCallback;
+        private static ManagedHostCall73 FontGetGlyphCountCallback;
+        private static ManagedHostCall73 FontGetTabWidthCallback;
+        private static ManagedHostCall73 FontGetAtlasWidthCallback;
+        private static ManagedHostCall73 FontGetAtlasHeightCallback;
+        private static ManagedHostCall74 FontGetAtlasPixelRangeCallback;
+        private static ManagedHostCall73 FontGetFallbackCountCallback;
+        private static ManagedHostCall75 FontHasGlyphCallback;
+        private static ManagedHostCall76 FontGetCharacterInfoCallback;
+        private static ManagedHostCall77 FontGetFallbackCallback;
+        private static ManagedHostCall78 FontAddFallbackCallback;
+        private static ManagedHostCall79 FontClearFallbacksCallback;
         private static ManagedHostCall25 FontGetSystemFontCountCallback;
-        private static ManagedHostCall79 FontGetSystemFontPathCallback;
-        private static ManagedHostCall79 FontGetSystemFontNameCallback;
+        private static ManagedHostCall80 FontGetSystemFontPathCallback;
+        private static ManagedHostCall80 FontGetSystemFontNameCallback;
         private static ManagedHostCall46 AnimationClipGetLengthCallback;
         private static ManagedHostCall46 AnimationClipGetSampleRateCallback;
         private static ManagedHostCall44 AnimationClipGetIsAdditiveCallback;
         private static ManagedHostCall5 AnimationComponentPlayCallback;
         private static ManagedHostCall5 AnimationComponentPauseCallback;
         private static ManagedHostCall5 AnimationComponentStopCallback;
-        private static ManagedHostCall80 TextHitTestCallback;
-        private static ManagedHostCall81 DebugWriteLogCallback;
-        private static ManagedHostCall82 RandomInitializeCallback;
+        private static ManagedHostCall81 TextHitTestCallback;
+        private static ManagedHostCall82 DebugWriteLogCallback;
+        private static ManagedHostCall83 RandomInitializeCallback;
         private static ManagedHostCall15 RandomGetValueCallback;
-        private static ManagedHostCall83 RandomGetRangeCallback;
+        private static ManagedHostCall84 RandomGetRangeCallback;
         private static ManagedHostCall16 RandomGetInsideUnitCircleCallback;
-        private static ManagedHostCall84 RandomGetInsideUnitSphereCallback;
-        private static ManagedHostCall85 NoiseGetPerlin2DCallback;
-        private static ManagedHostCall86 LayerMaskGetNameCallback;
-        private static ManagedHostCall87 LayerMaskGetLayerCallback;
-        private static ManagedHostCall60 SceneGetActiveCallback;
-        private static ManagedHostCall88 SceneGetExecutionStateCallback;
+        private static ManagedHostCall85 RandomGetInsideUnitSphereCallback;
+        private static ManagedHostCall86 NoiseGetPerlin2DCallback;
+        private static ManagedHostCall87 LayerMaskGetNameCallback;
+        private static ManagedHostCall88 LayerMaskGetLayerCallback;
+        private static ManagedHostCall61 SceneGetActiveCallback;
+        private static ManagedHostCall89 SceneGetExecutionStateCallback;
         private static ManagedHostCall25 SceneGetLoadedCountCallback;
-        private static ManagedHostCall89 SceneGetLoadedCallback;
-        private static ManagedHostCall90 SceneLoadCallback;
-        private static ManagedHostCall91 SceneUnloadCallback;
-        private static ManagedHostCall91 SceneReloadCallback;
-        private static ManagedHostCall91 SceneSetActiveCallback;
+        private static ManagedHostCall90 SceneGetLoadedCallback;
+        private static ManagedHostCall91 SceneLoadCallback;
+        private static ManagedHostCall92 SceneUnloadCallback;
+        private static ManagedHostCall92 SceneReloadCallback;
+        private static ManagedHostCall92 SceneSetActiveCallback;
         private static ManagedHostCall26 CameraGetFieldOfViewCallback;
         private static ManagedHostCall27 CameraSetFieldOfViewCallback;
         private static ManagedHostCall28 CameraGetProjectionCallback;
@@ -2211,8 +2217,8 @@ namespace Crowny
         private static ManagedHostCall27 CameraSetAspectRatioCallback;
         private static ManagedHostCall8 CameraGetBackgroundColorCallback;
         private static ManagedHostCall9 CameraSetBackgroundColorCallback;
-        private static ManagedHostCall92 CameraGetViewportRectangleCallback;
-        private static ManagedHostCall93 CameraSetViewportRectangleCallback;
+        private static ManagedHostCall93 CameraGetViewportRectangleCallback;
+        private static ManagedHostCall94 CameraSetViewportRectangleCallback;
         private static ManagedHostCall30 CameraGetHdrCallback;
         private static ManagedHostCall31 CameraSetHdrCallback;
         private static ManagedHostCall30 CameraGetMsaaCallback;
@@ -2221,16 +2227,16 @@ namespace Crowny
         private static ManagedHostCall31 CameraSetOcclusionCullingCallback;
         private static ManagedHostCall3 SpriteRendererGetTextureCallback;
         private static ManagedHostCall39 SpriteRendererSetTextureCallback;
-        private static ManagedHostCall92 SpriteRendererGetColorCallback;
-        private static ManagedHostCall93 SpriteRendererSetColorCallback;
+        private static ManagedHostCall93 SpriteRendererGetColorCallback;
+        private static ManagedHostCall94 SpriteRendererSetColorCallback;
         private static ManagedHostCall28 SpriteRendererGetSortingLayerCallback;
         private static ManagedHostCall29 SpriteRendererSetSortingLayerCallback;
         private static ManagedHostCall28 SpriteRendererGetOrderInLayerCallback;
         private static ManagedHostCall29 SpriteRendererSetOrderInLayerCallback;
         private static ManagedHostCall28 LightGetTypeCallback;
         private static ManagedHostCall29 LightSetTypeCallback;
-        private static ManagedHostCall92 LightGetColorCallback;
-        private static ManagedHostCall93 LightSetColorCallback;
+        private static ManagedHostCall93 LightGetColorCallback;
+        private static ManagedHostCall94 LightSetColorCallback;
         private static ManagedHostCall26 LightGetIntensityCallback;
         private static ManagedHostCall27 LightSetIntensityCallback;
         private static ManagedHostCall26 LightGetRangeCallback;
@@ -2269,79 +2275,79 @@ namespace Crowny
         private static ManagedHostCall35 LightSetShadowResolutionCallback;
         private static ManagedHostCall30 LightGetCacheStaticShadowCastersCallback;
         private static ManagedHostCall31 LightSetCacheStaticShadowCastersCallback;
-        private static ManagedHostCall88 Physics2DGetBackendCallback;
-        private static ManagedHostCall94 Physics2DGetIsSimulatingCallback;
+        private static ManagedHostCall89 Physics2DGetBackendCallback;
+        private static ManagedHostCall95 Physics2DGetIsSimulatingCallback;
         private static ManagedHostCall16 Physics2DGetGravityCallback;
-        private static ManagedHostCall95 Physics2DSetGravityCallback;
+        private static ManagedHostCall96 Physics2DSetGravityCallback;
         private static ManagedHostCall25 Physics2DGetVelocityIterationsCallback;
-        private static ManagedHostCall96 Physics2DSetVelocityIterationsCallback;
+        private static ManagedHostCall97 Physics2DSetVelocityIterationsCallback;
         private static ManagedHostCall25 Physics2DGetPositionIterationsCallback;
-        private static ManagedHostCall96 Physics2DSetPositionIterationsCallback;
-        private static ManagedHostCall60 Physics2DGetDefaultMaterialCallback;
-        private static ManagedHostCall97 Physics2DSetDefaultMaterialCallback;
-        private static ManagedHostCall86 Physics2DGetLayerNameCallback;
-        private static ManagedHostCall98 Physics2DSetLayerNameCallback;
-        private static ManagedHostCall99 Physics2DGetLayerMaskCallback;
-        private static ManagedHostCall100 Physics2DSetLayerMaskCallback;
-        private static ManagedHostCall101 Physics2DResolveEntityCallback;
-        private static ManagedHostCall102 Physics2DRaycastCallback;
-        private static ManagedHostCall88 Physics3DGetBackendCallback;
-        private static ManagedHostCall103 Physics3DGetBackendNameCallback;
-        private static ManagedHostCall94 Physics3DGetIsSimulatingCallback;
-        private static ManagedHostCall104 Physics3DGetCapabilitiesCallback;
-        private static ManagedHostCall84 Physics3DGetGravityCallback;
-        private static ManagedHostCall105 Physics3DSetGravityCallback;
+        private static ManagedHostCall97 Physics2DSetPositionIterationsCallback;
+        private static ManagedHostCall61 Physics2DGetDefaultMaterialCallback;
+        private static ManagedHostCall98 Physics2DSetDefaultMaterialCallback;
+        private static ManagedHostCall87 Physics2DGetLayerNameCallback;
+        private static ManagedHostCall99 Physics2DSetLayerNameCallback;
+        private static ManagedHostCall100 Physics2DGetLayerMaskCallback;
+        private static ManagedHostCall101 Physics2DSetLayerMaskCallback;
+        private static ManagedHostCall102 Physics2DResolveEntityCallback;
+        private static ManagedHostCall103 Physics2DRaycastCallback;
+        private static ManagedHostCall89 Physics3DGetBackendCallback;
+        private static ManagedHostCall104 Physics3DGetBackendNameCallback;
+        private static ManagedHostCall95 Physics3DGetIsSimulatingCallback;
+        private static ManagedHostCall105 Physics3DGetCapabilitiesCallback;
+        private static ManagedHostCall85 Physics3DGetGravityCallback;
+        private static ManagedHostCall106 Physics3DSetGravityCallback;
         private static ManagedHostCall25 Physics3DGetSubstepsCallback;
-        private static ManagedHostCall96 Physics3DSetSubstepsCallback;
-        private static ManagedHostCall60 Physics3DGetDefaultMaterialCallback;
-        private static ManagedHostCall97 Physics3DSetDefaultMaterialCallback;
-        private static ManagedHostCall106 Physics3DTrySetBackendCallback;
-        private static ManagedHostCall106 Physics3DIsBackendAvailableCallback;
-        private static ManagedHostCall107 Physics3DResolveEntityCallback;
-        private static ManagedHostCall108 Physics3DRaycastCallback;
-        private static ManagedHostCall109 Physics3DSweepCallback;
-        private static ManagedHostCall110 Physics3DOverlapCallback;
+        private static ManagedHostCall97 Physics3DSetSubstepsCallback;
+        private static ManagedHostCall61 Physics3DGetDefaultMaterialCallback;
+        private static ManagedHostCall98 Physics3DSetDefaultMaterialCallback;
+        private static ManagedHostCall107 Physics3DTrySetBackendCallback;
+        private static ManagedHostCall107 Physics3DIsBackendAvailableCallback;
+        private static ManagedHostCall108 Physics3DResolveEntityCallback;
+        private static ManagedHostCall109 Physics3DRaycastCallback;
+        private static ManagedHostCall110 Physics3DSweepCallback;
+        private static ManagedHostCall111 Physics3DOverlapCallback;
         private static ManagedHostCall47 MeshGetVertexCountCallback;
         private static ManagedHostCall47 MeshGetIndexCountCallback;
-        private static ManagedHostCall111 MeshCopyVerticesCallback;
-        private static ManagedHostCall112 MeshSetVerticesCallback;
-        private static ManagedHostCall111 MeshCopyNormalsCallback;
-        private static ManagedHostCall112 MeshSetNormalsCallback;
-        private static ManagedHostCall113 MeshCopyUvsCallback;
-        private static ManagedHostCall114 MeshSetUvsCallback;
-        private static ManagedHostCall111 MeshCopyColorsCallback;
-        private static ManagedHostCall112 MeshSetColorsCallback;
-        private static ManagedHostCall111 MeshCopyIndicesCallback;
-        private static ManagedHostCall112 MeshSetIndicesCallback;
+        private static ManagedHostCall112 MeshCopyVerticesCallback;
+        private static ManagedHostCall113 MeshSetVerticesCallback;
+        private static ManagedHostCall112 MeshCopyNormalsCallback;
+        private static ManagedHostCall113 MeshSetNormalsCallback;
+        private static ManagedHostCall114 MeshCopyUvsCallback;
+        private static ManagedHostCall115 MeshSetUvsCallback;
+        private static ManagedHostCall112 MeshCopyColorsCallback;
+        private static ManagedHostCall113 MeshSetColorsCallback;
+        private static ManagedHostCall112 MeshCopyIndicesCallback;
+        private static ManagedHostCall113 MeshSetIndicesCallback;
         private static ManagedHostCall41 MeshRecalculateBoundsCallback;
         private static ManagedHostCall41 MeshRecalculateNormalsCallback;
         private static ManagedHostCall41 MeshRecalculateTangentsCallback;
         private static ManagedHostCall41 MeshUploadDataCallback;
         private static ManagedHostCall41 MeshClearCallback;
-        private static ManagedHostCall115 MeshGetBoundsMinCallback;
-        private static ManagedHostCall115 MeshGetBoundsMaxCallback;
-        private static ManagedHostCall116 MeshSetVertexBufferParamsCallback;
-        private static ManagedHostCall117 MeshSetVertexBufferDataCallback;
-        private static ManagedHostCall118 MeshGetVertexBufferDataCallback;
+        private static ManagedHostCall116 MeshGetBoundsMinCallback;
+        private static ManagedHostCall116 MeshGetBoundsMaxCallback;
+        private static ManagedHostCall117 MeshSetVertexBufferParamsCallback;
+        private static ManagedHostCall118 MeshSetVertexBufferDataCallback;
+        private static ManagedHostCall119 MeshGetVertexBufferDataCallback;
         private static ManagedHostCall47 MeshGetVertexStrideCallback;
         private static ManagedHostCall47 MeshGetVertexAttributeCountCallback;
-        private static ManagedHostCall119 MeshHasVertexAttributeCallback;
-        private static ManagedHostCall120 MeshGetVertexAttributeCallback;
-        private static ManagedHostCall121 MeshCreatePlaneCallback;
-        private static ManagedHostCall122 MeshCreateBoxCallback;
-        private static ManagedHostCall123 MeshCreateCubeCallback;
-        private static ManagedHostCall124 MeshCreateSphereCallback;
-        private static ManagedHostCall125 MeshCreateCylinderCallback;
-        private static ManagedHostCall125 MeshCreateConeCallback;
-        private static ManagedHostCall126 MeshCreateCapsuleCallback;
-        private static ManagedHostCall127 MeshRendererGetMaterialCallback;
-        private static ManagedHostCall128 MeshRendererSetMaterialCallback;
-        private static ManagedHostCall129 MathMatrixDeterminantCallback;
-        private static ManagedHostCall130 MathMatrixInverseCallback;
-        private static ManagedHostCall130 MathMatrixAffineInverseCallback;
-        private static ManagedHostCall131 MathLookAtCallback;
-        private static ManagedHostCall132 AddScriptComponentCallback;
-        private static ManagedHostCall132 RemoveScriptComponentCallback;
+        private static ManagedHostCall120 MeshHasVertexAttributeCallback;
+        private static ManagedHostCall121 MeshGetVertexAttributeCallback;
+        private static ManagedHostCall122 MeshCreatePlaneCallback;
+        private static ManagedHostCall123 MeshCreateBoxCallback;
+        private static ManagedHostCall124 MeshCreateCubeCallback;
+        private static ManagedHostCall125 MeshCreateSphereCallback;
+        private static ManagedHostCall126 MeshCreateCylinderCallback;
+        private static ManagedHostCall126 MeshCreateConeCallback;
+        private static ManagedHostCall127 MeshCreateCapsuleCallback;
+        private static ManagedHostCall128 MeshRendererGetMaterialCallback;
+        private static ManagedHostCall129 MeshRendererSetMaterialCallback;
+        private static ManagedHostCall130 MathMatrixDeterminantCallback;
+        private static ManagedHostCall131 MathMatrixInverseCallback;
+        private static ManagedHostCall131 MathMatrixAffineInverseCallback;
+        private static ManagedHostCall132 MathLookAtCallback;
+        private static ManagedHostCall133 AddScriptComponentCallback;
+        private static ManagedHostCall133 RemoveScriptComponentCallback;
         private static ManagedHostCall3 MeshRendererGetMeshCallback;
         private static ManagedHostCall39 MeshRendererSetMeshCallback;
         private static ManagedHostCall34 MeshRendererGetMaterialCountCallback;
@@ -2364,8 +2370,8 @@ namespace Crowny
         private static ManagedHostCall11 Collider3DSetRotationCallback;
         private static ManagedHostCall3 Collider3DGetMaterialCallback;
         private static ManagedHostCall39 Collider3DSetMaterialCallback;
-        private static ManagedHostCall133 Collider3DGetCollisionFilterCallback;
-        private static ManagedHostCall134 Collider3DSetCollisionFilterCallback;
+        private static ManagedHostCall134 Collider3DGetCollisionFilterCallback;
+        private static ManagedHostCall135 Collider3DSetCollisionFilterCallback;
         private static ManagedHostCall8 BoxCollider3DGetSizeCallback;
         private static ManagedHostCall9 BoxCollider3DSetSizeCallback;
         private static ManagedHostCall26 SphereCollider3DGetRadiusCallback;
@@ -2396,39 +2402,39 @@ namespace Crowny
         private static ManagedHostCall31 Rigidbody3DSetContinuousCollisionCallback;
         private static ManagedHostCall34 Rigidbody3DGetConstraintsCallback;
         private static ManagedHostCall35 Rigidbody3DSetConstraintsCallback;
-        private static ManagedHostCall133 Rigidbody3DGetCollisionFilterCallback;
-        private static ManagedHostCall134 Rigidbody3DSetCollisionFilterCallback;
+        private static ManagedHostCall134 Rigidbody3DGetCollisionFilterCallback;
+        private static ManagedHostCall135 Rigidbody3DSetCollisionFilterCallback;
         private static ManagedHostCall8 Rigidbody3DGetLinearVelocityCallback;
         private static ManagedHostCall9 Rigidbody3DSetLinearVelocityCallback;
         private static ManagedHostCall8 Rigidbody3DGetAngularVelocityCallback;
         private static ManagedHostCall9 Rigidbody3DSetAngularVelocityCallback;
         private static ManagedHostCall30 Rigidbody3DGetAwakeCallback;
         private static ManagedHostCall31 Rigidbody3DSetAwakeCallback;
-        private static ManagedHostCall135 Rigidbody3DGetBodyHandleCallback;
+        private static ManagedHostCall136 Rigidbody3DGetBodyHandleCallback;
         private static ManagedHostCall46 PhysicsMaterial2DGetDensityCallback;
-        private static ManagedHostCall136 PhysicsMaterial2DSetDensityCallback;
+        private static ManagedHostCall137 PhysicsMaterial2DSetDensityCallback;
         private static ManagedHostCall46 PhysicsMaterial2DGetFrictionCallback;
-        private static ManagedHostCall136 PhysicsMaterial2DSetFrictionCallback;
+        private static ManagedHostCall137 PhysicsMaterial2DSetFrictionCallback;
         private static ManagedHostCall46 PhysicsMaterial2DGetRestitutionCallback;
-        private static ManagedHostCall136 PhysicsMaterial2DSetRestitutionCallback;
+        private static ManagedHostCall137 PhysicsMaterial2DSetRestitutionCallback;
         private static ManagedHostCall46 PhysicsMaterial2DGetRestitutionThresholdCallback;
-        private static ManagedHostCall136 PhysicsMaterial2DSetRestitutionThresholdCallback;
+        private static ManagedHostCall137 PhysicsMaterial2DSetRestitutionThresholdCallback;
         private static ManagedHostCall45 PhysicsMaterial2DGetFrictionCombineCallback;
-        private static ManagedHostCall137 PhysicsMaterial2DSetFrictionCombineCallback;
+        private static ManagedHostCall138 PhysicsMaterial2DSetFrictionCombineCallback;
         private static ManagedHostCall45 PhysicsMaterial2DGetRestitutionCombineCallback;
-        private static ManagedHostCall137 PhysicsMaterial2DSetRestitutionCombineCallback;
+        private static ManagedHostCall138 PhysicsMaterial2DSetRestitutionCombineCallback;
         private static ManagedHostCall46 PhysicsMaterial3DGetDensityCallback;
-        private static ManagedHostCall136 PhysicsMaterial3DSetDensityCallback;
+        private static ManagedHostCall137 PhysicsMaterial3DSetDensityCallback;
         private static ManagedHostCall46 PhysicsMaterial3DGetFrictionCallback;
-        private static ManagedHostCall136 PhysicsMaterial3DSetFrictionCallback;
+        private static ManagedHostCall137 PhysicsMaterial3DSetFrictionCallback;
         private static ManagedHostCall46 PhysicsMaterial3DGetRestitutionCallback;
-        private static ManagedHostCall136 PhysicsMaterial3DSetRestitutionCallback;
+        private static ManagedHostCall137 PhysicsMaterial3DSetRestitutionCallback;
         private static ManagedHostCall46 PhysicsMaterial3DGetRestitutionThresholdCallback;
-        private static ManagedHostCall136 PhysicsMaterial3DSetRestitutionThresholdCallback;
+        private static ManagedHostCall137 PhysicsMaterial3DSetRestitutionThresholdCallback;
         private static ManagedHostCall45 PhysicsMaterial3DGetFrictionCombineCallback;
-        private static ManagedHostCall137 PhysicsMaterial3DSetFrictionCombineCallback;
+        private static ManagedHostCall138 PhysicsMaterial3DSetFrictionCombineCallback;
         private static ManagedHostCall45 PhysicsMaterial3DGetRestitutionCombineCallback;
-        private static ManagedHostCall137 PhysicsMaterial3DSetRestitutionCombineCallback;
+        private static ManagedHostCall138 PhysicsMaterial3DSetRestitutionCombineCallback;
         private static ManagedHostCall3 AnimationComponentGetClipCallback;
         private static ManagedHostCall39 AnimationComponentSetClipCallback;
         private static ManagedHostCall26 AnimationComponentGetSpeedCallback;
@@ -2445,11 +2451,11 @@ namespace Crowny
         private static ManagedHostCall27 AnimationComponentSetNormalizedTimeCallback;
         private static ManagedHostCall28 AnimationComponentGetStateCallback;
         private static ManagedHostCall0 TextGetTextCallback;
-        private static ManagedHostCall138 TextSetTextCallback;
+        private static ManagedHostCall139 TextSetTextCallback;
         private static ManagedHostCall3 TextGetFontCallback;
         private static ManagedHostCall39 TextSetFontCallback;
-        private static ManagedHostCall92 TextGetColorCallback;
-        private static ManagedHostCall93 TextSetColorCallback;
+        private static ManagedHostCall93 TextGetColorCallback;
+        private static ManagedHostCall94 TextSetColorCallback;
         private static ManagedHostCall26 TextGetSizeCallback;
         private static ManagedHostCall27 TextSetSizeCallback;
         private static ManagedHostCall30 TextGetAutoSizeCallback;
@@ -2476,12 +2482,12 @@ namespace Crowny
         private static ManagedHostCall29 TextSetVerticalAlignmentCallback;
         private static ManagedHostCall28 TextGetFontStyleCallback;
         private static ManagedHostCall29 TextSetFontStyleCallback;
-        private static ManagedHostCall92 TextGetOutlineColorCallback;
-        private static ManagedHostCall93 TextSetOutlineColorCallback;
+        private static ManagedHostCall93 TextGetOutlineColorCallback;
+        private static ManagedHostCall94 TextSetOutlineColorCallback;
         private static ManagedHostCall26 TextGetOutlineWidthCallback;
         private static ManagedHostCall27 TextSetOutlineWidthCallback;
-        private static ManagedHostCall92 TextGetShadowColorCallback;
-        private static ManagedHostCall93 TextSetShadowColorCallback;
+        private static ManagedHostCall93 TextGetShadowColorCallback;
+        private static ManagedHostCall94 TextSetShadowColorCallback;
         private static ManagedHostCall32 TextGetShadowOffsetCallback;
         private static ManagedHostCall33 TextSetShadowOffsetCallback;
         private static ManagedHostCall26 TextGetShadowSoftnessCallback;
@@ -2496,8 +2502,8 @@ namespace Crowny
         private static ManagedHostCall27 TextSetParagraphSpacingCallback;
         private static ManagedHostCall30 TextGetUseCustomDecorationColorCallback;
         private static ManagedHostCall31 TextSetUseCustomDecorationColorCallback;
-        private static ManagedHostCall92 TextGetDecorationColorCallback;
-        private static ManagedHostCall93 TextSetDecorationColorCallback;
+        private static ManagedHostCall93 TextGetDecorationColorCallback;
+        private static ManagedHostCall94 TextSetDecorationColorCallback;
         private static ManagedHostCall26 TextGetDecorationThicknessCallback;
         private static ManagedHostCall27 TextSetDecorationThicknessCallback;
         private static ManagedHostCall26 TextGetUnderlineOffsetCallback;
@@ -2512,10 +2518,10 @@ namespace Crowny
         private static ManagedHostCall29 TextSetSortingLayerCallback;
         private static ManagedHostCall28 TextGetOrderInLayerCallback;
         private static ManagedHostCall29 TextSetOrderInLayerCallback;
-        private static ManagedHostCall139 Collider2DGetMaterialOverrideCallback;
-        private static ManagedHostCall140 Collider2DSetMaterialOverrideCallback;
-        private static ManagedHostCall139 Collider3DGetMaterialOverrideCallback;
-        private static ManagedHostCall140 Collider3DSetMaterialOverrideCallback;
+        private static ManagedHostCall140 Collider2DGetMaterialOverrideCallback;
+        private static ManagedHostCall141 Collider2DSetMaterialOverrideCallback;
+        private static ManagedHostCall140 Collider3DGetMaterialOverrideCallback;
+        private static ManagedHostCall141 Collider3DSetMaterialOverrideCallback;
 
         internal static int GetEntityName(ManagedNativeUuid entity, ManagedNativeStringView* result) => GetEntityNameCallback(api.Context.ToPointer(), entity, result);
         internal static int SetEntityName(ManagedNativeUuid entity, ManagedNativeStringView name) => SetEntityNameCallback(api.Context.ToPointer(), entity, name);
@@ -2666,6 +2672,7 @@ namespace Crowny
         internal static int MaterialGetAlphaMode(ManagedNativeUuid asset, int* result) => MaterialGetAlphaModeCallback(api.Context.ToPointer(), asset, result);
         internal static int MaterialSetAlphaMode(ManagedNativeUuid asset, int alphaMode) => MaterialSetAlphaModeCallback(api.Context.ToPointer(), asset, alphaMode);
         internal static int MaterialClearAlphaModeOverride(ManagedNativeUuid asset) => MaterialClearAlphaModeOverrideCallback(api.Context.ToPointer(), asset);
+        internal static int MaterialApplyToonPreset(ManagedNativeUuid asset, int preset, byte* result) => MaterialApplyToonPresetCallback(api.Context.ToPointer(), asset, preset, result);
         internal static int PhysicsMaterial2DCreate(ManagedNativeUuid* result) => PhysicsMaterial2DCreateCallback(api.Context.ToPointer(), result);
         internal static int PhysicsMaterial3DCreate(ManagedNativeUuid* result) => PhysicsMaterial3DCreateCallback(api.Context.ToPointer(), result);
         internal static int Rigidbody3DAddForce(ManagedNativeUuid entity, ManagedNativeVec3* force, int mode) => Rigidbody3DAddForceCallback(api.Context.ToPointer(), entity, force, mode);
@@ -4249,6 +4256,14 @@ namespace Crowny
         {
             EnsureHostBindings();
             EnsureStatus(ManagedHostTransport.MaterialClearAlphaModeOverride(EncodeUuid(asset)), "MaterialClearAlphaModeOverride");
+        }
+
+        internal static bool MaterialApplyToonPreset(UUID asset, int preset)
+        {
+            EnsureHostBindings();
+            byte result = default;
+            EnsureStatus(ManagedHostTransport.MaterialApplyToonPreset(EncodeUuid(asset), preset, &result), "MaterialApplyToonPreset");
+            return result != 0;
         }
 
         internal static UUID PhysicsMaterial2DCreate()

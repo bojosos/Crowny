@@ -10,7 +10,9 @@
 
 namespace Crowny
 {
-    static const uint32_t MATERIAL_YAML_VERSION = 2;
+    // Version 3 separates the legacy toon hull thickness from its independent
+    // silhouette width while preserving the old appearance on load.
+    static const uint32_t MATERIAL_YAML_VERSION = 3;
 
     static StringView AlphaModeName(AlphaMode alphaMode)
     {
@@ -279,11 +281,28 @@ namespace Crowny
 
         // Load data parameters
         const YAML::Node& params = data["Parameters"];
+        bool hasSilhouetteWidth = false;
+        bool hasLegacyThickness = false;
+        float legacyThickness = 0.0f;
         if (params && params.IsSequence())
         {
             for (const auto& paramNode : params)
+            {
+                const String name = paramNode["Name"].as<String>("");
+                const ShaderDataType type = static_cast<ShaderDataType>(paramNode["Type"].as<uint32_t>(0u));
+                if (name == "toonSilhouetteWidth" && type == ShaderDataType::Float)
+                    hasSilhouetteWidth = true;
+                else if (name == "thickness" && type == ShaderDataType::Float && paramNode["Value"])
+                {
+                    legacyThickness = paramNode["Value"].as<float>(0.0f);
+                    hasLegacyThickness = true;
+                }
                 DeserializeDataParam(paramNode, *m_Material);
+            }
         }
+
+        if (version < 3u && !hasSilhouetteWidth && hasLegacyThickness && m_Material->HasBinding("toonSilhouetteWidth"))
+            m_Material->SetFloat("toonSilhouetteWidth", legacyThickness);
 
         // Load texture parameters
         const YAML::Node& textures = data["Textures"];

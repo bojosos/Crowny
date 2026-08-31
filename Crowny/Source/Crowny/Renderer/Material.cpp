@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/RenderAPI/UniformParams.h"
+#include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/Material.h"
 
 namespace Crowny
@@ -46,37 +47,146 @@ namespace Crowny
         material->SetTexture("toonPatternTexture", Texture::WHITE);
         material->SetTexture("toonRampTexture", Texture::WHITE);
         material->SetTexture("toonMatcapTexture", Texture::WHITE);
-        material->SetColor("outlineColor", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-        material->SetFloat("thickness", 1.0f);
-        material->SetColor("tint", glm::vec4(1.0f));
-        material->SetFloat("bands", 3.0f);
-        material->SetColor("toonShadowColor", glm::vec4(0.2f, 0.22f, 0.3f, 1.0f));
-        material->SetFloat("toonBandSmoothness", 0.08f);
-        material->SetColor("toonSpecularColor", glm::vec4(1.0f));
-        material->SetFloat("toonSpecularThreshold", 0.8f);
-        material->SetFloat("toonSpecularSmoothness", 0.05f);
-        material->SetFloat("toonSpecularStrength", 0.5f);
-        material->SetColor("toonRimColor", glm::vec4(1.0f));
-        material->SetFloat("rimPower", 3.0f);
-        material->SetFloat("rimThreshold", 0.5f);
-        material->SetFloat("toonRimSmoothness", 0.08f);
-        material->SetFloat("toonRimStrength", 0.5f);
-        material->SetFloat("toonRimShadowMask", 0.75f);
-        material->SetFloat("toonIndirectStrength", 0.5f);
-        material->SetFloat("toonPatternScale", 16.0f);
-        material->SetFloat("toonPatternStrength", 0.0f);
-        material->SetFloat("toonPatternSmoothness", 0.1f);
-        material->SetFloat("toonPatternDistanceFade", 50.0f);
-        material->SetInt("toonPatternMapping", 0);
-        material->SetFloat("toonRampStrength", 0.0f);
-        material->SetFloat("toonRampOffset", 0.0f);
-        material->SetFloat("toonMatcapStrength", 0.0f);
-        material->SetFloat("toonMatcapRotation", 0.0f);
-        material->SetFloat("toonOutlineDepthThreshold", 0.002f);
-        material->SetFloat("toonOutlineNormalThreshold", 0.2f);
-        material->SetFloat("toonOutlineDistanceFade", 100.0f);
+        material->ApplyToonPreset(ToonMaterialPreset::Classic);
         material->SetVector3("camPos", glm::vec3(0.0f));
         return material;
+    }
+
+    bool Material::ApplyToonPreset(ToonMaterialPreset preset)
+    {
+        if (preset < ToonMaterialPreset::Classic || preset > ToonMaterialPreset::Hatched ||
+            MaterialRenderClassifier::Classify(*this).Model != MaterialModel::Toon)
+            return false;
+
+        const auto hasBinding = [this](StringView name, ShaderDataType type) {
+            const auto binding = m_Bindings.find(name);
+            return binding != m_Bindings.end() && binding->second.DataType == type;
+        };
+        static constexpr std::array<StringView, 27> floatBindings = {
+            "thickness",                  "toonSilhouetteWidth",        "bands",
+            "specularSize",               "specularSmoothness",         "shadowBrightness",
+            "toonBandSmoothness",         "toonSpecularThreshold",      "toonSpecularSmoothness",
+            "toonSpecularStrength",       "rimPower",                   "rimThreshold",
+            "toonRimSmoothness",          "toonRimStrength",            "toonRimShadowMask",
+            "toonIndirectStrength",       "toonPatternScale",           "toonPatternStrength",
+            "toonPatternSmoothness",      "toonPatternDistanceFade",    "toonRampStrength",
+            "toonRampOffset",             "toonMatcapStrength",         "toonMatcapRotation",
+            "toonOutlineDepthThreshold",  "toonOutlineNormalThreshold", "toonOutlineDistanceFade",
+        };
+        static constexpr std::array<StringView, 5> colorBindings = {
+            "outlineColor", "tint", "toonShadowColor", "toonSpecularColor", "toonRimColor",
+        };
+        if (std::any_of(floatBindings.begin(), floatBindings.end(), [&hasBinding](StringView name) {
+                return !hasBinding(name, ShaderDataType::Float);
+            }) ||
+            std::any_of(colorBindings.begin(), colorBindings.end(), [&hasBinding](StringView name) {
+                return !hasBinding(name, ShaderDataType::Float4);
+            }) ||
+            !hasBinding("toonPatternMapping", ShaderDataType::Int))
+            return false;
+
+        // Reset optional texture-driven styles while preserving the assigned textures.
+        SetColor("tint", glm::vec4(1.0f));
+        SetColor("toonSpecularColor", glm::vec4(1.0f));
+        SetColor("toonRimColor", glm::vec4(1.0f));
+        SetFloat("toonRampStrength", 0.0f);
+        SetFloat("toonRampOffset", 0.0f);
+        SetFloat("toonMatcapStrength", 0.0f);
+        SetFloat("toonMatcapRotation", 0.0f);
+
+        switch (preset)
+        {
+        case ToonMaterialPreset::Classic:
+            SetColor("outlineColor", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            SetFloat("thickness", 1.0f);
+            SetFloat("toonSilhouetteWidth", 1.0f);
+            SetFloat("bands", 3.0f);
+            SetFloat("specularSize", 0.5f);
+            SetFloat("specularSmoothness", 1.0f);
+            SetFloat("shadowBrightness", 0.2f);
+            SetColor("toonShadowColor", glm::vec4(0.2f, 0.22f, 0.3f, 1.0f));
+            SetFloat("toonBandSmoothness", 0.08f);
+            SetFloat("toonSpecularThreshold", 0.8f);
+            SetFloat("toonSpecularSmoothness", 0.05f);
+            SetFloat("toonSpecularStrength", 0.5f);
+            SetFloat("rimPower", 3.0f);
+            SetFloat("rimThreshold", 0.5f);
+            SetFloat("toonRimSmoothness", 0.08f);
+            SetFloat("toonRimStrength", 0.5f);
+            SetFloat("toonRimShadowMask", 0.75f);
+            SetFloat("toonIndirectStrength", 0.5f);
+            SetFloat("toonPatternScale", 16.0f);
+            SetFloat("toonPatternStrength", 0.0f);
+            SetFloat("toonPatternSmoothness", 0.1f);
+            SetFloat("toonPatternDistanceFade", 50.0f);
+            SetInt("toonPatternMapping", 0);
+            SetFloat("toonOutlineDepthThreshold", 0.002f);
+            SetFloat("toonOutlineNormalThreshold", 0.2f);
+            SetFloat("toonOutlineDistanceFade", 100.0f);
+            break;
+        case ToonMaterialPreset::Soft:
+            SetColor("outlineColor", glm::vec4(0.025f, 0.025f, 0.04f, 1.0f));
+            SetFloat("thickness", 0.75f);
+            SetFloat("toonSilhouetteWidth", 0.65f);
+            SetFloat("bands", 4.0f);
+            SetFloat("specularSize", 0.65f);
+            SetFloat("specularSmoothness", 0.6f);
+            SetFloat("shadowBrightness", 0.35f);
+            SetColor("toonShadowColor", glm::vec4(0.35f, 0.38f, 0.48f, 1.0f));
+            SetFloat("toonBandSmoothness", 0.18f);
+            SetFloat("toonSpecularThreshold", 0.72f);
+            SetFloat("toonSpecularSmoothness", 0.18f);
+            SetFloat("toonSpecularStrength", 0.3f);
+            SetColor("toonRimColor", glm::vec4(1.0f, 0.95f, 0.85f, 1.0f));
+            SetFloat("rimPower", 2.0f);
+            SetFloat("rimThreshold", 0.45f);
+            SetFloat("toonRimSmoothness", 0.18f);
+            SetFloat("toonRimStrength", 0.35f);
+            SetFloat("toonRimShadowMask", 0.5f);
+            SetFloat("toonIndirectStrength", 0.8f);
+            SetFloat("toonPatternScale", 16.0f);
+            SetFloat("toonPatternStrength", 0.0f);
+            SetFloat("toonPatternSmoothness", 0.1f);
+            SetFloat("toonPatternDistanceFade", 75.0f);
+            SetInt("toonPatternMapping", 0);
+            SetFloat("toonOutlineDepthThreshold", 0.003f);
+            SetFloat("toonOutlineNormalThreshold", 0.3f);
+            SetFloat("toonOutlineDistanceFade", 120.0f);
+            break;
+        case ToonMaterialPreset::Hatched:
+            SetColor("outlineColor", glm::vec4(0.015f, 0.015f, 0.02f, 1.0f));
+            SetFloat("thickness", 1.25f);
+            SetFloat("toonSilhouetteWidth", 1.25f);
+            SetFloat("bands", 3.0f);
+            SetFloat("specularSize", 0.82f);
+            SetFloat("specularSmoothness", 1.25f);
+            SetFloat("shadowBrightness", 0.12f);
+            SetColor("toonShadowColor", glm::vec4(0.12f, 0.13f, 0.18f, 1.0f));
+            SetFloat("toonBandSmoothness", 0.03f);
+            SetFloat("toonSpecularThreshold", 0.82f);
+            SetFloat("toonSpecularSmoothness", 0.03f);
+            SetFloat("toonSpecularStrength", 0.15f);
+            SetColor("toonRimColor", glm::vec4(0.8f, 0.85f, 1.0f, 1.0f));
+            SetFloat("rimPower", 4.0f);
+            SetFloat("rimThreshold", 0.6f);
+            SetFloat("toonRimSmoothness", 0.05f);
+            SetFloat("toonRimStrength", 0.25f);
+            SetFloat("toonRimShadowMask", 0.9f);
+            SetFloat("toonIndirectStrength", 0.35f);
+            SetFloat("toonPatternScale", 24.0f);
+            SetFloat("toonPatternStrength", 0.7f);
+            SetFloat("toonPatternSmoothness", 0.04f);
+            SetFloat("toonPatternDistanceFade", 80.0f);
+            SetInt("toonPatternMapping", 3);
+            SetFloat("toonOutlineDepthThreshold", 0.0015f);
+            SetFloat("toonOutlineNormalThreshold", 0.15f);
+            SetFloat("toonOutlineDistanceFade", 160.0f);
+            break;
+        default:
+            return false;
+        }
+
+        return true;
     }
 
     Ref<Material> Material::CreateUnlit(const AssetHandle<Shader>& shader)

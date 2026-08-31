@@ -987,7 +987,7 @@ namespace Crowny
     {
         const AssetFileHeader header = ReadAssetHeader(archive);
         if (header.Magic == ASSET_FILE_MAGIC &&
-            (header.Type != AssetType::Material || (header.Version != 2u && header.Version != MATERIAL_FORMAT_VERSION)))
+            (header.Type != AssetType::Material || header.Version < 2u || header.Version > MATERIAL_FORMAT_VERSION))
             throw cereal::Exception("Material asset format is not supported. Reimport the source asset.");
         archive(cereal::base_class<Asset>(&material));
         UUID shaderUuid;
@@ -1000,6 +1000,9 @@ namespace Crowny
         }
         uint32_t paramCount;
         archive(paramCount);
+        bool hasSilhouetteWidth = false;
+        bool hasLegacyThickness = false;
+        float legacyThickness = 0.0f;
         for (uint32_t i = 0; i < paramCount; i++)
         {
             String paramName;
@@ -1007,6 +1010,14 @@ namespace Crowny
             archive(paramName, typeVal, byteSize);
             Vector<uint8_t> buf(byteSize);
             archive(cereal::binary_data(buf.data(), byteSize));
+
+            if (paramName == "toonSilhouetteWidth" && typeVal == static_cast<uint32_t>(ShaderDataType::Float) && byteSize == sizeof(float))
+                hasSilhouetteWidth = true;
+            else if (paramName == "thickness" && typeVal == static_cast<uint32_t>(ShaderDataType::Float) && byteSize == sizeof(float))
+            {
+                std::memcpy(&legacyThickness, buf.data(), sizeof(legacyThickness));
+                hasLegacyThickness = true;
+            }
 
             const auto bindingIt = material.m_Bindings.find(paramName);
             if (bindingIt == material.m_Bindings.end())
@@ -1029,6 +1040,9 @@ namespace Crowny
                     blockIt->second->Write(member.Offset, buf.data(), byteSize);
             }
         }
+        if (header.Magic == ASSET_FILE_MAGIC && header.Version < 4u && !hasSilhouetteWidth && hasLegacyThickness &&
+            material.HasBinding("toonSilhouetteWidth"))
+            material.SetFloat("toonSilhouetteWidth", legacyThickness);
         material.m_HasAlphaModeOverride = false;
         material.m_AlphaMode = AlphaMode::Opaque;
         if (header.Magic == ASSET_FILE_MAGIC && header.Version >= 3u)

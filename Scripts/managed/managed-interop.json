@@ -1,5 +1,5 @@
 {
-  "abiVersion": 12,
+  "abiVersion": 13,
   "managedEntryPoint": "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi",
   "statusCodes": {
     "Ok": 0,
@@ -180,6 +180,7 @@
     "MaterialGetAlphaMode": { "parameters": [{ "name": "asset", "type": "uuid" }], "result": "i32" },
     "MaterialSetAlphaMode": { "parameters": [{ "name": "asset", "type": "uuid" }, { "name": "alphaMode", "type": "i32" }] },
     "MaterialClearAlphaModeOverride": { "parameters": [{ "name": "asset", "type": "uuid" }] },
+    "MaterialApplyToonPreset": { "parameters": [{ "name": "asset", "type": "uuid" }, { "name": "preset", "type": "i32" }], "result": "bool" },
     "PhysicsMaterial2DCreate": { "parameters": [], "result": "uuid" },
     "PhysicsMaterial3DCreate": { "parameters": [], "result": "uuid" },
     "Rigidbody3DAddForce": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "force", "type": "vec3" }, { "name": "mode", "type": "i32" }] },

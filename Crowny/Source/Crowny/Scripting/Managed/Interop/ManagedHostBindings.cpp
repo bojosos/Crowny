@@ -1753,6 +1753,20 @@ namespace Crowny
             });
         }
 
+        cw_managed_status CW_MANAGED_CALL MaterialApplyToonPreset(void* context, cw_managed_uuid assetId, int32_t preset, uint8_t* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr || preset < static_cast<int32_t>(ToonMaterialPreset::Classic) ||
+                    preset > static_cast<int32_t>(ToonMaterialPreset::Hatched))
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const AssetHandle<Material> material = ResolveAsset<Material>(assetId);
+                if (!material.IsLoaded())
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                *result = material->ApplyToonPreset(static_cast<ToonMaterialPreset>(preset)) ? 1 : 0;
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
         cw_managed_status CW_MANAGED_CALL PhysicsMaterial2DCreate(void* context, cw_managed_uuid* result)
         {
             return Execute(context, [&]() {

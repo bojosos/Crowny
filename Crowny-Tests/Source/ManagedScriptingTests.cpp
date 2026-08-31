@@ -185,7 +185,7 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
 {
-    CHECK(CW_MANAGED_ABI_VERSION == 12);
+    CHECK(CW_MANAGED_ABI_VERSION == 13);
 
     cw_managed_program_api api{};
     api.size = sizeof(api);

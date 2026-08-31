@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Assets/AssetCodecs.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Renderer/GpuMaterial.h"
@@ -159,6 +160,7 @@ TEST_CASE("Materials can explicitly request and persist weighted OIT routing", "
     const Ref<Material> material = Material::Create(shader);
 
     CHECK_FALSE(material->HasAlphaModeOverride());
+    CHECK_FALSE(material->ApplyToonPreset(ToonMaterialPreset::Classic));
     CHECK(MaterialRenderClassifier::Classify(*material).Alpha == AlphaMode::Opaque);
     const uint64_t initialVersion = material->GetParamVersion();
 
@@ -171,6 +173,10 @@ TEST_CASE("Materials can explicitly request and persist weighted OIT routing", "
     CHECK(material->GetParamVersion() == initialVersion + 1u);
 
     manager.Save(material, assetPath);
+    AssetFileHeader header;
+    REQUIRE(PeekAssetHeader(assetPath, header));
+    CHECK(header.Type == AssetType::Material);
+    CHECK(header.Version == MATERIAL_FORMAT_VERSION);
     const AssetHandle<Material> restored = manager.Load<Material>(assetPath, false);
     REQUIRE(restored);
     CHECK(restored->HasAlphaModeOverride());
@@ -179,6 +185,7 @@ TEST_CASE("Materials can explicitly request and persist weighted OIT routing", "
 
     MaterialSerializer serializer(material);
     const String yaml = serializer.SerializeToString();
+    CHECK(yaml.find("Version: 3") != String::npos);
     CHECK(yaml.find("AlphaMode: WeightedOIT") != String::npos);
 
     const Path yamlPath = fs::temp_directory_path() / "crowny-weighted-oit-material.cwmat";

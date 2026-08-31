@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 12u
+#define CW_MANAGED_ABI_VERSION 13u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -330,6 +330,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_has_alpha_mode_ov
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_get_alpha_mode_fn)(void* context, cw_managed_uuid asset, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_set_alpha_mode_fn)(void* context, cw_managed_uuid asset, int32_t alphaMode);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_clear_alpha_mode_override_fn)(void* context, cw_managed_uuid asset);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_material_apply_toon_preset_fn)(void* context, cw_managed_uuid asset, int32_t preset, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material2d_create_fn)(void* context, cw_managed_uuid* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_create_fn)(void* context, cw_managed_uuid* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_add_force_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* force, int32_t mode);
@@ -856,6 +857,7 @@ typedef struct cw_managed_host_api
     cw_managed_material_get_alpha_mode_fn material_get_alpha_mode;
     cw_managed_material_set_alpha_mode_fn material_set_alpha_mode;
     cw_managed_material_clear_alpha_mode_override_fn material_clear_alpha_mode_override;
+    cw_managed_material_apply_toon_preset_fn material_apply_toon_preset;
     cw_managed_physics_material2d_create_fn physics_material2d_create;
     cw_managed_physics_material3d_create_fn physics_material3d_create;
     cw_managed_rigidbody3d_add_force_fn rigidbody3d_add_force;
@@ -1378,6 +1380,7 @@ typedef struct cw_managed_host_api
     X(MaterialGetAlphaMode, material_get_alpha_mode) \
     X(MaterialSetAlphaMode, material_set_alpha_mode) \
     X(MaterialClearAlphaModeOverride, material_clear_alpha_mode_override) \
+    X(MaterialApplyToonPreset, material_apply_toon_preset) \
     X(PhysicsMaterial2DCreate, physics_material2d_create) \
     X(PhysicsMaterial3DCreate, physics_material3d_create) \
     X(Rigidbody3DAddForce, rigidbody3d_add_force) \

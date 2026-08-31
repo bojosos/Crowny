@@ -54,9 +54,9 @@ namespace Crowny
     // Version 5 targets SPIR-V 1.5 so fragment discard remains portable to OpenGL.
     // Version 6 persists descriptor-array reflection for bindless material resources.
     static constexpr uint32_t SHADER_FORMAT_VERSION = 6;
-    // Version 3 persists the optional explicit alpha rendering mode. Version 2
-    // remains readable and infers alpha routing from the shader.
-    static constexpr uint32_t MATERIAL_FORMAT_VERSION = 3;
+    // Version 3 persists the optional explicit alpha rendering mode. Version 4
+    // migrates the legacy toon hull thickness to its independent silhouette width.
+    static constexpr uint32_t MATERIAL_FORMAT_VERSION = 4;
     // Version 3 adds conventional LOD and meshlet metadata. Version 2 remains
     // readable and is represented as a single legacy LOD.
     static constexpr uint32_t MESH_FORMAT_VERSION = 4;

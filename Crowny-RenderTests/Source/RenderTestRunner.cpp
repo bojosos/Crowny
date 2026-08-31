@@ -21,6 +21,7 @@
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneCamera.h"
 #include "Crowny/Scene/SceneRenderer.h"
+#include "Crowny/Serialization/MaterialSerializer.h"
 #include "Crowny/Utils/PixelUtils.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
@@ -984,6 +985,22 @@ void main()
             if (!material)
             {
                 error = "Could not create the built-in toon material";
+                return false;
+            }
+
+            MaterialSerializer serializer(material);
+            const String legacyMaterial =
+              "Version: 2\nParameters:\n  - Name: thickness\n    Type: " +
+              std::to_string(static_cast<uint32_t>(ShaderDataType::Float)) + "\n    Value: 0.625\n";
+            if (!serializer.DeserializeFromString(legacyMaterial) ||
+                std::abs(material->GetDataParam<float>("toonSilhouetteWidth") - 0.625f) > 0.0001f)
+            {
+                error = "Legacy toon thickness did not migrate to silhouette width";
+                return false;
+            }
+            if (!material->ApplyToonPreset(ToonMaterialPreset::Hatched))
+            {
+                error = "The built-in toon material rejected a compatible preset";
                 return false;
             }
             material->SetColor("tint", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));

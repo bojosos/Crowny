@@ -336,6 +336,7 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> MaterialGetAlphaMode;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> MaterialSetAlphaMode;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> MaterialClearAlphaModeOverride;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, byte*, NativeStatus> MaterialApplyToonPreset;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> PhysicsMaterial2DCreate;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> PhysicsMaterial3DCreate;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, int, NativeStatus> Rigidbody3DAddForce;
@@ -857,6 +858,7 @@ namespace Crowny.ManagedHost.Interop
                    MaterialGetAlphaMode != null &&
                    MaterialSetAlphaMode != null &&
                    MaterialClearAlphaModeOverride != null &&
+                   MaterialApplyToonPreset != null &&
                    PhysicsMaterial2DCreate != null &&
                    PhysicsMaterial3DCreate != null &&
                    Rigidbody3DAddForce != null &&
@@ -1257,7 +1259,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 12;
+        public const uint Version = 13;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

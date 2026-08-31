@@ -6,6 +6,7 @@
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Scene/SceneManager.h"
 
@@ -423,6 +424,24 @@ namespace Crowny
             else
                 mat->SetAlphaMode(static_cast<AlphaMode>(alphaMode - 1));
         });
+
+        if (MaterialRenderClassifier::Classify(*mat).Model == MaterialModel::Toon)
+        {
+            UI::Pre("Apply Preset");
+            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+            const float buttonWidth = std::max(1.0f, (ImGui::GetContentRegionAvail().x - spacing * 2.0f) / 3.0f);
+            ImGui::PushID("ToonMaterialPreset");
+            if (ImGui::Button("Classic", ImVec2(buttonWidth, 0.0f)))
+                mat->ApplyToonPreset(ToonMaterialPreset::Classic);
+            ImGui::SameLine();
+            if (ImGui::Button("Soft", ImVec2(buttonWidth, 0.0f)))
+                mat->ApplyToonPreset(ToonMaterialPreset::Soft);
+            ImGui::SameLine();
+            if (ImGui::Button("Hatched", ImVec2(buttonWidth, 0.0f)))
+                mat->ApplyToonPreset(ToonMaterialPreset::Hatched);
+            ImGui::PopID();
+            UI::Post();
+        }
 
         ImGui::Separator();
 

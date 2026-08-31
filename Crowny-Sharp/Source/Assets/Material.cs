@@ -10,6 +10,14 @@ namespace Crowny
         WeightedOIT = 4
     }
 
+    /// <summary>Built-in starting points for Crowny's toon material controls.</summary>
+    public enum ToonMaterialPreset
+    {
+        Classic = 0,
+        Soft = 1,
+        Hatched = 2
+    }
+
     public class Material : Asset
     {
         /// <summary>Gets or sets the explicit alpha routing override. Null keeps shader-based inference.</summary>
@@ -30,6 +38,13 @@ namespace Crowny
 
         /// <summary>Restores shader-based alpha routing.</summary>
         public void ClearAlphaModeOverride() => ManagedRuntimeContext.MaterialClearAlphaModeOverride(m_ManagedUuid);
+
+        /// <summary>
+        /// Applies a toon preset while retaining the material's assigned textures.
+        /// Returns false when the material does not use a compatible toon shader.
+        /// </summary>
+        public bool ApplyToonPreset(ToonMaterialPreset preset) =>
+            ManagedRuntimeContext.MaterialApplyToonPreset(m_ManagedUuid, (int)preset);
 
         public void SetFloat(string name, float value) => ManagedRuntimeContext.MaterialSetFloat(m_ManagedUuid, name, value);
         public void SetVector2(string name, Vector2 value) => ManagedRuntimeContext.MaterialSetVector2(m_ManagedUuid, name, value);

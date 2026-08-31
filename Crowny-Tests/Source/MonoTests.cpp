@@ -225,7 +225,7 @@ TEST_CASE("Managed animation API exposes clip identity and playback controls", "
     }
 }
 
-TEST_CASE("Managed material API exposes explicit alpha routing", "[Mono][Renderer][Materials][.ProcessIsolated]")
+TEST_CASE("Managed material API exposes alpha routing and toon presets", "[Mono][Renderer][Materials][.ProcessIsolated]")
 {
     AttachThread();
 
@@ -238,10 +238,13 @@ TEST_CASE("Managed material API exposes explicit alpha routing", "[Mono][Rendere
     }
 
     Crowny::MonoClass* alphaMode = assembly->GetClass(CROWNY_NS, "AlphaMode");
+    Crowny::MonoClass* toonPreset = assembly->GetClass(CROWNY_NS, "ToonMaterialPreset");
     Crowny::MonoClass* material = assembly->GetClass(CROWNY_NS, "Material");
     REQUIRE(alphaMode != nullptr);
+    REQUIRE(toonPreset != nullptr);
     REQUIRE(material != nullptr);
     CHECK(material->GetProperty("AlphaModeOverride") != nullptr);
     CHECK(material->GetProperty("HasAlphaModeOverride") != nullptr);
     CHECK(material->GetMethod("ClearAlphaModeOverride", 0) != nullptr);
+    CHECK(material->GetMethod("ApplyToonPreset", 1) != nullptr);
 }
