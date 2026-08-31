@@ -103,6 +103,40 @@ namespace Crowny
         return normalized;
     }
 
+    PhysicsMaterialOverride NormalizePhysicsMaterialOverride(const PhysicsMaterialOverride& materialOverride)
+    {
+        PhysicsMaterialOverride normalized = materialOverride;
+        const uint32_t fields = static_cast<uint32_t>(normalized.Fields) & static_cast<uint32_t>(PhysicsMaterialOverrideBits::All);
+        normalized.Fields = PhysicsMaterialOverrideFlags(fields);
+        normalized.Values = NormalizePhysicsMaterialData(normalized.Values);
+        return normalized;
+    }
+
+    PhysicsMaterialData ResolvePhysicsMaterialData(const PhysicsMaterialData& baseMaterial,
+                                                   const PhysicsMaterialOverride& materialOverride)
+    {
+        PhysicsMaterialData resolved = NormalizePhysicsMaterialData(baseMaterial);
+        const PhysicsMaterialOverride normalized = NormalizePhysicsMaterialOverride(materialOverride);
+        if (normalized.Fields.IsSet(PhysicsMaterialOverrideBits::Density))
+            resolved.Density = normalized.Values.Density;
+        if (normalized.Fields.IsSet(PhysicsMaterialOverrideBits::Friction))
+            resolved.Friction = normalized.Values.Friction;
+        if (normalized.Fields.IsSet(PhysicsMaterialOverrideBits::Restitution))
+            resolved.Restitution = normalized.Values.Restitution;
+        if (normalized.Fields.IsSet(PhysicsMaterialOverrideBits::RestitutionThreshold))
+            resolved.RestitutionThreshold = normalized.Values.RestitutionThreshold;
+        if (normalized.Fields.IsSet(PhysicsMaterialOverrideBits::FrictionCombine))
+            resolved.FrictionCombine = normalized.Values.FrictionCombine;
+        if (normalized.Fields.IsSet(PhysicsMaterialOverrideBits::RestitutionCombine))
+            resolved.RestitutionCombine = normalized.Values.RestitutionCombine;
+        return resolved;
+    }
+
+    PhysicsMaterialOverride MakePhysicsMaterialOverride(const PhysicsMaterialData& material, PhysicsMaterialOverrideFlags fields)
+    {
+        return NormalizePhysicsMaterialOverride({ fields, material });
+    }
+
     PhysicsCombineMode ResolvePhysicsCombineMode(PhysicsCombineMode first, PhysicsCombineMode second)
     {
         if (!IsValidCombineMode(first))

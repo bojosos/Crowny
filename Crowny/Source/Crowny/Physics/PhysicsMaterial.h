@@ -3,6 +3,7 @@
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Common/Common.h"
+#include "Crowny/Common/Flags.h"
 
 #include <cstdint>
 
@@ -31,7 +32,33 @@ namespace Crowny
         PhysicsCombineMode RestitutionCombine = PhysicsCombineMode::Maximum;
     };
 
+    enum class PhysicsMaterialOverrideBits : uint32_t
+    {
+        None = 0,
+        Density = 1u << 0u,
+        Friction = 1u << 1u,
+        Restitution = 1u << 2u,
+        RestitutionThreshold = 1u << 3u,
+        FrictionCombine = 1u << 4u,
+        RestitutionCombine = 1u << 5u,
+        All = (1u << 6u) - 1u
+    };
+
+    using PhysicsMaterialOverrideFlags = Flags<PhysicsMaterialOverrideBits>;
+    CW_FLAGS_OPERATORS(PhysicsMaterialOverrideBits)
+
+    struct PhysicsMaterialOverride
+    {
+        PhysicsMaterialOverrideFlags Fields;
+        PhysicsMaterialData Values;
+    };
+
     PhysicsMaterialData NormalizePhysicsMaterialData(const PhysicsMaterialData& material);
+    PhysicsMaterialOverride NormalizePhysicsMaterialOverride(const PhysicsMaterialOverride& materialOverride);
+    PhysicsMaterialData ResolvePhysicsMaterialData(const PhysicsMaterialData& baseMaterial,
+                                                   const PhysicsMaterialOverride& materialOverride);
+    PhysicsMaterialOverride MakePhysicsMaterialOverride(const PhysicsMaterialData& material,
+                                                        PhysicsMaterialOverrideFlags fields = PhysicsMaterialOverrideBits::All);
     PhysicsCombineMode ResolvePhysicsCombineMode(PhysicsCombineMode first, PhysicsCombineMode second);
     float CombinePhysicsMaterialValue(float first, PhysicsCombineMode firstMode, float second, PhysicsCombineMode secondMode);
 

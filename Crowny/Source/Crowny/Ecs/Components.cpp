@@ -585,15 +585,22 @@ namespace Crowny
         RefreshMaterial();
     }
 
-    const PhysicsMaterialData& Collider2D::GetMaterialData() const
+    PhysicsMaterialData Collider2D::GetMaterialData() const
     {
         if (m_Material)
-            return m_Material->GetData();
+            return ResolvePhysicsMaterialData(m_Material->GetData(), m_MaterialOverride);
         if (Physics2D::IsStartedUp() && Physics2D::TryGet()->GetDefaultMaterial())
-            return Physics2D::TryGet()->GetDefaultMaterial()->GetData();
-        static const PhysicsMaterialData fallback;
-        return fallback;
+            return ResolvePhysicsMaterialData(Physics2D::TryGet()->GetDefaultMaterial()->GetData(), m_MaterialOverride);
+        return ResolvePhysicsMaterialData({}, m_MaterialOverride);
     }
+
+    void Collider2D::SetMaterialOverride(const PhysicsMaterialOverride& materialOverride)
+    {
+        m_MaterialOverride = NormalizePhysicsMaterialOverride(materialOverride);
+        RefreshMaterial();
+    }
+
+    void Collider2D::ClearMaterialOverride() { SetMaterialOverride({}); }
 
     void Collider2D::RefreshMaterial()
     {
@@ -893,6 +900,7 @@ namespace Crowny
         m_Rotation = other.m_Rotation;
         m_IsTrigger = other.m_IsTrigger;
         m_Material = other.m_Material;
+        m_MaterialOverride = other.m_MaterialOverride;
         m_Filter = other.m_Filter;
     }
 
@@ -929,14 +937,13 @@ namespace Crowny
             Physics3D::Get().SetShapeTrigger(RuntimeShape, trigger);
     }
 
-    const PhysicsMaterialData& Collider3D::GetMaterialData() const
+    PhysicsMaterialData Collider3D::GetMaterialData() const
     {
         if (m_Material)
-            return m_Material->GetData();
+            return ResolvePhysicsMaterialData(m_Material->GetData(), m_MaterialOverride);
         if (Physics3D::IsStartedUp() && Physics3D::Get().GetDefaultMaterial())
-            return Physics3D::Get().GetDefaultMaterial()->GetData();
-        static const PhysicsMaterialData fallback;
-        return fallback;
+            return ResolvePhysicsMaterialData(Physics3D::Get().GetDefaultMaterial()->GetData(), m_MaterialOverride);
+        return ResolvePhysicsMaterialData({}, m_MaterialOverride);
     }
 
     void Collider3D::SetMaterial(const AssetHandle<PhysicsMaterial3D>& material)
@@ -944,6 +951,14 @@ namespace Crowny
         m_Material = material.HasUUID() ? material : (Physics3D::IsStartedUp() ? Physics3D::Get().GetDefaultMaterial() : material);
         RefreshMaterial();
     }
+
+    void Collider3D::SetMaterialOverride(const PhysicsMaterialOverride& materialOverride)
+    {
+        m_MaterialOverride = NormalizePhysicsMaterialOverride(materialOverride);
+        RefreshMaterial();
+    }
+
+    void Collider3D::ClearMaterialOverride() { SetMaterialOverride({}); }
 
     void Collider3D::RefreshMaterial()
     {

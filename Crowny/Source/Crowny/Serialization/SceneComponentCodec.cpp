@@ -14,6 +14,7 @@
 #include <cereal/types/string.hpp>
 
 #include <array>
+#include <stdexcept>
 
 namespace Crowny
 {
@@ -35,11 +36,12 @@ namespace Crowny
                 return false;
             if (!material.IsLoaded())
                 return true;
-            Path path;
-            return AssetManager::TryGet() != nullptr && AssetManager::TryGet()->GetAssetPath(material.GetUUID(), path);
+            return AssetManager::TryGet() != nullptr && AssetManager::TryGet()->IsAssetRegistered(material.GetUUID());
         }
 
-        void WritePhysicsMaterialYaml(YAML::Emitter& out, const PhysicsMaterialData& data)
+        constexpr uint32_t PhysicsMaterialOverrideVersion = 1;
+
+        void WritePhysicsMaterialValuesYaml(YAML::Emitter& out, const PhysicsMaterialData& data)
         {
             SerializeValueYAML(out, "Density", data.Density);
             SerializeValueYAML(out, "Friction", data.Friction);
@@ -49,7 +51,7 @@ namespace Crowny
             SerializeEnumYAML(out, "RestitutionCombine", data.RestitutionCombine);
         }
 
-        PhysicsMaterialData ReadPhysicsMaterialYaml(const YAML::Node& node)
+        PhysicsMaterialData ReadPhysicsMaterialValuesYaml(const YAML::Node& node)
         {
             PhysicsMaterialData data;
             data.Density = node["Density"].as<float>(data.Density);
@@ -61,60 +63,83 @@ namespace Crowny
             return NormalizePhysicsMaterialData(data);
         }
 
-        bool HasPhysicsMaterialYaml(const YAML::Node& node)
+        void WritePhysicsMaterialOverrideYaml(YAML::Emitter& out, const PhysicsMaterialOverride& materialOverride)
         {
-            return node["Material"] || node["Density"] || node["Friction"] || node["Restitution"] || node["RestitutionThreshold"] ||
-                   node["FrictionCombine"] || node["RestitutionCombine"];
+            const PhysicsMaterialOverride normalized = NormalizePhysicsMaterialOverride(materialOverride);
+            if (!normalized.Fields)
+                return;
+            BeginYAMLMap(out, "MaterialOverride");
+            SerializeValueYAML(out, "Version", PhysicsMaterialOverrideVersion);
+            SerializeValueYAML(out, "Fields", static_cast<uint32_t>(normalized.Fields));
+            WritePhysicsMaterialValuesYaml(out, normalized.Values);
+            EndYAMLMap(out, "MaterialOverride");
         }
 
-        template <typename T> AssetHandle<T> CreateTransientMaterial(const PhysicsMaterialData& data)
+        PhysicsMaterialOverride ReadPhysicsMaterialOverrideYaml(const YAML::Node& node)
         {
-            if (AssetManager::TryGet() == nullptr)
+            const YAML::Node materialOverride = node["MaterialOverride"];
+            if (!materialOverride)
                 return {};
-            Ref<T> material = CreateRef<T>();
-            material->SetData(data);
-            return static_asset_cast<T>(AssetManager::TryGet()->CreateAssetHandle(material));
-        }
-
-        template <typename T> AssetHandle<T> ReadPhysicsMaterialYaml(const YAML::Node& node)
-        {
-            if (node["Material"])
-                return LoadAssetReference<T>(node["Material"].as<UUID>(UUID::EMPTY));
-            return CreateTransientMaterial<T>(ReadPhysicsMaterialYaml(node));
+            const uint32_t version = materialOverride["Version"].as<uint32_t>(0);
+            if (version != PhysicsMaterialOverrideVersion)
+                throw std::runtime_error("Unsupported physics material override version.");
+            PhysicsMaterialOverride result;
+            result.Fields = PhysicsMaterialOverrideFlags(materialOverride["Fields"].as<uint32_t>(0));
+            result.Values = ReadPhysicsMaterialValuesYaml(materialOverride);
+            return NormalizePhysicsMaterialOverride(result);
         }
 
         template <typename T>
-        void WritePhysicsMaterialBinary(BinaryDataStreamOutputArchive& archive, const AssetHandle<T>& material, const PhysicsMaterialData& data)
+        PhysicsMaterialOverride MakeSerializedPhysicsMaterialOverride(const AssetHandle<T>& material,
+                                                                      const PhysicsMaterialOverride& configuredOverride,
+                                                                      const PhysicsMaterialData& resolvedMaterial)
         {
-            const bool storeReference = ShouldSerializeMaterialReference(material);
-            archive(storeReference);
-            if (storeReference)
-            {
-                archive(material.GetUUID());
-                return;
-            }
-            archive(data.Density, data.Friction, data.Restitution, data.RestitutionThreshold, static_cast<uint8_t>(data.FrictionCombine),
-                    static_cast<uint8_t>(data.RestitutionCombine));
+            if (ShouldSerializeMaterialReference(material))
+                return NormalizePhysicsMaterialOverride(configuredOverride);
+            return MakePhysicsMaterialOverride(resolvedMaterial);
         }
 
-        template <typename T> AssetHandle<T> ReadPhysicsMaterialBinary(BinaryDataStreamInputArchive& archive)
+        template <typename T>
+        void WritePhysicsMaterialYaml(YAML::Emitter& out, const AssetHandle<T>& material,
+                                      const PhysicsMaterialOverride& configuredOverride, const PhysicsMaterialData& resolvedMaterial)
         {
-            bool isReference = false;
-            archive(isReference);
-            if (isReference)
-            {
-                UUID uuid;
-                archive(uuid);
-                return LoadAssetReference<T>(uuid);
-            }
+            if (ShouldSerializeMaterialReference(material))
+                SerializeValueYAML(out, "Material", material.GetUUID());
+            WritePhysicsMaterialOverrideYaml(out,
+                                             MakeSerializedPhysicsMaterialOverride(material, configuredOverride, resolvedMaterial));
+        }
 
-            PhysicsMaterialData data;
+        template <typename T>
+        void WritePhysicsMaterialBinary(BinaryDataStreamOutputArchive& archive, const AssetHandle<T>& material,
+                                        const PhysicsMaterialOverride& configuredOverride, const PhysicsMaterialData& resolvedMaterial)
+        {
+            const UUID materialId = ShouldSerializeMaterialReference(material) ? material.GetUUID() : UUID::EMPTY;
+            const PhysicsMaterialOverride materialOverride =
+              MakeSerializedPhysicsMaterialOverride(material, configuredOverride, resolvedMaterial);
+            const PhysicsMaterialData& values = materialOverride.Values;
+            archive(materialId, static_cast<uint32_t>(materialOverride.Fields));
+            archive(values.Density, values.Friction, values.Restitution, values.RestitutionThreshold,
+                    static_cast<uint8_t>(values.FrictionCombine), static_cast<uint8_t>(values.RestitutionCombine));
+        }
+
+        template <typename T> struct PhysicsMaterialBinding
+        {
+            AssetHandle<T> Material;
+            PhysicsMaterialOverride Override;
+        };
+
+        template <typename T> PhysicsMaterialBinding<T> ReadPhysicsMaterialBinary(BinaryDataStreamInputArchive& archive)
+        {
+            UUID materialId;
+            uint32_t fields = 0;
+            PhysicsMaterialData values;
             uint8_t frictionCombine = 0;
             uint8_t restitutionCombine = 0;
-            archive(data.Density, data.Friction, data.Restitution, data.RestitutionThreshold, frictionCombine, restitutionCombine);
-            data.FrictionCombine = static_cast<PhysicsCombineMode>(frictionCombine);
-            data.RestitutionCombine = static_cast<PhysicsCombineMode>(restitutionCombine);
-            return CreateTransientMaterial<T>(NormalizePhysicsMaterialData(data));
+            archive(materialId, fields);
+            archive(values.Density, values.Friction, values.Restitution, values.RestitutionThreshold, frictionCombine, restitutionCombine);
+            values.FrictionCombine = static_cast<PhysicsCombineMode>(frictionCombine);
+            values.RestitutionCombine = static_cast<PhysicsCombineMode>(restitutionCombine);
+            return { LoadAssetReference<T>(materialId), NormalizePhysicsMaterialOverride({ PhysicsMaterialOverrideFlags(fields), values }) };
         }
 
         void ReadPinValueYaml(const YAML::Node& node, PinDataType type, PinValue& outValue)
@@ -775,10 +800,7 @@ namespace Crowny
                 SerializeValueYAML(out, "Offset", collider.GetOffset());
                 SerializeValueYAML(out, "Size", collider.GetSize());
                 SerializeValueYAML(out, "IsTrigger", collider.IsTrigger());
-                if (ShouldSerializeMaterialReference(collider.GetMaterial()))
-                    SerializeValueYAML(out, "Material", collider.GetMaterial().GetUUID());
-                else
-                    WritePhysicsMaterialYaml(out, collider.GetMaterialData());
+                WritePhysicsMaterialYaml(out, collider.GetMaterial(), collider.GetMaterialOverride(), collider.GetMaterialData());
             }
 
             static void ReadYaml(const YAML::Node& node, Entity entity, SceneComponentReadContext&)
@@ -787,8 +809,9 @@ namespace Crowny
                 collider.SetOffset(node["Offset"].as<glm::vec2>(), entity);
                 collider.SetSize(node["Size"].as<glm::vec2>(), entity);
                 collider.SetIsTrigger(node["IsTrigger"].as<bool>());
-                if (HasPhysicsMaterialYaml(node))
-                    collider.SetMaterial(ReadPhysicsMaterialYaml<PhysicsMaterial2D>(node));
+                if (node["Material"])
+                    collider.SetMaterial(LoadAssetReference<PhysicsMaterial2D>(node["Material"].as<UUID>(UUID::EMPTY)));
+                collider.SetMaterialOverride(ReadPhysicsMaterialOverrideYaml(node));
             }
 
             static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
@@ -796,7 +819,7 @@ namespace Crowny
                 const auto& collider = entity.GetComponent<BoxCollider2DComponent>();
                 archive(collider.GetOffset().x, collider.GetOffset().y);
                 archive(collider.GetSize().x, collider.GetSize().y, collider.IsTrigger());
-                WritePhysicsMaterialBinary(archive, collider.GetMaterial(), collider.GetMaterialData());
+                WritePhysicsMaterialBinary(archive, collider.GetMaterial(), collider.GetMaterialOverride(), collider.GetMaterialData());
             }
 
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
@@ -805,10 +828,13 @@ namespace Crowny
                 glm::vec2 offset, size;
                 bool trigger;
                 archive(offset.x, offset.y, size.x, size.y, trigger);
+                const PhysicsMaterialBinding<PhysicsMaterial2D> material = ReadPhysicsMaterialBinary<PhysicsMaterial2D>(archive);
                 collider.SetOffset(offset, entity);
                 collider.SetSize(size, entity);
                 collider.SetIsTrigger(trigger);
-                collider.SetMaterial(ReadPhysicsMaterialBinary<PhysicsMaterial2D>(archive));
+                if (material.Material.HasUUID())
+                    collider.SetMaterial(material.Material);
+                collider.SetMaterialOverride(material.Override);
             }
         };
 
@@ -820,10 +846,7 @@ namespace Crowny
                 SerializeValueYAML(out, "Offset", collider.GetOffset());
                 SerializeValueYAML(out, "Size", collider.GetRadius());
                 SerializeValueYAML(out, "IsTrigger", collider.IsTrigger());
-                if (ShouldSerializeMaterialReference(collider.GetMaterial()))
-                    SerializeValueYAML(out, "Material", collider.GetMaterial().GetUUID());
-                else
-                    WritePhysicsMaterialYaml(out, collider.GetMaterialData());
+                WritePhysicsMaterialYaml(out, collider.GetMaterial(), collider.GetMaterialOverride(), collider.GetMaterialData());
             }
 
             static void ReadYaml(const YAML::Node& node, Entity entity, SceneComponentReadContext&)
@@ -832,15 +855,16 @@ namespace Crowny
                 collider.SetOffset(node["Offset"].as<glm::vec2>(), entity);
                 collider.SetRadius(node["Size"].as<float>(), entity);
                 collider.SetIsTrigger(node["IsTrigger"].as<bool>());
-                if (HasPhysicsMaterialYaml(node))
-                    collider.SetMaterial(ReadPhysicsMaterialYaml<PhysicsMaterial2D>(node));
+                if (node["Material"])
+                    collider.SetMaterial(LoadAssetReference<PhysicsMaterial2D>(node["Material"].as<UUID>(UUID::EMPTY)));
+                collider.SetMaterialOverride(ReadPhysicsMaterialOverrideYaml(node));
             }
 
             static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
             {
                 const auto& collider = entity.GetComponent<CircleCollider2DComponent>();
                 archive(collider.GetOffset().x, collider.GetOffset().y, collider.GetRadius(), collider.IsTrigger());
-                WritePhysicsMaterialBinary(archive, collider.GetMaterial(), collider.GetMaterialData());
+                WritePhysicsMaterialBinary(archive, collider.GetMaterial(), collider.GetMaterialOverride(), collider.GetMaterialData());
             }
 
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
@@ -850,10 +874,13 @@ namespace Crowny
                 float radius;
                 bool trigger;
                 archive(offset.x, offset.y, radius, trigger);
+                const PhysicsMaterialBinding<PhysicsMaterial2D> material = ReadPhysicsMaterialBinary<PhysicsMaterial2D>(archive);
                 collider.SetOffset(offset, entity);
                 collider.SetRadius(radius, entity);
                 collider.SetIsTrigger(trigger);
-                collider.SetMaterial(ReadPhysicsMaterialBinary<PhysicsMaterial2D>(archive));
+                if (material.Material.HasUUID())
+                    collider.SetMaterial(material.Material);
+                collider.SetMaterialOverride(material.Override);
             }
         };
 
@@ -1223,10 +1250,7 @@ namespace Crowny
             SerializeValueYAML(out, "Offset", collider.GetOffset());
             SerializeValueYAML(out, "Rotation", collider.GetRotation());
             SerializeValueYAML(out, "IsTrigger", collider.IsTrigger());
-            if (ShouldSerializeMaterialReference(collider.GetMaterial()))
-                SerializeValueYAML(out, "Material", collider.GetMaterial().GetUUID());
-            else
-                WritePhysicsMaterialYaml(out, collider.GetMaterialData());
+            WritePhysicsMaterialYaml(out, collider.GetMaterial(), collider.GetMaterialOverride(), collider.GetMaterialData());
             SerializeValueYAML(out, "Layer", collider.GetFilter().Layer);
             SerializeValueYAML(out, "Mask", collider.GetFilter().Mask);
             SerializeValueYAML(out, "Group", collider.GetFilter().Group);
@@ -1237,8 +1261,9 @@ namespace Crowny
             collider.SetOffset(node["Offset"].as<glm::vec3>(glm::vec3(0.0f)), entity);
             collider.SetRotation(node["Rotation"].as<glm::quat>(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)), entity);
             collider.SetIsTrigger(node["IsTrigger"].as<bool>(false));
-            if (HasPhysicsMaterialYaml(node))
-                collider.SetMaterial(ReadPhysicsMaterialYaml<PhysicsMaterial3D>(node));
+            if (node["Material"])
+                collider.SetMaterial(LoadAssetReference<PhysicsMaterial3D>(node["Material"].as<UUID>(UUID::EMPTY)));
+            collider.SetMaterialOverride(ReadPhysicsMaterialOverrideYaml(node));
             PhysicsFilter3D filter;
             filter.Layer = node["Layer"].as<uint32_t>(0);
             filter.Mask = node["Mask"].as<uint32_t>(0xffffffff);
@@ -1253,7 +1278,7 @@ namespace Crowny
             archive(offset.x, offset.y, offset.z);
             archive(rotation.x, rotation.y, rotation.z, rotation.w);
             archive(collider.IsTrigger());
-            WritePhysicsMaterialBinary(archive, collider.GetMaterial(), collider.GetMaterialData());
+            WritePhysicsMaterialBinary(archive, collider.GetMaterial(), collider.GetMaterialOverride(), collider.GetMaterialData());
             archive(collider.GetFilter().Layer, collider.GetFilter().Mask, collider.GetFilter().Group);
         }
 
@@ -1266,13 +1291,14 @@ namespace Crowny
             archive(offset.x, offset.y, offset.z);
             archive(rotation.x, rotation.y, rotation.z, rotation.w);
             archive(trigger);
-            AssetHandle<PhysicsMaterial3D> material = ReadPhysicsMaterialBinary<PhysicsMaterial3D>(archive);
+            const PhysicsMaterialBinding<PhysicsMaterial3D> material = ReadPhysicsMaterialBinary<PhysicsMaterial3D>(archive);
             archive(filter.Layer, filter.Mask, filter.Group);
             collider.SetOffset(offset, entity);
             collider.SetRotation(rotation, entity);
             collider.SetIsTrigger(trigger);
-            if (material.HasUUID())
-                collider.SetMaterial(material);
+            if (material.Material.HasUUID())
+                collider.SetMaterial(material.Material);
+            collider.SetMaterialOverride(material.Override);
             collider.SetFilter(filter, entity);
         }
 

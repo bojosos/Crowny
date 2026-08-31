@@ -223,6 +223,36 @@ TEST_CASE("Physics materials use deterministic backend-neutral combine rules", "
                Catch::Matchers::WithinAbs(0.8f, 0.0001f));
 }
 
+TEST_CASE("Physics material overrides resolve only selected fields", "[Physics][Material][Override]")
+{
+    PhysicsMaterialData baseMaterial;
+    baseMaterial.Density = 2.0f;
+    baseMaterial.Friction = 0.25f;
+    baseMaterial.Restitution = 0.4f;
+    baseMaterial.RestitutionThreshold = 1.25f;
+    baseMaterial.FrictionCombine = PhysicsCombineMode::Minimum;
+    baseMaterial.RestitutionCombine = PhysicsCombineMode::Average;
+
+    PhysicsMaterialOverride materialOverride;
+    materialOverride.Fields = PhysicsMaterialOverrideBits::Friction | PhysicsMaterialOverrideBits::RestitutionCombine;
+    materialOverride.Values.Friction = 0.9f;
+    materialOverride.Values.RestitutionCombine = PhysicsCombineMode::Multiply;
+    materialOverride.Values.Density = -8.0f;
+
+    const PhysicsMaterialData resolved = ResolvePhysicsMaterialData(baseMaterial, materialOverride);
+    CHECK(resolved.Density == 2.0f);
+    CHECK(resolved.Friction == 0.9f);
+    CHECK(resolved.Restitution == 0.4f);
+    CHECK(resolved.RestitutionThreshold == 1.25f);
+    CHECK(resolved.FrictionCombine == PhysicsCombineMode::Minimum);
+    CHECK(resolved.RestitutionCombine == PhysicsCombineMode::Multiply);
+
+    materialOverride.Fields = PhysicsMaterialOverrideFlags(static_cast<uint32_t>(PhysicsMaterialOverrideBits::All) | (1u << 31u));
+    const PhysicsMaterialOverride normalized = NormalizePhysicsMaterialOverride(materialOverride);
+    CHECK(static_cast<uint32_t>(normalized.Fields) == static_cast<uint32_t>(PhysicsMaterialOverrideBits::All));
+    CHECK(normalized.Values.Density == 0.0f);
+}
+
 TEST_CASE("3D backend factories are safe before initialization", "[Physics][Physics3D]")
 {
     uint32_t compiledBackends = 0;

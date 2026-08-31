@@ -35,8 +35,7 @@ namespace Crowny
                 return false;
             if (!material.IsLoaded())
                 return true;
-            Path path;
-            return AssetManager::TryGet() != nullptr && AssetManager::TryGet()->GetAssetPath(material.GetUUID(), path);
+            return AssetManager::TryGet() != nullptr && AssetManager::TryGet()->IsAssetRegistered(material.GetUUID());
         }
 
         YAML::Node FindComponentNode(const YAML::Node& entityNode, const SceneComponentCodec& codec)

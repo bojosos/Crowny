@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 11u
+#define CW_MANAGED_ABI_VERSION 12u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -140,6 +140,17 @@ typedef struct cw_managed_physics_filter3d
     uint32_t mask;
     int32_t group;
 } cw_managed_physics_filter3d;
+
+typedef struct cw_managed_physics_material_override
+{
+    uint32_t fields;
+    float density;
+    float friction;
+    float restitution;
+    float restitution_threshold;
+    int32_t friction_combine;
+    int32_t restitution_combine;
+} cw_managed_physics_material_override;
 
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_write_blob_fn)(void* context, const uint8_t* data, uint64_t length);
 
@@ -685,6 +696,10 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_sorting_layer_fn)
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_get_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_set_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider2d_get_material_override_fn)(void* context, cw_managed_uuid entity, cw_managed_physics_material_override* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider2d_set_material_override_fn)(void* context, cw_managed_uuid entity, const cw_managed_physics_material_override* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_get_material_override_fn)(void* context, cw_managed_uuid entity, cw_managed_physics_material_override* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collider3d_set_material_override_fn)(void* context, cw_managed_uuid entity, const cw_managed_physics_material_override* value);
 
 typedef struct cw_managed_host_api
 {
@@ -1207,6 +1222,10 @@ typedef struct cw_managed_host_api
     cw_managed_text_set_sorting_layer_fn text_set_sorting_layer;
     cw_managed_text_get_order_in_layer_fn text_get_order_in_layer;
     cw_managed_text_set_order_in_layer_fn text_set_order_in_layer;
+    cw_managed_collider2d_get_material_override_fn collider2d_get_material_override;
+    cw_managed_collider2d_set_material_override_fn collider2d_set_material_override;
+    cw_managed_collider3d_get_material_override_fn collider3d_get_material_override;
+    cw_managed_collider3d_set_material_override_fn collider3d_set_material_override;
 } cw_managed_host_api;
 
 #define CW_MANAGED_HOST_FUNCTION_LIST(X) \
@@ -1724,7 +1743,11 @@ typedef struct cw_managed_host_api
     X(TextGetSortingLayer, text_get_sorting_layer) \
     X(TextSetSortingLayer, text_set_sorting_layer) \
     X(TextGetOrderInLayer, text_get_order_in_layer) \
-    X(TextSetOrderInLayer, text_set_order_in_layer)
+    X(TextSetOrderInLayer, text_set_order_in_layer) \
+    X(Collider2DGetMaterialOverride, collider2d_get_material_override) \
+    X(Collider2DSetMaterialOverride, collider2d_set_material_override) \
+    X(Collider3DGetMaterialOverride, collider3d_get_material_override) \
+    X(Collider3DSetMaterialOverride, collider3d_set_material_override)
 
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_initialize_fn)(const cw_managed_host_api* host);
 typedef void(CW_MANAGED_CALL* cw_managed_shutdown_fn)(void);
@@ -1778,5 +1801,6 @@ static_assert(sizeof(cw_managed_vec4) == 16, "Managed Vector4 ABI layout changed
 static_assert(sizeof(cw_managed_quat) == 16, "Managed quaternion ABI layout changed.");
 static_assert(sizeof(cw_managed_mat4) == 64, "Managed Matrix4 ABI layout changed.");
 static_assert(sizeof(cw_managed_physics_filter3d) == 12, "Managed PhysicsFilter3D ABI layout changed.");
+static_assert(sizeof(cw_managed_physics_material_override) == 28, "Managed physics material override ABI layout changed.");
 static_assert(sizeof(cw_managed_contact_point) == 32, "Managed contact ABI layout changed.");
 #endif

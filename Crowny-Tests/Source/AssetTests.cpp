@@ -161,6 +161,8 @@ TEST_CASE("Managed physics material factories create serializable runtime handle
     Path assetPath;
     CHECK_FALSE(manager.GetAssetPath(material2D.GetUUID(), assetPath));
     CHECK_FALSE(manager.GetAssetPath(material3D.GetUUID(), assetPath));
+    CHECK_FALSE(manager.IsAssetRegistered(material2D.GetUUID()));
+    CHECK_FALSE(manager.IsAssetRegistered(material3D.GetUUID()));
 }
 
 TEST_CASE("Physics material assets survive binary round trips", "[Assets][Physics][Serialization]")

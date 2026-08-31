@@ -56,6 +56,7 @@ NATIVE_TYPES = {
     "quat": "cw_managed_quat",
     "mat4": "cw_managed_mat4",
     "physicsFilter3D": "cw_managed_physics_filter3d",
+    "physicsMaterialOverride": "cw_managed_physics_material_override",
     "bytes": "cw_managed_blob",
     "mutableBytes": "cw_managed_mutable_blob",
     "pointer": "void*",
@@ -78,6 +79,7 @@ HOST_CS_TYPES = {
     "quat": "NativeQuaternion",
     "mat4": "NativeMatrix4",
     "physicsFilter3D": "NativePhysicsFilter3D",
+    "physicsMaterialOverride": "NativePhysicsMaterialOverride",
     "bytes": "NativeBlob",
     "mutableBytes": "NativeMutableBlob",
     "pointer": "void*",
@@ -100,6 +102,7 @@ SHARP_CS_TYPES = {
     "quat": "ManagedNativeQuaternion",
     "mat4": "ManagedNativeMatrix4",
     "physicsFilter3D": "ManagedNativePhysicsFilter3D",
+    "physicsMaterialOverride": "ManagedNativePhysicsMaterialOverride",
     "bytes": "ManagedNativeBlob",
     "mutableBytes": "ManagedNativeMutableBlob",
     "pointer": "void*",
@@ -122,12 +125,13 @@ SHARP_API_TYPES = {
     "quat": "Quaternion",
     "mat4": "Matrix4",
     "physicsFilter3D": "PhysicsFilter3D",
+    "physicsMaterialOverride": "PhysicsMaterialOverride",
     "bytes": "byte[]",
     "mutableBytes": "byte[]",
     "pointer": "IntPtr",
 }
 
-POINTER_INPUT_TYPES = {"vec2", "vec3", "vec4", "color", "quat", "mat4", "physicsFilter3D"}
+POINTER_INPUT_TYPES = {"vec2", "vec3", "vec4", "color", "quat", "mat4", "physicsFilter3D", "physicsMaterialOverride"}
 
 
 def expand_host_functions(manifest: dict) -> dict:
@@ -316,6 +320,8 @@ def sharp_native_parameter(parameter: dict) -> tuple[list[str], str]:
         return [f"            ManagedNativeMatrix4 {native_name} = EncodeMatrix({name});"], f"&{native_name}"
     if parameter_type == "physicsFilter3D":
         return [f"            ManagedNativePhysicsFilter3D {native_name} = new ManagedNativePhysicsFilter3D {{ Layer = {name}.Layer, Mask = {name}.Mask, Group = {name}.Group }};"], f"&{native_name}"
+    if parameter_type == "physicsMaterialOverride":
+        return [f"            ManagedNativePhysicsMaterialOverride {native_name} = new ManagedNativePhysicsMaterialOverride {{ Fields = (uint){name}.Fields, Density = {name}.Density, Friction = {name}.Friction, Restitution = {name}.Restitution, RestitutionThreshold = {name}.RestitutionThreshold, FrictionCombine = (int){name}.FrictionCombine, RestitutionCombine = (int){name}.RestitutionCombine }};"], f"&{native_name}"
     raise ValueError(f"unsupported managed parameter type: {parameter_type}")
 
 
@@ -344,6 +350,8 @@ def sharp_result_declaration(result_type: str) -> tuple[str, str]:
         return declaration, "DecodeMatrix(result)"
     if result_type == "physicsFilter3D":
         return declaration, "new PhysicsFilter3D(result.Layer, result.Mask, result.Group)"
+    if result_type == "physicsMaterialOverride":
+        return declaration, "new PhysicsMaterialOverride((PhysicsMaterialOverrideFields)result.Fields, result.Density, result.Friction, result.Restitution, result.RestitutionThreshold, (PhysicsCombineMode)result.FrictionCombine, (PhysicsCombineMode)result.RestitutionCombine)"
     if result_type == "string":
         return declaration, "DecodeString(result)"
     if result_type == "optionalString":
@@ -535,6 +543,17 @@ typedef struct cw_managed_physics_filter3d
     int32_t group;
 }} cw_managed_physics_filter3d;
 
+typedef struct cw_managed_physics_material_override
+{{
+    uint32_t fields;
+    float density;
+    float friction;
+    float restitution;
+    float restitution_threshold;
+    int32_t friction_combine;
+    int32_t restitution_combine;
+}} cw_managed_physics_material_override;
+
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_write_blob_fn)(void* context, const uint8_t* data, uint64_t length);
 
 typedef struct cw_managed_blob_writer
@@ -630,6 +649,7 @@ static_assert(sizeof(cw_managed_vec4) == 16, "Managed Vector4 ABI layout changed
 static_assert(sizeof(cw_managed_quat) == 16, "Managed quaternion ABI layout changed.");
 static_assert(sizeof(cw_managed_mat4) == 64, "Managed Matrix4 ABI layout changed.");
 static_assert(sizeof(cw_managed_physics_filter3d) == 12, "Managed PhysicsFilter3D ABI layout changed.");
+static_assert(sizeof(cw_managed_physics_material_override) == 28, "Managed physics material override ABI layout changed.");
 static_assert(sizeof(cw_managed_contact_point) == 32, "Managed contact ABI layout changed.");
 #endif
 """
@@ -750,6 +770,18 @@ namespace Crowny.ManagedHost.Interop
         public uint Layer;
         public uint Mask;
         public int Group;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NativePhysicsMaterialOverride
+    {{
+        public uint Fields;
+        public float Density;
+        public float Friction;
+        public float Restitution;
+        public float RestitutionThreshold;
+        public int FrictionCombine;
+        public int RestitutionCombine;
     }}
 
     [StructLayout(LayoutKind.Sequential)]
@@ -963,6 +995,18 @@ namespace Crowny
         internal uint Layer;
         internal uint Mask;
         internal int Group;
+    }}
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativePhysicsMaterialOverride
+    {{
+        internal uint Fields;
+        internal float Density;
+        internal float Friction;
+        internal float Restitution;
+        internal float RestitutionThreshold;
+        internal int FrictionCombine;
+        internal int RestitutionCombine;
     }}
 
     [StructLayout(LayoutKind.Sequential)]

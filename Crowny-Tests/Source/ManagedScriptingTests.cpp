@@ -185,7 +185,7 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
 {
-    CHECK(CW_MANAGED_ABI_VERSION == 11);
+    CHECK(CW_MANAGED_ABI_VERSION == 12);
 
     cw_managed_program_api api{};
     api.size = sizeof(api);
@@ -195,7 +195,7 @@ TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scri
     CHECK(result.HasDiagnosticCode("managed.abi.version_mismatch"));
 }
 
-TEST_CASE("Managed host ABI exposes complete typed bindings and stable font data", "[Scripting][Managed][Contract][Font]")
+TEST_CASE("Managed host ABI exposes complete typed bindings and stable value layouts", "[Scripting][Managed][Contract]")
 {
     cw_managed_host_api api{};
     PopulateManagedHostBindings(api);
@@ -208,10 +208,67 @@ TEST_CASE("Managed host ABI exposes complete typed bindings and stable font data
     CHECK(api.font_get_is_valid != nullptr);
     CHECK(api.font_get_character_info != nullptr);
     CHECK(api.font_clear_fallbacks != nullptr);
+    CHECK(api.collider2d_get_material_override != nullptr);
+    CHECK(api.collider2d_set_material_override != nullptr);
+    CHECK(api.collider3d_get_material_override != nullptr);
+    CHECK(api.collider3d_set_material_override != nullptr);
     CHECK(sizeof(cw_managed_font_character_info) == 112);
+    CHECK(sizeof(cw_managed_physics_material_override) == 28);
     CHECK(offsetof(cw_managed_font_character_info, source_font) == 0);
     CHECK(offsetof(cw_managed_font_character_info, advance) == 32);
     CHECK(offsetof(cw_managed_font_character_info, valid) == 105);
+}
+
+TEST_CASE("Managed collider material overrides round trip through the shared host table",
+          "[Scripting][Managed][Contract][Physics]")
+{
+    const UUID entity2DId("11111111-2222-3333-4444-555555555555");
+    const UUID entity3DId("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    const cw_managed_uuid managedEntity2DId = {
+        { 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 }
+    };
+    const cw_managed_uuid managedEntity3DId = {
+        { 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee }
+    };
+
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    ScopedActiveScene activeScene(scene);
+    const Entity entity2D = scene->CreateEntityWithUuid(entity2DId, "Managed 2D collider");
+    const Entity entity3D = scene->CreateEntityWithUuid(entity3DId, "Managed 3D collider");
+    entity2D.AddComponent<BoxCollider2DComponent>();
+    entity3D.AddComponent<SphereCollider3DComponent>();
+
+    cw_managed_host_api api{};
+    PopulateManagedHostBindings(api);
+    int context = 0;
+
+    cw_managed_physics_material_override override2D{};
+    override2D.fields = static_cast<uint32_t>(PhysicsMaterialOverrideBits::Friction) |
+                        static_cast<uint32_t>(PhysicsMaterialOverrideBits::RestitutionCombine);
+    override2D.friction = 0.85f;
+    override2D.restitution_combine = static_cast<int32_t>(PhysicsCombineMode::Multiply);
+    REQUIRE(api.collider2d_set_material_override(&context, managedEntity2DId, &override2D) == CW_MANAGED_STATUS_OK);
+
+    cw_managed_physics_material_override roundTripped2D{};
+    REQUIRE(api.collider2d_get_material_override(&context, managedEntity2DId, &roundTripped2D) == CW_MANAGED_STATUS_OK);
+    CHECK(roundTripped2D.fields == override2D.fields);
+    CHECK(roundTripped2D.friction == 0.85f);
+    CHECK(roundTripped2D.restitution_combine == static_cast<int32_t>(PhysicsCombineMode::Multiply));
+    CHECK(entity2D.GetComponent<BoxCollider2DComponent>().GetMaterialData().Friction == 0.85f);
+
+    cw_managed_physics_material_override override3D{};
+    override3D.fields = static_cast<uint32_t>(PhysicsMaterialOverrideBits::Density) |
+                        static_cast<uint32_t>(PhysicsMaterialOverrideBits::RestitutionThreshold);
+    override3D.density = 2.5f;
+    override3D.restitution_threshold = 1.75f;
+    REQUIRE(api.collider3d_set_material_override(&context, managedEntity3DId, &override3D) == CW_MANAGED_STATUS_OK);
+
+    cw_managed_physics_material_override roundTripped3D{};
+    REQUIRE(api.collider3d_get_material_override(&context, managedEntity3DId, &roundTripped3D) == CW_MANAGED_STATUS_OK);
+    CHECK(roundTripped3D.fields == override3D.fields);
+    CHECK(roundTripped3D.density == 2.5f);
+    CHECK(roundTripped3D.restitution_threshold == 1.75f);
+    CHECK(entity3D.GetComponent<SphereCollider3DComponent>().GetMaterialData().Density == 2.5f);
 }
 
 TEST_CASE("CoreCLR adapter validates its private runtime before activation", "[Scripting][Managed][CoreCLR]")

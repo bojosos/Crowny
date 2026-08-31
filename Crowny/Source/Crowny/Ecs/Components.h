@@ -758,7 +758,8 @@ namespace Crowny
 
         Collider2D() : ComponentBase() {}
         Collider2D(const Collider2D& other)
-          : ComponentBase(other), m_Offset(other.m_Offset), m_Material(other.m_Material), m_IsTrigger(other.m_IsTrigger)
+          : ComponentBase(other), m_Offset(other.m_Offset), m_Material(other.m_Material), m_MaterialOverride(other.m_MaterialOverride),
+            m_IsTrigger(other.m_IsTrigger)
         {
         }
         Collider2D& operator=(const Collider2D& other)
@@ -768,6 +769,7 @@ namespace Crowny
                 ComponentBase::operator=(other);
                 m_Offset = other.m_Offset;
                 m_Material = other.m_Material;
+                m_MaterialOverride = other.m_MaterialOverride;
                 m_IsTrigger = other.m_IsTrigger;
             }
             return *this;
@@ -776,16 +778,20 @@ namespace Crowny
         const glm::vec2& GetOffset() const { return m_Offset; }
         bool IsTrigger() const { return m_IsTrigger; }
         const AssetHandle<PhysicsMaterial2D>& GetMaterial() const { return m_Material; }
-        const PhysicsMaterialData& GetMaterialData() const;
+        const PhysicsMaterialOverride& GetMaterialOverride() const { return m_MaterialOverride; }
+        PhysicsMaterialData GetMaterialData() const;
 
         void SetIsTrigger(bool trigger);
         void SetMaterial(const AssetHandle<PhysicsMaterial2D>& material);
+        void SetMaterialOverride(const PhysicsMaterialOverride& materialOverride);
+        void ClearMaterialOverride();
         void RefreshMaterial();
 
         void* RuntimeFixture = nullptr;
 
         glm::vec2 m_Offset = { 0.0f, 0.0f };
         AssetHandle<PhysicsMaterial2D> m_Material;
+        PhysicsMaterialOverride m_MaterialOverride;
         bool m_IsTrigger = false;
     };
 
@@ -907,13 +913,16 @@ namespace Crowny
         const glm::quat& GetRotation() const { return m_Rotation; }
         bool IsTrigger() const { return m_IsTrigger; }
         const AssetHandle<PhysicsMaterial3D>& GetMaterial() const { return m_Material; }
-        const PhysicsMaterialData& GetMaterialData() const;
+        const PhysicsMaterialOverride& GetMaterialOverride() const { return m_MaterialOverride; }
+        PhysicsMaterialData GetMaterialData() const;
         const PhysicsFilter3D& GetFilter() const { return m_Filter; }
 
         void SetOffset(const glm::vec3& offset, Entity entity);
         void SetRotation(const glm::quat& rotation, Entity entity);
         void SetIsTrigger(bool trigger);
         void SetMaterial(const AssetHandle<PhysicsMaterial3D>& material);
+        void SetMaterialOverride(const PhysicsMaterialOverride& materialOverride);
+        void ClearMaterialOverride();
         void RefreshMaterial();
         void SetFilter(const PhysicsFilter3D& filter, Entity entity);
 
@@ -926,6 +935,7 @@ namespace Crowny
         glm::quat m_Rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
         bool m_IsTrigger = false;
         AssetHandle<PhysicsMaterial3D> m_Material;
+        PhysicsMaterialOverride m_MaterialOverride;
         PhysicsFilter3D m_Filter;
     };
 

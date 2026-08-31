@@ -4,7 +4,7 @@ Crowny exposes one backend-neutral `ManagedScriptComponent`, `ManagedScript`, an
 own their runtime instances, callbacks, loading, and reload mechanics behind `ManagedScripting`; neither runtime object
 leaks into scene data or editor code. Mono remains the editor default during the transition. CoreCLR is an opt-in desktop
 preset until the remaining editor workflow, debugging, and operational gates pass. Public engine calls use the same
-generated 515-function contract on both backends.
+generated 519-function contract on both backends.
 
 ## Desktop CoreCLR package
 
@@ -49,7 +49,7 @@ dictionary entries. Assembly-qualified nested type names use `Outer+Inner`. Miss
 because no catalog normalization occurs until the script type is available. Once a type is loaded, unknown, renamed, or
 kind-incompatible members are intentionally dropped rather than carried as an implicit compatibility layer.
 
-Scene format 11 is based exclusively on `ScriptState`. YAML uses `ManagedScriptComponent`; binary scenes store the same
+Scene format 12 is based exclusively on `ScriptState`. YAML uses `ManagedScriptComponent`; binary scenes store the same
 JSON state payload. It is also the only scene format accepted by this build. Per-component version gates, YAML aliases,
 and legacy text, physics, and managed-script readers have been removed. Regenerate project scenes when adopting this
 version; compatibility can return later as an explicit import tool without complicating the runtime scene codec.

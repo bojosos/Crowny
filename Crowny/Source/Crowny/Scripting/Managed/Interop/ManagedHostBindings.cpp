@@ -171,6 +171,31 @@ namespace Crowny
 
         PhysicsFilter3D FromAbiFilter(const cw_managed_physics_filter3d& filter) { return { filter.layer, filter.mask, filter.group }; }
 
+        cw_managed_physics_material_override ToAbiMaterialOverride(const PhysicsMaterialOverride& materialOverride)
+        {
+            const PhysicsMaterialOverride normalized = NormalizePhysicsMaterialOverride(materialOverride);
+            return { static_cast<uint32_t>(normalized.Fields),
+                     normalized.Values.Density,
+                     normalized.Values.Friction,
+                     normalized.Values.Restitution,
+                     normalized.Values.RestitutionThreshold,
+                     static_cast<int32_t>(normalized.Values.FrictionCombine),
+                     static_cast<int32_t>(normalized.Values.RestitutionCombine) };
+        }
+
+        PhysicsMaterialOverride FromAbiMaterialOverride(const cw_managed_physics_material_override& materialOverride)
+        {
+            PhysicsMaterialOverride result;
+            result.Fields = PhysicsMaterialOverrideFlags(materialOverride.fields);
+            result.Values.Density = materialOverride.density;
+            result.Values.Friction = materialOverride.friction;
+            result.Values.Restitution = materialOverride.restitution;
+            result.Values.RestitutionThreshold = materialOverride.restitution_threshold;
+            result.Values.FrictionCombine = static_cast<PhysicsCombineMode>(materialOverride.friction_combine);
+            result.Values.RestitutionCombine = static_cast<PhysicsCombineMode>(materialOverride.restitution_combine);
+            return NormalizePhysicsMaterialOverride(result);
+        }
+
         template <typename Callback> cw_managed_status Execute(void* context, Callback&& callback)
         {
             if (context == nullptr)
@@ -837,6 +862,34 @@ namespace Crowny
 #undef CW_COLLIDER2D_SET
 #undef CW_COLLIDER2D_GET
 
+        cw_managed_status CW_MANAGED_CALL Collider2DGetMaterialOverride(void* context, cw_managed_uuid entityId,
+                                                                        cw_managed_physics_material_override* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                Collider2D* collider = ResolveCollider2D(ResolveEntity(entityId));
+                if (collider == nullptr)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                *result = ToAbiMaterialOverride(collider->GetMaterialOverride());
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL Collider2DSetMaterialOverride(void* context, cw_managed_uuid entityId,
+                                                                        const cw_managed_physics_material_override* value)
+        {
+            return Execute(context, [&]() {
+                if (value == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                Collider2D* collider = ResolveCollider2D(ResolveEntity(entityId));
+                if (collider == nullptr)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                collider->SetMaterialOverride(FromAbiMaterialOverride(*value));
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
         cw_managed_status CW_MANAGED_CALL Collider2DGetOffset(void* context, cw_managed_uuid entityId, cw_managed_vec2* result)
         {
             return Execute(context, [&]() {
@@ -950,6 +1003,34 @@ namespace Crowny
         CW_COLLIDER3D_SET(Collider3DSetMaterial, cw_managed_uuid, collider->SetMaterial(ResolveAsset<PhysicsMaterial3D>(value)))
 #undef CW_COLLIDER3D_SET
 #undef CW_COLLIDER3D_GET
+
+        cw_managed_status CW_MANAGED_CALL Collider3DGetMaterialOverride(void* context, cw_managed_uuid entityId,
+                                                                        cw_managed_physics_material_override* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                Collider3D* collider = ResolveCollider3D(ResolveEntity(entityId));
+                if (collider == nullptr)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                *result = ToAbiMaterialOverride(collider->GetMaterialOverride());
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL Collider3DSetMaterialOverride(void* context, cw_managed_uuid entityId,
+                                                                        const cw_managed_physics_material_override* value)
+        {
+            return Execute(context, [&]() {
+                if (value == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                Collider3D* collider = ResolveCollider3D(ResolveEntity(entityId));
+                if (collider == nullptr)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                collider->SetMaterialOverride(FromAbiMaterialOverride(*value));
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
 
         cw_managed_status CW_MANAGED_CALL Collider3DGetOffset(void* context, cw_managed_uuid entityId, cw_managed_vec3* result)
         {

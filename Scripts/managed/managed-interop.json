@@ -1,5 +1,5 @@
 {
-  "abiVersion": 11,
+  "abiVersion": 12,
   "managedEntryPoint": "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi",
   "statusCodes": {
     "Ok": 0,
@@ -516,6 +516,20 @@
         "TabWidth": "u32",
         "SortingLayer": "i32",
         "OrderInLayer": "i32"
+      }
+    },
+    "Collider2DMaterialOverride": {
+      "prefix": "Collider2D",
+      "receiver": { "name": "entity", "type": "uuid" },
+      "properties": {
+        "MaterialOverride": "physicsMaterialOverride"
+      }
+    },
+    "Collider3DMaterialOverride": {
+      "prefix": "Collider3D",
+      "receiver": { "name": "entity", "type": "uuid" },
+      "properties": {
+        "MaterialOverride": "physicsMaterialOverride"
       }
     }
   },

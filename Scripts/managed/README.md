@@ -2,7 +2,7 @@
 
 `managed-interop.json` is the transport contract shared by every Crowny managed backend. The generator emits the native ABI, the managed-host ABI, the CrownySharp transport, AOT roots, and linker roots. Gameplay-facing C# never selects Mono or CoreCLR for an engine operation.
 
-The current ABI exposes 515 typed feature functions. Mono and CoreCLR consume the same table; the parity check prevents a backend-specific feature path from being added beside it.
+The current ABI exposes 519 typed feature functions. Mono and CoreCLR consume the same table; the parity check prevents a backend-specific feature path from being added beside it.
 
 To add a managed binding:
 

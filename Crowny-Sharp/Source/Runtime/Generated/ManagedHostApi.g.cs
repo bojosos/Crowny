@@ -113,6 +113,18 @@ namespace Crowny
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    internal struct ManagedNativePhysicsMaterialOverride
+    {
+        internal uint Fields;
+        internal float Density;
+        internal float Friction;
+        internal float Restitution;
+        internal float RestitutionThreshold;
+        internal int FrictionCombine;
+        internal int RestitutionCombine;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct ManagedNativeHostApi
     {
         internal uint Size;
@@ -634,6 +646,10 @@ namespace Crowny
         internal IntPtr TextSetSortingLayer;
         internal IntPtr TextGetOrderInLayer;
         internal IntPtr TextSetOrderInLayer;
+        internal IntPtr Collider2DGetMaterialOverride;
+        internal IntPtr Collider2DSetMaterialOverride;
+        internal IntPtr Collider3DGetMaterialOverride;
+        internal IntPtr Collider3DSetMaterialOverride;
     }
 
     internal static unsafe class ManagedHostTransport
@@ -652,7 +668,7 @@ namespace Crowny
                 api = value;
                 return;
             }
-            if (value.AbiVersion != 11 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
+            if (value.AbiVersion != 12 || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
                 throw new InvalidOperationException("The native host uses an incompatible managed scripting ABI.");
             bool complete =
                 value.GetEntityName != IntPtr.Zero &&
@@ -1169,7 +1185,11 @@ namespace Crowny
                    value.TextGetSortingLayer != IntPtr.Zero &&
                    value.TextSetSortingLayer != IntPtr.Zero &&
                    value.TextGetOrderInLayer != IntPtr.Zero &&
-                   value.TextSetOrderInLayer != IntPtr.Zero;
+                   value.TextSetOrderInLayer != IntPtr.Zero &&
+                   value.Collider2DGetMaterialOverride != IntPtr.Zero &&
+                   value.Collider2DSetMaterialOverride != IntPtr.Zero &&
+                   value.Collider3DGetMaterialOverride != IntPtr.Zero &&
+                   value.Collider3DSetMaterialOverride != IntPtr.Zero;
             if (!complete)
                 throw new InvalidOperationException("The native host did not provide every managed binding.");
             GetEntityNameCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall0>(value.GetEntityName);
@@ -1687,6 +1707,10 @@ namespace Crowny
             TextSetSortingLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetSortingLayer);
             TextGetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall28>(value.TextGetOrderInLayer);
             TextSetOrderInLayerCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall29>(value.TextSetOrderInLayer);
+            Collider2DGetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall139>(value.Collider2DGetMaterialOverride);
+            Collider2DSetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall140>(value.Collider2DSetMaterialOverride);
+            Collider3DGetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall139>(value.Collider3DGetMaterialOverride);
+            Collider3DSetMaterialOverrideCallback = Marshal.GetDelegateForFunctionPointer<ManagedHostCall140>(value.Collider3DSetMaterialOverride);
             api = value;
         }
 
@@ -1968,6 +1992,10 @@ namespace Crowny
         private delegate int ManagedHostCall137(void* context, ManagedNativeUuid asset, int value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int ManagedHostCall138(void* context, ManagedNativeUuid entity, ManagedNativeStringView value);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall139(void* context, ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* result);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ManagedHostCall140(void* context, ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* value);
 
         private static ManagedHostCall0 GetEntityNameCallback;
         private static ManagedHostCall1 SetEntityNameCallback;
@@ -2484,6 +2512,10 @@ namespace Crowny
         private static ManagedHostCall29 TextSetSortingLayerCallback;
         private static ManagedHostCall28 TextGetOrderInLayerCallback;
         private static ManagedHostCall29 TextSetOrderInLayerCallback;
+        private static ManagedHostCall139 Collider2DGetMaterialOverrideCallback;
+        private static ManagedHostCall140 Collider2DSetMaterialOverrideCallback;
+        private static ManagedHostCall139 Collider3DGetMaterialOverrideCallback;
+        private static ManagedHostCall140 Collider3DSetMaterialOverrideCallback;
 
         internal static int GetEntityName(ManagedNativeUuid entity, ManagedNativeStringView* result) => GetEntityNameCallback(api.Context.ToPointer(), entity, result);
         internal static int SetEntityName(ManagedNativeUuid entity, ManagedNativeStringView name) => SetEntityNameCallback(api.Context.ToPointer(), entity, name);
@@ -3000,6 +3032,10 @@ namespace Crowny
         internal static int TextSetSortingLayer(ManagedNativeUuid entity, int value) => TextSetSortingLayerCallback(api.Context.ToPointer(), entity, value);
         internal static int TextGetOrderInLayer(ManagedNativeUuid entity, int* result) => TextGetOrderInLayerCallback(api.Context.ToPointer(), entity, result);
         internal static int TextSetOrderInLayer(ManagedNativeUuid entity, int value) => TextSetOrderInLayerCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider2DGetMaterialOverride(ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* result) => Collider2DGetMaterialOverrideCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider2DSetMaterialOverride(ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* value) => Collider2DSetMaterialOverrideCallback(api.Context.ToPointer(), entity, value);
+        internal static int Collider3DGetMaterialOverride(ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* result) => Collider3DGetMaterialOverrideCallback(api.Context.ToPointer(), entity, result);
+        internal static int Collider3DSetMaterialOverride(ManagedNativeUuid entity, ManagedNativePhysicsMaterialOverride* value) => Collider3DSetMaterialOverrideCallback(api.Context.ToPointer(), entity, value);
     }
 
     internal static unsafe partial class ManagedRuntimeContext
@@ -7008,6 +7044,36 @@ namespace Crowny
         {
             EnsureHostBindings();
             EnsureStatus(ManagedHostTransport.TextSetOrderInLayer(EncodeUuid(entity), value), "TextSetOrderInLayer");
+        }
+
+        internal static PhysicsMaterialOverride Collider2DGetMaterialOverride(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativePhysicsMaterialOverride result = default;
+            EnsureStatus(ManagedHostTransport.Collider2DGetMaterialOverride(EncodeUuid(entity), &result), "Collider2DGetMaterialOverride");
+            return new PhysicsMaterialOverride((PhysicsMaterialOverrideFields)result.Fields, result.Density, result.Friction, result.Restitution, result.RestitutionThreshold, (PhysicsCombineMode)result.FrictionCombine, (PhysicsCombineMode)result.RestitutionCombine);
+        }
+
+        internal static void Collider2DSetMaterialOverride(UUID entity, PhysicsMaterialOverride value)
+        {
+            EnsureHostBindings();
+            ManagedNativePhysicsMaterialOverride nativeValue = new ManagedNativePhysicsMaterialOverride { Fields = (uint)value.Fields, Density = value.Density, Friction = value.Friction, Restitution = value.Restitution, RestitutionThreshold = value.RestitutionThreshold, FrictionCombine = (int)value.FrictionCombine, RestitutionCombine = (int)value.RestitutionCombine };
+            EnsureStatus(ManagedHostTransport.Collider2DSetMaterialOverride(EncodeUuid(entity), &nativeValue), "Collider2DSetMaterialOverride");
+        }
+
+        internal static PhysicsMaterialOverride Collider3DGetMaterialOverride(UUID entity)
+        {
+            EnsureHostBindings();
+            ManagedNativePhysicsMaterialOverride result = default;
+            EnsureStatus(ManagedHostTransport.Collider3DGetMaterialOverride(EncodeUuid(entity), &result), "Collider3DGetMaterialOverride");
+            return new PhysicsMaterialOverride((PhysicsMaterialOverrideFields)result.Fields, result.Density, result.Friction, result.Restitution, result.RestitutionThreshold, (PhysicsCombineMode)result.FrictionCombine, (PhysicsCombineMode)result.RestitutionCombine);
+        }
+
+        internal static void Collider3DSetMaterialOverride(UUID entity, PhysicsMaterialOverride value)
+        {
+            EnsureHostBindings();
+            ManagedNativePhysicsMaterialOverride nativeValue = new ManagedNativePhysicsMaterialOverride { Fields = (uint)value.Fields, Density = value.Density, Friction = value.Friction, Restitution = value.Restitution, RestitutionThreshold = value.RestitutionThreshold, FrictionCombine = (int)value.FrictionCombine, RestitutionCombine = (int)value.RestitutionCombine };
+            EnsureStatus(ManagedHostTransport.Collider3DSetMaterialOverride(EncodeUuid(entity), &nativeValue), "Collider3DSetMaterialOverride");
         }
     }
 }

@@ -129,8 +129,8 @@ namespace Crowny
 
             void PreSolve(b2Contact* contact, const b2Manifold*) override
             {
-                const PhysicsMaterialData& firstMaterial = GetMaterial(contact->GetFixtureA());
-                const PhysicsMaterialData& secondMaterial = GetMaterial(contact->GetFixtureB());
+                const PhysicsMaterialData firstMaterial = GetMaterial(contact->GetFixtureA());
+                const PhysicsMaterialData secondMaterial = GetMaterial(contact->GetFixtureB());
                 contact->SetFriction(CombinePhysicsMaterialValue(firstMaterial.Friction, firstMaterial.FrictionCombine,
                                                                  secondMaterial.Friction, secondMaterial.FrictionCombine));
                 contact->SetRestitution(CombinePhysicsMaterialValue(firstMaterial.Restitution, firstMaterial.RestitutionCombine,
@@ -169,7 +169,7 @@ namespace Crowny
             }
 
         private:
-            const PhysicsMaterialData& GetMaterial(const b2Fixture* fixture) const
+            PhysicsMaterialData GetMaterial(const b2Fixture* fixture) const
             {
                 static const PhysicsMaterialData fallback;
                 if (!fixture || !m_Scene)
@@ -669,7 +669,7 @@ namespace Crowny
                 b2Fixture* fixture = GetFixture(collider);
                 if (!fixture)
                     return;
-                const PhysicsMaterialData& material = collider.GetMaterialData();
+                const PhysicsMaterialData material = collider.GetMaterialData();
                 fixture->SetDensity(material.Density);
                 fixture->SetFriction(material.Friction);
                 fixture->SetRestitution(material.Restitution);
@@ -758,7 +758,7 @@ namespace Crowny
                 definition.filter.categoryBits = static_cast<uint16_t>(1u << layer);
                 definition.filter.maskBits = static_cast<uint16_t>(m_Settings ? m_Settings->MaskBits[layer] : 0xFFFFu);
                 definition.isSensor = collider.IsTrigger();
-                const PhysicsMaterialData& material = collider.GetMaterialData();
+                const PhysicsMaterialData material = collider.GetMaterialData();
                 definition.density = material.Density;
                 definition.friction = material.Friction;
                 definition.restitution = material.Restitution;

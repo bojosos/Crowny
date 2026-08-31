@@ -137,6 +137,18 @@ namespace Crowny.ManagedHost.Interop
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct NativePhysicsMaterialOverride
+    {
+        public uint Fields;
+        public float Density;
+        public float Friction;
+        public float Restitution;
+        public float RestitutionThreshold;
+        public int FrictionCombine;
+        public int RestitutionCombine;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct NativeBlobWriter
     {
         public uint Size;
@@ -690,6 +702,10 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetSortingLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> TextGetOrderInLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> TextSetOrderInLayer;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativePhysicsMaterialOverride*, NativeStatus> Collider2DGetMaterialOverride;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativePhysicsMaterialOverride*, NativeStatus> Collider2DSetMaterialOverride;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativePhysicsMaterialOverride*, NativeStatus> Collider3DGetMaterialOverride;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativePhysicsMaterialOverride*, NativeStatus> Collider3DSetMaterialOverride;
 
         public readonly bool HasCompleteBindings() =>
             GetEntityName != null &&
@@ -1206,7 +1222,11 @@ namespace Crowny.ManagedHost.Interop
                    TextGetSortingLayer != null &&
                    TextSetSortingLayer != null &&
                    TextGetOrderInLayer != null &&
-                   TextSetOrderInLayer != null;
+                   TextSetOrderInLayer != null &&
+                   Collider2DGetMaterialOverride != null &&
+                   Collider2DSetMaterialOverride != null &&
+                   Collider3DGetMaterialOverride != null &&
+                   Collider3DSetMaterialOverride != null;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -1237,7 +1257,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 11;
+        public const uint Version = 12;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

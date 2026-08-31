@@ -60,6 +60,13 @@ namespace Crowny
             set { ManagedRuntimeContext.Collider2DSetMaterial(EntityId, value != null ? value.uuid : UUID.Empty); }
         }
 
+        /// <summary>Per-collider values applied after the reusable material asset.</summary>
+        public PhysicsMaterialOverride MaterialOverride
+        {
+            get { return ManagedRuntimeContext.Collider2DGetMaterialOverride(EntityId); }
+            set { ManagedRuntimeContext.Collider2DSetMaterialOverride(EntityId, value); }
+        }
+
         [Obsolete("Use IsTrigger instead.")]
         public bool isTrigger { get { return IsTrigger; } set { IsTrigger = value; } }
 

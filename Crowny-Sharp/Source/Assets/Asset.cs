@@ -12,6 +12,44 @@ namespace Crowny
         Maximum = 4
     }
 
+    [Flags]
+    public enum PhysicsMaterialOverrideFields : uint
+    {
+        None = 0,
+        Density = 1u << 0,
+        Friction = 1u << 1,
+        Restitution = 1u << 2,
+        RestitutionThreshold = 1u << 3,
+        FrictionCombine = 1u << 4,
+        RestitutionCombine = 1u << 5,
+        All = (1u << 6) - 1u
+    }
+
+    /// <summary>Values that replace selected fields of a collider's material asset.</summary>
+    public struct PhysicsMaterialOverride
+    {
+        public PhysicsMaterialOverrideFields Fields;
+        public float Density;
+        public float Friction;
+        public float Restitution;
+        public float RestitutionThreshold;
+        public PhysicsCombineMode FrictionCombine;
+        public PhysicsCombineMode RestitutionCombine;
+
+        internal PhysicsMaterialOverride(PhysicsMaterialOverrideFields fields, float density, float friction, float restitution,
+                                         float restitutionThreshold, PhysicsCombineMode frictionCombine,
+                                         PhysicsCombineMode restitutionCombine)
+        {
+            Fields = fields;
+            Density = density;
+            Friction = friction;
+            Restitution = restitution;
+            RestitutionThreshold = restitutionThreshold;
+            FrictionCombine = frictionCombine;
+            RestitutionCombine = restitutionCombine;
+        }
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct UUID
     {

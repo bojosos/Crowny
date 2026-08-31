@@ -234,6 +234,16 @@ namespace Crowny
         return false;
     }
 
+    bool AssetManager::IsAssetRegistered(const UUID& uuid) const
+    {
+        for (const Ref<AssetManifest>& manifest : m_Manifests)
+        {
+            if (manifest && manifest->UuidExists(uuid))
+                return true;
+        }
+        return false;
+    }
+
     void AssetManager::GetFilepathFromUUID(const UUID& uuid, Path& outFilepath) const
     {
         outFilepath.clear();

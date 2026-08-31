@@ -46,6 +46,7 @@ namespace Crowny
         bool Save(const Ref<Asset>& asset, const Path& filepath);
 
         bool GetAssetPath(const UUID& uuid, Path& outPath) const;
+        bool IsAssetRegistered(const UUID& uuid) const;
 
         void RegisterAssetManifest(const Ref<AssetManifest>& manifest);
         void UnregisterAssetManifest(const Ref<AssetManifest>& manifest);

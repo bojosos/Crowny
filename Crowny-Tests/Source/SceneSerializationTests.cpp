@@ -62,6 +62,25 @@ namespace
         return state;
     }
 
+    class ScopedAssetManifestRegistration
+    {
+    public:
+        ScopedAssetManifestRegistration(AssetManager& manager, const Ref<AssetManifest>& manifest)
+          : m_Manager(manager), m_Manifest(manifest)
+        {
+            m_Manager.RegisterAssetManifest(m_Manifest);
+        }
+
+        ~ScopedAssetManifestRegistration() { m_Manager.UnregisterAssetManifest(m_Manifest); }
+
+        ScopedAssetManifestRegistration(const ScopedAssetManifestRegistration&) = delete;
+        ScopedAssetManifestRegistration& operator=(const ScopedAssetManifestRegistration&) = delete;
+
+    private:
+        AssetManager& m_Manager;
+        Ref<AssetManifest> m_Manifest;
+    };
+
 } // namespace
 
 // Minimal fixture for scene serialization tests.
@@ -554,9 +573,8 @@ TEST_CASE("Complex Scene Serialization", "[Serialization]")
         const auto& dBox3d = dChild2.GetComponent<BoxCollider3DComponent>();
         CHECK(dBox3d.GetSize() == glm::vec3(2.0f, 3.0f, 4.0f));
         CHECK(dBox3d.GetOffset() == glm::vec3(0.5f, 0.0f, -0.5f));
-        REQUIRE(dBox3d.GetMaterial());
-        CHECK_THAT(dBox3d.GetMaterial()->GetRestitution(), Catch::Matchers::WithinAbs(0.6f, 0.0001f));
-        CHECK(dBox3d.GetMaterial()->GetFrictionCombine() == PhysicsCombineMode::Minimum);
+        CHECK_THAT(dBox3d.GetMaterialData().Restitution, Catch::Matchers::WithinAbs(0.6f, 0.0001f));
+        CHECK(dBox3d.GetMaterialData().FrictionCombine == PhysicsCombineMode::Minimum);
 
         REQUIRE(dChild1.HasComponent<AudioSourceComponent>());
         auto& dAsc = dChild1.GetComponent<AudioSourceComponent>();
@@ -572,7 +590,7 @@ TEST_CASE("Complex Scene Serialization", "[Serialization]")
     }
 }
 
-TEST_CASE("Physics material references survive YAML and binary scene round trips", "[Serialization][Physics]")
+TEST_CASE("Runtime physics materials flatten into collider overrides during scene round trips", "[Serialization][Physics]")
 {
     SerializationTestFixture fixture;
     Ref<Scene> scene = CreateRef<Scene>(false);
@@ -594,12 +612,12 @@ TEST_CASE("Physics material references survive YAML and binary scene round trips
         REQUIRE(loadedEntity);
         const auto& collider2D = loadedEntity.GetComponent<BoxCollider2DComponent>();
         const auto& collider3D = loadedEntity.GetComponent<SphereCollider3DComponent>();
-        REQUIRE(collider2D.GetMaterial());
-        REQUIRE(collider3D.GetMaterial());
-        CHECK(collider2D.GetMaterial()->GetFriction() == 0.15f);
-        CHECK(collider3D.GetMaterial()->GetRestitution() == 0.85f);
-        CHECK(collider2D.GetMaterial()->GetFrictionCombine() == PhysicsCombineMode::Maximum);
-        CHECK(collider3D.GetMaterial()->GetRestitutionCombine() == PhysicsCombineMode::Multiply);
+        CHECK(collider2D.GetMaterialData().Friction == 0.15f);
+        CHECK(collider3D.GetMaterialData().Restitution == 0.85f);
+        CHECK(collider2D.GetMaterialData().FrictionCombine == PhysicsCombineMode::Maximum);
+        CHECK(collider3D.GetMaterialData().RestitutionCombine == PhysicsCombineMode::Multiply);
+        CHECK(collider2D.GetMaterialOverride().Fields == PhysicsMaterialOverrideBits::All);
+        CHECK(collider3D.GetMaterialOverride().Fields == PhysicsMaterialOverrideBits::All);
         CHECK(collider2D.GetMaterial().GetUUID() != material2DHandle.GetUUID());
         CHECK(collider3D.GetMaterial().GetUUID() != material3DHandle.GetUUID());
     };
@@ -625,6 +643,92 @@ TEST_CASE("Physics material references survive YAML and binary scene round trips
     }
 }
 
+TEST_CASE("Physics material asset references and collider overrides survive scene round trips", "[Serialization][Physics][Assets]")
+{
+    SerializationTestFixture fixture;
+    AssetManager& manager = *AssetManager::TryGet();
+    const Path material2DPath = fs::temp_directory_path() / "crowny-collider-material-override.pmat";
+    const Path material3DPath = fs::temp_directory_path() / "crowny-collider-material-override.pmat3d";
+    const Path yamlPath = fs::temp_directory_path() / "crowny-collider-material-override.cwscene";
+    const Path binaryPath = fs::temp_directory_path() / "crowny-collider-material-override.cwb";
+    fs::remove(material2DPath);
+    fs::remove(material3DPath);
+    fs::remove(yamlPath);
+    fs::remove(binaryPath);
+
+    Ref<PhysicsMaterial2D> material2D = CreateRef<PhysicsMaterial2D>();
+    material2D->SetDensity(2.0f);
+    material2D->SetFriction(0.2f);
+    REQUIRE(manager.Save(material2D, material2DPath));
+    Ref<PhysicsMaterial3D> material3D = CreateRef<PhysicsMaterial3D>();
+    material3D->SetDensity(3.0f);
+    material3D->SetRestitution(0.3f);
+    REQUIRE(manager.Save(material3D, material3DPath));
+
+    const UUID material2DId = UuidGenerator::Generate();
+    const UUID material3DId = UuidGenerator::Generate();
+    Ref<AssetManifest> manifest = CreateRef<AssetManifest>("PhysicsOverrideTests");
+    manifest->RegisterAsset(material2DId, material2DPath);
+    manifest->RegisterAsset(material3DId, material3DPath);
+    ScopedAssetManifestRegistration manifestRegistration(manager, manifest);
+
+    const AssetHandle<PhysicsMaterial2D> material2DHandle = manager.LoadFromUUID<PhysicsMaterial2D>(material2DId);
+    const AssetHandle<PhysicsMaterial3D> material3DHandle = manager.LoadFromUUID<PhysicsMaterial3D>(material3DId);
+    REQUIRE(material2DHandle);
+    REQUIRE(material3DHandle);
+    REQUIRE(manager.IsAssetRegistered(material2DId));
+    REQUIRE(manager.IsAssetRegistered(material3DId));
+
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    scene->SetName("ColliderMaterialOverrides");
+    Entity entity = scene->CreateEntity("Colliders");
+    auto& collider2D = entity.AddComponent<BoxCollider2DComponent>();
+    collider2D.SetMaterial(material2DHandle);
+    PhysicsMaterialOverride override2D;
+    override2D.Fields = PhysicsMaterialOverrideBits::Friction;
+    override2D.Values.Friction = 0.75f;
+    collider2D.SetMaterialOverride(override2D);
+    auto& collider3D = entity.AddComponent<SphereCollider3DComponent>();
+    collider3D.SetMaterial(material3DHandle);
+    PhysicsMaterialOverride override3D;
+    override3D.Fields = PhysicsMaterialOverrideBits::Restitution | PhysicsMaterialOverrideBits::RestitutionCombine;
+    override3D.Values.Restitution = 0.8f;
+    override3D.Values.RestitutionCombine = PhysicsCombineMode::Multiply;
+    collider3D.SetMaterialOverride(override3D);
+
+    const auto verify = [&](const Ref<Scene>& loadedScene) {
+        const Entity loaded = loadedScene->FindEntityByName("Colliders");
+        REQUIRE(loaded);
+        const auto& loaded2D = loaded.GetComponent<BoxCollider2DComponent>();
+        const auto& loaded3D = loaded.GetComponent<SphereCollider3DComponent>();
+        CHECK(loaded2D.GetMaterial().GetUUID() == material2DId);
+        CHECK(loaded3D.GetMaterial().GetUUID() == material3DId);
+        CHECK(loaded2D.GetMaterialOverride().Fields == PhysicsMaterialOverrideBits::Friction);
+        CHECK(loaded3D.GetMaterialOverride().Fields ==
+              (PhysicsMaterialOverrideBits::Restitution | PhysicsMaterialOverrideBits::RestitutionCombine));
+        CHECK(loaded2D.GetMaterialData().Density == 2.0f);
+        CHECK(loaded2D.GetMaterialData().Friction == 0.75f);
+        CHECK(loaded3D.GetMaterialData().Density == 3.0f);
+        CHECK(loaded3D.GetMaterialData().Restitution == 0.8f);
+        CHECK(loaded3D.GetMaterialData().RestitutionCombine == PhysicsCombineMode::Multiply);
+    };
+
+    SceneSerializer(scene).Serialize(yamlPath);
+    Ref<Scene> yamlScene = CreateRef<Scene>(false);
+    REQUIRE(SceneSerializer(yamlScene).Deserialize(yamlPath));
+    verify(yamlScene);
+
+    SceneSerializer(scene).SerializeBinary(binaryPath);
+    Ref<Scene> binaryScene = CreateRef<Scene>(false);
+    REQUIRE(SceneSerializer(binaryScene).DeserializeBinary(binaryPath));
+    verify(binaryScene);
+
+    fs::remove(material2DPath);
+    fs::remove(material3DPath);
+    fs::remove(yamlPath);
+    fs::remove(binaryPath);
+}
+
 TEST_CASE("Missing physics material assets retain their references and use defaults", "[Serialization][Physics]")
 {
     SerializationTestFixture fixture;
@@ -636,8 +740,16 @@ TEST_CASE("Missing physics material assets retain their references and use defau
     Entity entity = scene->CreateEntity("MissingColliders");
     auto& collider2D = entity.AddComponent<BoxCollider2DComponent>();
     collider2D.SetMaterial(static_asset_cast<PhysicsMaterial2D>(AssetManager::TryGet()->GetAssetHandle(missing2D)));
+    PhysicsMaterialOverride override2D;
+    override2D.Fields = PhysicsMaterialOverrideBits::Friction;
+    override2D.Values.Friction = 0.9f;
+    collider2D.SetMaterialOverride(override2D);
     auto& collider3D = entity.AddComponent<BoxCollider3DComponent>();
     collider3D.SetMaterial(static_asset_cast<PhysicsMaterial3D>(AssetManager::TryGet()->GetAssetHandle(missing3D)));
+    PhysicsMaterialOverride override3D;
+    override3D.Fields = PhysicsMaterialOverrideBits::Restitution;
+    override3D.Values.Restitution = 0.65f;
+    collider3D.SetMaterialOverride(override3D);
 
     const Path path = fs::temp_directory_path() / "crowny-missing-physics-material-scene.yaml";
     SceneSerializer(scene).Serialize(path);
@@ -653,6 +765,8 @@ TEST_CASE("Missing physics material assets retain their references and use defau
     CHECK(loaded3D.GetMaterial().GetUUID() == missing3D);
     CHECK(loaded2D.GetMaterialData().Density == Physics2D::TryGet()->GetDefaultMaterial()->GetDensity());
     CHECK(loaded3D.GetMaterialData().Density == Physics3D::Get().GetDefaultMaterial()->GetDensity());
+    CHECK(loaded2D.GetMaterialData().Friction == 0.9f);
+    CHECK(loaded3D.GetMaterialData().Restitution == 0.65f);
     fs::remove(path);
 }
 

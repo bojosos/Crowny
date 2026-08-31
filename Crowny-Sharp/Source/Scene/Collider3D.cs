@@ -112,6 +112,13 @@ namespace Crowny
             set { ManagedRuntimeContext.Collider3DSetMaterial(EntityId, value != null ? value.uuid : UUID.Empty); }
         }
 
+        /// <summary>Per-collider values applied after the reusable material asset.</summary>
+        public PhysicsMaterialOverride MaterialOverride
+        {
+            get { return ManagedRuntimeContext.Collider3DGetMaterialOverride(EntityId); }
+            set { ManagedRuntimeContext.Collider3DSetMaterialOverride(EntityId, value); }
+        }
+
         public PhysicsFilter3D CollisionFilter
         {
             get { return ManagedRuntimeContext.Collider3DGetCollisionFilter(EntityId); }
