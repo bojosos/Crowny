@@ -1,5 +1,130 @@
 $ErrorActionPreference = "Stop"
 
+function Get-CrownyGitCommonRepositoryRoot {
+    param(
+        [Parameter(Mandatory)] [string]$RepositoryRoot,
+        [string]$GitCommonDirectory = ""
+    )
+
+    $repositoryRootPath = [IO.Path]::GetFullPath($RepositoryRoot)
+    $commonDirectory = $GitCommonDirectory
+    if ([string]::IsNullOrWhiteSpace($commonDirectory)) {
+        $dotGitPath = Join-Path $repositoryRootPath ".git"
+        if (Test-Path -LiteralPath $dotGitPath -PathType Container) {
+            return $repositoryRootPath
+        }
+        if (Test-Path -LiteralPath $dotGitPath -PathType Leaf) {
+            $gitDirectoryRecord = Get-Content -LiteralPath $dotGitPath -TotalCount 1
+            if ($gitDirectoryRecord -match '^gitdir:\s*(.+)$') {
+                $worktreeGitDirectory = $Matches[1]
+                if (-not [IO.Path]::IsPathRooted($worktreeGitDirectory)) {
+                    $worktreeGitDirectory = Join-Path $repositoryRootPath $worktreeGitDirectory
+                }
+                $worktreeAdminRoot = Split-Path -Parent ([IO.Path]::GetFullPath($worktreeGitDirectory))
+                if ([IO.Path]::GetFileName($worktreeAdminRoot) -eq "worktrees") {
+                    $commonDirectory = Split-Path -Parent $worktreeAdminRoot
+                }
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($commonDirectory)) {
+            return [IO.Path]::GetFullPath((Split-Path -Parent $commonDirectory))
+        }
+
+        $git = Get-Command "git" -ErrorAction SilentlyContinue
+        if (-not $git) { return $repositoryRootPath }
+
+        $previousErrorPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = "SilentlyContinue"
+            $result = @(& $git.Source -C $repositoryRootPath rev-parse --path-format=absolute --git-common-dir 2>$null)
+            $gitExitCode = $LASTEXITCODE
+        }
+        finally { $ErrorActionPreference = $previousErrorPreference }
+        if ($gitExitCode -ne 0 -or $result.Count -eq 0) { return $repositoryRootPath }
+        $commonDirectory = [string]$result[0]
+    }
+
+    if (-not [IO.Path]::IsPathRooted($commonDirectory)) {
+        $commonDirectory = Join-Path $repositoryRootPath $commonDirectory
+    }
+    $commonDirectory = [IO.Path]::GetFullPath($commonDirectory)
+    if ([IO.Path]::GetFileName($commonDirectory.TrimEnd('\', '/')) -ne ".git") {
+        return $repositoryRootPath
+    }
+    return [IO.Path]::GetFullPath((Split-Path -Parent $commonDirectory))
+}
+
+function Get-CrownyBuildRoots {
+    param(
+        [Parameter(Mandatory)] [string]$RepositoryRoot,
+        [string]$DependencyRoot = "",
+        [string]$CoordinationRoot = "",
+        [string]$GitCommonDirectory = ""
+    )
+
+    $repositoryRootPath = [IO.Path]::GetFullPath($RepositoryRoot)
+    $commonRepositoryRoot = Get-CrownyGitCommonRepositoryRoot `
+        -RepositoryRoot $repositoryRootPath -GitCommonDirectory $GitCommonDirectory
+
+    $dependencyOverride = if (-not [string]::IsNullOrWhiteSpace($DependencyRoot)) {
+        $DependencyRoot
+    }
+    else {
+        $env:CROWNY_DEPS_ROOT
+    }
+    $resolvedDependencyRoot = if (-not [string]::IsNullOrWhiteSpace($dependencyOverride)) {
+        [IO.Path]::GetFullPath($dependencyOverride)
+    }
+    else {
+        Join-Path $commonRepositoryRoot ".deps"
+    }
+
+    $coordinationOverride = if (-not [string]::IsNullOrWhiteSpace($CoordinationRoot)) {
+        $CoordinationRoot
+    }
+    else {
+        $env:CROWNY_BUILD_COORDINATION_ROOT
+    }
+    $resolvedCoordinationRoot = if (-not [string]::IsNullOrWhiteSpace($coordinationOverride)) {
+        [IO.Path]::GetFullPath($coordinationOverride)
+    }
+    else {
+        Join-Path $commonRepositoryRoot ".deps\build-coordination"
+    }
+
+    return [pscustomobject]@{
+        RepositoryRoot = $repositoryRootPath
+        CommonRepositoryRoot = $commonRepositoryRoot
+        LocalDependencyRoot = Join-Path $repositoryRootPath ".deps"
+        DependencyRoot = [IO.Path]::GetFullPath($resolvedDependencyRoot)
+        CoordinationRoot = [IO.Path]::GetFullPath($resolvedCoordinationRoot)
+    }
+}
+
+function Get-CrownyDependencyPath {
+    param(
+        [Parameter(Mandatory)] [string]$RepositoryRoot,
+        [Parameter(Mandatory)] [string]$RelativePath,
+        [string]$ReadyRelativePath = "",
+        [string]$DependencyRoot = "",
+        [string]$GitCommonDirectory = ""
+    )
+
+    $roots = Get-CrownyBuildRoots -RepositoryRoot $RepositoryRoot `
+        -DependencyRoot $DependencyRoot -GitCommonDirectory $GitCommonDirectory
+    if (-not [string]::IsNullOrWhiteSpace($DependencyRoot) -or -not [string]::IsNullOrWhiteSpace($env:CROWNY_DEPS_ROOT)) {
+        return Join-Path $roots.DependencyRoot $RelativePath
+    }
+
+    $readinessPath = if ([string]::IsNullOrWhiteSpace($ReadyRelativePath)) { $RelativePath } else { $ReadyRelativePath }
+    $localReadyPath = Join-Path $roots.LocalDependencyRoot $readinessPath
+    if (Test-Path -LiteralPath $localReadyPath) {
+        return Join-Path $roots.LocalDependencyRoot $RelativePath
+    }
+    return Join-Path $roots.DependencyRoot $RelativePath
+}
+
 function Invoke-CrownyChecked {
     param(
         [Parameter(Mandatory)] [string]$FilePath,
@@ -52,21 +177,32 @@ function Find-CrownyMSVCCompiler {
 function Initialize-CrownyBuildEnvironment {
     param([Parameter(Mandatory)] [string]$RepositoryRoot)
 
-    $dependencyRoot = Join-Path $RepositoryRoot ".deps"
     if (-not $env:CROWNY_MONO_ROOT) { $env:CROWNY_MONO_ROOT = Join-Path $env:ProgramFiles "Mono" }
-    if (-not $env:VULKAN_SDK) { $env:VULKAN_SDK = Join-Path $dependencyRoot "VulkanSDK" }
+    if (-not $env:VULKAN_SDK) {
+        $env:VULKAN_SDK = Get-CrownyDependencyPath -RepositoryRoot $RepositoryRoot `
+            -RelativePath "VulkanSDK" -ReadyRelativePath "VulkanSDK\Include\vulkan\vulkan.h"
+    }
     if (-not $env:CROWNY_VMA_INCLUDE) {
         $vulkanInclude = Join-Path $env:VULKAN_SDK "Include"
         if (Test-Path -LiteralPath (Join-Path $vulkanInclude "vma\vk_mem_alloc.h")) {
             $env:CROWNY_VMA_INCLUDE = $vulkanInclude
         }
         else {
-            $env:CROWNY_VMA_INCLUDE = Join-Path $dependencyRoot "VulkanSDK\Include"
+            $env:CROWNY_VMA_INCLUDE = Join-Path $env:VULKAN_SDK "Include"
         }
     }
-    if (-not $env:CROWNY_OPENAL_ROOT) { $env:CROWNY_OPENAL_ROOT = Join-Path $dependencyRoot "openal" }
-    if (-not $env:CROWNY_PHYSICS_ROOT) { $env:CROWNY_PHYSICS_ROOT = Join-Path $dependencyRoot "physics\install" }
-    if (-not $env:CROWNY_SPIRV_CROSS_ROOT) { $env:CROWNY_SPIRV_CROSS_ROOT = Join-Path $dependencyRoot "spirv-cross\install" }
+    if (-not $env:CROWNY_OPENAL_ROOT) {
+        $env:CROWNY_OPENAL_ROOT = Get-CrownyDependencyPath -RepositoryRoot $RepositoryRoot `
+            -RelativePath "openal" -ReadyRelativePath "openal\include\AL\al.h"
+    }
+    if (-not $env:CROWNY_PHYSICS_ROOT) {
+        $env:CROWNY_PHYSICS_ROOT = Get-CrownyDependencyPath -RepositoryRoot $RepositoryRoot `
+            -RelativePath "physics\install" -ReadyRelativePath "physics\install"
+    }
+    if (-not $env:CROWNY_SPIRV_CROSS_ROOT) {
+        $env:CROWNY_SPIRV_CROSS_ROOT = Get-CrownyDependencyPath -RepositoryRoot $RepositoryRoot `
+            -RelativePath "spirv-cross\install" -ReadyRelativePath "spirv-cross\install"
+    }
 }
 
 function Get-CrownyWorkspaceConfiguration {
@@ -128,25 +264,37 @@ function Get-CrownyHash {
 function Get-CrownyLockName {
     param(
         [Parameter(Mandatory)] [string]$RepositoryRoot,
-        [Parameter(Mandatory)] [string]$Name
+        [Parameter(Mandatory)] [string]$Name,
+        [ValidateSet("Worktree", "Shared")] [string]$Scope = "Worktree"
     )
 
-    $identity = Get-CrownyHash -Files @() -Values @([IO.Path]::GetFullPath($RepositoryRoot).ToLowerInvariant(), $Name)
+    $roots = Get-CrownyBuildRoots -RepositoryRoot $RepositoryRoot
+    $scopePath = if ($Scope -eq "Shared") { $roots.CoordinationRoot } else { $roots.RepositoryRoot }
+    $identity = Get-CrownyHash -Files @() -Values @($scopePath.ToLowerInvariant(), $Name)
     return $identity.Substring(0, 20)
+}
+
+function Get-CrownyLockRoot {
+    param([Parameter(Mandatory)] [string]$RepositoryRoot)
+
+    $lockRoot = Join-Path (Get-CrownyBuildRoots -RepositoryRoot $RepositoryRoot).CoordinationRoot "locks"
+    New-Item -ItemType Directory -Force -Path $lockRoot | Out-Null
+    return $lockRoot
 }
 
 function Enter-CrownyExclusiveLock {
     param(
         [Parameter(Mandatory)] [string]$RepositoryRoot,
         [Parameter(Mandatory)] [string]$Name,
+        [ValidateSet("Worktree", "Shared")] [string]$Scope = "Worktree",
         [switch]$Wait
     )
 
-    $lockRoot = Join-Path $RepositoryRoot ".deps\locks"
-    New-Item -ItemType Directory -Force -Path $lockRoot | Out-Null
-    $lockPath = Join-Path $lockRoot "$(Get-CrownyLockName -RepositoryRoot $RepositoryRoot -Name $Name).lock"
+    $lockRoot = Get-CrownyLockRoot -RepositoryRoot $RepositoryRoot
+    $lockPath = Join-Path $lockRoot "$(Get-CrownyLockName -RepositoryRoot $RepositoryRoot -Name $Name -Scope $Scope).lock"
     $ownerPath = "$lockPath.owner.json"
 
+    $stream = $null
     $reportedOwner = $false
     while (-not $stream) {
         try {
@@ -190,8 +338,7 @@ function Get-CrownyOutputGatePath {
         [Parameter(Mandatory)] [string]$Configuration
     )
 
-    $lockRoot = Join-Path $RepositoryRoot ".deps\locks"
-    New-Item -ItemType Directory -Force -Path $lockRoot | Out-Null
+    $lockRoot = Get-CrownyLockRoot -RepositoryRoot $RepositoryRoot
     $identity = Get-CrownyLockName -RepositoryRoot $RepositoryRoot -Name "output-$Configuration"
     $gatePath = Join-Path $lockRoot "$identity.gate"
     if (-not (Test-Path -LiteralPath $gatePath)) {
@@ -235,6 +382,7 @@ function Enter-CrownyOutputWriteLock {
     $gatePath = Get-CrownyOutputGatePath -RepositoryRoot $RepositoryRoot -Configuration $Configuration
     $null = Get-CrownyOutputLockOwners -GatePath $gatePath
     $ownerPath = "$gatePath.writer.owner.json"
+    $stream = $null
     $reportedOwner = $false
     while (-not $stream) {
         try {
@@ -270,6 +418,7 @@ function Enter-CrownyOutputReadLock {
     $gatePath = Get-CrownyOutputGatePath -RepositoryRoot $RepositoryRoot -Configuration $Configuration
     $null = Get-CrownyOutputLockOwners -GatePath $gatePath
     $ownerPath = "$gatePath.reader.$PID-$([Guid]::NewGuid().ToString('N')).owner.json"
+    $stream = $null
     $reportedOwner = $false
     while (-not $stream) {
         try {
@@ -322,18 +471,28 @@ function Enter-CrownyCompilerLease {
     else {
         $wantedJobs
     }
-    $leaseRoot = Join-Path $RepositoryRoot ".deps\compiler-leases"
+    $leaseRoot = Join-Path (Get-CrownyBuildRoots -RepositoryRoot $RepositoryRoot).CoordinationRoot "compiler-leases"
     New-Item -ItemType Directory -Force -Path $leaseRoot | Out-Null
     $reported = $false
 
     while ($true) {
-        $schedulerLock = Enter-CrownyExclusiveLock -RepositoryRoot $RepositoryRoot -Name "compiler-scheduler" -Wait
+        $schedulerLock = Enter-CrownyExclusiveLock -RepositoryRoot $RepositoryRoot -Name "compiler-scheduler" -Scope Shared -Wait
         try {
             $active = [Collections.Generic.List[object]]::new()
             foreach ($leasePath in @(Get-ChildItem -LiteralPath $leaseRoot -Filter "*.json" -File -ErrorAction SilentlyContinue)) {
                 try {
                     $record = Get-Content -LiteralPath $leasePath.FullName -Raw | ConvertFrom-Json
-                    if (Get-Process -Id $record.pid -ErrorAction SilentlyContinue) {
+                    $process = Get-Process -Id $record.pid -ErrorAction SilentlyContinue
+                    $processMatches = $null -ne $process
+                    if ($processMatches -and $record.PSObject.Properties.Name -contains "processStartedUtc") {
+                        $recordedStart = [DateTime]::Parse(
+                            [string]$record.processStartedUtc,
+                            [Globalization.CultureInfo]::InvariantCulture,
+                            [Globalization.DateTimeStyles]::RoundtripKind)
+                        $actualStart = $process.StartTime.ToUniversalTime()
+                        $processMatches = [Math]::Abs(($actualStart - $recordedStart.ToUniversalTime()).TotalSeconds) -lt 1
+                    }
+                    if ($processMatches) {
                         $active.Add([pscustomobject]@{ Path = $leasePath.FullName; Record = $record })
                     }
                     else {
@@ -351,6 +510,7 @@ function Enter-CrownyCompilerLease {
                 $leasePath = Join-Path $leaseRoot "$PID-$([Guid]::NewGuid().ToString('N')).json"
                 [ordered]@{
                     pid = $PID
+                    processStartedUtc = (Get-Process -Id $PID).StartTime.ToUniversalTime().ToString("o")
                     jobs = $grantedJobs
                     command = [Environment]::CommandLine
                     startedUtc = [DateTime]::UtcNow.ToString("o")
@@ -376,7 +536,7 @@ function Exit-CrownyCompilerLease {
     )
 
     if (-not $Lease) { return }
-    $schedulerLock = Enter-CrownyExclusiveLock -RepositoryRoot $RepositoryRoot -Name "compiler-scheduler" -Wait
+    $schedulerLock = Enter-CrownyExclusiveLock -RepositoryRoot $RepositoryRoot -Name "compiler-scheduler" -Scope Shared -Wait
     try { Remove-Item -LiteralPath $Lease.Path -Force -ErrorAction SilentlyContinue }
     finally { Exit-CrownyExclusiveLock -Lock $schedulerLock }
 }
@@ -384,9 +544,9 @@ function Exit-CrownyCompilerLease {
 function Enter-CrownyProjectReadLock {
     param([Parameter(Mandatory)] [string]$RepositoryRoot, [switch]$Wait)
 
-    $lockRoot = Join-Path $RepositoryRoot ".deps\locks"
-    New-Item -ItemType Directory -Force -Path $lockRoot | Out-Null
-    $gatePath = Join-Path $lockRoot "projects.gate"
+    $lockRoot = Get-CrownyLockRoot -RepositoryRoot $RepositoryRoot
+    $identity = Get-CrownyLockName -RepositoryRoot $RepositoryRoot -Name "projects"
+    $gatePath = Join-Path $lockRoot "$identity.projects.gate"
     if (-not (Test-Path -LiteralPath $gatePath)) {
         [IO.File]::WriteAllText($gatePath, "Crowny project generation gate")
     }
@@ -409,9 +569,9 @@ function Enter-CrownyProjectReadLock {
 function Enter-CrownyProjectWriteLock {
     param([Parameter(Mandatory)] [string]$RepositoryRoot, [switch]$Wait)
 
-    $lockRoot = Join-Path $RepositoryRoot ".deps\locks"
-    New-Item -ItemType Directory -Force -Path $lockRoot | Out-Null
-    $gatePath = Join-Path $lockRoot "projects.gate"
+    $lockRoot = Get-CrownyLockRoot -RepositoryRoot $RepositoryRoot
+    $identity = Get-CrownyLockName -RepositoryRoot $RepositoryRoot -Name "projects"
+    $gatePath = Join-Path $lockRoot "$identity.projects.gate"
     if (-not (Test-Path -LiteralPath $gatePath)) {
         [IO.File]::WriteAllText($gatePath, "Crowny project generation gate")
     }

@@ -11,12 +11,14 @@ param(
     [string]$Simd = "AVX2",
     [ValidateRange(0, 64)]
     [int]$Jobs = 0,
-    [string]$VulkanVersion = "1.4.357.0"
+    [string]$VulkanVersion = "1.4.357.0",
+    [string]$DependencyRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$dependencyRoot = Join-Path $repositoryRoot ".deps"
+. (Join-Path $PSScriptRoot "windows-build-common.ps1")
+$dependencyRoot = (Get-CrownyBuildRoots -RepositoryRoot $repositoryRoot -DependencyRoot $DependencyRoot).DependencyRoot
 $vulkanRoot = Join-Path $dependencyRoot "VulkanSDK"
 $openALRoot = Join-Path $dependencyRoot "openal"
 
@@ -63,18 +65,18 @@ try {
     Invoke-Checked -FilePath "git" -ArgumentList @("submodule", "update", "--init", "--recursive")
 
     if ($CoreCLR) {
-        & (Join-Path $PSScriptRoot "setup-dotnet.ps1")
+        & (Join-Path $PSScriptRoot "setup-dotnet.ps1") -DependencyRoot $dependencyRoot
     }
 
     Install-WinGetPackage -Id "Mono.Mono"
     Install-WinGetPackage -Id "7zip.7zip"
     Install-WinGetPackage -Id "Kitware.CMake"
-    & (Join-Path $PSScriptRoot "setup-vulkan.ps1") -VulkanVersion $VulkanVersion
+    & (Join-Path $PSScriptRoot "setup-vulkan.ps1") -VulkanVersion $VulkanVersion -DependencyRoot $dependencyRoot
     $physicsConfiguration = if ($Configuration -eq "Debug") { "Debug" } else { "Release" }
-    & (Join-Path $PSScriptRoot "setup-openal.ps1") -Configuration $physicsConfiguration -Simd $Simd
+    & (Join-Path $PSScriptRoot "setup-openal.ps1") -Configuration $physicsConfiguration -Simd $Simd -DependencyRoot $dependencyRoot
 
-    & (Join-Path $PSScriptRoot "setup-physics.ps1") -Configuration $physicsConfiguration -Simd $Simd
-    & (Join-Path $PSScriptRoot "setup-spirv-cross.ps1") -Configuration $physicsConfiguration -VulkanVersion $VulkanVersion -Simd $Simd
+    & (Join-Path $PSScriptRoot "setup-physics.ps1") -Configuration $physicsConfiguration -Simd $Simd -DependencyRoot $dependencyRoot
+    & (Join-Path $PSScriptRoot "setup-spirv-cross.ps1") -Configuration $physicsConfiguration -VulkanVersion $VulkanVersion -Simd $Simd -DependencyRoot $dependencyRoot
 
     $monoRoot = Join-Path $env:ProgramFiles "Mono"
     $requiredFiles = @(
@@ -101,7 +103,6 @@ try {
     $env:CROWNY_PHYSICS_ROOT = Join-Path $dependencyRoot "physics\install"
     $env:CROWNY_SPIRV_CROSS_ROOT = Join-Path $dependencyRoot "spirv-cross\install"
 
-    . (Join-Path $PSScriptRoot "windows-build-common.ps1")
     Ensure-CrownyProjects -RepositoryRoot $repositoryRoot -Simd $Simd -Force
 
     if ($Build) {

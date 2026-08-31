@@ -5,15 +5,18 @@ param(
     [string]$VulkanVersion = "1.4.357.0",
     [ValidateSet("SSE4.1", "AVX2")]
     [string]$Simd = "AVX2",
+    [string]$DependencyRoot = "",
     [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$dependencyRoot = Join-Path $repositoryRoot ".deps\spirv-cross"
-$sourceRoot = Join-Path $dependencyRoot "source"
-$buildRoot = Join-Path $dependencyRoot "build\$Configuration"
-$installRoot = Join-Path $dependencyRoot "install\$Configuration"
+. (Join-Path $PSScriptRoot "windows-build-common.ps1")
+$sharedDependencyRoot = (Get-CrownyBuildRoots -RepositoryRoot $repositoryRoot -DependencyRoot $DependencyRoot).DependencyRoot
+$spirvCrossRoot = Join-Path $sharedDependencyRoot "spirv-cross"
+$sourceRoot = Join-Path $spirvCrossRoot "source"
+$buildRoot = Join-Path $spirvCrossRoot "build\$Configuration"
+$installRoot = Join-Path $spirvCrossRoot "install\$Configuration"
 $tag = "vulkan-sdk-$VulkanVersion"
 $simdLevel = $Simd.ToLowerInvariant()
 $simdCMakeOptions = if ($Simd -eq "AVX2") {
