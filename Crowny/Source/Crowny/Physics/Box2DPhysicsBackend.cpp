@@ -89,6 +89,8 @@ namespace Crowny
         {
             Entity First;
             Entity Second;
+            uint64_t ShapeA = 0;
+            uint64_t ShapeB = 0;
             Collision2D Collision;
             bool IsTrigger = false;
         };
@@ -104,6 +106,7 @@ namespace Crowny
         {
             ContactEventType Type;
             ContactSnapshot Contact;
+            uint64_t Sequence = 0;
         };
 
         class Box2DContactListener final : public b2ContactListener
@@ -115,14 +118,14 @@ namespace Crowny
             {
                 ContactSnapshot snapshot = Snapshot(contact);
                 m_Contacts[contact] = snapshot;
-                m_Events.push_back({ ContactEventType::Enter, std::move(snapshot) });
+                m_Events.push_back({ ContactEventType::Enter, std::move(snapshot), m_NextSequence++ });
             }
 
             void EndContact(b2Contact* contact) override
             {
                 auto iter = m_Contacts.find(contact);
                 ContactSnapshot snapshot = iter != m_Contacts.end() ? iter->second : Snapshot(contact);
-                m_Events.push_back({ ContactEventType::Exit, std::move(snapshot) });
+                m_Events.push_back({ ContactEventType::Exit, std::move(snapshot), m_NextSequence++ });
                 if (iter != m_Contacts.end())
                     m_Contacts.erase(iter);
             }
@@ -140,7 +143,7 @@ namespace Crowny
                 ContactSnapshot snapshot = Snapshot(contact);
                 m_Contacts[contact] = snapshot;
                 if (!snapshot.IsTrigger)
-                    m_Events.push_back({ ContactEventType::Stay, std::move(snapshot) });
+                    m_Events.push_back({ ContactEventType::Stay, std::move(snapshot), m_NextSequence++ });
             }
 
             void QueueTriggerStayEvents()
@@ -148,7 +151,7 @@ namespace Crowny
                 for (const auto& entry : m_Contacts)
                 {
                     if (entry.second.IsTrigger)
-                        m_Events.push_back({ ContactEventType::Stay, entry.second });
+                        m_Events.push_back({ ContactEventType::Stay, entry.second, m_NextSequence++ });
                 }
             }
 
@@ -156,9 +159,11 @@ namespace Crowny
             {
                 m_DispatchEvents.clear();
                 m_DispatchEvents.swap(m_Events);
-                for (const ContactEvent& event : m_DispatchEvents)
+                NormalizeEvents(m_DispatchEvents, m_Events);
+                for (const ContactEvent& event : m_Events)
                     Dispatch(event);
                 m_DispatchEvents.clear();
+                m_Events.clear();
             }
 
             void Clear()
@@ -166,6 +171,7 @@ namespace Crowny
                 m_Contacts.clear();
                 m_Events.clear();
                 m_DispatchEvents.clear();
+                m_NextSequence = 0;
             }
 
         private:
@@ -200,6 +206,8 @@ namespace Crowny
                 ContactSnapshot result;
                 result.First = Entity(static_cast<entt::entity>(fixtureA->GetBody()->GetUserData().pointer), m_Scene);
                 result.Second = Entity(static_cast<entt::entity>(fixtureB->GetBody()->GetUserData().pointer), m_Scene);
+                result.ShapeA = fixtureA->GetUserData().pointer;
+                result.ShapeB = fixtureB->GetUserData().pointer;
                 result.IsTrigger = fixtureA->IsSensor() || fixtureB->IsSensor();
                 result.Collision.Colliders = { result.First, result.Second };
 
@@ -212,6 +220,60 @@ namespace Crowny
                         result.Collision.Points.emplace_back(worldManifold.points[i].x, worldManifold.points[i].y);
                 }
                 return result;
+            }
+
+            static std::pair<uint64_t, uint64_t> ContactKey(const ContactEvent& event)
+            {
+                return event.Contact.ShapeA < event.Contact.ShapeB ? std::pair(event.Contact.ShapeA, event.Contact.ShapeB)
+                                                                  : std::pair(event.Contact.ShapeB, event.Contact.ShapeA);
+            }
+
+            static void NormalizeEvents(Vector<ContactEvent>& input, Vector<ContactEvent>& output)
+            {
+                std::sort(input.begin(), input.end(), [](const ContactEvent& lhs, const ContactEvent& rhs) {
+                    return std::tuple(ContactKey(lhs), lhs.Type, lhs.Sequence) < std::tuple(ContactKey(rhs), rhs.Type, rhs.Sequence);
+                });
+
+                output.clear();
+                for (size_t read = 0; read < input.size();)
+                {
+                    const auto key = ContactKey(input[read]);
+                    size_t pairEnd = read + 1;
+                    while (pairEnd < input.size() && ContactKey(input[pairEnd]) == key)
+                        ++pairEnd;
+
+                    size_t enter = pairEnd;
+                    size_t stay = pairEnd;
+                    size_t exit = pairEnd;
+                    for (size_t index = read; index < pairEnd; ++index)
+                    {
+                        switch (input[index].Type)
+                        {
+                        case ContactEventType::Enter:
+                            enter = index;
+                            break;
+                        case ContactEventType::Stay:
+                            stay = index;
+                            break;
+                        case ContactEventType::Exit:
+                            exit = index;
+                            break;
+                        }
+                    }
+
+                    if (enter != pairEnd)
+                    {
+                        if (stay != pairEnd && !input[stay].Contact.Collision.Points.empty())
+                            input[enter].Contact.Collision.Points = input[stay].Contact.Collision.Points;
+                        output.push_back(std::move(input[enter]));
+                    }
+                    else if (stay != pairEnd && exit == pairEnd)
+                        output.push_back(std::move(input[stay]));
+                    if (exit != pairEnd)
+                        output.push_back(std::move(input[exit]));
+
+                    read = pairEnd;
+                }
             }
 
             static void DispatchToEntity(const ContactEvent& event, Entity receiver, Entity other, bool reverse)
@@ -261,6 +323,7 @@ namespace Crowny
             UnorderedMap<b2Contact*, ContactSnapshot> m_Contacts;
             Vector<ContactEvent> m_Events;
             Vector<ContactEvent> m_DispatchEvents;
+            uint64_t m_NextSequence = 0;
         };
 
         class Box2DPhysicsBackend final : public Physics2DBackend
@@ -757,6 +820,7 @@ namespace Crowny
                 const uint32_t layer = std::min(entity.GetComponent<Rigidbody2DComponent>().GetLayerMask(), Physics2DLayerCount - 1);
                 definition.filter.categoryBits = static_cast<uint16_t>(1u << layer);
                 definition.filter.maskBits = static_cast<uint16_t>(m_Settings ? m_Settings->MaskBits[layer] : 0xFFFFu);
+                definition.userData.pointer = collider.InstanceId;
                 definition.isSensor = collider.IsTrigger();
                 const PhysicsMaterialData material = collider.GetMaterialData();
                 definition.density = material.Density;

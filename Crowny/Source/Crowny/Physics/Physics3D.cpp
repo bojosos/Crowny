@@ -11,6 +11,121 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        auto ContactEndpointKey(const PhysicsContactEvent3D& event, bool first)
+        {
+            const PhysicsShape3DHandle shape = first ? event.ShapeA : event.ShapeB;
+            const PhysicsBody3DHandle body = first ? event.BodyA : event.BodyB;
+            return std::tuple(shape.Value, body.Value);
+        }
+
+        auto ContactPairKey(const PhysicsContactEvent3D& event)
+        {
+            return std::tuple(event.ShapeA.Value, event.BodyA.Value, event.ShapeB.Value, event.BodyB.Value);
+        }
+
+        auto ContactPointKey(const PhysicsContactPoint3D& point)
+        {
+            return std::tuple(point.Point.x, point.Point.y, point.Point.z, point.Normal.x, point.Normal.y, point.Normal.z, point.Separation,
+                              point.NormalImpulse);
+        }
+
+        void SortAndDeduplicateContactPoints(SmallVector<PhysicsContactPoint3D, 4>& points)
+        {
+            std::sort(points.begin(), points.end(),
+                      [](const PhysicsContactPoint3D& lhs, const PhysicsContactPoint3D& rhs) { return ContactPointKey(lhs) < ContactPointKey(rhs); });
+            uint32_t write = 0;
+            for (uint32_t read = 0; read < points.size(); ++read)
+            {
+                if (write != 0 && ContactPointKey(points[write - 1]) == ContactPointKey(points[read]))
+                    continue;
+                if (write != read)
+                    points[write] = std::move(points[read]);
+                ++write;
+            }
+            points.resize(write);
+        }
+
+        void CanonicalizeContactEvent(PhysicsContactEvent3D& event)
+        {
+            if (ContactEndpointKey(event, false) < ContactEndpointKey(event, true))
+            {
+                std::swap(event.BodyA, event.BodyB);
+                std::swap(event.ShapeA, event.ShapeB);
+                std::swap(event.ShapeUserDataA, event.ShapeUserDataB);
+                std::swap(event.MaterialA, event.MaterialB);
+                for (PhysicsContactPoint3D& point : event.Points)
+                    point.Normal = -point.Normal;
+            }
+            SortAndDeduplicateContactPoints(event.Points);
+        }
+
+        void MergeContactEvent(PhysicsContactEvent3D& target, PhysicsContactEvent3D&& source)
+        {
+            target.IsTrigger = target.IsTrigger || source.IsTrigger;
+            target.Points.reserve(target.Points.size() + source.Points.size());
+            for (PhysicsContactPoint3D& point : source.Points)
+                target.Points.push_back(std::move(point));
+            SortAndDeduplicateContactPoints(target.Points);
+        }
+    } // namespace
+
+    void NormalizePhysicsContactEvents3D(Vector<PhysicsContactEvent3D>& events)
+    {
+        for (PhysicsContactEvent3D& event : events)
+            CanonicalizeContactEvent(event);
+
+        std::sort(events.begin(), events.end(), [](const PhysicsContactEvent3D& lhs, const PhysicsContactEvent3D& rhs) {
+            return std::tuple(ContactPairKey(lhs), lhs.Type) < std::tuple(ContactPairKey(rhs), rhs.Type);
+        });
+
+        size_t write = 0;
+        for (size_t read = 0; read < events.size();)
+        {
+            const auto pair = ContactPairKey(events[read]);
+            const PhysicsContactEventType3D type = events[read].Type;
+            PhysicsContactEvent3D merged = std::move(events[read++]);
+            while (read < events.size() && ContactPairKey(events[read]) == pair && events[read].Type == type)
+                MergeContactEvent(merged, std::move(events[read++]));
+            events[write++] = std::move(merged);
+        }
+        events.resize(write);
+
+        write = 0;
+        for (size_t read = 0; read < events.size();)
+        {
+            const auto pair = ContactPairKey(events[read]);
+            size_t pairEnd = read + 1;
+            bool hasTransition = events[read].Type != PhysicsContactEventType3D::Stay;
+            size_t enter = events[read].Type == PhysicsContactEventType3D::Enter ? read : events.size();
+            while (pairEnd < events.size() && ContactPairKey(events[pairEnd]) == pair)
+            {
+                hasTransition = hasTransition || events[pairEnd].Type != PhysicsContactEventType3D::Stay;
+                if (events[pairEnd].Type == PhysicsContactEventType3D::Enter)
+                    enter = pairEnd;
+                ++pairEnd;
+            }
+            if (enter != events.size())
+            {
+                for (size_t index = read; index < pairEnd; ++index)
+                {
+                    if (events[index].Type == PhysicsContactEventType3D::Stay)
+                        MergeContactEvent(events[enter], std::move(events[index]));
+                }
+            }
+            for (; read < pairEnd; ++read)
+            {
+                if (hasTransition && events[read].Type == PhysicsContactEventType3D::Stay)
+                    continue;
+                if (write != read)
+                    events[write] = std::move(events[read]);
+                ++write;
+            }
+        }
+        events.resize(write);
+    }
+
     Physics3D::Physics3D()
     {
         m_Settings.DefaultMaterial = static_asset_cast<PhysicsMaterial3D>(AssetManager::TryGet()->CreateAssetHandle(CreateRef<PhysicsMaterial3D>()));

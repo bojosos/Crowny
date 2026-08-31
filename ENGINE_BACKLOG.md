@@ -72,9 +72,12 @@ This is the durable record of the requested engine work. A checked item is merge
 ## Physics and ECS
 
 - [ ] Refactor 2D physics behind a backend-neutral interface. Box2D is the default. Expose bodies, all common collider shapes, materials, filters, triggers, joints, queries, contacts, callbacks, sleeping, CCD, and deterministic lifecycle rules.
+  - [x] Box2D contact delivery uses stable collider instance IDs, deterministic pair/phase ordering, one event per phase, and no same-step Stay beside Enter or Exit while retaining event scratch across fixed steps.
 - [ ] Complete 3D physics with Jolt as default and Bullet as an interchangeable backend. Keep common features backend-neutral; expose backend extensions explicitly instead of weakening the common API.
+  - [x] Box3D, Jolt, and Bullet normalize retained contact-batch scratch through one backend-neutral seam: endpoint orientation and normals are canonical, points and pairs are deterministic, duplicate manifolds merge, transition batches suppress Stay, and copied shape user-data/material snapshots remain valid during deferred scene delivery.
 - [ ] Vendor physics libraries consistently with existing submodules. Record whether upstream can be pinned directly or requires a Crowny fork for build fixes or stable patches.
 - [ ] Complete C# bindings for 2D and 3D bodies, colliders, materials, layers, queries, contacts, callbacks, joints, assets, and serialization.
+  - [ ] Expose stable participating shape handles and resolved material snapshots in managed collision payloads; native callbacks now retain this data, but the managed event ABI still carries only the other entity and contact manifold.
 - [x] C# can create UUID-bearing, path-free 2D and 3D physics materials with backend-neutral properties and inline scene serialization. Managed-created material and mesh wrappers use collectible weak ownership and are drained safely at scripting shutdown.
 - [ ] Serialize physics materials and collider overrides without raw paths. Define fallback/default material behavior and version migrations.
 - [x] Draw Box2D box/circle and 3D box/sphere/capsule collider shapes in the viewport when physics overlays are enabled, using the same transform and scale rules as the active backends.

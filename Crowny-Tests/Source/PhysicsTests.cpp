@@ -11,6 +11,7 @@
 #include <array>
 #include <limits>
 #include <string_view>
+#include <tuple>
 
 using namespace Crowny;
 
@@ -268,6 +269,86 @@ TEST_CASE("3D backend factories are safe before initialization", "[Physics][Phys
     CHECK(compiledBackends > 0);
 }
 
+TEST_CASE("3D contact batches normalize independent of backend callback order", "[Physics][Physics3D][Contacts]")
+{
+    PhysicsContactEvent3D reversedEnter;
+    reversedEnter.Type = PhysicsContactEventType3D::Enter;
+    reversedEnter.BodyA = { 90 };
+    reversedEnter.BodyB = { 30 };
+    reversedEnter.ShapeA = { 9 };
+    reversedEnter.ShapeB = { 3 };
+    reversedEnter.ShapeUserDataA = 900;
+    reversedEnter.ShapeUserDataB = 300;
+    reversedEnter.MaterialA.Friction = 0.9f;
+    reversedEnter.MaterialB.Friction = 0.3f;
+    reversedEnter.Points.push_back({ { 2.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, -0.2f, 2.0f });
+
+    PhysicsContactEvent3D duplicateEnter = reversedEnter;
+    std::swap(duplicateEnter.BodyA, duplicateEnter.BodyB);
+    std::swap(duplicateEnter.ShapeA, duplicateEnter.ShapeB);
+    std::swap(duplicateEnter.ShapeUserDataA, duplicateEnter.ShapeUserDataB);
+    std::swap(duplicateEnter.MaterialA, duplicateEnter.MaterialB);
+    duplicateEnter.Points[0].Normal = -duplicateEnter.Points[0].Normal;
+    duplicateEnter.Points.push_back({ { 1.0f, 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, -0.1f, 1.0f });
+
+    PhysicsContactEvent3D sameStepStay = duplicateEnter;
+    sameStepStay.Type = PhysicsContactEventType3D::Stay;
+
+    PhysicsContactEvent3D endingStay;
+    endingStay.Type = PhysicsContactEventType3D::Stay;
+    endingStay.BodyA = { 20 };
+    endingStay.BodyB = { 80 };
+    endingStay.ShapeA = { 2 };
+    endingStay.ShapeB = { 8 };
+
+    PhysicsContactEvent3D endingExit = endingStay;
+    endingExit.Type = PhysicsContactEventType3D::Exit;
+
+    Vector<PhysicsContactEvent3D> first = { sameStepStay, endingExit, reversedEnter, endingStay, duplicateEnter };
+    Vector<PhysicsContactEvent3D> second(first.rbegin(), first.rend());
+    NormalizePhysicsContactEvents3D(first);
+    NormalizePhysicsContactEvents3D(second);
+
+    REQUIRE(first.size() == 2);
+    REQUIRE(second.size() == first.size());
+    CHECK(first[0].ShapeA.Value == 2);
+    CHECK(first[0].ShapeB.Value == 8);
+    CHECK(first[0].Type == PhysicsContactEventType3D::Exit);
+    CHECK(first[1].ShapeA.Value == 3);
+    CHECK(first[1].ShapeB.Value == 9);
+    CHECK(first[1].BodyA.Value == 30);
+    CHECK(first[1].BodyB.Value == 90);
+    CHECK(first[1].ShapeUserDataA == 300);
+    CHECK(first[1].ShapeUserDataB == 900);
+    CHECK(first[1].MaterialA.Friction == 0.3f);
+    CHECK(first[1].MaterialB.Friction == 0.9f);
+    CHECK(first[1].Type == PhysicsContactEventType3D::Enter);
+    REQUIRE(first[1].Points.size() == 2);
+    CHECK(first[1].Points[0].Point == glm::vec3(1.0f, 0.0f, 0.0f));
+    CHECK(first[1].Points[1].Point == glm::vec3(2.0f, 0.0f, 0.0f));
+    CHECK(first[1].Points[0].Normal == glm::vec3(-1.0f, 0.0f, 0.0f));
+    CHECK(first[1].Points[1].Normal == glm::vec3(-1.0f, 0.0f, 0.0f));
+
+    for (size_t index = 0; index < first.size(); ++index)
+    {
+        CHECK(second[index].Type == first[index].Type);
+        CHECK(second[index].BodyA == first[index].BodyA);
+        CHECK(second[index].BodyB == first[index].BodyB);
+        CHECK(second[index].ShapeA == first[index].ShapeA);
+        CHECK(second[index].ShapeB == first[index].ShapeB);
+        CHECK(second[index].ShapeUserDataA == first[index].ShapeUserDataA);
+        CHECK(second[index].ShapeUserDataB == first[index].ShapeUserDataB);
+        REQUIRE(second[index].Points.size() == first[index].Points.size());
+        for (uint32_t point = 0; point < first[index].Points.size(); ++point)
+        {
+            CHECK(second[index].Points[point].Point == first[index].Points[point].Point);
+            CHECK(second[index].Points[point].Normal == first[index].Points[point].Normal);
+            CHECK(second[index].Points[point].Separation == first[index].Points[point].Separation);
+            CHECK(second[index].Points[point].NormalImpulse == first[index].Points[point].NormalImpulse);
+        }
+    }
+}
+
 TEST_CASE("3D backends implement the common contract", "[Physics][Physics3D]")
 {
     for (const BackendCase& backendCase : BackendCases)
@@ -349,6 +430,45 @@ TEST_CASE("3D backends implement the common contract", "[Physics][Physics3D]")
 
             backend->Step(1.0f / 60.0f, 4);
             CHECK_FALSE(contacts.empty());
+            for (size_t index = 0; index < contacts.size(); ++index)
+            {
+                const PhysicsContactEvent3D& event = contacts[index];
+                CHECK(std::tuple(event.ShapeA.Value, event.BodyA.Value) <= std::tuple(event.ShapeB.Value, event.BodyB.Value));
+                if (event.ShapeA == staticShape)
+                {
+                    CHECK(event.ShapeUserDataA == 11);
+                    CHECK(event.MaterialA.Friction == 0.25f);
+                }
+                else if (event.ShapeA == dynamicShape)
+                {
+                    CHECK(event.ShapeUserDataA == 21);
+                    CHECK(event.MaterialA.Friction == 0.5f);
+                }
+                if (event.ShapeB == staticShape)
+                {
+                    CHECK(event.ShapeUserDataB == 11);
+                    CHECK(event.MaterialB.Friction == 0.25f);
+                }
+                else if (event.ShapeB == dynamicShape)
+                {
+                    CHECK(event.ShapeUserDataB == 21);
+                    CHECK(event.MaterialB.Friction == 0.5f);
+                }
+                if (index != 0)
+                {
+                    const PhysicsContactEvent3D& previous = contacts[index - 1];
+                    CHECK(std::tuple(previous.ShapeA.Value, previous.BodyA.Value, previous.ShapeB.Value, previous.BodyB.Value, previous.Type) <=
+                          std::tuple(event.ShapeA.Value, event.BodyA.Value, event.ShapeB.Value, event.BodyB.Value, event.Type));
+                }
+                if (event.Type != PhysicsContactEventType3D::Stay)
+                {
+                    for (const PhysicsContactEvent3D& candidate : contacts)
+                    {
+                        if (candidate.ShapeA == event.ShapeA && candidate.ShapeB == event.ShapeB)
+                            CHECK(candidate.Type != PhysicsContactEventType3D::Stay);
+                    }
+                }
+            }
 
             backend->DestroyConstraint(constraint);
             backend->DestroyBody(dynamicBody);

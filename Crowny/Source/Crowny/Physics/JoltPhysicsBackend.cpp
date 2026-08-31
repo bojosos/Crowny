@@ -212,6 +212,7 @@ namespace Crowny
                 m_Shapes.clear();
                 m_ActiveContacts.clear();
                 m_PendingContacts.clear();
+                m_DispatchContacts.clear();
                 m_Initialized = false;
             }
             m_Physics.reset();
@@ -231,14 +232,16 @@ namespace Crowny
                 return;
             m_Physics->Update(timestep, std::max(substeps, 1u), m_TempAllocator.get(), m_JobSystem.get());
 
-            Vector<PhysicsContactEvent3D> pending;
+            m_DispatchContacts.clear();
             {
                 std::lock_guard<std::mutex> lock(m_ContactMutex);
-                pending.swap(m_PendingContacts);
+                m_DispatchContacts.swap(m_PendingContacts);
             }
+            NormalizePhysicsContactEvents3D(m_DispatchContacts);
             if (m_Callback)
-                for (const PhysicsContactEvent3D& event : pending)
+                for (const PhysicsContactEvent3D& event : m_DispatchContacts)
                     m_Callback(event);
+            m_DispatchContacts.clear();
         }
 
         void SetGravity(const glm::vec3& gravity) override
@@ -988,6 +991,12 @@ namespace Crowny
             return JPH::ValidateResult::AcceptContact;
         }
 
+        static std::pair<uint64_t, uint64_t> ContactPair(const PhysicsContactEvent3D& event)
+        {
+            return event.ShapeA.Value < event.ShapeB.Value ? std::pair(event.ShapeA.Value, event.ShapeB.Value)
+                                                           : std::pair(event.ShapeB.Value, event.ShapeA.Value);
+        }
+
         void OnContactAdded(const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold,
                             JPH::ContactSettings& settings) override
         {
@@ -1007,10 +1016,17 @@ namespace Crowny
             if (found == m_ActiveContacts.end())
                 return;
             PhysicsContactEvent3D event = found->second;
-            event.Type = PhysicsContactEventType3D::Exit;
-            event.Points.clear();
-            m_PendingContacts.push_back(std::move(event));
             m_ActiveContacts.erase(found);
+            const auto pairKey = ContactPair(event);
+            const bool pairRemainsActive = std::any_of(m_ActiveContacts.begin(), m_ActiveContacts.end(), [&](const auto& active) {
+                return ContactPair(active.second) == pairKey;
+            });
+            if (!pairRemainsActive)
+            {
+                event.Type = PhysicsContactEventType3D::Exit;
+                event.Points.clear();
+                m_PendingContacts.push_back(std::move(event));
+            }
         }
 
         void QueueContact(PhysicsContactEventType3D type, const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold,
@@ -1026,6 +1042,10 @@ namespace Crowny
             const auto shapeB = m_Shapes.find(event.ShapeB.Value);
             if (shapeA == m_Shapes.end() || shapeB == m_Shapes.end())
                 return;
+            event.ShapeUserDataA = shapeA->second.Desc.UserData;
+            event.ShapeUserDataB = shapeB->second.Desc.UserData;
+            event.MaterialA = shapeA->second.Desc.Material;
+            event.MaterialB = shapeB->second.Desc.Material;
             event.IsTrigger = shapeA->second.Desc.IsTrigger || shapeB->second.Desc.IsTrigger;
             settings.mIsSensor = event.IsTrigger;
             settings.mCombinedFriction = CombinePhysicsMaterialValue(
@@ -1045,6 +1065,15 @@ namespace Crowny
             }
             const JPH::SubShapeIDPair key(bodyA.GetID(), manifold.mSubShapeID1, bodyB.GetID(), manifold.mSubShapeID2);
             std::lock_guard<std::mutex> lock(m_ContactMutex);
+            if (event.Type == PhysicsContactEventType3D::Enter)
+            {
+                const auto pairKey = ContactPair(event);
+                const bool pairAlreadyActive = std::any_of(m_ActiveContacts.begin(), m_ActiveContacts.end(), [&](const auto& active) {
+                    return ContactPair(active.second) == pairKey;
+                });
+                if (pairAlreadyActive)
+                    event.Type = PhysicsContactEventType3D::Stay;
+            }
             m_ActiveContacts[key] = event;
             m_PendingContacts.push_back(std::move(event));
         }
@@ -1062,6 +1091,7 @@ namespace Crowny
         std::unordered_map<uint64_t, PhysicsConstraint3DDesc> m_ConstraintRecords;
         std::unordered_map<JPH::SubShapeIDPair, PhysicsContactEvent3D> m_ActiveContacts;
         Vector<PhysicsContactEvent3D> m_PendingContacts;
+        Vector<PhysicsContactEvent3D> m_DispatchContacts;
         PhysicsContactCallback3D m_Callback;
         std::mutex m_ContactMutex;
         uint64_t m_NextBody = 1;

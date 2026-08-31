@@ -229,11 +229,17 @@ namespace Crowny
         PhysicsBody3DHandle BodyB;
         PhysicsShape3DHandle ShapeA;
         PhysicsShape3DHandle ShapeB;
+        uint64_t ShapeUserDataA = 0;
+        uint64_t ShapeUserDataB = 0;
+        PhysicsMaterialData MaterialA;
+        PhysicsMaterialData MaterialB;
         bool IsTrigger = false;
         SmallVector<PhysicsContactPoint3D, 4> Points;
     };
 
     using PhysicsContactCallback3D = std::function<void(const PhysicsContactEvent3D&)>;
+
+    void NormalizePhysicsContactEvents3D(Vector<PhysicsContactEvent3D>& events);
 } // namespace Crowny
 
 namespace std

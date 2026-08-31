@@ -124,6 +124,7 @@ namespace Crowny
             m_NativeShapes.clear();
             m_Constraints.clear();
             m_ActiveContacts.clear();
+            m_ContactEvents.clear();
             m_Callback = nullptr;
         }
 
@@ -825,17 +826,28 @@ namespace Crowny
             event.BodyA = FindShapeBody(shapeA);
             event.BodyB = FindShapeBody(shapeB);
             event.IsTrigger = trigger;
+            const auto shapeAIt = m_Shapes.find(shapeA);
+            const auto shapeBIt = m_Shapes.find(shapeB);
+            if (shapeAIt != m_Shapes.end())
+            {
+                event.ShapeUserDataA = shapeAIt->second.Desc.UserData;
+                event.MaterialA = shapeAIt->second.Desc.Material;
+            }
+            if (shapeBIt != m_Shapes.end())
+            {
+                event.ShapeUserDataB = shapeBIt->second.Desc.UserData;
+                event.MaterialB = shapeBIt->second.Desc.Material;
+            }
             if (trigger || !shapeA || !shapeB)
                 return event;
 
-            const auto nativeIt = m_Shapes.find(shapeA);
-            if (nativeIt == m_Shapes.end() || !b3Shape_IsValid(nativeIt->second.Native))
+            if (shapeAIt == m_Shapes.end() || !b3Shape_IsValid(shapeAIt->second.Native))
                 return event;
-            const int count = b3Shape_GetContactCapacity(nativeIt->second.Native);
+            const int count = b3Shape_GetContactCapacity(shapeAIt->second.Native);
             if (count <= 0)
                 return event;
             Vector<b3ContactData> contacts(count);
-            const int written = b3Shape_GetContactData(nativeIt->second.Native, contacts.data(), count);
+            const int written = b3Shape_GetContactData(shapeAIt->second.Native, contacts.data(), count);
             for (int i = 0; i < written; ++i)
             {
                 const b3ContactData& contact = contacts[i];
@@ -862,7 +874,7 @@ namespace Crowny
 
         void SnapshotEvents()
         {
-            Vector<PhysicsContactEvent3D> pending;
+            m_ContactEvents.clear();
             const b3ContactEvents contacts = b3World_GetContactEvents(m_World);
             for (int i = 0; i < contacts.beginCount; ++i)
             {
@@ -871,7 +883,7 @@ namespace Crowny
                 if (!shapeA || !shapeB)
                     continue;
                 m_ActiveContacts[MakePair(shapeA.Value, shapeB.Value)] = { shapeA, shapeB, false };
-                pending.push_back(MakeEvent(PhysicsContactEventType3D::Enter, shapeA, shapeB, false));
+                m_ContactEvents.push_back(MakeEvent(PhysicsContactEventType3D::Enter, shapeA, shapeB, false));
             }
             for (int i = 0; i < contacts.endCount; ++i)
             {
@@ -881,7 +893,7 @@ namespace Crowny
                 auto active = m_ActiveContacts.find(pair);
                 if (active == m_ActiveContacts.end())
                     continue;
-                pending.push_back(MakeEvent(PhysicsContactEventType3D::Exit, active->second.ShapeA, active->second.ShapeB, false));
+                m_ContactEvents.push_back(MakeEvent(PhysicsContactEventType3D::Exit, active->second.ShapeA, active->second.ShapeB, false));
                 m_ActiveContacts.erase(active);
             }
 
@@ -893,7 +905,7 @@ namespace Crowny
                 if (!shapeA || !shapeB)
                     continue;
                 m_ActiveContacts[MakePair(shapeA.Value, shapeB.Value)] = { shapeA, shapeB, true };
-                pending.push_back(MakeEvent(PhysicsContactEventType3D::Enter, shapeA, shapeB, true));
+                m_ContactEvents.push_back(MakeEvent(PhysicsContactEventType3D::Enter, shapeA, shapeB, true));
             }
             for (int i = 0; i < sensors.endCount; ++i)
             {
@@ -903,17 +915,19 @@ namespace Crowny
                 auto active = m_ActiveContacts.find(pair);
                 if (active == m_ActiveContacts.end())
                     continue;
-                pending.push_back(MakeEvent(PhysicsContactEventType3D::Exit, active->second.ShapeA, active->second.ShapeB, true));
+                m_ContactEvents.push_back(MakeEvent(PhysicsContactEventType3D::Exit, active->second.ShapeA, active->second.ShapeB, true));
                 m_ActiveContacts.erase(active);
             }
 
             for (const auto& [pair, active] : m_ActiveContacts)
-                pending.push_back(MakeEvent(PhysicsContactEventType3D::Stay, active.ShapeA, active.ShapeB, active.Trigger));
+                m_ContactEvents.push_back(MakeEvent(PhysicsContactEventType3D::Stay, active.ShapeA, active.ShapeB, active.Trigger));
+            NormalizePhysicsContactEvents3D(m_ContactEvents);
             if (m_Callback)
             {
-                for (const PhysicsContactEvent3D& event : pending)
+                for (const PhysicsContactEvent3D& event : m_ContactEvents)
                     m_Callback(event);
             }
+            m_ContactEvents.clear();
         }
 
         void RemoveActiveContacts(PhysicsShape3DHandle shape)
@@ -935,6 +949,7 @@ namespace Crowny
         UnorderedMap<uint64_t, PhysicsShape3DHandle> m_NativeShapes;
         UnorderedMap<uint64_t, b3JointId> m_Constraints;
         std::unordered_map<ContactPair, ActiveContact, ContactPairHash> m_ActiveContacts;
+        Vector<PhysicsContactEvent3D> m_ContactEvents;
     };
 
     Scope<Physics3DBackend> CreateBox3DBackend() { return CreateScope<Box3DPhysicsBackend>(); }

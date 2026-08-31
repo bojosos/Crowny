@@ -96,6 +96,7 @@ namespace Crowny
             m_Bodies.clear();
             m_Shapes.clear();
             m_ActiveContacts.clear();
+            m_ContactEvents.clear();
             m_World.reset();
             m_Solver.reset();
             m_Broadphase.reset();
@@ -866,6 +867,7 @@ namespace Crowny
 
         void DispatchContacts()
         {
+            m_ContactEvents.clear();
             std::unordered_map<BulletContactKey, ContactRecord, BulletContactKeyHash> current;
             const int manifoldCount = m_Dispatcher->getNumManifolds();
             for (int manifoldIndex = 0; manifoldIndex < manifoldCount; ++manifoldIndex)
@@ -892,6 +894,16 @@ namespace Crowny
                     const auto shapeBIt = m_Shapes.find(shapeB);
                     record.Event.IsTrigger = (shapeAIt != m_Shapes.end() && shapeAIt->second.Desc.IsTrigger) ||
                                              (shapeBIt != m_Shapes.end() && shapeBIt->second.Desc.IsTrigger);
+                    if (shapeAIt != m_Shapes.end())
+                    {
+                        record.Event.ShapeUserDataA = shapeAIt->second.Desc.UserData;
+                        record.Event.MaterialA = shapeAIt->second.Desc.Material;
+                    }
+                    if (shapeBIt != m_Shapes.end())
+                    {
+                        record.Event.ShapeUserDataB = shapeBIt->second.Desc.UserData;
+                        record.Event.MaterialB = shapeBIt->second.Desc.Material;
+                    }
                     PhysicsContactPoint3D output;
                     output.Point = FromBullet(point.getPositionWorldOnA());
                     output.Normal = -FromBullet(point.m_normalWorldOnB);
@@ -901,12 +913,11 @@ namespace Crowny
                 }
             }
 
-            Vector<PhysicsContactEvent3D> pending;
             for (auto& [key, record] : current)
             {
                 record.Event.Type =
                   m_ActiveContacts.find(key) == m_ActiveContacts.end() ? PhysicsContactEventType3D::Enter : PhysicsContactEventType3D::Stay;
-                pending.push_back(record.Event);
+                m_ContactEvents.push_back(record.Event);
             }
             for (const auto& [key, record] : m_ActiveContacts)
             {
@@ -915,14 +926,16 @@ namespace Crowny
                 PhysicsContactEvent3D event = record.Event;
                 event.Type = PhysicsContactEventType3D::Exit;
                 event.Points.clear();
-                pending.push_back(event);
+                m_ContactEvents.push_back(event);
             }
             m_ActiveContacts = std::move(current);
+            NormalizePhysicsContactEvents3D(m_ContactEvents);
             if (m_Callback)
             {
-                for (const PhysicsContactEvent3D& event : pending)
+                for (const PhysicsContactEvent3D& event : m_ContactEvents)
                     m_Callback(event);
             }
+            m_ContactEvents.clear();
         }
 
         uint64_t m_NextHandle = 1;
@@ -938,6 +951,7 @@ namespace Crowny
         UnorderedMap<const btRigidBody*, PhysicsBody3DHandle> m_BodyLookup;
         UnorderedMap<uint64_t, Scope<btTypedConstraint>> m_Constraints;
         std::unordered_map<BulletContactKey, ContactRecord, BulletContactKeyHash> m_ActiveContacts;
+        Vector<PhysicsContactEvent3D> m_ContactEvents;
         ContactAddedCallback m_PreviousContactAddedCallback = nullptr;
         static inline BulletPhysicsBackend* s_ActiveBackend = nullptr;
     };
