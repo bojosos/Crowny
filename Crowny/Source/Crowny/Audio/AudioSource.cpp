@@ -1,12 +1,12 @@
 #include "cwpch.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Audio/AudioBus.h"
 #include "Crowny/Audio/AudioFilter.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Audio/AudioMixer.h"
 #include "Crowny/Audio/AudioSource.h"
 #include "Crowny/Audio/AudioUtils.h"
-#include "Crowny/Common/Time.h"
 #include "Crowny/Ecs/Components.h"
 
 #include <AL/al.h>
@@ -95,7 +95,8 @@ namespace Crowny
             return;
         }
 
-        const float dt = Time::GetDeltaTime();
+        const Application* application = Application::TryGet();
+        const float dt = application != nullptr ? application->GetTime().GetUnscaledDeltaTime() : 0.0f;
         if (dt > 1e-6f)
         {
             m_Velocity = (position - m_PrevPosition) / dt;

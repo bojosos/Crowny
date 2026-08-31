@@ -16,16 +16,6 @@ namespace Crowny
     struct Collider2D;
     struct Rigidbody2DComponent;
 
-    class TimeSettingsSerializer;
-    struct TimeSettings : public RefCounted
-    {
-        float TimeScale = 1.0f;
-        float MaxTimestep = 1.0f / 3.0f;
-        float FixedTimestep = 0.02f;
-
-        using Serializer = TimeSettingsSerializer;
-    };
-
     class PhysicsSettingsSerializer;
     struct Physics2DSettings : public RefCounted
     {

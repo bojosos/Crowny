@@ -4,6 +4,7 @@
 #include "Crowny/Scripting/Managed/Interop/ManagedHostBindings.h"
 #include "Crowny/Scripting/Managed/ManagedComponentTypes.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Animation/AnimationClip.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioBus.h"
@@ -15,7 +16,6 @@
 #include "Crowny/Common/Noise.h"
 #include "Crowny/Common/Random.h"
 #include "Crowny/Common/StringUtils.h"
-#include "Crowny/Common/Time.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/Physics/Physics2D.h"
@@ -561,11 +561,11 @@ namespace Crowny
     }
         CW_GLOBAL_FLOAT(InputGetMouseScrollX, Input::GetMouseScrollX())
         CW_GLOBAL_FLOAT(InputGetMouseScrollY, Input::GetMouseScrollY())
-        CW_GLOBAL_FLOAT(TimeGetDeltaTime, Time::GetDeltaTime())
-        CW_GLOBAL_FLOAT(TimeGetTime, Time::GetTime())
-        CW_GLOBAL_FLOAT(TimeGetFixedDeltaTime, Time::GetFixedDeltaTime())
-        CW_GLOBAL_FLOAT(TimeGetSmoothDeltaTime, Time::GetSmoothDeltaTime())
-        CW_GLOBAL_FLOAT(TimeGetRealtimeSinceStartup, Time::GetRealtimeSinceStartup())
+        CW_GLOBAL_FLOAT(TimeGetDeltaTime, Application::Get().GetTime().GetDeltaTime())
+        CW_GLOBAL_FLOAT(TimeGetTime, Application::Get().GetTime().GetTime())
+        CW_GLOBAL_FLOAT(TimeGetFixedDeltaTime, Application::Get().GetTime().GetFixedDeltaTime())
+        CW_GLOBAL_FLOAT(TimeGetSmoothDeltaTime, Application::Get().GetTime().GetSmoothDeltaTime())
+        CW_GLOBAL_FLOAT(TimeGetRealtimeSinceStartup, Application::Get().GetTime().GetRealtimeSinceStartup())
 #undef CW_GLOBAL_FLOAT
 
         cw_managed_status CW_MANAGED_CALL TimeGetFrameCount(void* context, uint32_t* result)
@@ -573,7 +573,7 @@ namespace Crowny
             return Execute(context, [&]() -> cw_managed_status {
                 if (result == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
-                *result = static_cast<uint32_t>(Time::GetFrameCount());
+                *result = static_cast<uint32_t>(Application::Get().GetTime().GetFrameCount());
                 return CW_MANAGED_STATUS_OK;
             });
         }

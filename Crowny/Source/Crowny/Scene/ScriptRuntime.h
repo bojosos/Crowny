@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Timestep.h"
 #include "Crowny/Scripting/Managed/ManagedTypes.h"
 
 namespace Crowny
@@ -15,8 +16,8 @@ namespace Crowny
         static void Init();
         static void OnStart();
         static void OnStart(const Ref<Scene>& scene);
-        static void OnUpdate();
-        static void OnUpdate(const Ref<Scene>& scene);
+        static void OnUpdate(Timestep timestep);
+        static void OnUpdate(const Ref<Scene>& scene, Timestep timestep);
         static void OnShutdown();
         static void OnShutdown(const Ref<Scene>& scene);
 

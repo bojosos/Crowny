@@ -233,9 +233,12 @@ namespace Crowny
         }
     }
 
-    void ScriptRuntime::OnUpdate() { OnUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
+    void ScriptRuntime::OnUpdate(Timestep timestep)
+    {
+        OnUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr, timestep);
+    }
 
-    void ScriptRuntime::OnUpdate(const Ref<Scene>& scene)
+    void ScriptRuntime::OnUpdate(const Ref<Scene>& scene, Timestep timestep)
     {
         if (scene == nullptr)
             return;
@@ -248,7 +251,7 @@ namespace Crowny
                 Entity entity;
                 ManagedScript* script = FindScript(scene, invocation, entity);
                 if (script != nullptr)
-                    Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::Update));
+                    Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::Update, timestep.GetSeconds()));
             }
         }
         if (ManagedScripting* managed = GetManagedScripting())

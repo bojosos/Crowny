@@ -25,7 +25,6 @@
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
-#include "Crowny/Common/Time.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
@@ -53,8 +52,6 @@ namespace Crowny
                 value = s_NextHistoryOwnerId.fetch_add(1, std::memory_order_relaxed);
             return value;
         }
-
-        uint64_t CurrentSimulationFrameNumber() { return std::max(Time::GetFrameCount(), uint64_t{ 1 }); }
 
         uint64_t CameraHistoryNamespace(uint64_t historyOwnerId, const Scene* scene, uint64_t cameraIdentity, uint64_t identityKind)
         {
@@ -2187,7 +2184,7 @@ namespace Crowny
 
     void SceneRenderer::ExtractSnapshot(RenderSnapshot& snapshot, bool drawGrid) const
     {
-        const uint64_t frameNumber = snapshot.FrameNumber != 0 ? snapshot.FrameNumber : CurrentSimulationFrameNumber();
+        const uint64_t frameNumber = snapshot.FrameNumber != 0 ? snapshot.FrameNumber : m_RenderSyncEpoch + 1;
         snapshot.Clear();
         snapshot.FrameNumber = frameNumber;
         Camera* mainCamera = nullptr;
@@ -2239,7 +2236,7 @@ namespace Crowny
                                                    uint64_t historyNamespace, bool drawGrid) const
     {
         ZoneScopedN("ExtractSnapshot");
-        const uint64_t frameNumber = snapshot.FrameNumber != 0 ? snapshot.FrameNumber : CurrentSimulationFrameNumber();
+        const uint64_t frameNumber = snapshot.FrameNumber != 0 ? snapshot.FrameNumber : m_RenderSyncEpoch + 1;
         snapshot.Clear();
         snapshot.FrameNumber = frameNumber;
         snapshot.ProjectionMatrix = camera.GetProjection();

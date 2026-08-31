@@ -250,7 +250,7 @@ namespace Crowny
                 m_SceneState = SceneState::Edit;
                 m_ViewportPanel->EnableGizmo();
                 m_GameMode = false;
-                Time::Reset();
+                Application::TryGet()->GetTime().ResetSimulation();
                 break;
             case SceneExecutionState::Play:
                 m_SceneState = SceneState::Play;
@@ -563,14 +563,18 @@ namespace Crowny
             break;
         }
         case SceneState::Play: {
-            SceneManager::TryGet()->GetActiveScene()->OnUpdateRuntime(ts);
-            ScriptRuntime::OnUpdate();
-            m_SceneRenderer->UpdateAnimations(ts);
+            Application* application = Application::TryGet();
+            Time& time = application->GetTime();
+            time.AdvanceSimulation(*application->GetTimeSettings());
+            const Timestep simulationStep(time.GetDeltaTime());
+
+            SceneManager::TryGet()->GetActiveScene()->OnUpdateRuntime(simulationStep);
+            ScriptRuntime::OnUpdate(simulationStep);
+            m_SceneRenderer->UpdateAnimations(simulationStep);
             m_SceneRenderer->UpdateProceduralMeshes();
             RenderSnapshot& snapshot = AcquireSnapshot();
             m_SceneRenderer->ExtractSnapshot(snapshot);
             SubmitSnapshot(snapshot);
-            Time::Update(ts, Application::TryGet()->GetTimeSettings()->FixedTimestep);
             break;
         }
         case SceneState::Simulate: {

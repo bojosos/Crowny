@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/Module.h"
+#include "Crowny/Common/Time.h"
 #include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Events/MouseEvent.h"
 #include "Crowny/Layers/LayerStack.h"
@@ -18,8 +19,6 @@ namespace Crowny
 
     class Window;
     class EngineRuntime;
-    struct TimeSettings;
-
     struct ScriptConfig
     {
         ManagedBackendPreset Backend = ManagedBackendPreset::Mono;
@@ -60,6 +59,8 @@ namespace Crowny
         void PushOverlay(Layer* layer);
 
         Window& GetWindow() const;
+        Time& GetTime() { return m_Time; }
+        const Time& GetTime() const { return m_Time; }
         const Ref<RenderWindow>& GetRenderWindow() const { return m_Windows[0]; }
         Ref<TimeSettings> GetTimeSettings() const;
         void SetTimeSettings(const Ref<TimeSettings>& timeSettings);
@@ -94,6 +95,7 @@ namespace Crowny
         bool m_Running = true;
         bool m_Minimized = false;
         float m_LastFrameTime = 0.0f;
+        Time m_Time;
 
         LayerStack* m_LayerStack;
         ImGuiLayer* m_ImGuiLayer;

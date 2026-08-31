@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/Time.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics3D.h"
 #include "Crowny/Serialization/SettingsSerializer.h"

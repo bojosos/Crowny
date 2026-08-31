@@ -1,6 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "Crowny/Common/Time.h"
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
 #include "Crowny/Physics/PhysicsCollision.h"
@@ -248,30 +247,19 @@ TEST_CASE("Active cameras do not age each other within one frame", "[Memory][Fra
     }
 }
 
-TEST_CASE("Value-returning snapshots use the simulation frame for history aging", "[Memory][Frame][Renderer][SceneSync]")
+TEST_CASE("Value-returning snapshots assign implicit frame numbers", "[Memory][Frame][Renderer][SceneSync]")
 {
-    struct ResetTimeOnExit
-    {
-        ~ResetTimeOnExit() { Time::Reset(); }
-    };
-    [[maybe_unused]] const ResetTimeOnExit resetTime;
-
-    Time::Reset();
     const Ref<Scene> scene = CreateRef<Scene>(false);
     SceneRenderer renderer(scene, nullptr);
-    std::array<Camera, 121> cameras;
+    Camera camera;
 
     for (uint64_t frame = 1; frame <= 3; frame++)
     {
-        Time::Update(1.0f / 60.0f, 1.0f / 60.0f);
-        for (Camera& camera : cameras)
-        {
-            const RenderSnapshot snapshot = renderer.ExtractSnapshot(camera, glm::mat4(1.0f), false);
-            CHECK(snapshot.FrameNumber == frame);
-            if (frame != 1)
-                CHECK_FALSE(snapshot.CameraCut);
-            CHECK(snapshot.ReleasedHistoryNamespaces.Empty());
-        }
+        const RenderSnapshot snapshot = renderer.ExtractSnapshot(camera, glm::mat4(1.0f), false);
+        CHECK(snapshot.FrameNumber == frame);
+        if (frame != 1)
+            CHECK_FALSE(snapshot.CameraCut);
+        CHECK(snapshot.ReleasedHistoryNamespaces.Empty());
     }
 }
 

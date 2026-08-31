@@ -12,7 +12,6 @@
 #include "Crowny/ImGui/ImGuiOpenGLLayer.h"
 #include "Crowny/ImGui/ImGuiVulkanLayer.h"
 #include "Crowny/Input/Input.h"
-#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Scene/SceneRenderer.h"
@@ -32,7 +31,11 @@ namespace Crowny
         (*func)();
     }
 
-    Application::Application(const ApplicationDesc& applicationDesc) : m_ApplicationDesc(applicationDesc) { m_LayerStack = new LayerStack(); }
+    Application::Application(const ApplicationDesc& applicationDesc)
+      : m_TimeSettings(CreateRef<TimeSettings>()), m_ApplicationDesc(applicationDesc)
+    {
+        m_LayerStack = new LayerStack();
+    }
 
     Application::~Application() { delete m_LayerStack; }
 
@@ -165,14 +168,12 @@ namespace Crowny
 
     Ref<TimeSettings> Application::GetTimeSettings() const
     {
-        if (!m_TimeSettings)
-        {
-            static Ref<TimeSettings> defaultTimeSettings = CreateRef<TimeSettings>();
-            return defaultTimeSettings;
-        }
         return m_TimeSettings;
     }
-    void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings) { m_TimeSettings = timeSettings; }
+    void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings)
+    {
+        m_TimeSettings = timeSettings != nullptr ? timeSettings : CreateRef<TimeSettings>();
+    }
 
     EngineRuntime& Application::GetRuntime()
     {
@@ -200,6 +201,7 @@ namespace Crowny
             const float time = (float)glfwGetTime();
             const Timestep timestep = time - m_LastFrameTime;
             m_LastFrameTime = time;
+            m_Time.BeginFrame(timestep);
             auto& rapi = *RenderAPI::TryGet();
             rapi.BeginFrameStatistics(timestep.GetSeconds());
 

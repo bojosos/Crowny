@@ -6,31 +6,31 @@ namespace Crowny
         /// <summary>
         /// The time that has passed since the last frame.
         /// </summary>
-        /// <returns>Time since last frame in milliseconds.</returns>
+        /// <returns>Time since the last simulation frame in seconds.</returns>
         public static float deltaTime => ManagedRuntimeContext.TimeGetDeltaTime();
         
         /// <summary>
-        /// The time that has passed since the beginning.
+        /// The scaled time that has passed since simulation started.
         /// </summary>
-        /// <returns>Time in milliseconds.</returns>
+        /// <returns>Simulation time in seconds.</returns>
         public static float time => ManagedRuntimeContext.TimeGetTime();
         
         /// <summary>
-        /// Fixed delta time is fixed xd
+        /// The configured fixed simulation step.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The fixed step in seconds.</returns>
         public static float fixedDeltaTime => ManagedRuntimeContext.TimeGetFixedDeltaTime();
 
         /// <summary>
-        /// smoothDeltaTime = deltaTime + time / (frameCount + 1);
+        /// The average scaled delta time over the latest simulation frames.
         /// </summary>
-        /// <returns>The smoothDeltaTime if milliseconds.</returns>
+        /// <returns>The smoothed delta time in seconds.</returns>
         public static float smoothDeltaTime => ManagedRuntimeContext.TimeGetSmoothDeltaTime();
 
         /// <summary>
-        /// The in between frame time since the beginning.
+        /// Unscaled application time since startup.
         /// </summary>
-        /// <returns>The time in milliseconds.</returns>
+        /// <returns>Realtime in seconds.</returns>
         public static float realtimeSinceStartup => ManagedRuntimeContext.TimeGetRealtimeSinceStartup();
 
         /// <summary>
