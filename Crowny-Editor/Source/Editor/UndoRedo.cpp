@@ -24,6 +24,47 @@ namespace Crowny
             for (Entity child : children)
                 SerializeSubtree(serializer, output, child);
         }
+
+        Vector<Entity> NormalizeHierarchySelection(const Vector<Entity>& entities, Scene* scene)
+        {
+            Vector<Entity> candidates;
+            if (scene == nullptr)
+                return candidates;
+
+            const Entity sceneRoot = scene->GetRootEntity();
+            UnorderedSet<entt::entity> selectedHandles;
+            selectedHandles.reserve(entities.size());
+            candidates.reserve(entities.size());
+            for (Entity entity : entities)
+            {
+                if (!entity || entity.GetScene() != scene || (sceneRoot && entity == sceneRoot) ||
+                    !selectedHandles.insert(entity.GetHandle()).second)
+                    continue;
+                candidates.push_back(entity);
+            }
+
+            Vector<Entity> roots;
+            roots.reserve(candidates.size());
+            UnorderedSet<entt::entity> ancestorPath;
+            for (Entity entity : candidates)
+            {
+                bool selectedAncestor = false;
+                ancestorPath.clear();
+                for (Entity parent = entity.GetParent(); parent; parent = parent.GetParent())
+                {
+                    if (!ancestorPath.insert(parent.GetHandle()).second)
+                        return {};
+                    if (selectedHandles.find(parent.GetHandle()) != selectedHandles.end())
+                    {
+                        selectedAncestor = true;
+                        break;
+                    }
+                }
+                if (!selectedAncestor)
+                    roots.push_back(entity);
+            }
+            return roots;
+        }
     } // namespace
 
     bool UndoTransaction::Begin(Id id, ActionFactory factory)
@@ -391,11 +432,13 @@ namespace Crowny
         Entity parent = ResolveParent();
         if (restored && parent)
         {
-            restored.SetParent(parent);
-            restored.SetPosition(m_LocalPosition);
-            restored.SetRotation(m_LocalRotation);
-            restored.SetScale(m_LocalScale);
-            restored.SetSiblingIndex(m_SiblingIndex);
+            const Array<Entity, 1> entities{ restored };
+            m_Scene->ReparentEntities(entities, parent, m_SiblingIndex);
+            TransformComponent& transform = restored.GetTransform();
+            transform.SetPosition(m_LocalPosition);
+            transform.SetRotation(m_LocalRotation);
+            transform.SetScale(m_LocalScale);
+            restored.NotifyTransformChanged();
         }
         return restored;
     }
@@ -431,6 +474,50 @@ namespace Crowny
 
     void EntityDeletedAction::Revert() { m_Focus = m_Snapshot.Restore(); }
 
+    EntitiesDeletedAction::EntitiesDeletedAction(const Vector<Entity>& entities, const Ref<Scene>& scene)
+      : UndoAction(entities.size() == 1u ? "Delete entity" : "Delete entities"), m_Scene(scene)
+    {
+        if (!m_Scene)
+            return;
+        const Vector<Entity> roots = NormalizeHierarchySelection(entities, m_Scene.get());
+        m_Snapshots.reserve(roots.size());
+        for (Entity entity : roots)
+        {
+            EntitySnapshot snapshot(entity, m_Scene);
+            if (!m_Focus)
+                m_Focus = snapshot.ResolveParent();
+            m_Snapshots.push_back(std::move(snapshot));
+        }
+        std::sort(m_Snapshots.begin(), m_Snapshots.end(), [](const EntitySnapshot& lhs, const EntitySnapshot& rhs) {
+            if (lhs.GetParentUuid() != rhs.GetParentUuid())
+                return lhs.GetParentUuid() < rhs.GetParentUuid();
+            return lhs.GetSiblingIndex() < rhs.GetSiblingIndex();
+        });
+    }
+
+    void EntitiesDeletedAction::Commit()
+    {
+        if (!m_Scene)
+            return;
+        Vector<Entity> entities;
+        entities.reserve(m_Snapshots.size());
+        for (const EntitySnapshot& snapshot : m_Snapshots)
+        {
+            if (Entity entity = snapshot.ResolveRoot())
+                entities.push_back(entity);
+        }
+        if (!entities.empty())
+            m_Scene->DestroyEntities(entities);
+        m_Focus = m_Snapshots.empty() ? Entity{} : m_Snapshots.front().ResolveParent();
+    }
+
+    void EntitiesDeletedAction::Revert()
+    {
+        for (const EntitySnapshot& snapshot : m_Snapshots)
+            snapshot.Restore();
+        m_Focus = m_Snapshots.empty() ? Entity{} : m_Snapshots.front().ResolveParent();
+    }
+
     EntityReparentAction::EntityReparentAction(Entity entity, Entity oldParent, Entity newParent)
       : UndoAction("Reparent entity"), m_Scene(entity.GetScene()), m_Entity(entity.GetUuid()), m_OldParent(oldParent.GetUuid()),
         m_NewParent(newParent.GetUuid()), m_OldSibling(entity.GetSiblingIndex()), m_NewSibling(newParent.GetChildCount())
@@ -446,8 +533,79 @@ namespace Crowny
         if (!m_Scene)
             return;
         Entity entity = m_Scene->TryGetEntityFromUuid(m_Entity);
-        Entity parent = m_Scene->TryGetEntityFromUuid(targetUuid);
-        if (entity && parent && entity.SetParent(parent))
-            entity.SetSiblingIndex(siblingIndex);
+        Entity parent = targetUuid.Empty() ? Entity{} : m_Scene->TryGetEntityFromUuid(targetUuid);
+        if (entity && (targetUuid.Empty() || parent))
+        {
+            const Array<Entity, 1> entities{ entity };
+            m_Scene->ReparentEntities(entities, parent, siblingIndex);
+        }
+    }
+
+    EntitiesReparentAction::EntitiesReparentAction(const Vector<Entity>& entities, Entity newParent)
+      : UndoAction(entities.size() == 1u ? "Reparent entity" : "Reparent entities"),
+        m_Scene(newParent ? Ref<Scene>(newParent.GetScene())
+                          : (!entities.empty() && entities.front() ? Ref<Scene>(entities.front().GetScene()) : Ref<Scene>{})),
+        m_NewParentId(newParent ? newParent.GetUuid() : UUID::EMPTY),
+        m_NewSiblingIndex(newParent ? newParent.GetChildCount() : 0u)
+    {
+        if (!m_Scene)
+            return;
+        const Vector<Entity> roots = NormalizeHierarchySelection(entities, m_Scene.get());
+        m_Records.reserve(roots.size());
+        for (Entity entity : roots)
+        {
+            const Entity oldParent = entity.GetParent();
+            m_Records.push_back({ entity.GetUuid(), oldParent ? oldParent.GetUuid() : UUID::EMPTY, entity.GetSiblingIndex() });
+        }
+
+        m_RevertOrder.reserve(m_Records.size());
+        for (uint32_t index = 0u; index < m_Records.size(); index++)
+            m_RevertOrder.push_back(index);
+        std::sort(m_RevertOrder.begin(), m_RevertOrder.end(), [&](uint32_t lhs, uint32_t rhs) {
+            const Record& first = m_Records[lhs];
+            const Record& second = m_Records[rhs];
+            if (first.OldParentId != second.OldParentId)
+                return first.OldParentId < second.OldParentId;
+            return first.OldSiblingIndex < second.OldSiblingIndex;
+        });
+    }
+
+    void EntitiesReparentAction::Commit()
+    {
+        if (!m_Scene)
+            return;
+        const Entity parent = m_NewParentId.Empty() ? Entity{} : m_Scene->TryGetEntityFromUuid(m_NewParentId);
+        if (!m_NewParentId.Empty() && !parent)
+            return;
+        Vector<Entity> entities;
+        entities.reserve(m_Records.size());
+        for (const Record& record : m_Records)
+        {
+            if (Entity entity = m_Scene->TryGetEntityFromUuid(record.EntityId))
+                entities.push_back(entity);
+        }
+        if (!entities.empty())
+            m_Scene->ReparentEntities(entities, parent, m_NewSiblingIndex);
+    }
+
+    void EntitiesReparentAction::Revert()
+    {
+        if (!m_Scene)
+            return;
+        for (const uint32_t recordIndex : m_RevertOrder)
+        {
+            const Record& record = m_Records[recordIndex];
+            Entity entity = m_Scene->TryGetEntityFromUuid(record.EntityId);
+            Entity parent = record.OldParentId.Empty() ? Entity{} : m_Scene->TryGetEntityFromUuid(record.OldParentId);
+            if (!entity || (!record.OldParentId.Empty() && !parent))
+                continue;
+            const Array<Entity, 1> entities{ entity };
+            m_Scene->ReparentEntities(entities, parent, record.OldSiblingIndex);
+        }
+    }
+
+    Entity EntitiesReparentAction::GetFocusEntity() const
+    {
+        return m_Scene && !m_Records.empty() ? m_Scene->TryGetEntityFromUuid(m_Records.front().EntityId) : Entity{};
     }
 } // namespace Crowny

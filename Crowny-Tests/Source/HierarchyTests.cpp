@@ -449,3 +449,226 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
         ExpectMatrixEqual(clone.GetChild(0).GetWorldMatrix(), childWorld);
     }
 }
+
+TEST_CASE("Bulk hierarchy reparent preserves input order and world transforms", "[Ecs][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity firstParent = scene->CreateEntity("First parent");
+    Entity secondParent = scene->CreateEntity("Second parent");
+    Entity destination = scene->CreateEntity("Destination");
+    Entity first = scene->CreateEntity("First");
+    Entity second = scene->CreateEntity("Second");
+    Entity third = scene->CreateEntity("Third");
+    Entity destinationBefore = scene->CreateEntity("Destination before");
+    Entity destinationAfter = scene->CreateEntity("Destination after");
+
+    REQUIRE(first.SetParent(firstParent));
+    REQUIRE(second.SetParent(firstParent));
+    REQUIRE(third.SetParent(secondParent));
+    REQUIRE(destinationBefore.SetParent(destination));
+    REQUIRE(destinationAfter.SetParent(destination));
+    firstParent.SetPosition({ 10.0f, 0.0f, 0.0f });
+    secondParent.SetPosition({ 0.0f, 20.0f, 0.0f });
+    destination.SetPosition({ -30.0f, 0.0f, 5.0f });
+    first.SetPosition({ 1.0f, 2.0f, 3.0f });
+    second.SetPosition({ 4.0f, 5.0f, 6.0f });
+    third.SetPosition({ 7.0f, 8.0f, 9.0f });
+
+    const glm::mat4 firstWorld = first.GetWorldMatrix();
+    const glm::mat4 secondWorld = second.GetWorldMatrix();
+    const glm::mat4 thirdWorld = third.GetWorldMatrix();
+    const Array<Entity, 3> moving{ second, third, first };
+
+    const HierarchyMutationResult result = scene->ReparentEntities(moving, destination, 1u);
+
+    REQUIRE(result.Succeeded);
+    CHECK(result.Stats.RootEntityCount == 3u);
+    CHECK(result.Stats.ReparentedEntityCount == 3u);
+    CHECK(result.Stats.ParentVectorRebuildCount == 3u);
+    CHECK(result.Stats.TransformInvalidationRootCount == 3u);
+    REQUIRE(destination.GetChildCount() == 5u);
+    CHECK(destination.GetChild(0) == destinationBefore);
+    CHECK(destination.GetChild(1) == second);
+    CHECK(destination.GetChild(2) == third);
+    CHECK(destination.GetChild(3) == first);
+    CHECK(destination.GetChild(4) == destinationAfter);
+    CHECK(firstParent.GetChildCount() == 0u);
+    CHECK(secondParent.GetChildCount() == 0u);
+    ExpectMatrixEqual(first.GetWorldMatrix(), firstWorld);
+    ExpectMatrixEqual(second.GetWorldMatrix(), secondWorld);
+    ExpectMatrixEqual(third.GetWorldMatrix(), thirdWorld);
+}
+
+TEST_CASE("Bulk hierarchy destroy normalizes selected descendants", "[Ecs][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>();
+    Entity parent = scene->CreateEntity("Parent");
+    Entity child = scene->CreateEntity("Child");
+    Entity grandChild = scene->CreateEntity("Grand child");
+    REQUIRE(child.SetParent(parent));
+    REQUIRE(grandChild.SetParent(child));
+    const UUID parentId = parent.GetUuid();
+    const UUID childId = child.GetUuid();
+    const UUID grandChildId = grandChild.GetUuid();
+    const Array<Entity, 2> selected{ parent, child };
+
+    const HierarchyMutationResult result = scene->DestroyEntities(selected);
+
+    REQUIRE(result.Succeeded);
+    CHECK(result.Stats.RootEntityCount == 1u);
+    CHECK(result.Stats.DestroyedEntityCount == 3u);
+    CHECK_FALSE(scene->TryGetEntityFromUuid(parentId));
+    CHECK_FALSE(scene->TryGetEntityFromUuid(childId));
+    CHECK_FALSE(scene->TryGetEntityFromUuid(grandChildId));
+}
+
+TEST_CASE("Bulk hierarchy preserve-children destroy rejects nested selections atomically", "[Ecs][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity parent = scene->CreateEntity("Parent");
+    Entity child = scene->CreateEntity("Child");
+    Entity grandChild = scene->CreateEntity("Grand child");
+    REQUIRE(child.SetParent(parent));
+    REQUIRE(grandChild.SetParent(child));
+    const Array<Entity, 2> selected{ parent, child };
+
+    const HierarchyMutationResult result =
+        scene->DestroyEntities(selected, HierarchyDestroyMode::PreserveChildren);
+
+    CHECK_FALSE(result.Succeeded);
+    CHECK(parent.IsValid());
+    CHECK(child.IsValid());
+    CHECK(grandChild.IsValid());
+    CHECK(parent.GetParent() == Entity{});
+    REQUIRE(parent.GetChildCount() == 1u);
+    CHECK(parent.GetChild(0) == child);
+    CHECK(child.GetParent() == parent);
+    REQUIRE(child.GetChildCount() == 1u);
+    CHECK(child.GetChild(0) == grandChild);
+    CHECK(grandChild.GetParent() == child);
+}
+
+TEST_CASE("Bulk hierarchy preserve-children destroy promotes multiple sibling groups in place", "[Ecs][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity parent = scene->CreateEntity("Parent");
+    Entity before = scene->CreateEntity("Before");
+    Entity firstRemoved = scene->CreateEntity("First removed");
+    Entity between = scene->CreateEntity("Between");
+    Entity secondRemoved = scene->CreateEntity("Second removed");
+    Entity after = scene->CreateEntity("After");
+    Entity firstChild = scene->CreateEntity("First child");
+    Entity secondChild = scene->CreateEntity("Second child");
+    Entity thirdChild = scene->CreateEntity("Third child");
+    REQUIRE(before.SetParent(parent));
+    REQUIRE(firstRemoved.SetParent(parent));
+    REQUIRE(between.SetParent(parent));
+    REQUIRE(secondRemoved.SetParent(parent));
+    REQUIRE(after.SetParent(parent));
+    REQUIRE(firstChild.SetParent(firstRemoved));
+    REQUIRE(secondChild.SetParent(firstRemoved));
+    REQUIRE(thirdChild.SetParent(secondRemoved));
+    const Array<Entity, 2> selected{ secondRemoved, firstRemoved };
+
+    const HierarchyMutationResult result =
+        scene->DestroyEntities(selected, HierarchyDestroyMode::PreserveChildren);
+
+    REQUIRE(result.Succeeded);
+    CHECK(result.Stats.RootEntityCount == 2u);
+    CHECK(result.Stats.DestroyedEntityCount == 2u);
+    CHECK(result.Stats.ReparentedEntityCount == 3u);
+    CHECK(result.Stats.ParentVectorRebuildCount == 1u);
+    REQUIRE(parent.GetChildCount() == 6u);
+    CHECK(parent.GetChild(0) == before);
+    CHECK(parent.GetChild(1) == firstChild);
+    CHECK(parent.GetChild(2) == secondChild);
+    CHECK(parent.GetChild(3) == between);
+    CHECK(parent.GetChild(4) == thirdChild);
+    CHECK(parent.GetChild(5) == after);
+    CHECK(firstChild.GetParent() == parent);
+    CHECK(secondChild.GetParent() == parent);
+    CHECK(thirdChild.GetParent() == parent);
+}
+
+TEST_CASE("Bulk hierarchy destroy rejects inconsistent child ownership atomically", "[Ecs][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity parent = scene->CreateEntity("Parent");
+    Entity child = scene->CreateEntity("Child");
+    REQUIRE(child.SetParent(parent));
+    child.GetComponent<RelationshipComponent>().Parent = {};
+    const Array<Entity, 1> selected{ parent };
+
+    const HierarchyMutationResult result = scene->DestroyEntities(selected);
+
+    CHECK_FALSE(result.Succeeded);
+    CHECK(parent.IsValid());
+    CHECK(child.IsValid());
+    REQUIRE(parent.GetChildCount() == 1u);
+    CHECK(parent.GetChild(0) == child);
+    child.GetComponent<RelationshipComponent>().Parent = parent;
+}
+
+TEST_CASE("Bulk hierarchy reparent rejects the whole batch before mutation", "[Ecs][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity firstParent = scene->CreateEntity("First parent");
+    Entity secondParent = scene->CreateEntity("Second parent");
+    Entity destination = scene->CreateEntity("Destination");
+    Entity first = scene->CreateEntity("First");
+    Entity second = scene->CreateEntity("Second");
+    REQUIRE(first.SetParent(firstParent));
+    REQUIRE(second.SetParent(secondParent));
+    destination.SetScale({ 0.0f, 1.0f, 1.0f });
+    const glm::mat4 firstWorld = first.GetWorldMatrix();
+    const glm::mat4 secondWorld = second.GetWorldMatrix();
+    const Array<Entity, 2> moving{ first, second };
+
+    const HierarchyMutationResult result = scene->ReparentEntities(moving, destination);
+
+    CHECK_FALSE(result.Succeeded);
+    CHECK(first.GetParent() == firstParent);
+    CHECK(second.GetParent() == secondParent);
+    CHECK(firstParent.GetChild(0) == first);
+    CHECK(secondParent.GetChild(0) == second);
+    CHECK(destination.GetChildCount() == 0u);
+    ExpectMatrixEqual(first.GetWorldMatrix(), firstWorld);
+    ExpectMatrixEqual(second.GetWorldMatrix(), secondWorld);
+}
+
+TEST_CASE("Bulk hierarchy destroy rebuilds one parent vector linearly", "[Ecs][Hierarchy][Bulk][Performance]")
+{
+    constexpr uint32_t childCount = 10000u;
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity parent = scene->CreateEntity("Parent");
+    Vector<Entity> children;
+    Vector<Entity> removed;
+    children.reserve(childCount);
+    removed.reserve(childCount / 2u);
+    bool allParented = true;
+    for (uint32_t index = 0; index < childCount; index++)
+    {
+        Entity child = scene->CreateEntity("Child");
+        allParented = child.SetParent(parent) && allParented;
+        children.push_back(child);
+        if ((index & 1u) == 0u)
+            removed.push_back(child);
+    }
+
+    REQUIRE(allParented);
+    const HierarchyMutationResult result = scene->DestroyEntities(removed);
+
+    REQUIRE(result.Succeeded);
+    CHECK(result.Stats.RootEntityCount == childCount / 2u);
+    CHECK(result.Stats.DestroyedEntityCount == childCount / 2u);
+    CHECK(result.Stats.ParentVectorRebuildCount == 1u);
+    CHECK(result.Stats.SiblingIndexWriteCount == childCount / 2u);
+    REQUIRE(parent.GetChildCount() == childCount / 2u);
+    bool orderAndIndicesCorrect = true;
+    for (uint32_t index = 0; index < parent.GetChildCount(); index++)
+    {
+        orderAndIndicesCorrect = parent.GetChild(index) == children[index * 2u + 1u] &&
+                                 parent.GetChild(index).GetSiblingIndex() == index && orderAndIndicesCorrect;
+    }
+    CHECK(orderAndIndicesCorrect);
+}

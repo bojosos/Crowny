@@ -89,18 +89,18 @@ namespace Crowny
             if (!parent)
                 return;
 
-            Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entityUuids.size() == 1u ? "Reparent entity" : "Reparent entities");
+            Vector<Entity> children;
+            children.reserve(entityUuids.size());
             for (const UUID& entityUuid : entityUuids)
             {
                 Entity child = scene->TryGetEntityFromUuid(entityUuid);
                 if (!child || !child.GetParent() || child.GetParent() == parent)
                     continue;
-                Ref<EntityReparentAction> action = CreateRef<EntityReparentAction>(child, child.GetParent(), parent);
-                if (child.SetParent(parent))
-                    actions->Add(action);
+                children.push_back(child);
             }
-            if (!actions->Empty())
-                UndoRedo::Get().RegisterAction(actions);
+            Ref<EntitiesReparentAction> action = CreateRef<EntitiesReparentAction>(children, parent);
+            if (!action->Empty() && scene->ReparentEntities(children, parent).Succeeded)
+                UndoRedo::Get().RegisterAction(action);
         });
     }
 
@@ -137,17 +137,17 @@ namespace Crowny
                     const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
                     if (!scene)
                         return;
-                    Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Delete entity" : "Delete entities");
+                    Vector<Entity> validEntities;
+                    validEntities.reserve(entities.size());
+                    const Entity root = scene->GetRootEntity();
                     for (Entity entity : entities)
                     {
-                        if (entity && entity.GetScene() == scene.get())
-                        {
-                            actions->Add(CreateRef<EntityDeletedAction>(entity, scene));
-                            scene->DestroyEntity(entity);
-                        }
+                        if (entity && entity.GetScene() == scene.get() && entity != root)
+                            validEntities.push_back(entity);
                     }
-                    if (!actions->Empty())
-                        UndoRedo::Get().RegisterAction(actions);
+                    Ref<EntitiesDeletedAction> action = CreateRef<EntitiesDeletedAction>(validEntities, scene);
+                    if (!action->Empty() && scene->DestroyEntities(validEntities).Succeeded)
+                        UndoRedo::Get().RegisterAction(action);
                 });
                 SetSelectedEntity(SceneManager::TryGet()->GetActiveScene()->GetRootEntity());
             }
@@ -686,17 +686,16 @@ namespace Crowny
                     const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
                     if (!scene)
                         return;
-                    Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Delete entity" : "Delete entities");
+                    Vector<Entity> validEntities;
+                    validEntities.reserve(entities.size());
                     for (Entity entity : entities)
                     {
                         if (entity && entity != root)
-                        {
-                            actions->Add(CreateRef<EntityDeletedAction>(entity, scene));
-                            scene->DestroyEntity(entity);
-                        }
+                            validEntities.push_back(entity);
                     }
-                    if (!actions->Empty())
-                        UndoRedo::Get().RegisterAction(actions);
+                    Ref<EntitiesDeletedAction> action = CreateRef<EntitiesDeletedAction>(validEntities, scene);
+                    if (!action->Empty() && scene->DestroyEntities(validEntities).Succeeded)
+                        UndoRedo::Get().RegisterAction(action);
                 });
                 SetSelectedEntity(root);
             }

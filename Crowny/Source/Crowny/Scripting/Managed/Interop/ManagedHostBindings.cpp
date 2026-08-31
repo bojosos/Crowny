@@ -400,7 +400,7 @@ namespace Crowny
                     return CW_MANAGED_STATUS_STALE_HANDLE;
                 const UUID parentUuid = FromAbiUuid(parentId);
                 if (parentUuid.Empty())
-                    return CW_MANAGED_STATUS_OK;
+                    return entity.SetParent({}) ? CW_MANAGED_STATUS_OK : CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 const Entity parent = ResolveEntity(parentId);
                 if (!parent)
                     return CW_MANAGED_STATUS_STALE_HANDLE;

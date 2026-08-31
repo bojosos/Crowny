@@ -329,6 +329,8 @@ namespace Crowny
         Entity Destroy() const;
         Entity ResolveRoot() const;
         Entity ResolveParent() const;
+        const UUID& GetParentUuid() const { return m_ParentUuid; }
+        uint32_t GetSiblingIndex() const { return m_SiblingIndex; }
 
     private:
         Ref<Scene> m_Scene;
@@ -369,6 +371,22 @@ namespace Crowny
         Entity m_Focus;
     };
 
+    class EntitiesDeletedAction : public UndoAction
+    {
+    public:
+        EntitiesDeletedAction(const Vector<Entity>& entities, const Ref<Scene>& scene);
+
+        void Commit() override;
+        void Revert() override;
+        Entity GetFocusEntity() const override { return m_Focus; }
+        bool Empty() const { return m_Snapshots.empty(); }
+
+    private:
+        Ref<Scene> m_Scene;
+        Vector<EntitySnapshot> m_Snapshots;
+        Entity m_Focus;
+    };
+
     class EntityReparentAction : public UndoAction
     {
     public:
@@ -386,5 +404,30 @@ namespace Crowny
         UUID m_NewParent = UUID::EMPTY;
         uint32_t m_OldSibling = 0u;
         uint32_t m_NewSibling = 0u;
+    };
+
+    class EntitiesReparentAction : public UndoAction
+    {
+    public:
+        EntitiesReparentAction(const Vector<Entity>& entities, Entity newParent);
+
+        void Commit() override;
+        void Revert() override;
+        Entity GetFocusEntity() const override;
+        bool Empty() const { return m_Records.empty(); }
+
+    private:
+        struct Record
+        {
+            UUID EntityId = UUID::EMPTY;
+            UUID OldParentId = UUID::EMPTY;
+            uint32_t OldSiblingIndex = 0u;
+        };
+
+        Ref<Scene> m_Scene;
+        Vector<Record> m_Records;
+        Vector<uint32_t> m_RevertOrder;
+        UUID m_NewParentId = UUID::EMPTY;
+        uint32_t m_NewSiblingIndex = 0u;
     };
 } // namespace Crowny

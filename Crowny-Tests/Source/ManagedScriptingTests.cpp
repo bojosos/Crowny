@@ -219,6 +219,28 @@ TEST_CASE("Managed host ABI exposes complete typed bindings and stable value lay
     CHECK(offsetof(cw_managed_font_character_info, valid) == 105);
 }
 
+TEST_CASE("Managed entity parent accepts the empty UUID as unparent", "[Scripting][Managed][Contract][Hierarchy]")
+{
+    const UUID childId("11111111-2222-3333-4444-555555555555");
+    const cw_managed_uuid managedChildId = {
+        { 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 }
+    };
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    ScopedActiveScene activeScene(scene);
+    Entity parent = scene->CreateEntity("Parent");
+    Entity child = scene->CreateEntityWithUuid(childId, "Child");
+    REQUIRE(child.SetParent(parent));
+
+    cw_managed_host_api api{};
+    PopulateManagedHostBindings(api);
+    int context = 0;
+    const cw_managed_uuid emptyParent{};
+
+    REQUIRE(api.set_entity_parent(&context, managedChildId, emptyParent) == CW_MANAGED_STATUS_OK);
+    CHECK_FALSE(child.GetParent());
+    CHECK(parent.GetChildCount() == 0u);
+}
+
 TEST_CASE("Managed collider material overrides round trip through the shared host table",
           "[Scripting][Managed][Contract][Physics]")
 {

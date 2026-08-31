@@ -7,6 +7,8 @@
 #include "Crowny/Physics/Physics3DTypes.h"
 
 #include <entt/entt.hpp>
+#include <limits>
+#include <span>
 
 namespace Crowny
 {
@@ -21,6 +23,31 @@ namespace Crowny
     struct CameraComponent;
     struct ScriptState;
     struct ScriptTypeIdentity;
+
+    enum class HierarchyDestroyMode
+    {
+        DestroySubtree,
+        PreserveChildren
+    };
+
+    struct HierarchyMutationStats
+    {
+        uint32_t InputEntityCount = 0u;
+        uint32_t RootEntityCount = 0u;
+        uint32_t ReparentedEntityCount = 0u;
+        uint32_t DestroyedEntityCount = 0u;
+        uint32_t ParentVectorRebuildCount = 0u;
+        uint32_t TransformInvalidationRootCount = 0u;
+        uint64_t SiblingIndexWriteCount = 0u;
+    };
+
+    struct HierarchyMutationResult
+    {
+        bool Succeeded = false;
+        HierarchyMutationStats Stats;
+
+        explicit operator bool() const { return Succeeded; }
+    };
 
     class Scene : public Asset
     {
@@ -42,6 +69,13 @@ namespace Crowny
         Entity CreateEntity(const String& name = "");
         Entity CreateEntityWithUuid(const UUID& uuid, const String& name);
         void DestroyEntity(Entity entity);
+        // DestroySubtree normalizes inputs to top-level roots. PreserveChildren rejects nested inputs, deletes each
+        // requested root, and promotes its direct children in place.
+        HierarchyMutationResult DestroyEntities(std::span<const Entity> entities,
+                                                HierarchyDestroyMode mode = HierarchyDestroyMode::DestroySubtree);
+        // Input order becomes sibling order at the destination. The insertion index is evaluated after removing movers.
+        HierarchyMutationResult ReparentEntities(std::span<const Entity> entities, Entity newParent,
+                                                 uint32_t insertionIndex = std::numeric_limits<uint32_t>::max());
         Entity FindEntityByName(const String& name) const;
         Entity GetRootEntity() const;
         Entity TryGetEntityFromUuid(const UUID& uuid) const;

@@ -1151,8 +1151,6 @@ namespace Crowny
         return entity;
     }
 
-    void Scene::DestroyEntity(Entity entity) { entity.Destroy(); }
-
     Entity Scene::TryGetEntityFromUuid(const UUID& uuid) const
     {
         const auto entity = m_EntityMap.find(uuid);

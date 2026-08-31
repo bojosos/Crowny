@@ -483,6 +483,120 @@ TEST_CASE("Reparent undo retains its scene and restores hierarchy state", "[Edit
     action = nullptr;
 }
 
+TEST_CASE("Bulk delete undo snapshots every sibling before mutation", "[Editor][Undo][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>();
+    Entity root = scene->GetRootEntity();
+    Entity first = scene->CreateEntity("First");
+    Entity second = scene->CreateEntity("Second");
+    Entity third = scene->CreateEntity("Third");
+    Entity fourth = scene->CreateEntity("Fourth");
+    Entity fifth = scene->CreateEntity("Fifth");
+    const UUID secondId = second.GetUuid();
+    const UUID fourthId = fourth.GetUuid();
+    const Vector<Entity> deleted{ second, fourth };
+    EntitiesDeletedAction action(deleted, scene);
+
+    REQUIRE(scene->DestroyEntities(deleted).Succeeded);
+    REQUIRE(root.GetChildCount() == 3u);
+    CHECK(root.GetChild(0) == first);
+    CHECK(root.GetChild(1) == third);
+    CHECK(root.GetChild(2) == fifth);
+
+    action.Revert();
+    second = scene->TryGetEntityFromUuid(secondId);
+    fourth = scene->TryGetEntityFromUuid(fourthId);
+    REQUIRE(second);
+    REQUIRE(fourth);
+    REQUIRE(root.GetChildCount() == 5u);
+    CHECK(root.GetChild(0) == first);
+    CHECK(root.GetChild(1) == second);
+    CHECK(root.GetChild(2) == third);
+    CHECK(root.GetChild(3) == fourth);
+    CHECK(root.GetChild(4) == fifth);
+
+    action.Commit();
+    CHECK_FALSE(scene->TryGetEntityFromUuid(secondId));
+    CHECK_FALSE(scene->TryGetEntityFromUuid(fourthId));
+}
+
+TEST_CASE("Bulk reparent undo restores sparse sibling positions", "[Editor][Undo][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity oldParent = scene->CreateEntity("Old parent");
+    Entity newParent = scene->CreateEntity("New parent");
+    Entity first = scene->CreateEntity("First");
+    Entity second = scene->CreateEntity("Second");
+    Entity third = scene->CreateEntity("Third");
+    Entity fourth = scene->CreateEntity("Fourth");
+    Entity existing = scene->CreateEntity("Existing");
+    REQUIRE(first.SetParent(oldParent));
+    REQUIRE(second.SetParent(oldParent));
+    REQUIRE(third.SetParent(oldParent));
+    REQUIRE(fourth.SetParent(oldParent));
+    REQUIRE(existing.SetParent(newParent));
+    oldParent.SetPosition({ 10.0f, 0.0f, 0.0f });
+    newParent.SetPosition({ -20.0f, 0.0f, 0.0f });
+    second.SetPosition({ 1.0f, 2.0f, 3.0f });
+    fourth.SetPosition({ 4.0f, 5.0f, 6.0f });
+    const glm::mat4 secondWorld = second.GetWorldMatrix();
+    const glm::mat4 fourthWorld = fourth.GetWorldMatrix();
+    const Vector<Entity> moving{ second, fourth };
+    EntitiesReparentAction action(moving, newParent);
+
+    REQUIRE(scene->ReparentEntities(moving, newParent).Succeeded);
+    REQUIRE(newParent.GetChildCount() == 3u);
+    CHECK(newParent.GetChild(0) == existing);
+    CHECK(newParent.GetChild(1) == second);
+    CHECK(newParent.GetChild(2) == fourth);
+
+    action.Revert();
+    REQUIRE(oldParent.GetChildCount() == 4u);
+    CHECK(oldParent.GetChild(0) == first);
+    CHECK(oldParent.GetChild(1) == second);
+    CHECK(oldParent.GetChild(2) == third);
+    CHECK(oldParent.GetChild(3) == fourth);
+    CHECK(newParent.GetChildCount() == 1u);
+    CHECK(newParent.GetChild(0) == existing);
+    CHECK(second.GetWorldMatrix() == secondWorld);
+    CHECK(fourth.GetWorldMatrix() == fourthWorld);
+
+    action.Commit();
+    CHECK(newParent.GetChild(0) == existing);
+    CHECK(newParent.GetChild(1) == second);
+    CHECK(newParent.GetChild(2) == fourth);
+    CHECK(second.GetWorldMatrix() == secondWorld);
+    CHECK(fourth.GetWorldMatrix() == fourthWorld);
+}
+
+TEST_CASE("Bulk delete undo normalizes selected descendants before snapshotting", "[Editor][Undo][Hierarchy][Bulk]")
+{
+    Ref<Scene> scene = CreateRef<Scene>();
+    Entity root = scene->GetRootEntity();
+    Entity parent = scene->CreateEntity("Parent");
+    Entity child = scene->CreateEntity("Child");
+    REQUIRE(child.SetParent(parent));
+    const UUID parentId = parent.GetUuid();
+    const UUID childId = child.GetUuid();
+    const Vector<Entity> selected{ parent, child };
+    EntitiesDeletedAction action(selected, scene);
+
+    REQUIRE(scene->DestroyEntities(selected).Succeeded);
+    action.Revert();
+
+    parent = scene->TryGetEntityFromUuid(parentId);
+    child = scene->TryGetEntityFromUuid(childId);
+    REQUIRE(parent);
+    REQUIRE(child);
+    CHECK(parent.GetParent() == root);
+    CHECK(parent.GetChildCount() == 1u);
+    CHECK(parent.GetChild(0) == child);
+
+    action.Commit();
+    CHECK_FALSE(scene->TryGetEntityFromUuid(parentId));
+    CHECK_FALSE(scene->TryGetEntityFromUuid(childId));
+}
+
 TEST_CASE("Retained component snapshots preserve multi-edit undo state", "[Editor][Undo][Component]")
 {
     Ref<Scene> scene = CreateRef<Scene>(false);

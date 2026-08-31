@@ -188,39 +188,13 @@ namespace Crowny
     {
         if (!IsValid())
             return;
-        if (m_Scene->m_RootEntity && *m_Scene->m_RootEntity == *this)
-            return;
-
-        if (destroyChildren)
-        {
-            const Vector<Entity> children = GetChildren();
-            for (Entity child : children)
-                child.Destroy(true);
-        }
-        else
-        {
-            const Vector<Entity> children = GetChildren();
-            Entity parent = GetParent();
-            uint32_t insertionIndex = GetSiblingIndex();
-            for (Entity child : children)
-            {
-                if (child.SetParent(parent) && parent)
-                    child.SetSiblingIndex(insertionIndex++);
-            }
-        }
-
-        m_Scene->m_EntityMap.erase(GetUuid());
-
-        Entity parent = GetParent();
-        if (parent)
-        {
-            uint32_t ignoredIndex = 0;
-            RemoveChildReference(parent, *this, ignoredIndex);
-        }
-
-        m_Scene->m_Registry.destroy(m_EntityHandle);
-        m_EntityHandle = entt::null;
-        m_Scene = nullptr;
+        Scene* scene = m_Scene;
+        const entt::entity handle = m_EntityHandle;
+        const Array<Entity, 1> entities{ *this };
+        const HierarchyDestroyMode mode = destroyChildren ? HierarchyDestroyMode::DestroySubtree : HierarchyDestroyMode::PreserveChildren;
+        scene->DestroyEntities(entities, mode);
+        if (!scene->m_Registry.valid(handle))
+            Clear();
     }
 
     void Entity::NotifyTransformChanged(bool updatePhysics)
