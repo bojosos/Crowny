@@ -147,6 +147,24 @@ try {
     }
     Assert-True -Condition (-not (Test-Path -LiteralPath $lease.Path)) -Message "Released compiler leases must be removed."
 
+    $spirvSetupPath = Join-Path $PSScriptRoot "setup-spirv-cross.ps1"
+    $spirvTokens = $null
+    $spirvErrors = $null
+    $spirvAst = [Management.Automation.Language.Parser]::ParseFile(
+        $spirvSetupPath,
+        [ref]$spirvTokens,
+        [ref]$spirvErrors)
+    Assert-True -Condition ($spirvErrors.Count -eq 0) -Message "setup-spirv-cross.ps1 must parse cleanly."
+    $componentRootAssignments = @($spirvAst.FindAll({
+        param($node)
+        if ($node -isnot [Management.Automation.Language.AssignmentStatementAst]) { return $false }
+        if ($node.Left -isnot [Management.Automation.Language.VariableExpressionAst]) { return $false }
+        if ($node.Left.VariablePath.UserPath -ne "dependencyRoot") { return $false }
+        return $node.Right.Extent.Text -match 'Join-Path\s+\$dependencyCacheRoot\s+["'']spirv-cross["'']'
+    }, $true))
+    Assert-True -Condition ($componentRootAssignments.Count -eq 1) `
+        -Message "SPIRV-Cross setup must derive its component root from the resolved dependency cache."
+
     Write-Host "windows-build-common diagnostics passed."
 }
 finally {
