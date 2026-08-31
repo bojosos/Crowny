@@ -378,6 +378,7 @@ namespace Crowny
 
         ImGui::PopStyleVar(3);
         ImGui::SetCursorScreenPos(savedCursor);
+        ImGui::Dummy(ImVec2(0.0f, 0.0f));
 
         if (viewportWidth >= 670.0f)
         {
