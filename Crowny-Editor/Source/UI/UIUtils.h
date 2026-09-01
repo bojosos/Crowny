@@ -39,6 +39,22 @@ namespace Crowny
             ~ScopedStyle() { ImGui::PopStyleVar(); }
         };
 
+        struct ScopedWindow
+        {
+            ScopedWindow(const char* name, bool* open = nullptr, ImGuiWindowFlags flags = ImGuiWindowFlags_None)
+              : m_Visible(ImGui::Begin(name, open, flags))
+            {
+            }
+            ScopedWindow(const ScopedWindow&) = delete;
+            ScopedWindow operator=(const ScopedWindow&) = delete;
+            ~ScopedWindow() { ImGui::End(); }
+
+            bool IsVisible() const { return m_Visible; }
+
+        private:
+            bool m_Visible;
+        };
+
         struct ScopedColor
         {
             ScopedColor(const ScopedColor&) = delete;

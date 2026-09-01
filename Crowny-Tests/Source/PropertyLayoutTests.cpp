@@ -146,7 +146,60 @@ namespace
         ImGui::End();
         ImGui::EndFrame();
     }
+
+    struct WindowStackObservations
+    {
+        bool Visible = false;
+        bool NestedStylePushed = false;
+        bool StyleBalanced = false;
+        bool WindowBalanced = false;
+    };
+
+    WindowStackObservations DrawScopedWindowWithNestedStyle(bool collapsed)
+    {
+        ImGui::NewFrame();
+        if (collapsed)
+            ImGui::SetNextWindowCollapsed(true, ImGuiCond_Always);
+
+        ImGuiContext& context = *GImGui;
+        const int initialStyleDepth = context.StyleVarStack.Size;
+        const int initialWindowDepth = context.CurrentWindowStack.Size;
+
+        WindowStackObservations observations;
+        {
+            UI::ScopedWindow window("Settings stack test");
+            observations.Visible = window.IsVisible();
+            if (observations.Visible)
+            {
+                UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 7.0f));
+                observations.NestedStylePushed = context.StyleVarStack.Size == initialStyleDepth + 1;
+                ImGui::TextUnformatted("Settings");
+            }
+        }
+
+        observations.StyleBalanced = context.StyleVarStack.Size == initialStyleDepth;
+        observations.WindowBalanced = context.CurrentWindowStack.Size == initialWindowDepth;
+        ImGui::EndFrame();
+        return observations;
+    }
 } // namespace
+
+TEST_CASE("Scoped windows end after nested style guards unwind", "[Editor][UI][ImGui][Settings]")
+{
+    ImGuiContextScope imgui;
+
+    const WindowStackObservations visible = DrawScopedWindowWithNestedStyle(false);
+    CHECK(visible.Visible);
+    CHECK(visible.NestedStylePushed);
+    CHECK(visible.StyleBalanced);
+    CHECK(visible.WindowBalanced);
+
+    const WindowStackObservations collapsed = DrawScopedWindowWithNestedStyle(true);
+    CHECK_FALSE(collapsed.Visible);
+    CHECK_FALSE(collapsed.NestedStylePushed);
+    CHECK(collapsed.StyleBalanced);
+    CHECK(collapsed.WindowBalanced);
+}
 
 TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[Editor][Properties][ImGui]")
 {

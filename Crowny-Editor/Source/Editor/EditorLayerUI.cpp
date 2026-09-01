@@ -1174,11 +1174,9 @@ namespace Crowny
 
         ImGui::SetNextWindowSize(ImVec2(620.0f, 680.0f), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSizeConstraints(ImVec2(420.0f, 320.0f), ImVec2(FLT_MAX, FLT_MAX));
-        if (!ImGui::Begin("Settings", &m_ShowSettings))
-        {
-            ImGui::End();
+        UI::ScopedWindow settingsWindow("Settings", &m_ShowSettings);
+        if (!settingsWindow.IsVisible())
             return;
-        }
         UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 7.0f));
 
         UIUtils::SearchWidget(m_SettingsSearch, "Search settings...");
@@ -1383,7 +1381,6 @@ namespace Crowny
                               "developer debug diagnostics ImGui asset entity C#", "renderer test albedo metalness roughness" }))
             ImGui::TextDisabled("No matching settings.");
 
-        ImGui::End();
     }
 
 } // namespace Crowny
