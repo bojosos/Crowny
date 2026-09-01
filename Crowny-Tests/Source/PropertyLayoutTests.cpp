@@ -165,6 +165,31 @@ TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[E
     }
 }
 
+TEST_CASE("Labeled ImGui scopes isolate asset reference child IDs", "[Editor][Properties][ImGui][AssetReference]")
+{
+    ImGuiContextScope imgui;
+
+    ImGui::NewFrame();
+    ImGui::Begin("Asset reference ID test");
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    const int initialIdDepth = window->IDStack.Size;
+    const auto captureIds = [](const char* propertyLabel) {
+        UI::ScopedID propertyScope(propertyLabel);
+        const UI::PopupLabelId popupId = UI::PopupLabelId::Create("AssetSearch", 0u);
+        return Pair<ImGuiID, ImGuiID>(ImGui::GetID(popupId.CStr()), ImGui::GetID("Null##1"));
+    };
+
+    const Pair<ImGuiID, ImGuiID> meshIds = captureIds("Mesh");
+    const Pair<ImGuiID, ImGuiID> materialIds = captureIds("Material");
+
+    CHECK(meshIds.first != materialIds.first);
+    CHECK(meshIds.second != materialIds.second);
+    CHECK(window->IDStack.Size == initialIdDepth);
+
+    ImGui::End();
+    ImGui::EndFrame();
+}
+
 TEST_CASE("Property dropdowns allocate nothing after ImGui warm-up", "[Editor][Properties][ImGui][Memory][Frame]")
 {
     UndoRedoScope undoRedo;

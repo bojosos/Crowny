@@ -51,6 +51,14 @@ namespace Crowny
             ~ScopedColor() { ImGui::PopStyleColor(); }
         };
 
+        struct ScopedID
+        {
+            explicit ScopedID(const StringView id) { ImGui::PushID(id.data(), id.data() + id.size()); }
+            ScopedID(const ScopedID&) = delete;
+            ScopedID operator=(const ScopedID&) = delete;
+            ~ScopedID() { ImGui::PopID(); }
+        };
+
         struct ScopedDisable
         {
             ScopedDisable(bool disabled = false) { ImGui::BeginDisabled(disabled); }
@@ -982,6 +990,7 @@ namespace Crowny
 
         template <typename AssetType> static bool AssetReference(const String& label, AssetHandle<AssetType>& assetHandle)
         {
+            UI::ScopedID propertyScope(label);
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
@@ -1055,6 +1064,7 @@ namespace Crowny
 
         static bool AssetReference(const String& label, AssetHandle<Asset>& assetHandle, AssetType assetType)
         {
+            UI::ScopedID propertyScope(label);
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
