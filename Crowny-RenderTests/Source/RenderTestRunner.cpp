@@ -1014,11 +1014,28 @@ void main()
             material->SetFloat("toonPatternStrength", 0.0f);
             material->SetInt("toonPatternMapping", static_cast<int>(ToonPatternMapping::ProceduralHatch));
 
-            const Ref<MeshData> sphereData = MeshFactory::CreateSphereData(0.75f, 32u, 16u);
+            Ref<MeshData> sphereData = MeshFactory::CreateSphereData(0.75f, 32u, 16u);
             if (!sphereData)
             {
                 error = "Could not create the toon test sphere";
                 return false;
+            }
+            if (RenderAPI::GetAPI() == RenderAPI::API::Vulkan)
+            {
+                const BufferLayout colorlessLayout = { { ShaderDataType::Float3, VertexAttribute::Position },
+                                                       { ShaderDataType::Float3, VertexAttribute::Normal },
+                                                       { ShaderDataType::Float3, VertexAttribute::Tangent },
+                                                       { ShaderDataType::Float3, VertexAttribute::Bitangent },
+                                                       { ShaderDataType::Float2, VertexAttribute::TexCoord0 } };
+                const Ref<MeshData> colorlessSphere = MeshData::Create(sphereData->GetVertexCount(), sphereData->GetIndexCount(), colorlessLayout,
+                                                                       sphereData->GetIndexType());
+                colorlessSphere->SetPositions(sphereData->GetPositions());
+                colorlessSphere->SetNormals(sphereData->GetNormals());
+                colorlessSphere->SetTangents(sphereData->GetTangents());
+                colorlessSphere->SetBitangents(sphereData->GetBitangents());
+                colorlessSphere->SetUVs(0u, sphereData->GetUVs());
+                colorlessSphere->SetIndices(sphereData->GetIndices());
+                sphereData = colorlessSphere;
             }
             MeshDesc meshDesc;
             meshDesc.Data = sphereData;
