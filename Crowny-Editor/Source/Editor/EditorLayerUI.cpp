@@ -42,6 +42,7 @@
 #include "Editor/ColliderOverlay.h"
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
+#include "Editor/ProjectHubLayout.h"
 #include "Editor/ProjectLibrary.h"
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
@@ -174,9 +175,8 @@ namespace Crowny
             return;
         }
 
-        // Below: no project is loaded -- render the fullscreen hub
-
-        // Fullscreen hub window covering the entire viewport
+        // Keep the hub on the main viewport so it never creates another native platform window.
+        // The fullscreen window is only a backdrop; the interactive project card stays compact.
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->Pos);
         ImGui::SetNextWindowSize(viewport->Size);
@@ -189,12 +189,28 @@ namespace Crowny
         ImGui::Begin("##ProjectHub", nullptr, hubFlags);
         ImGui::PopStyleVar();
 
-        const ImVec2 windowSize = ImGui::GetContentRegionAvail();
-        const float sidebarWidth = std::clamp(windowSize.x * 0.22f, 168.0f, 220.0f);
+        const ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+        const ProjectHubLayout hubLayout = CalculateProjectHubLayout(viewportSize.x, viewportSize.y);
+        if (hubLayout.Card.Width <= 0.0f || hubLayout.Card.Height <= 0.0f)
+        {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::SetCursorPos(ImVec2(hubLayout.Card.X, hubLayout.Card.Y));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::BeginChild("##ProjectHubCard", ImVec2(hubLayout.Card.Width, hubLayout.Card.Height), true,
+                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGui::PopStyleVar(3);
+
+        const ImVec2 cardSize = ImGui::GetContentRegionAvail();
+        const float sidebarWidth = std::min(hubLayout.Sidebar.Width, cardSize.x);
 
         // ---- Left sidebar ----
         {
-            ImGui::BeginChild("##HubSidebar", ImVec2(sidebarWidth, windowSize.y), true);
+            ImGui::BeginChild("##HubSidebar", ImVec2(sidebarWidth, cardSize.y), true);
 
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
 
@@ -246,14 +262,14 @@ namespace Crowny
 
         // ---- Right content area ----
         {
-            ImGui::BeginChild("##HubContent", ImVec2(0, windowSize.y), false);
+            ImGui::BeginChild("##HubContent", ImVec2(0, cardSize.y), false);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
             const float contentPadding = 16.0f;
             ImGui::SetCursorPos(ImVec2(contentPadding, contentPadding));
 
             if (m_HubPage == HubPage::RecentProjects)
             {
-                ImGui::TextUnformatted("Projects");
+                ImGui::TextUnformatted("Recent projects");
                 ImGui::Spacing();
 
                 const auto openProject = [this](const Path& projectPath) {
@@ -522,6 +538,7 @@ namespace Crowny
             ImGui::EndChild();
         }
 
+        ImGui::EndChild();
         ImGui::End();
     }
 
