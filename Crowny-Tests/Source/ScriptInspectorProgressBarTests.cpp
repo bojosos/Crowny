@@ -2,8 +2,6 @@
 
 #include "Panels/ScriptInspectorProgressBar.h"
 
-#include <catch2/catch.hpp>
-
 using namespace Crowny;
 
 TEST_CASE("Progress bar resolves state-backed presentation values", "[Editor][Scripting][ProgressBar]")

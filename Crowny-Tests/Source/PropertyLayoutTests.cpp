@@ -161,7 +161,7 @@ TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[E
         CHECK(observations.ItemWidthBalanced);
         CHECK(observations.IdBalanced);
         CHECK(observations.ColumnsFinalized);
-        CHECK(observations.MultilineHeight == Approx(observations.ExpectedMultilineHeight));
+        CHECK(observations.MultilineHeight == Catch::Approx(observations.ExpectedMultilineHeight));
     }
 }
 
