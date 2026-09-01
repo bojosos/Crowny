@@ -13,7 +13,8 @@ namespace Crowny
         VS2015,
         VS2017,
         VS2019,
-        VS2022
+        VS2022,
+        VS2026
     };
 
     class VisualStudioCodeEditor : public CodeEditor
@@ -22,10 +23,10 @@ namespace Crowny
         VisualStudioCodeEditor(VisualStudioVersion version, const Path& execPath);
         virtual ~VisualStudioCodeEditor() = default;
 
-        virtual void OpenFile(const Path& solitionPath, const Path& filePath, uint32_t line) const override;
-        virtual void Sync(const CodeSolutionData& data, const Path& solutionPath) const override;
-        virtual void SetEditorExecutablePath(const Path& path) override;
-        virtual void ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const override;
+        void OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const override;
+        bool Sync(const CodeSolutionData& data, const Path& solutionPath) const override;
+        void SetEditorExecutablePath(const Path& path) override;
+        void ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const override;
 
     private:
         Path m_ExecPath;
@@ -36,8 +37,8 @@ namespace Crowny
     {
     public:
         VisualStudioCodeEditorFactory();
-        virtual const Vector<CodeEditorInstallation>& GetAvailableEditors() const override { return m_SupportedEditors; }
-        virtual CodeEditor* Create(const Path& path) const override;
+        const Vector<CodeEditorInstallation>& GetAvailableEditors() const override { return m_SupportedEditors; }
+        CodeEditor* Create(const Path& path) const override;
 
     private:
         Vector<CodeEditorInstallation> m_SupportedEditors;

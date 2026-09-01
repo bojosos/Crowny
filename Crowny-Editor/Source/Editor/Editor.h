@@ -20,6 +20,8 @@ namespace Crowny
         VS2017,
         VS2019,
         VS2022,
+        VS2026,
+        VSCode,
         MonoDevelop,
         None
     };

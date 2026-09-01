@@ -1220,8 +1220,62 @@ namespace Crowny
                 {
                     const CodeEditorInstallation& selectedEditor = editors[m_VisualStudioVersionId];
                     CodeEditorManager::Get().SetActive(selectedEditor.ExecutablePath);
+                    if (Editor::Get().IsProjectLoaded())
+                        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
                 }
                 UI::EndPropertyGrid();
+            }
+        }
+
+        if (matchesSection({ "managed C# assembly dependency mono coreclr runtime" }) &&
+            beginSection("Managed assemblies", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (!Editor::Get().IsProjectLoaded())
+                ImGui::TextDisabled("Open a project to add managed assembly dependencies.");
+            else
+            {
+                Vector<Path>& dependencies = Editor::Get().GetProjectSettings()->ManagedAssemblyReferences;
+                ImGui::TextWrapped("Referenced DLLs are added to the generated C# project and validated before Mono or CoreCLR runs the game.");
+                ImGui::Spacing();
+
+                size_t removeIndex = dependencies.size();
+                for (size_t index = 0; index < dependencies.size(); index++)
+                {
+                    ImGui::PushID(static_cast<int32_t>(index));
+                    ImGui::TextUnformatted(dependencies[index].generic_string().c_str());
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Remove"))
+                        removeIndex = index;
+                    ImGui::PopID();
+                }
+                if (removeIndex != dependencies.size())
+                {
+                    dependencies.erase(dependencies.begin() + static_cast<ptrdiff_t>(removeIndex));
+                    Editor::Get().SaveProjectSettings();
+                    CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
+                }
+
+                if (ImGui::Button("Add assembly..."))
+                {
+                    Vector<Path> selected;
+                    const Path projectRoot = Editor::Get().GetProjectPath();
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, selected, "Choose managed assembly", projectRoot,
+                                                   { { "Managed assembly", "*.dll" } }) &&
+                        !selected.empty())
+                    {
+                        Path assembly = fs::absolute(selected.front()).lexically_normal();
+                        const Path relative = assembly.lexically_relative(projectRoot);
+                        if (!relative.empty() && relative != "." && !relative.generic_string().starts_with(".."))
+                            assembly = relative;
+                        if (std::find(dependencies.begin(), dependencies.end(), assembly) == dependencies.end())
+                            dependencies.push_back(assembly);
+                        Editor::Get().SaveProjectSettings();
+                        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
+                    }
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Synchronize code project"))
+                    CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
             }
         }
 
@@ -1320,7 +1374,8 @@ namespace Crowny
         }
 
         if (!m_SettingsSearch.empty() &&
-            !matchesSection({ "startup project recent auto load", "code editor IDE Visual Studio", "viewport grid wireframe collider rendering",
+            !matchesSection({ "startup project recent auto load", "code editor IDE Visual Studio", "managed C# assembly dependency mono coreclr runtime",
+                              "viewport grid wireframe collider rendering",
                               "time scale fixed timestep maximum", "physics 2D gravity solver layers collision matrix",
                               "input actions bindings keyboard mouse gamepad controls rebinding", "workspace layout reset panels command palette",
                               "developer debug diagnostics ImGui asset entity C#", "renderer test albedo metalness roughness" }))

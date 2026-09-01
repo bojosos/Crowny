@@ -34,6 +34,9 @@ namespace Crowny
         // Project-authored input contexts and bindings. Runtime rebinds remain in memory.
         InputMap InputActions;
 
+        // Pure managed .dll files referenced by game scripts. Paths are relative to the project when possible.
+        Vector<Path> ManagedAssemblyReferences;
+
         // Camera
         glm::vec3 EditorCameraPosition = { 0.0f, 0.0f, 0.0f };
         glm::vec3 EditorCameraFocalPoint = { 0.0f, 0.0f, 0.0f };
