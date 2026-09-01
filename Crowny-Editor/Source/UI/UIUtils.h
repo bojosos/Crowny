@@ -271,6 +271,7 @@ namespace Crowny
             Underline();
             ImGui::PopStyleVar(2); // ItemSpacing, FramePadding
             ShiftCursorY(18.0f);
+            ImGui::Dummy(ImVec2(0.0f, 0.0f));
             PopID();
         }
 

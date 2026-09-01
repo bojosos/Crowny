@@ -67,6 +67,7 @@ namespace
         bool ItemWidthBalanced = false;
         bool IdBalanced = false;
         bool ColumnsFinalized = false;
+        bool BoundaryCommitted = false;
         float MultilineHeight = 0.0f;
         float ExpectedMultilineHeight = 0.0f;
     };
@@ -104,6 +105,7 @@ namespace
         observations.ItemWidthBalanced &= window->DC.ItemWidthStack.Size == initialItemWidthDepth;
         observations.IdBalanced = window->IDStack.Size == initialIdDepth;
         observations.ColumnsFinalized = window->DC.CurrentColumns == nullptr;
+        observations.BoundaryCommitted = window->DC.CursorMaxPos.y >= window->DC.CursorPos.y;
         ImGui::Dummy(ImVec2(0.0f, 0.0f));
 
         ImGui::End();
@@ -214,6 +216,7 @@ TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[E
         CHECK(observations.ItemWidthBalanced);
         CHECK(observations.IdBalanced);
         CHECK(observations.ColumnsFinalized);
+        CHECK(observations.BoundaryCommitted);
         CHECK(observations.MultilineHeight == Catch::Approx(observations.ExpectedMultilineHeight));
     }
 }
