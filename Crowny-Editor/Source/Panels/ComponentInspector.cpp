@@ -96,6 +96,7 @@ namespace Crowny
             UI::Pre(label);
             UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2(3.0f, 0.0f));
             const float width = std::max(1.0f, (ImGui::GetContentRegionAvail().x - (length - 1) * 3.0f) / static_cast<float>(length));
+            ImGui::PushID(propertyName);
             for (int axis = 0; axis < length; ++axis)
             {
                 if (axis != 0)
@@ -123,6 +124,7 @@ namespace Crowny
                     setter(entity, entityValue);
                 });
             }
+            ImGui::PopID();
             UI::Post();
             return changed;
         }
