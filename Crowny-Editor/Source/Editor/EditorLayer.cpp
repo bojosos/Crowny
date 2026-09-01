@@ -390,7 +390,6 @@ namespace Crowny
         EditorAssets::Unload();
         if (Editor::Get().IsProjectLoaded())
         {
-            AddRecentEntry(Editor::Get().GetProjectPath());
             SaveProjectSettings();
             const Ref<Scene>& activeScene = SceneManager::TryGet()->GetActiveScene();
             if (activeScene && !activeScene->GetFilepath().empty())

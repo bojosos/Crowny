@@ -6,7 +6,7 @@ namespace Crowny
     struct RecentProject
     {
         Path ProjectPath;
-        std::time_t Timestamp;
+        std::time_t Timestamp = 0;
     };
 
     class EditorSettingsSerializer;
@@ -38,7 +38,7 @@ namespace Crowny
         glm::vec4 ColliderColor = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
 
         // Project things
-        Array<RecentProject, 5> RecentProjects;
+        Array<RecentProject, 5> RecentProjects{};
         Path LastOpenProject;
         bool AutoLoadLastProject = true;
 

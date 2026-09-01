@@ -155,7 +155,6 @@ namespace Crowny
                         SaveProjectSettings();
                         m_AssetBrowser->Unload();
                         Editor::Get().LoadProject(outPaths[0]);
-                        Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
                         SetProjectSettings();
                         m_AssetBrowser->Initialize();
                     }
@@ -269,14 +268,22 @@ namespace Crowny
 
             if (m_HubPage == HubPage::RecentProjects)
             {
+                Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
                 ImGui::TextUnformatted("Recent projects");
+                ImGui::Spacing();
+
+                if (ImGui::Checkbox("Open most recent project on startup", &m_AutoLoadLastProject))
+                {
+                    settings->AutoLoadLastProject = m_AutoLoadLastProject;
+                    Editor::Get().SaveEditorSettings();
+                }
+                UI::SetTooltip("Opens the newest project in this list that still exists.");
                 ImGui::Spacing();
 
                 const auto openProject = [this](const Path& projectPath) {
                     if (!fs::is_directory(projectPath))
                         return;
                     Editor::Get().LoadProject(projectPath);
-                    Editor::Get().GetEditorSettings()->LastOpenProject = projectPath;
                     SetProjectSettings();
                     m_AssetBrowser->Initialize();
                 };
@@ -317,7 +324,6 @@ namespace Crowny
                 ImGui::Separator();
                 ImGui::Spacing();
 
-                Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
                 uint32_t recentCount = 0;
                 uint32_t matchingCount = 0;
                 bool selectedVisible = false;
@@ -423,6 +429,7 @@ namespace Crowny
                     settings->RecentProjects[settings->RecentProjects.size() - 1].ProjectPath.clear();
                     settings->RecentProjects[settings->RecentProjects.size() - 1].Timestamp = 0;
                     m_SelectedRecentIdx = -1;
+                    Editor::Get().SaveEditorSettings();
                 }
                 UI::SetTooltip("Removes this shortcut. Project files stay on disk.");
                 ImGui::SameLine();
@@ -523,7 +530,6 @@ namespace Crowny
                     Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
                     Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
                     Editor::Get().LoadProject(newProjectPath);
-                    Editor::Get().GetEditorSettings()->LastOpenProject = newProjectPath;
                     SetProjectSettings();
                     m_NewProjectPath.clear();
                     m_NewProjectName.clear();
@@ -1209,8 +1215,13 @@ namespace Crowny
 
         if (matchesSection({ "startup project recent auto load" }) && beginSection("Startup", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::Checkbox("Open the last project on startup", &m_AutoLoadLastProject);
-            ImGui::TextDisabled("Crowny opens the project saved in editor settings.");
+            if (ImGui::Checkbox("Open most recent project on startup", &m_AutoLoadLastProject))
+            {
+                Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
+                settings->AutoLoadLastProject = m_AutoLoadLastProject;
+                Editor::Get().SaveEditorSettings();
+            }
+            ImGui::TextDisabled("Crowny opens the newest recent project that still exists.");
         }
 
         if (matchesSection({ "code editor IDE Visual Studio" }) && beginSection("Code editor", ImGuiTreeNodeFlags_DefaultOpen))

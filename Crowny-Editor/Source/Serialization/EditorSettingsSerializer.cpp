@@ -58,9 +58,9 @@ namespace Crowny
         editorSettings->GridMoveSnap = node["GridMoveSnap"].as<glm::vec3>();
         editorSettings->GridRotateSnap = node["GridRotateSnap"].as<float>();
         editorSettings->GridScaleSnap = node["GridScaleSnap"].as<float>();
-        editorSettings->LastOpenProject = node["LastOpenProject"].as<String>();
-        editorSettings->AutoLoadLastProject = node["AutoLoadLastProject"].as<bool>();
-        editorSettings->ShowImGuiDemoWindow = node["ShowImGuiDemo"].as<bool>();
+        editorSettings->LastOpenProject = node["LastOpenProject"].as<String>(String());
+        editorSettings->AutoLoadLastProject = node["AutoLoadLastProject"].as<bool>(true);
+        editorSettings->ShowImGuiDemoWindow = node["ShowImGuiDemo"].as<bool>(false);
 
         if (const YAML::Node& info = node["ShowScriptDebugInfo"])
             editorSettings->ShowScriptDebugInfo = info.as<bool>();
@@ -110,11 +110,16 @@ namespace Crowny
         if (const YAML::Node& n = node["ColliderColor"])
             editorSettings->ColliderColor = n.as<glm::vec4>(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
 
-        uint32_t idx = 0;
-        for (const auto& project : node["RecentProjects"])
+        if (const YAML::Node recentProjects = node["RecentProjects"]; recentProjects && recentProjects.IsSequence())
         {
-            editorSettings->RecentProjects[idx].ProjectPath = project["Path"].as<String>();
-            editorSettings->RecentProjects[idx++].Timestamp = project["Timestamp"].as<std::time_t>();
+            size_t index = 0;
+            for (const YAML::Node& project : recentProjects)
+            {
+                if (index == editorSettings->RecentProjects.size())
+                    break;
+                editorSettings->RecentProjects[index].ProjectPath = project["Path"].as<String>(String());
+                editorSettings->RecentProjects[index++].Timestamp = project["Timestamp"].as<std::time_t>(0);
+            }
         }
         return editorSettings;
     }

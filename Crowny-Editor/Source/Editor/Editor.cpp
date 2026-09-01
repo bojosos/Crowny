@@ -2,11 +2,14 @@
 
 #include "Editor/Editor.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
+#include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/Serialization/FileEncoder.h"
 #include "Crowny/Serialization/SceneSerializer.h"
+#include "Editor/Settings/EditorSettingsPersistence.h"
 #include "Serialization/EditorSettingsSerializer.h"
 #include "Serialization/ProjectSettingsSerializer.h"
 
@@ -14,6 +17,45 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        Path GetPersistentEditorSettingsPath() { return PlatformUtils::GetOurRoamingDirectory() / "Editor/Settings.yaml"; }
+
+        Path GetLegacyEditorSettingsPath()
+        {
+            std::error_code error;
+            const Path processRelativePath = fs::absolute("Editor/Settings.yaml", error);
+            const Path normalizedProcessPath = error ? Path("Editor/Settings.yaml") : processRelativePath.lexically_normal();
+            if (fs::is_regular_file(normalizedProcessPath))
+                return normalizedProcessPath;
+
+            if (Application::TryGet() != nullptr)
+            {
+                const Path workingDirectory = Application::TryGet()->GetWorkingDirectory();
+                const Path repositoryLegacyPath = workingDirectory / "Crowny-Editor/Editor/Settings.yaml";
+                if (fs::is_regular_file(repositoryLegacyPath))
+                    return repositoryLegacyPath;
+
+                const Path workingDirectoryLegacyPath = workingDirectory / "Editor/Settings.yaml";
+                if (fs::is_regular_file(workingDirectoryLegacyPath))
+                    return workingDirectoryLegacyPath;
+            }
+            return normalizedProcessPath;
+        }
+
+        Path CanonicalizeProjectPath(const Path& projectPath)
+        {
+            std::error_code error;
+            const Path canonicalPath = fs::weakly_canonical(projectPath, error);
+            if (!error && !canonicalPath.empty())
+                return NormalizeProjectPath(canonicalPath);
+
+            error.clear();
+            const Path absolutePath = fs::absolute(projectPath, error);
+            return NormalizeProjectPath(error ? projectPath : absolutePath);
+        }
+    } // namespace
+
     Editor::Editor(FileWatch::FileWatchCallback&& fileWatchCallback) : m_FileWatchCallback(fileWatchCallback) {}
 
     void Editor::OnStartUp()
@@ -56,12 +98,14 @@ namespace Crowny
     {
         UnloadProject();
 
-        const Path assetsPath = projectPath / "Assets";
+        const Path canonicalProjectPath = CanonicalizeProjectPath(projectPath);
+
+        const Path assetsPath = canonicalProjectPath / "Assets";
         if (fs::exists(assetsPath))
             m_Watch = CreateScope<FileWatch>(assetsPath, m_FileWatchCallback);
 
-        m_ProjectPath = projectPath;
-        m_ProjectName = projectPath.filename().string();
+        m_ProjectPath = canonicalProjectPath;
+        m_ProjectName = canonicalProjectPath.filename().string();
 
         LoadProjectSettings();
         ProjectLibrary::Get().LoadLibrary();
@@ -69,7 +113,9 @@ namespace Crowny
           *m_ProjectSettings, [](const Path& path, UUID& sceneId) { return ProjectLibrary::Get().TryGetAssetId(path, AssetType::Scene, sceneId); });
         if (migratedSceneReferences)
             SaveProjectSettings();
-        Log::RenameClientLogger(projectPath.filename().string());
+        RecordRecentProject(*m_EditorSettings, canonicalProjectPath, std::time(nullptr));
+        SaveEditorSettings();
+        Log::RenameClientLogger(canonicalProjectPath.filename().string());
     }
 
     void Editor::LoadProjectSettings()
@@ -90,14 +136,21 @@ namespace Crowny
 
     void Editor::LoadEditorSettings()
     {
-        const Path settingsPath = "Editor/Settings.yaml";
-        if (fs::exists(settingsPath))
+        const Path persistentPath = GetPersistentEditorSettingsPath();
+        const Path legacyPath = GetLegacyEditorSettingsPath();
+        const EditorSettingsPaths paths =
+          SelectEditorSettingsPaths(persistentPath, legacyPath, fs::is_regular_file(persistentPath), fs::is_regular_file(legacyPath));
+        if (!paths.LoadPath.empty())
         {
-            FileDecoder<EditorSettings, SerializerType::Yaml> decoder(settingsPath);
+            FileDecoder<EditorSettings, SerializerType::Yaml> decoder(paths.LoadPath);
             m_EditorSettings = decoder.Decode();
         }
         if (m_EditorSettings == nullptr)
             m_EditorSettings = CreateRef<EditorSettings>();
+        const bool normalizedProjects =
+          NormalizeRecentProjects(*m_EditorSettings, [](const Path& path) { return CanonicalizeProjectPath(path); });
+        if (paths.MigrateLegacy || normalizedProjects)
+            SaveEditorSettings();
     }
 
     void Editor::UnloadProject()
@@ -131,7 +184,9 @@ namespace Crowny
     {
         if (m_EditorSettings == nullptr)
             return;
-        const Path settingsPath = "Editor/Settings.yaml";
+        const Path settingsPath = GetPersistentEditorSettingsPath();
+        if (!fs::is_directory(settingsPath.parent_path()))
+            fs::create_directories(settingsPath.parent_path());
         FileEncoder<EditorSettings, SerializerType::Yaml> encoder(settingsPath);
         encoder.Encode(m_EditorSettings);
     }
