@@ -112,6 +112,12 @@ namespace Crowny
             TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
         }
 
+        void SetLocalTransform(const Transform& transform)
+        {
+            LocalTransform = transform;
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
+        }
+
         void SetWorldPosition(const glm::vec3& position, const Entity& parent)
         {
             if (parent)
@@ -218,7 +224,19 @@ namespace Crowny
         {
             if (parent)
             {
-                WorldTransformCache = parent.GetWorldMatrix() * GetLocalMatrix();
+                const glm::mat4& parentWorld = parent.GetWorldMatrix();
+                UpdateWorldTransform(&parentWorld);
+            }
+            else
+                UpdateWorldTransform(nullptr);
+        }
+
+    private:
+        void UpdateWorldTransform(const glm::mat4* parentWorld) const
+        {
+            if (parentWorld != nullptr)
+            {
+                WorldTransformCache = *parentWorld * GetLocalMatrix();
                 Math::DecomposeMatrix(WorldTransformCache, WorldTransform.m_Position, WorldTransform.m_Rotation, WorldTransform.m_Scale);
             }
             else

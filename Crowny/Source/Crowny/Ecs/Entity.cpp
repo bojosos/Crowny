@@ -2,7 +2,6 @@
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
-#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Scene/Scene.h"
 
 namespace Crowny
@@ -105,6 +104,7 @@ namespace Crowny
             return false;
         }
 
+        m_Scene->MarkHierarchyTopologyDirty();
         NotifyTransformChanged();
         return true;
     }
@@ -135,6 +135,7 @@ namespace Crowny
         siblings.erase(siblings.begin() + currentIndex);
         siblings.insert(siblings.begin() + index, value);
         RefreshSiblingIndices(siblings, std::min(index, currentIndex));
+        m_Scene->MarkHierarchyTopologyDirty();
         return true;
     }
 
@@ -199,25 +200,7 @@ namespace Crowny
 
     void Entity::NotifyTransformChanged(bool updatePhysics)
     {
-        TransformComponent& tc = GetTransform();
-        tc.InvalidateWorld();
-        Entity parent = GetParent();
-        AudioListenerComponent* listener = m_Scene->m_Registry.try_get<AudioListenerComponent>(m_EntityHandle);
-        AudioSourceComponent* source = m_Scene->m_Registry.try_get<AudioSourceComponent>(m_EntityHandle);
-        if (listener || source)
-        {
-            const Transform& worldTransform = tc.GetWorldTransform(parent);
-            if (listener)
-                listener->OnTransformChanged(worldTransform);
-            if (source)
-                source->OnTransformChanged(worldTransform);
-        }
-        if (updatePhysics && HasComponent<Rigidbody2DComponent>() && Physics2D::IsStartedUp() && Physics2D::TryGet()->IsSimulating())
-            Physics2D::TryGet()->UpdateTransform(*this);
-        if (updatePhysics)
-            m_Scene->UpdatePhysics3DTransform(*this);
-        for (Entity child : GetChildren())
-            child.NotifyTransformChanged(updatePhysics);
+        m_Scene->QueueTransformChange(*this, updatePhysics);
     }
 
     void Entity::SetPosition(const glm::vec3& position)
@@ -241,8 +224,15 @@ namespace Crowny
         NotifyTransformChanged();
     }
 
+    void Entity::SetLocalTransform(const Transform& transform, bool updatePhysics)
+    {
+        GetTransform().SetLocalTransform(transform);
+        NotifyTransformChanged(updatePhysics);
+    }
+
     void Entity::SetWorldPosition(const glm::vec3& position)
     {
+        m_Scene->FlushTransformChanges();
         TransformComponent& transform = GetTransform();
         transform.SetWorldPosition(position, GetParent());
         NotifyTransformChanged();
@@ -250,6 +240,7 @@ namespace Crowny
 
     void Entity::SetWorldRotation(const glm::quat& rotation)
     {
+        m_Scene->FlushTransformChanges();
         TransformComponent& transform = GetTransform();
         transform.SetWorldRotation(rotation, GetParent());
         NotifyTransformChanged();
@@ -257,6 +248,7 @@ namespace Crowny
 
     void Entity::SetWorldScale(const glm::vec3& scale)
     {
+        m_Scene->FlushTransformChanges();
         TransformComponent& transform = GetTransform();
         transform.SetWorldScale(scale, GetParent());
         NotifyTransformChanged();
@@ -264,21 +256,37 @@ namespace Crowny
 
     bool Entity::SetWorldTransform(const glm::mat4& worldTransform, bool updatePhysics)
     {
+        m_Scene->FlushTransformChanges();
         if (!GetTransform().SetWorldMatrix(worldTransform, GetParent()))
             return false;
         NotifyTransformChanged(updatePhysics);
         return true;
     }
 
-    glm::vec3 Entity::GetWorldPosition() const { return GetTransform().GetWorldTransform(GetParent()).GetPosition(); }
-    glm::quat Entity::GetWorldRotation() const { return GetTransform().GetWorldTransform(GetParent()).GetRotation(); }
-    glm::vec3 Entity::GetWorldScale() const { return GetTransform().GetWorldTransform(GetParent()).GetScale(); }
+    glm::vec3 Entity::GetWorldPosition() const
+    {
+        m_Scene->ResolveWorldTransform(*this);
+        return GetTransform().GetWorldTransform(GetParent()).GetPosition();
+    }
+
+    glm::quat Entity::GetWorldRotation() const
+    {
+        m_Scene->ResolveWorldTransform(*this);
+        return GetTransform().GetWorldTransform(GetParent()).GetRotation();
+    }
+
+    glm::vec3 Entity::GetWorldScale() const
+    {
+        m_Scene->ResolveWorldTransform(*this);
+        return GetTransform().GetWorldTransform(GetParent()).GetScale();
+    }
     glm::vec3 Entity::GetLocalPosition() const { return GetTransform().GetLocalTransform().GetPosition(); }
     glm::quat Entity::GetLocalRotation() const { return GetTransform().GetLocalTransform().GetRotation(); }
     glm::vec3 Entity::GetLocalScale() const { return GetTransform().GetLocalTransform().GetScale(); }
 
     const Transform& Entity::GetWorldTransform() const
     {
+        m_Scene->ResolveWorldTransform(*this);
         const TransformComponent& transform = GetTransform();
         return transform.GetWorldTransform(GetParent());
     }
@@ -291,6 +299,7 @@ namespace Crowny
 
     const glm::mat4& Entity::GetWorldMatrix() const
     {
+        m_Scene->ResolveWorldTransform(*this);
         const TransformComponent& transform = GetTransform();
         return transform.GetWorldMatrix(GetParent());
     }

@@ -112,6 +112,7 @@ namespace Crowny
         RebuildCopiedRelationships(other, copyEntityMap);
 
         RegisterEntityCallbacks();
+        MarkHierarchyTopologyDirty();
     }
 
     Scene& Scene::operator=(const Scene& other)
@@ -119,6 +120,7 @@ namespace Crowny
         if (this == &other)
             return *this;
 
+        ResetTransformHierarchyCache();
         m_Registry.clear();
         m_EntityMap.clear();
         delete m_RootEntity;
@@ -148,6 +150,7 @@ namespace Crowny
         if (other.m_RootEntity)
             m_RootEntity = new Entity(m_EntityMap.at(other.m_RootEntity->GetUuid()), this);
         RebuildCopiedRelationships(other, copyEntityMap);
+        MarkHierarchyTopologyDirty();
 
         return *this;
     }
@@ -217,6 +220,8 @@ namespace Crowny
         m_Registry.on_update<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentUpdate>(this);
         m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentDestroy>(this);
 
+        m_Registry.on_construct<RelationshipComponent>().connect<&Scene::OnRelationshipComponentConstruct>(this);
+        m_Registry.on_destroy<RelationshipComponent>().connect<&Scene::OnRelationshipComponentDestroy>(this);
         m_Registry.on_destroy<TransformComponent>().connect<&Scene::OnTransformComponentDestroy>(this);
         m_Registry.on_destroy<ManagedScriptComponent>().connect<&Scene::OnManagedScriptComponentDestroy>(this);
     }
@@ -264,6 +269,7 @@ namespace Crowny
                 destinationRelationship.Children.push_back(destinationChild);
             }
         }
+        MarkHierarchyTopologyDirty();
     }
 
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
@@ -1200,6 +1206,10 @@ namespace Crowny
         Entity e = { entity, this };
         ScriptRuntime::NotifyEntityDestroyed(e);
     }
+
+    void Scene::OnRelationshipComponentConstruct(entt::registry&, entt::entity) { MarkHierarchyTopologyDirty(); }
+
+    void Scene::OnRelationshipComponentDestroy(entt::registry&, entt::entity) { MarkHierarchyTopologyDirty(); }
 
     void Scene::OnManagedScriptComponentDestroy(entt::registry& registry, entt::entity entity)
     {

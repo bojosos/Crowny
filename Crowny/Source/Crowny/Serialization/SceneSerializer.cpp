@@ -123,6 +123,7 @@ namespace Crowny
         }
 
         ResolveRelationships(*m_Scene, relationships);
+        m_Scene->MarkHierarchyTopologyDirty();
     }
 
     void SceneSerializer::Serialize(const Path& filepath)
@@ -232,6 +233,7 @@ namespace Crowny
             }
 
             sceneMutationStarted = true;
+            m_Scene->ResetTransformHierarchyCache();
             m_Scene->m_Registry.clear();
             m_Scene->m_EntityMap.clear();
             delete m_Scene->m_RootEntity;
@@ -271,6 +273,7 @@ namespace Crowny
         {
             if (sceneMutationStarted)
             {
+                m_Scene->ResetTransformHierarchyCache();
                 m_Scene->m_Registry.clear();
                 m_Scene->m_EntityMap.clear();
                 delete m_Scene->m_RootEntity;
@@ -309,6 +312,7 @@ namespace Crowny
             String layout;
             archive(sceneName, layout);
             sceneMutationStarted = true;
+            m_Scene->ResetTransformHierarchyCache();
             m_Scene->m_Registry.clear();
             m_Scene->m_EntityMap.clear();
             delete m_Scene->m_RootEntity;
@@ -339,6 +343,7 @@ namespace Crowny
                 }
             }
             ResolveRelationships(*m_Scene, relationships);
+            m_Scene->MarkHierarchyTopologyDirty();
 
             auto view = m_Scene->GetAllEntitiesWith<TagComponent>();
             Entity root;
@@ -398,6 +403,7 @@ namespace Crowny
         {
             if (sceneMutationStarted)
             {
+                m_Scene->ResetTransformHierarchyCache();
                 m_Scene->m_Registry.clear();
                 m_Scene->m_EntityMap.clear();
                 delete m_Scene->m_RootEntity;
