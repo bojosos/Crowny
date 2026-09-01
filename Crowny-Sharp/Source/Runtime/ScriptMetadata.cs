@@ -227,6 +227,7 @@ namespace Crowny
         {
             new CallbackSignature("Start", "Start", null, null),
             new CallbackSignature("Update", "Update", null, null),
+            new CallbackSignature("FixedUpdate", "FixedUpdate", null, null),
             new CallbackSignature("Destroy", "Destroy", "OnDestroy", null),
             new CallbackSignature("CollisionEnter2D", "OnCollisionEnter2D", null, typeof(Collision2D)),
             new CallbackSignature("CollisionStay2D", "OnCollisionStay2D", null, typeof(Collision2D)),

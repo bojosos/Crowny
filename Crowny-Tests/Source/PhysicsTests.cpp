@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "Crowny/Application/Application.h"
@@ -7,6 +8,7 @@
 #include "Crowny/Physics/Physics2DBackend.h"
 #include "Crowny/Physics/Physics3D.h"
 #include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 
 #include <array>
 #include <limits>
@@ -68,6 +70,27 @@ namespace
         Physics3D& Physics;
         Physics3DBackendType Original;
     };
+
+    struct Physics3DStateRestore
+    {
+        explicit Physics3DStateRestore(Physics3D& physics)
+            : Physics(physics), OriginalBackend(physics.GetBackend()), OriginalSettings(physics.GetSettings())
+        {
+        }
+
+        ~Physics3DStateRestore()
+        {
+            if (Physics.IsSimulating())
+                Physics.StopSimulation();
+            if (Physics.GetBackend() != OriginalBackend)
+                Physics.SetBackend(OriginalBackend);
+            Physics.SetSettings(OriginalSettings);
+        }
+
+        Physics3D& Physics;
+        Physics3DBackendType OriginalBackend;
+        Physics3DSettings OriginalSettings;
+    };
 } // namespace
 
 TEST_CASE("Box2D implements the backend-neutral 2D contract", "[Physics][Physics2D]")
@@ -104,6 +127,140 @@ TEST_CASE("Box2D implements the backend-neutral 2D contract", "[Physics][Physics
     backend->StopSimulation(scene.get());
     CHECK_FALSE(backend->IsSimulating());
     CHECK(body.GetComponent<Rigidbody2DComponent>().RuntimeBody == nullptr);
+}
+
+TEST_CASE("Box2D advances exactly once by the supplied fixed tick", "[Physics][Physics2D][FixedUpdate]")
+{
+    EnsureHeadlessRuntime();
+    Scope<Physics2DBackend> backend = CreateBox2DBackend();
+    REQUIRE(backend != nullptr);
+
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity body = scene->CreateEntity("Exact-step 2D body");
+    auto& rigidbody = body.AddComponent<Rigidbody2DComponent>();
+    rigidbody.SetBodyType(RigidbodyBodyType::Dynamic);
+    rigidbody.SetInterpolationMode(RigidbodyInterpolation::Interpolate);
+    body.AddComponent<BoxCollider2DComponent>();
+
+    Physics2DSettings settings;
+    settings.Gravity = glm::vec2(0.0f);
+    settings.MaskBits.fill(0xFFFFu);
+    backend->BeginSimulation(scene.get(), settings);
+    backend->SetLinearVelocity(body, { 1.0f, 0.0f });
+
+    backend->Step(0.01f, scene.get(), settings);
+    CHECK(backend->GetPosition(body).x == Catch::Approx(0.01f).margin(0.0001f));
+    backend->SynchronizeTransforms(scene.get(), 0.5f, 0.005f);
+    CHECK(body.GetWorldTransform().GetPosition().x == Catch::Approx(0.005f).margin(0.0001f));
+    backend->SynchronizeTransforms(scene.get(), 1.0f, 0.0f);
+
+    backend->Step(0.01f, scene.get(), settings);
+    CHECK(backend->GetPosition(body).x == Catch::Approx(0.02f).margin(0.0001f));
+
+    backend->StopSimulation(scene.get());
+}
+
+TEST_CASE("Physics3D advances exactly once by the supplied fixed tick", "[Physics][Physics3D][FixedUpdate]")
+{
+    EnsureHeadlessRuntime();
+    if (!Physics3D::IsBackendCompiled(Physics3DBackendType::Box3D))
+        SKIP("Box3D is not compiled into this build");
+
+    Physics3D& physics = Physics3D::Get();
+    [[maybe_unused]] Physics3DStateRestore restorePhysics(physics);
+    REQUIRE(physics.SetBackend(Physics3DBackendType::Box3D));
+
+    Physics3DSettings settings = physics.GetSettings();
+    settings.Gravity = glm::vec3(0.0f);
+    settings.Substeps = 1;
+    physics.SetSettings(settings);
+    REQUIRE(physics.StartSimulation());
+
+    PhysicsBody3DDesc bodyDesc;
+    bodyDesc.Type = PhysicsBodyType3D::Dynamic;
+    bodyDesc.LinearVelocity = { 1.0f, 0.0f, 0.0f };
+    bodyDesc.GravityScale = 0.0f;
+    bodyDesc.AllowSleep = false;
+    const PhysicsBody3DHandle body = physics.CreateBody(bodyDesc);
+    REQUIRE(body);
+    physics.AddShape(body, PhysicsShape3DDesc{});
+
+    glm::vec3 position;
+    glm::quat rotation;
+    physics.Step(0.01f);
+    physics.GetBodyTransform(body, position, rotation);
+    CHECK(position.x == Catch::Approx(0.01f).margin(0.002f));
+
+    physics.Step(0.01f);
+    physics.GetBodyTransform(body, position, rotation);
+    CHECK(position.x == Catch::Approx(0.02f).margin(0.002f));
+
+    physics.StopSimulation();
+}
+
+TEST_CASE("Runtime and physics simulation consume one shared frame plan", "[Physics][FixedUpdate][Integration]")
+{
+    EnsureHeadlessRuntime();
+    Physics2D& physics = Physics2D::Get();
+    const glm::vec2 originalGravity = physics.GetGravity();
+    physics.SetGravity(glm::vec2(0.0f));
+
+    const auto runFrame = [&](bool runtime) {
+        Ref<Scene> scene = CreateRef<Scene>(false);
+        Entity body = scene->CreateEntity(runtime ? "Runtime body" : "Simulation body");
+        auto& rigidbody = body.AddComponent<Rigidbody2DComponent>();
+        rigidbody.SetBodyType(RigidbodyBodyType::Dynamic);
+        body.AddComponent<BoxCollider2DComponent>();
+
+        if (runtime)
+            scene->OnRuntimeStart();
+        else
+            scene->OnSimulationStart();
+        Physics2D::Get().SetLinearVelocity(body, { 1.0f, 0.0f });
+
+        Time time;
+        TimeSettings settings;
+        settings.FixedTimestep = 0.02f;
+        time.BeginFrame(0.055f);
+        const SimulationFrame frame = time.AdvanceSimulation(settings);
+        uint32_t variableUpdates = 0;
+
+        scene->SynchronizePhysicsTransforms(1.0f, 0.0f);
+        time.ExecuteSimulationFrame(
+          frame,
+          [&](Timestep fixedDelta) {
+              if (runtime)
+              {
+                  ScriptRuntime::OnFixedUpdate(scene, fixedDelta);
+                  scene->OnFixedUpdate(fixedDelta);
+              }
+              else
+                  scene->OnSimulationFixedUpdate(fixedDelta);
+          },
+          [&](Timestep frameDelta) {
+              ++variableUpdates;
+              if (runtime)
+              {
+                  scene->OnUpdateRuntime(frameDelta);
+                  ScriptRuntime::OnUpdate(scene, frameDelta);
+              }
+          },
+          [&](float interpolationAlpha, Timestep extrapolationTime) {
+              scene->SynchronizePhysicsTransforms(interpolationAlpha, extrapolationTime);
+          });
+
+        CHECK(variableUpdates == 1);
+        CHECK(Physics2D::Get().GetPosition(body).x == Catch::Approx(0.04f).margin(0.0001f));
+        if (runtime)
+            scene->OnRuntimeStop();
+        else
+            scene->OnSimulationEnd();
+    };
+
+    SECTION("Play") { runFrame(true); }
+    SECTION("Simulate") { runFrame(false); }
+
+    physics.SetGravity(originalGravity);
 }
 
 TEST_CASE("Active 2D components survive AddOrReplace and clean up", "[Physics][Physics2D][Ecs][Lifecycle]")

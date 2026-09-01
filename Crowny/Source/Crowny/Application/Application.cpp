@@ -191,15 +191,15 @@ namespace Crowny
 
     void Application::Run()
     {
-        m_LastFrameTime = static_cast<float>(glfwGetTime());
+        m_LastFrameTime = glfwGetTime();
 #ifdef MC_WEB
         std::function<void()> loop = [&]() {
 #else
         while (m_Running)
         {
 #endif
-            const float time = (float)glfwGetTime();
-            const Timestep timestep = time - m_LastFrameTime;
+            const double time = glfwGetTime();
+            const Timestep timestep(static_cast<float>(time - m_LastFrameTime));
             m_LastFrameTime = time;
             m_Time.BeginFrame(timestep);
             auto& rapi = *RenderAPI::TryGet();

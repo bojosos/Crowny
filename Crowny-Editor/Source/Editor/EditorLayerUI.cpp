@@ -726,6 +726,7 @@ namespace Crowny
             timeSettings->FixedTimestep = std::max(0.0001f, timeSettings->FixedTimestep);
         if (UI::Property("Maximum timestep", timeSettings->MaxTimestep))
             timeSettings->MaxTimestep = std::max(timeSettings->FixedTimestep, timeSettings->MaxTimestep);
+        UI::Property("Maximum fixed steps per frame", timeSettings->MaxFixedStepsPerFrame, 1u);
         UI::EndPropertyGrid();
     }
 

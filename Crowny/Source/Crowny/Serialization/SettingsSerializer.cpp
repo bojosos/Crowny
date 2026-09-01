@@ -36,6 +36,7 @@ namespace Crowny
         SerializeValueYAML(out, "TimeScale", settings->TimeScale);
         SerializeValueYAML(out, "MaxTimestep", settings->MaxTimestep);
         SerializeValueYAML(out, "FixedTimestep", settings->FixedTimestep);
+        SerializeValueYAML(out, "MaxFixedStepsPerFrame", settings->MaxFixedStepsPerFrame);
 
         EndYAMLMap(out, "TimeSettings");
     }
@@ -51,6 +52,7 @@ namespace Crowny
         DeserializeValueYAML(timeSettingsNode, "TimeScale", timeSettings->TimeScale, 1.0f);
         DeserializeValueYAML(timeSettingsNode, "MaxTimestep", timeSettings->MaxTimestep, 1.0f / 3.0f);
         DeserializeValueYAML(timeSettingsNode, "FixedTimestep", timeSettings->FixedTimestep, 0.02f);
+        DeserializeValueYAML(timeSettingsNode, "MaxFixedStepsPerFrame", timeSettings->MaxFixedStepsPerFrame, 17u);
 
         return timeSettings;
     }

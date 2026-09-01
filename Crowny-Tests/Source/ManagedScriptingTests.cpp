@@ -85,6 +85,7 @@ namespace
         mover.Identity = { "GameAssembly", "Contract", "Mover" };
         mover.Fields.push_back(speed);
         mover.Events.push_back(ScriptEventKind::Start);
+        mover.Events.push_back(ScriptEventKind::FixedUpdate);
 
         ScriptCatalog catalog;
         catalog.ManifestVersion = MANAGED_CATALOG_VERSION;
@@ -127,6 +128,7 @@ TEST_CASE("Generated metadata backend exercises the managed scripting contract",
     REQUIRE(created.Handle.IsValid());
 
     REQUIRE(scripting.Dispatch(created.Handle, ScriptEvent::Lifecycle(ScriptEventKind::Start)).Succeeded);
+    REQUIRE(scripting.Dispatch(created.Handle, ScriptEvent::Lifecycle(ScriptEventKind::FixedUpdate, 0.02f)).Succeeded);
     const ScriptStateResult captured = scripting.CaptureState(created.Handle);
     REQUIRE(captured.Result.Succeeded);
     CHECK(captured.State == MakeState(3.5f));
@@ -185,7 +187,7 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
 {
-    CHECK(CW_MANAGED_ABI_VERSION == 13);
+    CHECK(CW_MANAGED_ABI_VERSION == 14);
 
     cw_managed_program_api api{};
     api.size = sizeof(api);
@@ -401,7 +403,7 @@ TEST_CASE("Managed JSON uses catalog kinds to preserve ambiguous values", "[Scri
 TEST_CASE("Managed catalog preserves unambiguous nested script identities", "[Scripting][Managed][Contract]")
 {
     const String json = R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
-                        R"("TypeName":"Outer+Mover","BaseType":null,"RunInEditor":true,"Events":["Start"],"Fields":[]}]})";
+                        R"("TypeName":"Outer+Mover","BaseType":null,"RunInEditor":true,"Events":["Start","FixedUpdate"],"Fields":[]}]})";
     ScriptCatalog catalog;
     const ManagedOperationResult result = ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR);
     REQUIRE(result.Succeeded);
@@ -409,6 +411,8 @@ TEST_CASE("Managed catalog preserves unambiguous nested script identities", "[Sc
     CHECK(catalog.FindType({ "GameAssembly", "Game", "Outer+Mover" }) == &catalog.Types.front());
     CHECK(catalog.FindType({ "GameAssembly", "Game", "Mover" }) == nullptr);
     CHECK((catalog.Types.front().Flags & ScriptTypeFlags::RunInEditor) != ScriptTypeFlags::None);
+    CHECK(std::find(catalog.Types.front().Events.begin(), catalog.Types.front().Events.end(), ScriptEventKind::FixedUpdate) !=
+          catalog.Types.front().Events.end());
 
     String invalid = json;
     const size_t event = invalid.find("Start");

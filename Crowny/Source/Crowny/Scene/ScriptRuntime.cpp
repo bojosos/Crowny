@@ -258,6 +258,27 @@ namespace Crowny
             LogDiagnostics(managed->Update());
     }
 
+    void ScriptRuntime::OnFixedUpdate(Timestep timestep)
+    {
+        OnFixedUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr, timestep);
+    }
+
+    void ScriptRuntime::OnFixedUpdate(const Ref<Scene>& scene, Timestep timestep)
+    {
+        if (scene == nullptr)
+            return;
+        SceneManager::CallbackScope callbackScope =
+          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+        const Vector<ScriptInvocation>& invocations = CollectScriptInvocations(scene);
+        for (const ScriptInvocation& invocation : invocations)
+        {
+            Entity entity;
+            ManagedScript* script = FindScript(scene, invocation, entity);
+            if (script != nullptr)
+                Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::FixedUpdate, timestep.GetSeconds()));
+        }
+    }
+
     void ScriptRuntime::OnShutdown() { OnShutdown(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
 
     void ScriptRuntime::OnShutdown(const Ref<Scene>& scene)

@@ -36,6 +36,7 @@ namespace Crowny.ManagedHost.Interop
         TriggerEnter3D = 12,
         TriggerStay3D = 13,
         TriggerExit3D = 14,
+        FixedUpdate = 15,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -1259,7 +1260,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 13;
+        public const uint Version = 14;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

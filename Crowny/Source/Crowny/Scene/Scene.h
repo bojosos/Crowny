@@ -102,9 +102,10 @@ namespace Crowny
         void OnRuntimeStop();
 
         void OnFixedUpdate(Timestep ts);
+        void SynchronizePhysicsTransforms(float interpolationAlpha, Timestep extrapolationTime);
 
         void OnSimulationStart();
-        void OnSimulationUpdate(Timestep ts);
+        void OnSimulationFixedUpdate(Timestep ts);
         void OnSimulationEnd();
 
         void OnUpdateRuntime(Timestep ts);

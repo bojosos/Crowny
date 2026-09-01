@@ -37,6 +37,7 @@ namespace Crowny
         virtual void StopSimulation(Scene* scene) = 0;
         virtual bool IsSimulating() const = 0;
         virtual void Step(Timestep timestep, Scene* scene, const Physics2DSettings& settings) = 0;
+        virtual void SynchronizeTransforms(Scene* scene, float interpolationAlpha, Timestep extrapolationTime) = 0;
         virtual void SetGravity(const glm::vec2& gravity) = 0;
         virtual void SetTransform(Entity entity) = 0;
 

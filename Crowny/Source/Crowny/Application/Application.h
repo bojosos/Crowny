@@ -94,7 +94,7 @@ namespace Crowny
         Ref<TimeSettings> m_TimeSettings;
         bool m_Running = true;
         bool m_Minimized = false;
-        float m_LastFrameTime = 0.0f;
+        double m_LastFrameTime = 0.0;
         Time m_Time;
 
         LayerStack* m_LayerStack;

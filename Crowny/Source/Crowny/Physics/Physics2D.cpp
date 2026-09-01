@@ -207,6 +207,12 @@ namespace Crowny
             m_Backend->Step(timestep, scene, *m_Settings);
     }
 
+    void Physics2D::SynchronizeTransforms(Scene* scene, float interpolationAlpha, Timestep extrapolationTime)
+    {
+        if (IsSimulating())
+            m_Backend->SynchronizeTransforms(scene, interpolationAlpha, extrapolationTime);
+    }
+
     void Physics2D::StopSimulation(Scene* scene)
     {
         if (!IsSimulating())
