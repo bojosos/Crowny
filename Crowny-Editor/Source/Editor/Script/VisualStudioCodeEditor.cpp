@@ -184,6 +184,7 @@ namespace Crowny
 
     class VSMessageFilter : public IMessageFilter
     {
+    public:
         DWORD __stdcall HandleInComingCall(DWORD dwCallType, HTASK htaskCaller, DWORD dwTickCount, LPINTERFACEINFO lpInterfaceInfo) override
         {
             return SERVERCALL_ISHANDLED;
@@ -675,11 +676,11 @@ namespace Crowny
                 CodeEditorVersion Version;
                 const char* Name;
             };
-            static const std::array<LegacyVisualStudio, 6> versions = {
+            static const std::array<LegacyVisualStudio, 6> versions = {{
                 { L"9.0", CodeEditorVersion::VS2008, "Visual Studio 2008" },  { L"10.0", CodeEditorVersion::VS2010, "Visual Studio 2010" },
                 { L"11.0", CodeEditorVersion::VS2012, "Visual Studio 2012" }, { L"12.0", CodeEditorVersion::VS2013, "Visual Studio 2013" },
                 { L"14.0", CodeEditorVersion::VS2015, "Visual Studio 2015" }, { L"15.0", CodeEditorVersion::VS2017, "Visual Studio 2017" },
-            };
+            }};
             static const std::array<const wchar_t*, 2> registryKeys = {
                 L"SOFTWARE\\Microsoft\\VisualStudio\\SxS\\VS7",
                 L"SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\SxS\\VS7",
