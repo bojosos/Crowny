@@ -70,7 +70,7 @@ namespace Crowny
         const auto projection = properties.Bind(
           "ProjectionType", [](const CameraComponent& camera) { return camera.Camera.GetProjectionType(); },
           [](CameraComponent& camera, SceneCamera::CameraProjection value) { camera.Camera.SetProjectionType(value); });
-        UI::PropertyDropdown("Projection", { "Orthographic", "Perspective" }, projection);
+        UI::SelectionPropertyDropdown("Projection", { "Orthographic", "Perspective" }, projection);
 
         const SelectionPropertyValue<SceneCamera::CameraProjection> projectionValue = projection.Read();
         if (projectionValue && !projectionValue.Mixed)
@@ -136,7 +136,7 @@ namespace Crowny
         (void)primary;
         const auto properties = InspectorSelection(entities, "Light").Components<LightComponent>();
         const auto typeProperty = properties.Bind("Type", &LightComponent::Type);
-        UI::PropertyDropdown("Type", { "Directional", "Point", "Spot" }, typeProperty);
+        UI::SelectionPropertyDropdown("Type", { "Directional", "Point", "Spot" }, typeProperty);
         UI::PropertyColor("Color", properties.Bind("Color", &LightComponent::Color));
         const auto temperatureEnabled = properties.Bind("UseColorTemperature", &LightComponent::UseColorTemperature);
         UI::Property("Use Temperature", temperatureEnabled);
@@ -198,7 +198,7 @@ namespace Crowny
 
         const auto shadows = properties.Bind("Shadows", &LightComponent::Shadows);
         const auto shadowMode = shadows.Member("Shadows.Mode", &LightShadowSettings::Mode);
-        UI::PropertyDropdown("Shadows", { "Disabled", "Hard", "Soft" }, shadowMode);
+        UI::SelectionPropertyDropdown("Shadows", { "Disabled", "Hard", "Soft" }, shadowMode);
         const SelectionPropertyValue<LightShadowMode> shadowModeValue = shadowMode.Read();
         if (shadowModeValue && !shadowModeValue.Mixed && *shadowModeValue.Primary != LightShadowMode::Disabled)
         {
@@ -293,8 +293,10 @@ namespace Crowny
         UI::Property("Wrapping", wrapping);
         const SelectionPropertyValue<bool> wrappingValue = wrapping.Read();
         if (wrappingValue && !wrappingValue.Mixed && *wrappingValue.Primary)
-            UI::PropertyDropdown("Wrap Mode", { "Word", "Character", "Word Then Character" }, properties.Bind("Wrap Mode", &TextComponent::WrapMode));
-        UI::PropertyDropdown("Overflow", { "Overflow", "Ellipsis", "Truncate" }, properties.Bind("Overflow", &TextComponent::Overflow));
+            UI::SelectionPropertyDropdown("Wrap Mode", { "Word", "Character", "Word Then Character" },
+                                          properties.Bind("Wrap Mode", &TextComponent::WrapMode));
+        UI::SelectionPropertyDropdown("Overflow", { "Overflow", "Ellipsis", "Truncate" },
+                                      properties.Bind("Overflow", &TextComponent::Overflow));
         UI::Property("Clip To Bounds", properties.Bind("Clip To Bounds", &TextComponent::ClipToBounds));
         UI::Property("Max Lines", properties.Bind("Max Lines", &TextComponent::MaxLines));
         UI::PropertyColor("Outline", properties.Bind("Outline", &TextComponent::OutlineColor));
@@ -401,8 +403,8 @@ namespace Crowny
         const auto properties = InspectorSelection(entities, "Animation").Components<AnimationComponent>();
         UI::PropertyAsset<AnimationClip>("Clip", properties.Bind("Clip", &AnimationComponent::GetClip, &AnimationComponent::SetClip));
         UI::Property("Speed", properties.Bind("Speed", &AnimationComponent::GetSpeed, &AnimationComponent::SetSpeed), 0.05f);
-        UI::PropertyDropdown("Wrap Mode", { "Clamp", "Loop", "Ping Pong" },
-                             properties.Bind("WrapMode", &AnimationComponent::GetWrapMode, &AnimationComponent::SetWrapMode));
+        UI::SelectionPropertyDropdown("Wrap Mode", { "Clamp", "Loop", "Ping Pong" },
+                                      properties.Bind("WrapMode", &AnimationComponent::GetWrapMode, &AnimationComponent::SetWrapMode));
         UI::Property("Play On Awake", properties.Bind("PlayOnAwake", &AnimationComponent::GetPlayOnAwake, &AnimationComponent::SetPlayOnAwake));
         UI::Property("Apply Root Motion",
                      properties.Bind("ApplyRootMotion", &AnimationComponent::GetApplyRootMotion, &AnimationComponent::SetApplyRootMotion));
@@ -415,7 +417,7 @@ namespace Crowny
         UI::EditSelectionProperty(properties.Bind("Layer", &Rigidbody2DComponent::GetLayerMask, &Rigidbody2DComponent::SetLayerMask),
                                   [](uint32_t& value) { return UIUtils::PropertyLayer("Layer", value); });
         const auto bodyType = properties.Bind("BodyType", &Rigidbody2DComponent::GetBodyType, &Rigidbody2DComponent::SetBodyType);
-        UI::PropertyDropdown("Body Type", { "Static", "Dynamic", "Kinematic" }, bodyType);
+        UI::SelectionPropertyDropdown("Body Type", { "Static", "Dynamic", "Kinematic" }, bodyType);
 
         const SelectionPropertyValue<RigidbodyBodyType> bodyTypeValue = bodyType.Read();
         if (bodyTypeValue && !bodyTypeValue.Mixed && *bodyTypeValue.Primary == RigidbodyBodyType::Dynamic)
@@ -435,11 +437,12 @@ namespace Crowny
         }
         if (bodyTypeValue && !bodyTypeValue.Mixed && *bodyTypeValue.Primary != RigidbodyBodyType::Static)
         {
-            UI::PropertyDropdown("Collision Detection", { "Discrete", "Continuous" },
-                                 properties.Bind("CollisionDetection", &Rigidbody2DComponent::GetCollisionDetectionMode,
-                                                 &Rigidbody2DComponent::SetCollisionDetectionMode));
-            UI::PropertyDropdown("Sleeping Mode", { "Never Sleep", "Start Awake", "Start Sleeping" },
-                                 properties.Bind("SleepMode", &Rigidbody2DComponent::GetSleepMode, &Rigidbody2DComponent::SetSleepMode));
+            UI::SelectionPropertyDropdown("Collision Detection", { "Discrete", "Continuous" },
+                                          properties.Bind("CollisionDetection", &Rigidbody2DComponent::GetCollisionDetectionMode,
+                                                          &Rigidbody2DComponent::SetCollisionDetectionMode));
+            UI::SelectionPropertyDropdown("Sleeping Mode", { "Never Sleep", "Start Awake", "Start Sleeping" },
+                                          properties.Bind("SleepMode", &Rigidbody2DComponent::GetSleepMode,
+                                                          &Rigidbody2DComponent::SetSleepMode));
             UI::PropertyFlags("Constraints", { "Position X", "Position Y", "Rotation" },
                               { Rigidbody2DConstraintsBits::FreezePositionX, Rigidbody2DConstraintsBits::FreezePositionY,
                                 Rigidbody2DConstraintsBits::FreezeRotation },
@@ -483,7 +486,7 @@ namespace Crowny
         (void)primary;
         const auto properties = InspectorSelection(entities, "Rigidbody 3D").Components<Rigidbody3DComponent>();
         const auto bodyType = properties.Bind("BodyType", &Rigidbody3DComponent::GetBodyType, &Rigidbody3DComponent::SetBodyType);
-        UI::PropertyDropdown("Body Type", { "Static", "Dynamic", "Kinematic" }, bodyType);
+        UI::SelectionPropertyDropdown("Body Type", { "Static", "Dynamic", "Kinematic" }, bodyType);
 
         const SelectionPropertyValue<PhysicsBodyType3D> bodyTypeValue = bodyType.Read();
         if (bodyTypeValue && !bodyTypeValue.Mixed && *bodyTypeValue.Primary == PhysicsBodyType3D::Dynamic)

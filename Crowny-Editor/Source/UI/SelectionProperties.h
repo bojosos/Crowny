@@ -179,12 +179,13 @@ namespace Crowny::UI
     }
 
     template <SelectionPropertyBinding Binding>
-    static bool PropertyDropdown(const char* label, std::initializer_list<const char*> options, Binding&& property)
+    static bool SelectionPropertyDropdown(const char* label, std::initializer_list<const char*> options, Binding&& property)
     {
         return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertyDropdown(label, options, value); });
     }
 
-    template <SelectionPropertyBinding Binding> static bool PropertyDropdown(const char* label, const Vector<String>& options, Binding&& property)
+    template <SelectionPropertyBinding Binding>
+    static bool SelectionPropertyDropdown(const char* label, const Vector<String>& options, Binding&& property)
     {
         return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertyDropdown(label, options, value); });
     }

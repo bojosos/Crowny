@@ -145,10 +145,9 @@ namespace Crowny
               m_Entities, m_ComponentName, propertyName, std::move(getter), std::move(setter), std::move(predicate), std::move(equal));
         }
 
-        template <typename Reader, typename Writer, typename ProjectedEqual = SelectionPropertyDetail::Equal>
-        auto Project(Reader reader, Writer writer, ProjectedEqual equal = {}) const
+        template <typename Reader, typename Writer> auto Project(Reader reader, Writer writer) const
         {
-            return Project(m_PropertyName, std::move(reader), std::move(writer), std::move(equal));
+            return Project(m_PropertyName, std::move(reader), std::move(writer));
         }
 
         template <typename Owner, typename MemberType>
