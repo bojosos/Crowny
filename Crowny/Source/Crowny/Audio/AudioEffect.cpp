@@ -9,42 +9,33 @@
 
 namespace Crowny
 {
-    namespace
-    {
-        const EFX* GetAvailableEFX()
-        {
-            AudioManager* manager = AudioManager::TryGet();
-            return manager != nullptr && manager->IsEFXAvailable() ? &manager->GetEFX() : nullptr;
-        }
-    } // namespace
-
     AudioEffect::~AudioEffect()
     {
-        if (m_EffectId != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
-            AudioManager::TryGet()->GetEFX().DeleteEffects(1, &m_EffectId);
+        if (const EFX* efx = AudioManager::TryGetEFX(); m_EffectId != 0 && efx != nullptr)
+            efx->DeleteEffects(1, &m_EffectId);
     }
 
     ReverbEffect::ReverbEffect()
     {
-        if (AudioManager::TryGet() == nullptr || !AudioManager::TryGet()->IsEFXAvailable())
+        const EFX* efx = AudioManager::TryGetEFX();
+        if (efx == nullptr)
             return;
 
-        const EFX& efx = AudioManager::TryGet()->GetEFX();
         // Prefer EAXREVERB when available; standard AL_REVERB shares the same parameter subset
         // we expose so Apply() uses AL_REVERB_* tokens regardless.
-        const ALenum type = efx.HasEAXReverb ? AL_EFFECT_EAXREVERB : AL_EFFECT_REVERB;
-        efx.GenEffects(1, &m_EffectId);
-        efx.Effecti(m_EffectId, AL_EFFECT_TYPE, type);
+        const ALenum type = efx->HasEAXReverb ? AL_EFFECT_EAXREVERB : AL_EFFECT_REVERB;
+        efx->GenEffects(1, &m_EffectId);
+        efx->Effecti(m_EffectId, AL_EFFECT_TYPE, type);
         if (alGetError() != AL_NO_ERROR)
         {
-            efx.DeleteEffects(1, &m_EffectId);
+            efx->DeleteEffects(1, &m_EffectId);
             m_EffectId = 0;
         }
     }
 
     void ReverbEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
 
@@ -128,14 +119,14 @@ namespace Crowny
     // free function in this TU so it doesn't leak into the header.
     static void AllocateEffect(ALuint& effectId, ALenum type)
     {
-        if (AudioManager::TryGet() == nullptr || !AudioManager::TryGet()->IsEFXAvailable())
+        const EFX* efx = AudioManager::TryGetEFX();
+        if (efx == nullptr)
             return;
-        const EFX& efx = AudioManager::TryGet()->GetEFX();
-        efx.GenEffects(1, &effectId);
-        efx.Effecti(effectId, AL_EFFECT_TYPE, type);
+        efx->GenEffects(1, &effectId);
+        efx->Effecti(effectId, AL_EFFECT_TYPE, type);
         if (alGetError() != AL_NO_ERROR)
         {
-            efx.DeleteEffects(1, &effectId);
+            efx->DeleteEffects(1, &effectId);
             effectId = 0;
         }
     }
@@ -144,7 +135,7 @@ namespace Crowny
 
     void EchoEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
         efx->Effectf(m_EffectId, AL_ECHO_DELAY, std::clamp(Delay, 0.0f, 0.207f));
@@ -158,7 +149,7 @@ namespace Crowny
 
     void DistortionEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
         efx->Effectf(m_EffectId, AL_DISTORTION_EDGE, std::clamp(Edge, 0.0f, 1.0f));
@@ -172,7 +163,7 @@ namespace Crowny
 
     void ChorusEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
         efx->Effecti(m_EffectId, AL_CHORUS_WAVEFORM, std::clamp(Waveform, 0, 1));
@@ -187,7 +178,7 @@ namespace Crowny
 
     void EqualizerEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
         efx->Effectf(m_EffectId, AL_EQUALIZER_LOW_GAIN, std::clamp(LowGain, 0.126f, 7.943f));
@@ -206,7 +197,7 @@ namespace Crowny
 
     void PitchShifterEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
         efx->Effecti(m_EffectId, AL_PITCH_SHIFTER_COARSE_TUNE, std::clamp(CoarseTune, -12, 12));
@@ -217,7 +208,7 @@ namespace Crowny
 
     void FlangerEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
         efx->Effecti(m_EffectId, AL_FLANGER_WAVEFORM, std::clamp(Waveform, 0, 1));
@@ -232,7 +223,7 @@ namespace Crowny
 
     void CompressorEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
         efx->Effecti(m_EffectId, AL_COMPRESSOR_ONOFF, Enabled ? 1 : 0);
@@ -242,7 +233,7 @@ namespace Crowny
 
     void RingModulatorEffect::Apply()
     {
-        const EFX* efx = GetAvailableEFX();
+        const EFX* efx = AudioManager::TryGetEFX();
         if (!IsValid() || efx == nullptr)
             return;
         efx->Effectf(m_EffectId, AL_RING_MODULATOR_FREQUENCY, std::clamp(Frequency, 0.0f, 8000.0f));

@@ -90,6 +90,12 @@ namespace Crowny
 
     bool AudioManager::IsContextCurrent() const { return m_Context != nullptr && alcGetCurrentContext() == m_Context; }
 
+    const EFX* AudioManager::TryGetEFX()
+    {
+        const AudioManager* manager = TryGet();
+        return manager != nullptr && manager->m_EFX.Available ? &manager->m_EFX : nullptr;
+    }
+
     bool AudioManager::EnsureContextCurrent()
     {
         if (!IsAvailable())
@@ -104,30 +110,12 @@ namespace Crowny
 
     void AudioManager::RefreshEFXCapability()
     {
-        const bool available = m_EFX.Load(m_Device);
-        if (available)
-        {
-            if (!m_EFXAvailableReported)
-            {
-                CW_ENGINE_INFO("OpenAL EFX enabled: {0} auxiliary send(s), EAX reverb: {1}.", m_EFX.MaxAuxiliarySends, m_EFX.HasEAXReverb);
-                m_EFXAvailableReported = true;
-            }
-            return;
-        }
-
-        if (m_EFXFallbackReported)
-            return;
-        const EFXCapabilityState capability = m_EFX.GetCapabilityState();
-        if (m_EFX.Status == EFXLoadStatus::MissingEntrypoint)
-            CW_ENGINE_WARN("OpenAL EFX disabled: {0}/{1} entrypoints loaded, missing {2}. Core playback continues. Use an OpenAL runtime and "
-                           "device with complete ALC_EXT_EFX support.",
-                           capability.LoadedEntrypoints, capability.RequiredEntrypoints,
-                           capability.MissingEntrypoint != nullptr ? capability.MissingEntrypoint : "an unknown entrypoint");
-        else
-            CW_ENGINE_WARN("OpenAL EFX disabled: {0}. Core playback continues. Check the selected device and OpenAL runtime for ALC_EXT_EFX "
-                           "support.",
-                           EFX::GetStatusName(m_EFX.Status));
-        m_EFXFallbackReported = true;
+        m_EFX.Load(m_Device);
+        const EFXDiagnostic diagnostic = m_EFXDiagnostics.Observe(m_EFX.GetCapabilityState());
+        if (diagnostic.Level == EFXDiagnosticLevel::Info)
+            CW_ENGINE_INFO("{0}", diagnostic.Message);
+        else if (diagnostic.Level == EFXDiagnosticLevel::Warning)
+            CW_ENGINE_WARN("{0}", diagnostic.Message);
     }
 
     void AudioManager::RefreshPCMCapabilities()

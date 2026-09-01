@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/StdHeaders.h"
+
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/efx.h>
@@ -36,6 +38,34 @@ namespace Crowny
         bool SupportsEAXReverb = false;
         bool Available = false;
         const char* MissingEntrypoint = nullptr;
+    };
+
+    enum class EFXDiagnosticLevel : uint8_t
+    {
+        None,
+        Info,
+        Warning,
+    };
+
+    struct EFXDiagnostic
+    {
+        EFXDiagnosticLevel Level = EFXDiagnosticLevel::None;
+        String Message;
+
+        explicit operator bool() const { return Level != EFXDiagnosticLevel::None; }
+    };
+
+    // Converts EFX capability changes into diagnostics and suppresses repeats for the lifetime of
+    // the owning audio manager. An absent optional feature is informational; a partially resolved
+    // or otherwise inconsistent implementation is a warning. Neither case disables base audio.
+    class EFXCapabilityDiagnostics
+    {
+    public:
+        EFXDiagnostic Observe(const EFXCapabilityState& capability);
+
+    private:
+        bool m_AvailableReported = false;
+        bool m_FallbackReported = false;
     };
 
     using EFXEntrypointResolver = void* (*)(void* context, const char* name);

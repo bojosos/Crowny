@@ -125,7 +125,8 @@ This is the durable record of the requested engine work. A checked item is merge
 ## Audio
 
 - [ ] Complete OpenAL support for devices, contexts, sources, spatialization, streaming, listener state, attenuation, Doppler, distance models, filters, auxiliary sends, EFX effects, reverb presets, routing, and capability diagnostics.
-- [ ] Treat missing EFX entry points as an expected capability fallback, with one clear message and no broken base audio.
+- [x] Treat missing EFX entry points as an expected capability fallback. AudioManager exposes one all-or-nothing `TryGetEFX()` seam, reports
+  absent support once at info level or partial/inconsistent support once as a warning, and keeps base PCM preparation independent from EFX.
 - [ ] Restore per-source streaming decoders and move OpenAL ownership to a dedicated audio thread. Decode PCM on bounded workers and drain safely on scene/application shutdown.
   - [x] Streaming sources retain decoded/conversion scratch, cache per-device PCM capabilities, validate OpenAL upload sizes, and allocate nothing after reaching their warm high-water mark.
 - [ ] Expand audio assets, import, previews, waveform/duration metadata, serialization, editor controls, and C# parity.
