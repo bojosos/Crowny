@@ -8,6 +8,12 @@ using namespace Crowny;
 
 namespace
 {
+    String ReadRawTextFile(const Path& path)
+    {
+        const Ref<DataStream> input = FileSystem::OpenFile(path);
+        return input != nullptr ? input->GetAsString() : String{};
+    }
+
     CodeProjectData MakeProject(CSharpProjectRuntime runtime = CSharpProjectRuntime::Mono)
     {
         CodeProjectData project;
@@ -125,7 +131,7 @@ TEST_CASE("C# solution writer preserves unchanged generated files", "[Editor][Sc
     CHECK(changed);
 
     const Path solutionPath = outputDirectory / "Game.sln";
-    CHECK(FileSystem::ReadTextFile(solutionPath).find("\r\n") != String::npos);
+    CHECK(ReadRawTextFile(solutionPath).find("\r\n") != String::npos);
 
     changed = true;
     REQUIRE(CSProject::WriteSolution(CSProjectVersion::VS2026, solution, outputDirectory, &changed));
@@ -153,7 +159,7 @@ TEST_CASE("C# solution writer preserves external solution projects and folders",
 
     constexpr const char* externalProjectGuid = "A8E345D3-1AC4-4B88-AF71-9C1E4A5C6922";
     constexpr const char* solutionFolderGuid = "0D9A9CB4-0E3C-4D86-861B-210328DECEAF";
-    String customized = FileSystem::ReadTextFile(solutionPath);
+    String customized = ReadRawTextFile(solutionPath);
     const size_t globalStart = customized.find("\r\nGlobal\r\n");
     REQUIRE(globalStart != String::npos);
     const String externalProjects = "\r\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"External.Tools\", \"External/Tools.csproj\", \"{" +
@@ -172,10 +178,10 @@ TEST_CASE("C# solution writer preserves external solution projects and folders",
     const size_t configurationsEnd = customized.find("\r\n\tEndGlobalSection", customized.find("GlobalSection(ProjectConfigurationPlatforms)"));
     REQUIRE(configurationsEnd != String::npos);
     customized.insert(configurationsEnd, projectConfiguration);
-    REQUIRE(FileSystem::WriteTextFile(solutionPath, customized));
+    REQUIRE(FileSystem::WriteTextFileAtomic(solutionPath, customized));
 
     REQUIRE(CSProject::WriteSolution(CSProjectVersion::VS2026, solution, outputDirectory));
-    const String merged = FileSystem::ReadTextFile(solutionPath);
+    const String merged = ReadRawTextFile(solutionPath);
     CHECK(merged.find("External/Tools.csproj") != String::npos);
     CHECK(merged.find("GlobalSection(NestedProjects)") != String::npos);
     CHECK(merged.find(externalProjectGuid) != String::npos);
