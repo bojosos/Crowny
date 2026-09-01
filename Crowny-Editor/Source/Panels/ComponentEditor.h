@@ -3,6 +3,7 @@
 #include "Crowny/Ecs/Entity.h"
 #include "Editor/ComponentUndoSnapshot.h"
 #include "Editor/ScriptInspectorTransaction.h"
+#include "Editor/SelectionComponentOperations.h"
 #include "Panels/ComponentMenuModel.h"
 
 #include <imgui.h>
@@ -26,10 +27,12 @@ namespace Crowny
         ImGui::Columns(2);
     }
 
-    template <class Component> Ref<UndoAction> ComponentAddAction(Entity entity)
+    template <class Component> SelectionComponentChange ComponentSelectionAddAction(std::span<const Entity> entities)
     {
-        entity.AddComponent<Component>();
-        return CreateRef<Crowny::AddComponentAction<Component>>(entity);
+        if constexpr (std::is_same_v<Component, ManagedScriptComponent>)
+            return {};
+        else
+            return AddComponentToSelection<Component>(entities);
     }
 
     template <class Component> Ref<UndoAction> ComponentRemoveAction(Entity entity)
@@ -58,9 +61,11 @@ namespace Crowny
             using Callback = std::function<void(Entity, const Vector<Entity>&)>;
             using SingleCallback = std::function<void(Entity)>;
             using ActionCallback = std::function<Ref<UndoAction>(Entity)>;
+            using SelectionActionCallback = std::function<SelectionComponentChange(std::span<const Entity>)>;
             String name;
             Callback widget;
-            ActionCallback create, destroy;
+            SelectionActionCallback addToSelection;
+            ActionCallback destroy;
             Ref<RetainedUndoActionFactory> undoFactory;
         };
 
@@ -98,7 +103,7 @@ namespace Crowny
                 return RegisterComponent<Component>(ComponentInfo{
                   name,
                   wrappedWidget,
-                  ComponentAddAction<Component>,
+                  ComponentSelectionAddAction<Component>,
                   ComponentRemoveAction<Component>,
                   transaction,
                 });
@@ -124,7 +129,7 @@ namespace Crowny
                 return RegisterComponent<Component>(ComponentInfo{
                   name,
                   wrappedWidget,
-                  ComponentAddAction<Component>,
+                  ComponentSelectionAddAction<Component>,
                   ComponentRemoveAction<Component>,
                   snapshots,
                 });
@@ -151,7 +156,7 @@ namespace Crowny
                 return RegisterComponent<Component>(ComponentInfo{
                   name,
                   widget,
-                  ComponentAddAction<Component>,
+                  ComponentSelectionAddAction<Component>,
                   ComponentRemoveAction<Component>,
                   transaction,
                 });
@@ -170,7 +175,7 @@ namespace Crowny
                 return RegisterComponent<Component>(ComponentInfo{
                   name,
                   widget,
-                  ComponentAddAction<Component>,
+                  ComponentSelectionAddAction<Component>,
                   ComponentRemoveAction<Component>,
                   snapshots,
                 });

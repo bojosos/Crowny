@@ -1,6 +1,7 @@
 #include "cwepch.h"
 
 #include "Editor/Editor.h"
+#include "Editor/EditorAssets.h"
 #include "Editor/EditorLayer.h"
 #include "Editor/ViewportTransformInteraction.h"
 
@@ -69,40 +70,6 @@ namespace Crowny
             return static_cast<const FileEntry*>(entry);
         }
 
-        const char* GetGizmoLabel(GizmoEditMode mode)
-        {
-            switch (mode)
-            {
-            case GizmoEditMode::None:
-                return "Select";
-            case GizmoEditMode::Translate:
-                return "Move";
-            case GizmoEditMode::Rotate:
-                return "Rotate";
-            case GizmoEditMode::Scale:
-                return "Scale";
-            case GizmoEditMode::Bounds:
-                return "Bounds";
-            default:
-                return "Select";
-            }
-        }
-
-        bool HudButton(const char* label, bool active, const ImVec2& size)
-        {
-            if (active)
-            {
-                ImGui::PushStyleColor(ImGuiCol_Button, UI::Colors::Accent);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UI::Colors::AccentHover);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, UI::Colors::AccentPress);
-            }
-
-            const bool pressed = ImGui::Button(label, size);
-            if (active)
-                ImGui::PopStyleColor(3);
-            return pressed;
-        }
-
         void FormatStatisticCount(char* output, size_t outputSize, uint64_t value)
         {
             if (value >= 1'000'000'000ull)
@@ -128,9 +95,27 @@ namespace Crowny
         case GizmoEditMode::Scale:
             return ImGuizmo::SCALE;
         case GizmoEditMode::Bounds:
-            return ImGuizmo::BOUNDS;
+            // ImGuizmo::BOUNDS requires explicit local bounds. The collider path
+            // supplies those separately; generic selections use scale handles.
+            return ImGuizmo::SCALE;
         }
         return ImGuizmo::TRANSLATE;
+    }
+
+    static SelectionTransformOperation GetSelectionTransformOperation(GizmoEditMode gizmoMode)
+    {
+        switch (gizmoMode)
+        {
+        case GizmoEditMode::Rotate:
+            return SelectionTransformOperation::Rotate;
+        case GizmoEditMode::Scale:
+        case GizmoEditMode::Bounds:
+            return SelectionTransformOperation::Scale;
+        case GizmoEditMode::None:
+        case GizmoEditMode::Translate:
+            return SelectionTransformOperation::Translate;
+        }
+        return SelectionTransformOperation::Translate;
     }
 
     ViewportPanel::ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<const Vector<Entity>&()> selectedEntities)
@@ -163,59 +148,6 @@ namespace Crowny
         return m_SelectedEntitiesScratch;
     }
 
-    const Vector<Entity>& ViewportPanel::GetTopLevelSelection(const Vector<Entity>& selectedEntities)
-    {
-        m_TopLevelSelectionScratch.clear();
-        m_TopLevelSelectionScratch.reserve(selectedEntities.size());
-        for (Entity entity : selectedEntities)
-        {
-            if (!entity)
-                continue;
-            bool selectedAncestor = false;
-            for (Entity parent = entity.GetParent(); parent; parent = parent.GetParent())
-            {
-                if (std::find(selectedEntities.begin(), selectedEntities.end(), parent) != selectedEntities.end())
-                {
-                    selectedAncestor = true;
-                    break;
-                }
-            }
-            if (!selectedAncestor)
-                m_TopLevelSelectionScratch.push_back(entity);
-        }
-        return m_TopLevelSelectionScratch;
-    }
-
-    glm::mat4 ViewportPanel::GetSelectionPivot(Entity primary, const Vector<Entity>& selectedEntities) const
-    {
-        glm::vec3 minimum(FLT_MAX);
-        glm::vec3 maximum(-FLT_MAX);
-        for (Entity entity : selectedEntities)
-        {
-            if (!entity)
-                continue;
-            const glm::vec3 position = entity.GetWorldPosition();
-            minimum = glm::min(minimum, position);
-            maximum = glm::max(maximum, position);
-        }
-        const glm::vec3 center = minimum.x == FLT_MAX ? glm::vec3(0.0f) : (minimum + maximum) * 0.5f;
-        glm::mat4 pivot = glm::translate(glm::mat4(1.0f), center);
-        if (m_LocalMode && primary)
-            pivot *= glm::mat4_cast(primary.GetWorldRotation());
-        return pivot;
-    }
-
-    void ViewportPanel::BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot)
-    {
-        if (m_TransformInteraction.IsActive())
-            EndTransformInteraction();
-
-        const Vector<Entity>& topLevelSelection = GetTopLevelSelection(selectedEntities);
-        m_TransformInteraction.Begin(topLevelSelection, pivot);
-    }
-
-    void ViewportPanel::ApplyTransformInteraction(const glm::mat4& pivot) { m_TransformInteraction.Update(pivot); }
-
     void ViewportPanel::EndTransformInteraction()
     {
         const ViewportTransformResolution resolution = m_TransformInteraction.Resolve(false, false);
@@ -244,139 +176,80 @@ namespace Crowny
     {
         const float viewportWidth = imageMax.x - imageMin.x;
         const float viewportHeight = imageMax.y - imageMin.y;
-        if (viewportWidth < 155.0f || viewportHeight < 72.0f)
+        if (viewportWidth < 154.0f || viewportHeight < 58.0f)
             return;
 
-        const bool compact = viewportWidth < 430.0f;
-        const bool showSpace = viewportWidth >= 245.0f;
-        const bool showSnapValue = viewportWidth >= 355.0f;
-        const bool showHelp = viewportWidth >= 205.0f;
+        const bool compactStrip = viewportWidth < 170.0f;
         const float padding = 4.0f;
-        const float spacing = 4.0f;
-        const float buttonHeight = ImGui::GetFrameHeight();
-        const float modeWidth = compact ? 64.0f : 78.0f;
-        const float spaceWidth = compact ? 51.0f : 58.0f;
-        const float snapWidth = 50.0f;
-        const float valueWidth = 67.0f;
-        const float helpWidth = 26.0f;
-
-        float hudWidth = padding * 2.0f + modeWidth + spacing + snapWidth;
-        if (showSpace)
-            hudWidth += spacing + spaceWidth;
-        if (showSnapValue)
-            hudWidth += spacing + valueWidth;
-        if (showHelp)
-            hudWidth += spacing + helpWidth;
-
-        const ImVec2 hudMin(imageMin.x + 8.0f, imageMax.y - buttonHeight - padding * 2.0f - 8.0f);
-        const ImVec2 hudMax(hudMin.x + hudWidth, hudMin.y + buttonHeight + padding * 2.0f);
-        m_MouseOverHud = ImGui::IsMouseHoveringRect(hudMin, hudMax, false);
-        ImGui::GetWindowDrawList()->AddRectFilled(hudMin, hudMax, IM_COL32(27, 24, 22, 224), 5.0f);
-        ImGui::GetWindowDrawList()->AddRect(hudMin, hudMax, IM_COL32(76, 68, 61, 210), 5.0f);
+        const float spacing = 2.0f;
+        const float settingsGap = compactStrip ? 3.0f : 5.0f;
+        const float buttonSize = compactStrip ? 20.0f : 22.0f;
+        constexpr size_t ButtonCount = 6u;
+        const float hudWidth = padding * 2.0f + buttonSize * static_cast<float>(ButtonCount) + spacing * 4.0f + settingsGap * 2.0f;
+        const ImVec2 hudMin(imageMin.x + 6.0f, imageMin.y + 5.0f);
+        const ImVec2 hudMax(hudMin.x + hudWidth, hudMin.y + buttonSize + padding * 2.0f);
+        m_MouseOverHud |= ImGui::IsMouseHoveringRect(hudMin, hudMax, false);
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(hudMin, hudMax, IM_COL32(27, 24, 22, 220), 4.0f);
+        drawList->AddRect(hudMin, hudMax, IM_COL32(90, 81, 73, 180), 4.0f);
 
         const ImVec2 savedCursor = ImGui::GetCursorScreenPos();
         ImGui::SetCursorScreenPos(ImVec2(hudMin.x + padding, hudMin.y + padding));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 3.0f));
+        ImGui::PushID("ViewportToolStrip");
 
-        if (HudButton(GetGizmoLabel(m_GizmoMode), m_GizmoMode != GizmoEditMode::None, ImVec2(modeWidth, buttonHeight)))
-            ImGui::OpenPopup("##ViewportGizmoMenu");
-        UI::SetTooltip("Choose a gizmo. Shortcuts: Q, W, E, R, T");
-
-        if (ImGui::BeginPopup("##ViewportGizmoMenu"))
-        {
-            m_MouseOverHud |= ImGui::IsWindowHovered();
-            if (ImGui::MenuItem("Select", "Q", m_GizmoMode == GizmoEditMode::None))
-                m_GizmoMode = GizmoEditMode::None;
-            if (ImGui::MenuItem("Move", "W", m_GizmoMode == GizmoEditMode::Translate))
-                m_GizmoMode = GizmoEditMode::Translate;
-            if (ImGui::MenuItem("Rotate", "E", m_GizmoMode == GizmoEditMode::Rotate))
-                m_GizmoMode = GizmoEditMode::Rotate;
-            if (ImGui::MenuItem("Scale", "R", m_GizmoMode == GizmoEditMode::Scale))
-                m_GizmoMode = GizmoEditMode::Scale;
-            if (ImGui::MenuItem("Bounds", "T", m_GizmoMode == GizmoEditMode::Bounds))
-                m_GizmoMode = GizmoEditMode::Bounds;
-            ImGui::EndPopup();
-        }
-
-        if (showSpace)
-        {
-            const bool supportsTransformSpace = m_GizmoMode == GizmoEditMode::Translate || m_GizmoMode == GizmoEditMode::Rotate;
-            ImGui::SameLine();
+        const ImU32 neutralTint = IM_COL32(166, 158, 150, 255);
+        const ImU32 hoverTint = IM_COL32(235, 232, 228, 255);
+        const auto drawIconButton = [&](const char* id, const Ref<Texture>& icon, bool active, StringView tooltip, bool settings = false) {
+            ImGui::PushID(id);
+            const bool clicked = ImGui::InvisibleButton("##icon", ImVec2(buttonSize, buttonSize));
+            const ImRect bounds = UI::GetItemRect();
+            if (active || settings)
             {
-                UI::ScopedDisable disable(!supportsTransformSpace);
-                const bool useLocalSpace = m_LocalMode || !supportsTransformSpace;
-                if (HudButton(useLocalSpace ? "Local" : "World", !useLocalSpace, ImVec2(spaceWidth, buttonHeight)))
-                    m_LocalMode = !m_LocalMode;
+                const ImU32 fill = active ? IM_COL32(196, 123, 48, 42) : IM_COL32(255, 255, 255, 12);
+                drawList->AddRectFilled(bounds.Min, bounds.Max, fill, settings ? 4.0f : 3.0f);
             }
-            UI::SetTooltip(supportsTransformSpace ? "Change transform space" : "Scale and bounds use local space");
-        }
+            if (settings)
+                drawList->AddRect(bounds.Min, bounds.Max, active ? UI::Colors::Accent : IM_COL32(104, 94, 85, 190), 4.0f);
 
-        const bool modifierSnap = Input::IsKeyPressed(Key::LeftControl) || Input::IsKeyPressed(Key::RightControl);
+            const float iconPadding = 2.5f;
+            const ImRect iconBounds(ImVec2(bounds.Min.x + iconPadding, bounds.Min.y + iconPadding),
+                                    ImVec2(bounds.Max.x - iconPadding, bounds.Max.y - iconPadding));
+            UI::DrawButtonImage(icon, active ? UI::Colors::Accent : neutralTint, active ? UI::Colors::AccentHover : hoverTint,
+                                UI::Colors::AccentPress, iconBounds);
+            UI::SetTooltip(tooltip);
+            ImGui::PopID();
+            return clicked;
+        };
+
+        const EditorAssetsLibrary assets = EditorAssets::Get();
+        if (drawIconButton("Select", assets.ArrowPointerIcon, m_GizmoMode == GizmoEditMode::None, "Select (Q)"))
+            m_GizmoMode = GizmoEditMode::None;
         ImGui::SameLine();
-        if (HudButton("Snap", m_SnapEnabled || modifierSnap, ImVec2(snapWidth, buttonHeight)))
-            m_SnapEnabled = !m_SnapEnabled;
-        UI::SetTooltip(m_SnapEnabled ? "Snapping is on. Click to turn it off" : "Click to keep snapping on. Hold Ctrl to use it temporarily");
+        if (drawIconButton("Move", assets.ArrowsIcon, m_GizmoMode == GizmoEditMode::Translate, "Move (W)"))
+            m_GizmoMode = GizmoEditMode::Translate;
+        ImGui::SameLine();
+        if (drawIconButton("Rotate", assets.RotateIcon, m_GizmoMode == GizmoEditMode::Rotate, "Rotate (E)"))
+            m_GizmoMode = GizmoEditMode::Rotate;
+        ImGui::SameLine();
+        if (drawIconButton("Scale", assets.MaximizeIcon, m_GizmoMode == GizmoEditMode::Scale || m_GizmoMode == GizmoEditMode::Bounds,
+                           "Scale (R). Bounds editing: T"))
+            m_GizmoMode = GizmoEditMode::Scale;
+        ImGui::SameLine();
+        if (drawIconButton("Space", assets.GlobeIcon, m_LocalMode, m_LocalMode ? "Local transform space (X)" : "World transform space (X)"))
+            m_LocalMode = !m_LocalMode;
 
-        Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
-        if (showSnapValue)
-        {
-            char snapLabel[32];
-            if (m_GizmoMode == GizmoEditMode::Rotate)
-                snprintf(snapLabel, sizeof(snapLabel), "%.1f deg", editorSettings->GridRotateSnap);
-            else if (m_GizmoMode == GizmoEditMode::Scale)
-                snprintf(snapLabel, sizeof(snapLabel), "%.2f", editorSettings->GridScaleSnap);
-            else
-                snprintf(snapLabel, sizeof(snapLabel), "%.2f m", editorSettings->GridMoveSnap.x);
+        ImGui::SameLine(0.0f, settingsGap);
+        const ImVec2 separatorTop = ImGui::GetCursorScreenPos();
+        drawList->AddLine(ImVec2(separatorTop.x - settingsGap * 0.5f, separatorTop.y + 3.0f),
+                          ImVec2(separatorTop.x - settingsGap * 0.5f, separatorTop.y + buttonSize - 3.0f), IM_COL32(104, 94, 85, 150));
+        const bool settingsOpen = m_IsViewportSettingsOpen && m_IsViewportSettingsOpen();
+        if (drawIconButton("Settings", assets.SettingsIcon, settingsOpen, "Viewport, grid, snapping, and physics gizmo settings", true) &&
+            m_ToggleViewportSettings)
+            m_ToggleViewportSettings();
 
-            ImGui::SameLine();
-            if (ImGui::Button(snapLabel, ImVec2(valueWidth, buttonHeight)))
-                ImGui::OpenPopup("##ViewportSnapSettings");
-            UI::SetTooltip("Edit snap increments");
-        }
-
-        if (showHelp)
-        {
-            ImGui::SameLine();
-            if (ImGui::Button("?", ImVec2(helpWidth, buttonHeight)))
-                ImGui::OpenPopup("##ViewportNavigationHelp");
-            UI::SetTooltip("Viewport controls");
-        }
-
-        if (ImGui::BeginPopup("##ViewportSnapSettings"))
-        {
-            m_MouseOverHud |= ImGui::IsWindowHovered();
-            ImGui::TextDisabled("Snap increments");
-            ImGui::Separator();
-            ImGui::SetNextItemWidth(190.0f);
-            if (ImGui::DragFloat3("Move", glm::value_ptr(editorSettings->GridMoveSnap), 0.01f, 0.001f, 1000.0f, "%.3f m"))
-                editorSettings->GridMoveSnap = glm::max(editorSettings->GridMoveSnap, glm::vec3(0.001f));
-            ImGui::SetNextItemWidth(190.0f);
-            editorSettings->GridRotateSnap = std::max(editorSettings->GridRotateSnap, 0.1f);
-            ImGui::DragFloat("Rotate", &editorSettings->GridRotateSnap, 0.5f, 0.1f, 180.0f, "%.1f deg");
-            ImGui::SetNextItemWidth(190.0f);
-            editorSettings->GridScaleSnap = std::max(editorSettings->GridScaleSnap, 0.001f);
-            ImGui::DragFloat("Scale", &editorSettings->GridScaleSnap, 0.01f, 0.001f, 10.0f, "%.3f");
-            ImGui::Spacing();
-            ImGui::TextDisabled("Hold Ctrl for temporary snapping.");
-            ImGui::EndPopup();
-        }
-
-        if (ImGui::BeginPopup("##ViewportNavigationHelp"))
-        {
-            m_MouseOverHud |= ImGui::IsWindowHovered();
-            ImGui::TextDisabled("Camera");
-            ImGui::Separator();
-            ImGui::TextUnformatted("Alt + left drag    Orbit");
-            ImGui::TextUnformatted("Alt + middle drag  Pan");
-            ImGui::TextUnformatted("Alt + right drag   Zoom");
-            ImGui::TextUnformatted("Mouse wheel        Zoom");
-            ImGui::TextUnformatted("F                  Frame selection");
-            ImGui::EndPopup();
-        }
-
-        ImGui::PopStyleVar(3);
+        ImGui::PopID();
+        ImGui::PopStyleVar();
         ImGui::SetCursorScreenPos(savedCursor);
         ImGui::Dummy(ImVec2(0.0f, 0.0f));
 
@@ -388,12 +261,12 @@ namespace Crowny
               FormatViewportHudStatus(entityName, static_cast<bool>(selectedEntity), selectedEntities.size(), static_cast<int32_t>(m_ViewportSize.x),
                                       static_cast<int32_t>(m_ViewportSize.y), camera.GetDistance());
             const ImVec2 textSize = ImGui::CalcTextSize(status.Text.data());
-            const ImVec2 statusMin(imageMax.x - textSize.x - 16.0f, hudMin.y);
-            const ImVec2 statusMax(imageMax.x - 8.0f, hudMax.y);
-            if (statusMin.x > hudMax.x + 8.0f)
+            const ImVec2 statusMin(imageMax.x - textSize.x - 16.0f, imageMax.y - ImGui::GetFrameHeight() - 12.0f);
+            const ImVec2 statusMax(imageMax.x - 8.0f, imageMax.y - 8.0f);
+            if (statusMin.x > imageMin.x + 8.0f)
             {
                 ImGui::GetWindowDrawList()->AddRectFilled(statusMin, statusMax, IM_COL32(27, 24, 22, 210), 5.0f);
-                ImGui::GetWindowDrawList()->AddText(ImVec2(statusMin.x + 4.0f, statusMin.y + padding + ImGui::GetStyle().FramePadding.y),
+                ImGui::GetWindowDrawList()->AddText(ImVec2(statusMin.x + 4.0f, statusMin.y + ImGui::GetStyle().FramePadding.y),
                                                     IM_COL32(190, 184, 178, 255), status.Text.data());
             }
         }
@@ -423,8 +296,11 @@ namespace Crowny
                 textWidth = std::max(textWidth, ImGui::CalcTextSize(lines[line]).x);
 
             const float lineHeight = ImGui::GetTextLineHeight();
-            const ImVec2 statisticsMin(imageMin.x + 8.0f, imageMin.y + 8.0f);
-            const ImVec2 statisticsMax(statisticsMin.x + textWidth + 16.0f, statisticsMin.y + lineHeight * lineCount + 16.0f);
+            const float viewCubeSize = std::clamp(std::min(viewportWidth, viewportHeight) * 0.22f, 72.0f, 128.0f);
+            const ImVec2 statisticsMin(imageMax.x - textWidth - 24.0f, imageMin.y + viewCubeSize + 12.0f);
+            const ImVec2 statisticsMax(imageMax.x - 8.0f, statisticsMin.y + lineHeight * lineCount + 16.0f);
+            if (statisticsMax.y > imageMax.y - 8.0f)
+                return;
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             drawList->AddRectFilled(statisticsMin, statisticsMax, IM_COL32(27, 24, 22, 224), 5.0f);
             drawList->AddRect(statisticsMin, statisticsMax, IM_COL32(76, 68, 61, 210), 5.0f);
@@ -489,7 +365,8 @@ namespace Crowny
                     const Vector<Entity>& selectedEntities = RefreshSelectionScratch(selectedEntity);
                     if (!selectedEntities.empty())
                     {
-                        const glm::mat4 pivot = GetSelectionPivot(selectedEntity, selectedEntities);
+                        const glm::mat4 pivot = ViewportTransformInteraction::CalculatePivot(
+                          selectedEntities, selectedEntity, m_LocalMode ? SelectionTransformSpace::Local : SelectionTransformSpace::World);
                         EditorLayer::GetEditorCamera().Focus(glm::vec3(pivot[3]));
                     }
                 }
@@ -566,7 +443,7 @@ namespace Crowny
                 const float value = std::max(editorSettings->GridRotateSnap, 0.1f);
                 snapValues[0] = snapValues[1] = snapValues[2] = value;
             }
-            else if (m_GizmoMode == GizmoEditMode::Scale)
+            else if (m_GizmoMode == GizmoEditMode::Scale || m_GizmoMode == GizmoEditMode::Bounds)
             {
                 const float value = std::max(editorSettings->GridScaleSnap, 0.001f);
                 snapValues[0] = snapValues[1] = snapValues[2] = value;
@@ -632,27 +509,20 @@ namespace Crowny
                 if (m_ColliderBoundsTransaction.IsActive())
                     EndColliderBoundsInteraction(Input::IsKeyPressed(Key::Escape));
 
-                glm::mat4 transform = m_TransformInteraction.IsActive() ? m_TransformInteraction.GetCurrentPivot()
-                                      : selectedEntities.size() > 1u    ? GetSelectionPivot(selected, selectedEntities)
-                                                                        : selected.GetWorldMatrix();
-                const glm::mat4 originalTransform = transform;
-                const bool supportsWorldSpace = m_GizmoMode == GizmoEditMode::Translate || m_GizmoMode == GizmoEditMode::Rotate;
-                const ImGuizmo::OPERATION operation = m_GizmoMode == GizmoEditMode::Bounds ? ImGuizmo::SCALE : GetImGuizmoMode(m_GizmoMode);
-                const bool manipulated = ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), operation,
-                                                              !m_LocalMode && supportsWorldSpace ? ImGuizmo::WORLD : ImGuizmo::LOCAL,
+                const SelectionTransformOperation selectionOperation = GetSelectionTransformOperation(m_GizmoMode);
+                const SelectionTransformSpace selectionSpace =
+                  m_LocalMode || m_GizmoMode == GizmoEditMode::Bounds ? SelectionTransformSpace::Local : SelectionTransformSpace::World;
+                glm::mat4 transform = m_TransformInteraction.IsActive()
+                                        ? m_TransformInteraction.GetCurrentPivot()
+                                        : ViewportTransformInteraction::CalculatePivot(selectedEntities, selected, selectionSpace);
+                const ImGuizmo::OPERATION operation = GetImGuizmoMode(m_GizmoMode);
+                const bool manipulated = ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), operation, ImGuizmo::LOCAL,
                                                               glm::value_ptr(transform), nullptr, snap ? snapValues : nullptr);
-                if (manipulated)
-                {
-                    if (!m_GizmoWasUsing)
-                        BeginTransformInteraction(selectedEntities, originalTransform);
-                    ApplyTransformInteraction(transform);
-                }
-
                 const bool usingGizmo = ImGuizmo::IsUsing();
-                const ViewportTransformResolution resolution = m_TransformInteraction.Resolve(usingGizmo, Input::IsKeyPressed(Key::Escape));
-                UndoRedo::Get().RegisterAction(resolution.Action);
-                // Keep the capture latched until ImGuizmo releases the mouse so
-                // an Escape cancellation cannot begin a second transaction.
+                const ViewportTransformFrameResult frame = m_TransformInteraction.ProcessGizmoFrame(
+                  selectedEntities, selected, selectionOperation, selectionSpace,
+                  ViewportGizmoFrame{ transform, manipulated, usingGizmo, Input::IsKeyPressed(Key::Escape) });
+                UndoRedo::Get().RegisterAction(frame.Resolution.Action);
                 m_GizmoWasUsing = usingGizmo;
             }
         }

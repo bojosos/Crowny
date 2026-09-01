@@ -8,6 +8,47 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        Ref<Texture> CreateSettingsIcon()
+        {
+            constexpr uint32_t iconSize = 16u;
+            TextureDesc description;
+            description.Width = iconSize;
+            description.Height = iconSize;
+            description.Format = TextureFormat::RGBA8;
+            description.GenerateMipmaps = false;
+            description.sRGB = false;
+            description.DebugName = "Editor/ViewportSettingsIcon";
+
+            Ref<PixelData> pixels = PixelData::Create(iconSize, iconSize, 1u, TextureFormat::RGBA8);
+            const glm::vec4 transparent(0.0f);
+            const glm::vec4 white(1.0f);
+            for (uint32_t y = 0u; y < iconSize; ++y)
+            {
+                for (uint32_t x = 0u; x < iconSize; ++x)
+                    pixels->SetColorAt(x, y, transparent);
+            }
+
+            const auto drawSlider = [&](uint32_t y, uint32_t knobX) {
+                for (uint32_t x = 2u; x <= 13u; ++x)
+                    pixels->SetColorAt(x, y, white);
+                for (uint32_t knobY = y - 1u; knobY <= y + 1u; ++knobY)
+                {
+                    for (uint32_t knobPixelX = knobX - 1u; knobPixelX <= knobX + 1u; ++knobPixelX)
+                        pixels->SetColorAt(knobPixelX, knobY, white);
+                }
+            };
+            drawSlider(3u, 5u);
+            drawSlider(8u, 11u);
+            drawSlider(13u, 7u);
+
+            Ref<Texture> texture = Texture::Create(description);
+            texture->WriteData(*pixels);
+            return texture;
+        }
+    } // namespace
+
     const String EditorAssets::UnassignedTexture = "Resources/Textures/Unassigned.asset";
 
     const String EditorAssets::PlayIcon = "Resources/Icons/Play.asset";
@@ -60,7 +101,7 @@ namespace Crowny
         s_Library.MaximizeIcon = LoadTexture(MaximizeIcon);
         s_Library.GlobeIcon = LoadTexture(GlobeIcon);
         s_Library.SearchIcon = LoadTexture(SearchIcon);
-        s_Library.SettingsIcon = s_Library.SearchIcon; // Placeholder until a dedicated icon is added
+        s_Library.SettingsIcon = CreateSettingsIcon();
 
         s_Library.ConsoleInfo = LoadTexture(ConsoleInfo);
         s_Library.ConsoleWarn = LoadTexture(ConsoleWarn);

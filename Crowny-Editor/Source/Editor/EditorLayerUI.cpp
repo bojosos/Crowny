@@ -86,7 +86,6 @@ namespace Crowny
         // UI_ProjectManager handles menu-triggered open/new even when a project is loaded
         UI_ProjectManager();
         UI_Header();
-        UI_ViewportSettings();
         UI_Settings();
         UI_BuildGame();
         UI_CommandPalette();
@@ -101,6 +100,7 @@ namespace Crowny
         m_ViewportPanel->SetEditorRenderTarget(m_RenderTarget);
         m_ViewportPanel->SetShowStatistics(m_ShowRenderingStatistics);
         m_Panels->Render();
+        UI_ViewportSettings();
 
         ImGui::End(); // End dockspace
 
@@ -1123,6 +1123,7 @@ namespace Crowny
         ImGui::Begin("##viewport_settings_popup", nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
                        ImGuiWindowFlags_NoNav);
+        m_ViewportPanel->SetViewportSettingsHovered(ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows));
 
         ImGui::Spacing();
 
@@ -1138,6 +1139,27 @@ namespace Crowny
             m_WireframeMode = true;
 
         ImGui::Checkbox("Show Statistics", &m_ShowRenderingStatistics);
+
+        ImGui::Spacing();
+
+        // ── Transform Snapping ──────────────────────────────────────────
+        ImGui::TextDisabled("Transform Snapping");
+        ImGui::Separator();
+
+        bool snapEnabled = m_ViewportPanel->GetSnapEnabled();
+        if (ImGui::Checkbox("Enabled", &snapEnabled))
+            m_ViewportPanel->SetSnapEnabled(snapEnabled);
+        UI::SetTooltip("Keep snapping enabled. Hold Ctrl for temporary snapping.");
+
+        Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
+        ImGui::PushItemWidth(settingsWidth * 0.55f);
+        if (ImGui::DragFloat3("Move", glm::value_ptr(editorSettings->GridMoveSnap), 0.01f, 0.001f, 1000.0f, "%.3f m"))
+            editorSettings->GridMoveSnap = glm::max(editorSettings->GridMoveSnap, glm::vec3(0.001f));
+        if (ImGui::DragFloat("Rotate", &editorSettings->GridRotateSnap, 0.5f, 0.1f, 180.0f, "%.1f deg"))
+            editorSettings->GridRotateSnap = std::max(editorSettings->GridRotateSnap, 0.1f);
+        if (ImGui::DragFloat("Scale", &editorSettings->GridScaleSnap, 0.01f, 0.001f, 10.0f, "%.3f"))
+            editorSettings->GridScaleSnap = std::max(editorSettings->GridScaleSnap, 0.001f);
+        ImGui::PopItemWidth();
 
         ImGui::Spacing();
 
@@ -1272,7 +1294,7 @@ namespace Crowny
                 {
                     dependencies.erase(dependencies.begin() + static_cast<ptrdiff_t>(removeIndex));
                     Editor::Get().SaveProjectSettings();
-                    CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
+                    CodeEditorManager::Get().NotifyProjectSettingsChanged();
                 }
 
                 if (ImGui::Button("Add assembly..."))
@@ -1290,7 +1312,7 @@ namespace Crowny
                         if (std::find(dependencies.begin(), dependencies.end(), assembly) == dependencies.end())
                             dependencies.push_back(assembly);
                         Editor::Get().SaveProjectSettings();
-                        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
+                        CodeEditorManager::Get().NotifyProjectSettingsChanged();
                     }
                 }
                 ImGui::SameLine();

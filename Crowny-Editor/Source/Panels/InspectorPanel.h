@@ -66,7 +66,7 @@ namespace Crowny
         void RenderMeshImportInspector();
         void RenderPrefabInspector();
 
-        void HandleInspectorDragDrop(Entity selectedEntity);
+        void HandleInspectorDragDrop(const Vector<Entity>& selectedEntities);
 
         template <typename T> T* BeginImportInspector();
         void EndImportInspector(float xOffset, float width);

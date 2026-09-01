@@ -141,9 +141,9 @@ namespace Crowny
 
         EditorAssets::Load();
 
-        Editor::StartUp([this](const Path& path, FileWatch::Change changeType) {
-            if (changeType != FileWatch::FileModified && changeType != FileWatch::FileAdded && changeType != FileWatch::FileNewRenamed)
-                return;
+        Editor::StartUp([this](const Path& path, FileWatch::Change) {
+            if (CodeEditorManager::IsStartedUp())
+                CodeEditorManager::Get().NotifyProjectInputChanged(path);
             {
                 Lock lock(m_FileWatchMutex);
                 m_FileWatchQueue.push_back(path);
@@ -179,6 +179,8 @@ namespace Crowny
           ViewportPanel::Registration, [this]() { return m_HierarchyPanel->GetSelectedEntity(); },
           [this]() -> const Vector<Entity>& { return m_HierarchyPanel->GetSelectedEntities(); });
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
+        m_ViewportPanel->SetViewportSettingsCallbacks([this]() { m_ShowViewportSettings = !m_ShowViewportSettings; },
+                                                      [this]() { return m_ShowViewportSettings; });
         m_ConsolePanel = &m_Panels->Add(ConsolePanel::Registration);
         m_AssetBrowser = &m_Panels->Add(AssetBrowserPanel::Registration, [this](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
         m_AudioMixerPanel = &m_Panels->Add(AudioMixerPanel::Registration);
@@ -638,6 +640,9 @@ namespace Crowny
         // Process completed async imports (GPU init on main thread)
         if (ProjectLibrary::IsStartedUp() && ProjectLibrary::Get().IsImporting())
             ProjectLibrary::Get().ProcessCompletedImports();
+
+        if (CodeEditorManager::IsStartedUp())
+            CodeEditorManager::Get().Update();
 
         if (m_Temp) // Delay scene reload
         {

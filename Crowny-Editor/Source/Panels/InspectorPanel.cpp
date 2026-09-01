@@ -1,5 +1,7 @@
 #include "cwepch.h"
 
+#include "Crowny/Application/Application.h"
+#include "Crowny/Application/EngineRuntime.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/FileSystem.h"
@@ -13,6 +15,7 @@
 #include "Panels/ComponentEditor.h"
 #include "Panels/InspectorPanel.h"
 
+#include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
 #include "UI/Properties.h"
@@ -26,6 +29,7 @@
 #include "Crowny/Import/ShaderImporter.h"
 #include "Crowny/Import/TextFileImporter.h"
 #include "Crowny/Import/TextureImporter.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/NodeGraph/NodeRegistry.h"
@@ -41,6 +45,59 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        ScriptTypeIdentity ResolveDroppedScriptIdentity(const FileEntry& entry, bool logAmbiguity)
+        {
+            const String typeName = entry.Filepath.stem().string();
+            const String defaultNamespace = Editor::Get().GetProjectPath().filename().string();
+            Application* application = Application::TryGet();
+            const ManagedScripting* managed = application != nullptr ? application->GetRuntime().GetManagedScripting() : nullptr;
+            if (managed == nullptr || !managed->IsStarted())
+                return { GAME_ASSEMBLY, defaultNamespace, typeName };
+
+            Vector<ScriptTypeIdentity> candidates;
+            for (const ScriptTypeSchema& type : managed->GetScriptCatalog().Types)
+            {
+                if (type.Identity.Assembly == GAME_ASSEMBLY && type.Identity.TypeName == typeName)
+                    candidates.push_back(type.Identity);
+            }
+            if (candidates.size() == 1u)
+                return candidates.front();
+
+            const auto defaultMatch = std::find_if(candidates.begin(), candidates.end(),
+                                                   [&](const ScriptTypeIdentity& identity) { return identity.Namespace == defaultNamespace; });
+            if (defaultMatch != candidates.end() && std::find_if(defaultMatch + 1, candidates.end(), [&](const ScriptTypeIdentity& identity) {
+                                                        return identity.Namespace == defaultNamespace;
+                                                    }) == candidates.end())
+                return *defaultMatch;
+
+            if (candidates.empty())
+                return { GAME_ASSEMBLY, defaultNamespace, typeName };
+
+            if (logAmbiguity)
+            {
+                CW_ENGINE_WARN("Cannot infer which managed type '{}' represents because multiple game scripts use that class name. "
+                               "Add it from the component menu instead.",
+                               typeName);
+            }
+            return {};
+        }
+
+        bool IsAttachableScript(const FileEntry& entry)
+        {
+            if (entry.Metadata == nullptr)
+                return false;
+            const Ref<CSharpScriptImportOptions> options = StaticRefCast<CSharpScriptImportOptions>(entry.Metadata->ImportOptions);
+            return options == nullptr || !options->IsEditorScript;
+        }
+
+        template <typename Component> bool SelectionHasMissingComponent(const Vector<Entity>& entities)
+        {
+            return std::any_of(entities.begin(), entities.end(), [](Entity entity) { return entity && !entity.HasComponent<Component>(); });
+        }
+    } // namespace
+
     template <typename T> T* InspectorPanel::BeginImportInspector()
     {
         UI::BeginPropertyGrid();
@@ -225,24 +282,33 @@ namespace Crowny
         FlushPendingAssetSaves();
     }
 
-    void InspectorPanel::HandleInspectorDragDrop(Entity selectedEntity)
+    void InspectorPanel::HandleInspectorDragDrop(const Vector<Entity>& selectedEntities)
     {
         if (ImGui::BeginDragDropTarget()) // Add components when files are dropped on entities in the inspector (C#
                                           // script, AudioSource, etc...)
         {
-            auto hasComponentCallback = [selectedEntity](const FileEntry* entry) {
+            auto hasComponentCallback = [&](const FileEntry* entry) {
+                if (entry == nullptr || entry->Metadata == nullptr)
+                    return false;
                 switch (entry->Metadata->Type)
                 {
                 case AssetType::AudioClip:
-                    return !selectedEntity.HasComponent<AudioSourceComponent>();
+                    return SelectionHasMissingComponent<AudioSourceComponent>(selectedEntities);
                 case AssetType::Mesh:
-                    return !selectedEntity.HasComponent<MeshRendererComponent>();
-                case AssetType::ScriptCode:
-                    return true; // You can always add more scripts!!!
+                    return SelectionHasMissingComponent<MeshRendererComponent>(selectedEntities);
+                case AssetType::ScriptCode: {
+                    if (!IsAttachableScript(*entry))
+                        return false;
+                    const ScriptTypeIdentity identity = ResolveDroppedScriptIdentity(*entry, false);
+                    return !identity.IsValid() || std::any_of(selectedEntities.begin(), selectedEntities.end(), [&](Entity entity) {
+                        Scene* scene = entity ? entity.GetScene() : nullptr;
+                        return scene != nullptr && !scene->HasScriptComponent(entity, identity);
+                    });
+                }
                 case AssetType::Texture:
-                    return !selectedEntity.HasComponent<SpriteRendererComponent>();
+                    return SelectionHasMissingComponent<SpriteRendererComponent>(selectedEntities);
                 case AssetType::Font:
-                    return !selectedEntity.HasComponent<TextComponent>();
+                    return SelectionHasMissingComponent<TextComponent>(selectedEntities);
                 default:
                     return false;
                 }
@@ -254,63 +320,35 @@ namespace Crowny
                     switch (fileEntry->Metadata->Type)
                     {
                     case AssetType::AudioClip: {
-                        if (!selectedEntity.HasComponent<AudioSourceComponent>())
-                        {
-                            AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
-                            AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(fileEntry));
-                            audioSource.SetClip(clip);
-                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<AudioSourceComponent>>(selectedEntity));
-                        }
+                        const AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(fileEntry));
+                        const SelectionComponentChange change = AddComponentToSelection<AudioSourceComponent>(
+                          selectedEntities, [&](Entity, AudioSourceComponent& component) { component.SetClip(clip); });
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
                     }
                     case AssetType::ScriptCode: {
-                        const String className = fileEntry->Filepath.filename().replace_extension("").string();
-                        Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
-                        bool exists = false;
-                        if (selectedEntity.HasComponent<ManagedScriptComponent>())
-                        {
-                            auto& scripts = selectedEntity.GetComponent<ManagedScriptComponent>().Scripts;
-                            for (const auto& script : scripts)
-                            {
-                                if (script.GetTypeIdentity().TypeName == className)
-                                    exists = true;
-                            }
-                        }
-                        // TODO: Parse the namespace and class name
-                        if (!exists)
-                        {
-                            ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(selectedEntity);
-                            activeScene->AddScriptComponent(selectedEntity, "Sandbox", className);
-                            UndoRedo::Get().RegisterAction(CreateRef<ChangeScriptComponentAction>(selectedEntity, std::move(snapshot), "Add script"));
-                        }
+                        const ScriptTypeIdentity identity = ResolveDroppedScriptIdentity(*fileEntry, true);
+                        const SelectionComponentChange change = AddManagedScriptToSelection(selectedEntities, identity);
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
                     }
                     case AssetType::Font:
-                        if (!selectedEntity.HasComponent<TextComponent>())
-                        {
-                            TextComponent& textComponent = selectedEntity.AddComponent<TextComponent>();
-                            AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(fileEntry));
-                            textComponent.Font = font;
-                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<TextComponent>>(selectedEntity));
-                        }
+                        const AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(fileEntry));
+                        const SelectionComponentChange change =
+                          AddComponentToSelection<TextComponent>(selectedEntities, [&](Entity, TextComponent& component) { component.Font = font; });
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
                     case AssetType::Mesh:
-                        if (!selectedEntity.HasComponent<MeshRendererComponent>())
-                        {
-                            MeshRendererComponent& meshComponent = selectedEntity.AddComponent<MeshRendererComponent>();
-                            AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(fileEntry));
-                            meshComponent.MeshHandle = mesh;
-                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<MeshRendererComponent>>(selectedEntity));
-                        }
+                        const AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(fileEntry));
+                        const SelectionComponentChange change = AddComponentToSelection<MeshRendererComponent>(
+                          selectedEntities, [&](Entity, MeshRendererComponent& component) { component.MeshHandle = mesh; });
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
                     case AssetType::Texture:
-                        if (!selectedEntity.HasComponent<SpriteRendererComponent>())
-                        {
-                            SpriteRendererComponent& spriteComponent = selectedEntity.AddComponent<SpriteRendererComponent>();
-                            AssetHandle<Texture> texture = static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
-                            spriteComponent.Texture = texture;
-                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<SpriteRendererComponent>>(selectedEntity));
-                        }
+                        const AssetHandle<Texture> texture = static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
+                        const SelectionComponentChange change = AddComponentToSelection<SpriteRendererComponent>(
+                          selectedEntities, [&](Entity, SpriteRendererComponent& component) { component.Texture = texture; });
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
                     }
                 }
@@ -399,7 +437,7 @@ namespace Crowny
 
         ImGui::EndChild();
         if (m_InspectorMode == InspectorMode::GameObject && m_InspectedEntity)
-            HandleInspectorDragDrop(m_InspectedEntity);
+            HandleInspectorDragDrop(m_InspectedEntities);
         EndPanel();
     }
 

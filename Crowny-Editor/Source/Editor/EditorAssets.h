@@ -19,7 +19,7 @@ namespace Crowny
         Ref<Texture> MaximizeIcon;
         Ref<Texture> GlobeIcon;
         Ref<Texture> SearchIcon;
-        Ref<Texture> SettingsIcon; // Placeholder — replace with a dedicated icon file when available
+        Ref<Texture> SettingsIcon;
         Ref<Texture> ConsoleInfo;
         Ref<Texture> ConsoleWarn;
         Ref<Texture> ConsoleError;

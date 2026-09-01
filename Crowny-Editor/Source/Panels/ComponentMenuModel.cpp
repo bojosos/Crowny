@@ -25,10 +25,30 @@ namespace Crowny
         if (HasScriptCatalog(fingerprint))
             return;
 
+        for (ScriptEntry& entry : scripts)
+        {
+            if (entry.Name.empty())
+                entry.Name = entry.Identity.TypeName;
+
+            entry.SearchText = entry.Name;
+            if (entry.Identity.IsValid())
+                entry.SearchText += " " + entry.Identity.GetFullName() + " " + entry.Identity.Assembly;
+            if (entry.Detail.empty())
+            {
+                entry.Detail = entry.Identity.IsValid() ? entry.Identity.GetFullName() + " (" + entry.Identity.Assembly + ")" : "C# script";
+            }
+        }
+
         std::sort(scripts.begin(), scripts.end(), [](const ScriptEntry& left, const ScriptEntry& right) {
             if (left.Name != right.Name)
                 return left.Name < right.Name;
-            return left.Visible > right.Visible;
+            if (left.Visible != right.Visible)
+                return left.Visible > right.Visible;
+            if (left.Identity.Assembly != right.Identity.Assembly)
+                return left.Identity.Assembly < right.Identity.Assembly;
+            if (left.Identity.Namespace != right.Identity.Namespace)
+                return left.Identity.Namespace < right.Identity.Namespace;
+            return left.Identity.TypeName < right.Identity.TypeName;
         });
         m_Scripts = std::move(scripts);
         m_ScriptCatalogFingerprint = fingerprint;
@@ -80,7 +100,7 @@ namespace Crowny
             const ScriptEntry& entry = m_Scripts[index];
             if (entry.Name == m_Query)
                 m_SearchResults.ScriptNameDeclared = true;
-            if (entry.Visible && StringUtils::IsSearchMathing(entry.Name, m_Query))
+            if (entry.Visible && StringUtils::IsSearchMathing(entry.SearchText, m_Query))
                 m_SearchResults.ScriptIndices.push_back(index);
         }
 
