@@ -1017,8 +1017,7 @@ namespace Crowny
         const float edgeOffset = 4.0f;
         const float windowHeight = 32.0f;
         const float numberOfButtons = 3.0f;
-        const float stateWidth = 72.0f;
-        const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f + stateWidth;
+        const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
         const float toolbarX = (m_ViewportPanel->GetViewportBounds().x + m_ViewportPanel->GetViewportBounds().z) / 2.0f;
         ImGui::SetNextWindowPos(ImVec2(toolbarX - (backgroundWidth / 2.0f), m_ViewportPanel->GetViewportBounds().y + edgeOffset));
@@ -1070,13 +1069,6 @@ namespace Crowny
                 TogglePause();
             UI::SetTooltip(m_SceneState == SceneState::PausePlay ? "Resume play mode" : "Pause play mode");
             ImGui::EndDisabled();
-
-            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
-            const char* stateLabel = m_SceneState == SceneState::Play        ? "Playing"
-                                     : m_SceneState == SceneState::PausePlay ? "Paused"
-                                     : m_SceneState == SceneState::Simulate  ? "Simulating"
-                                                                             : "Editing";
-            ImGui::TextDisabled("%s", stateLabel);
         }
         ImGui::Spring();
         ImGui::EndHorizontal();
