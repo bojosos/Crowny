@@ -815,9 +815,9 @@ TEST_CASE("Managed catalog preserves field tooltips", "[Scripting][Managed][Cont
     CHECK(tooltip->Text == "Health value between 0 and 100.");
 
     String invalid = json;
-    const size_t tooltip = invalid.find("\"Tooltip\":\"Health value between 0 and 100.\"");
-    REQUIRE(tooltip != String::npos);
-    invalid.replace(tooltip, String("\"Tooltip\":\"Health value between 0 and 100.\"").size(), "\"Tooltip\":42");
+    const size_t tooltipOffset = invalid.find("\"Tooltip\":\"Health value between 0 and 100.\"");
+    REQUIRE(tooltipOffset != String::npos);
+    invalid.replace(tooltipOffset, String("\"Tooltip\":\"Health value between 0 and 100.\"").size(), "\"Tooltip\":42");
     CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
 }
 
