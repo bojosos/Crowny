@@ -3,6 +3,7 @@
 #include "Editor/Script/CodeEditor.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/ConsoleSeverityToggleVisual.h"
+#include "Panels/ConsoleSplitLayout.h"
 #include "UI/UIUtils.h"
 
 #include "Crowny/Common/PlatformUtils.h"
@@ -24,13 +25,6 @@ namespace Crowny
             return;
         }
         const float availableHeight = ImGui::GetContentRegionAvail().y;
-        const float splitterHeight = 6.0f;
-        const float minimumDetailsHeight = std::min(100.0f, availableHeight * 0.4f);
-        const float maximumMessageHeight = std::max(1.0f, availableHeight - minimumDetailsHeight - splitterHeight);
-        const float minimumMessageHeight = std::min(120.0f, maximumMessageHeight);
-        if (m_MessageHeight <= 0.0f)
-            m_MessageHeight = maximumMessageHeight;
-        m_MessageHeight = std::clamp(m_MessageHeight, minimumMessageHeight, maximumMessageHeight);
 
         ConsoleBuffer& console = ConsoleBuffer::Get();
         const bool hasNewMessages = console.HasNewMessages();
@@ -38,7 +32,11 @@ namespace Crowny
             m_RequestScrollToBottom = true;
         RefreshMessages();
 
-        ImGui::BeginChild("##consoleMessages", ImVec2(0, m_MessageHeight), true);
+        const ConsoleSplitLayout splitLayout = BuildConsoleSplitLayout(availableHeight, m_SelectedMessageId != 0, m_MessageHeight);
+        if (splitLayout.DetailsVisible)
+            m_MessageHeight = splitLayout.MessageHeight;
+
+        ImGui::BeginChild("##consoleMessages", ImVec2(0, splitLayout.MessageHeight), true);
         RenderHeader();
         ImGui::Separator();
         RenderMessages();
@@ -49,14 +47,20 @@ namespace Crowny
             CopySelectedMessage();
 
         ImGui::EndChild();
-        ImGui::InvisibleButton("##consoleSplitter", ImVec2(-1, splitterHeight));
-        if (ImGui::IsItemHovered())
-            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-        if (ImGui::IsItemActive())
-            m_MessageHeight = std::clamp(m_MessageHeight + ImGui::GetIO().MouseDelta.y, minimumMessageHeight, maximumMessageHeight);
-        ImGui::BeginChild("##consoleDetails", ImVec2(0, 0), true);
-        RenderFooter();
-        ImGui::EndChild();
+        if (splitLayout.DetailsVisible && m_SelectedMessageId != 0)
+        {
+            ImGui::InvisibleButton("##consoleSplitter", ImVec2(-1, splitLayout.SplitterHeight));
+            if (ImGui::IsItemHovered())
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+            if (ImGui::IsItemActive())
+            {
+                m_MessageHeight =
+                  std::clamp(m_MessageHeight + ImGui::GetIO().MouseDelta.y, splitLayout.MinimumMessageHeight, splitLayout.MaximumMessageHeight);
+            }
+            ImGui::BeginChild("##consoleDetails", ImVec2(0, 0), true);
+            RenderFooter();
+            ImGui::EndChild();
+        }
 
         EndPanel();
     }
