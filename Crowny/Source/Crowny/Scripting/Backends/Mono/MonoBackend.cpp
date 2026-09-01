@@ -141,8 +141,9 @@ namespace Crowny
             ManagedScriptComponent& component = entity.GetComponent<ManagedScriptComponent>();
             if (runtimeInstanceId != 0)
                 return component.FindScript(runtimeInstanceId);
-            const auto script = std::find_if(component.Scripts.begin(), component.Scripts.end(),
-                                             [&](ManagedScript& candidate) { return identity != nullptr && candidate.GetTypeIdentity() == *identity; });
+            const auto script = std::find_if(component.Scripts.begin(), component.Scripts.end(), [&](ManagedScript& candidate) {
+                return identity != nullptr && candidate.GetTypeIdentity() == *identity;
+            });
             return script == component.Scripts.end() ? nullptr : &*script;
         }
 
@@ -175,6 +176,7 @@ namespace Crowny
                 m_CaptureManagedState = nullptr;
                 m_PrepareManagedScript = nullptr;
                 m_TryApplyManagedState = nullptr;
+                m_InvokeManagedButton = nullptr;
                 m_HostApi.size = sizeof(m_HostApi);
                 m_HostApi.abi_version = CW_MANAGED_ABI_VERSION;
                 m_HostApi.context = this;
@@ -200,6 +202,7 @@ namespace Crowny
                 m_CaptureManagedState = nullptr;
                 m_PrepareManagedScript = nullptr;
                 m_TryApplyManagedState = nullptr;
+                m_InvokeManagedButton = nullptr;
                 if (m_OwnsScriptAssets)
                     ScriptAssetManager::Shutdown();
                 if (m_OwnsScriptObjects)
@@ -398,8 +401,7 @@ namespace Crowny
                     rollbackCreate();
                     return { Failure("managed.mono.create_reentered", "The Mono script was removed while its constructor was running."), 0 };
                 }
-                ScriptEntityBehaviour* behaviour =
-                  ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, entity, *script);
+                ScriptEntityBehaviour* behaviour = ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, entity, *script);
                 if (behaviour == nullptr)
                 {
                     rollbackCreate();
@@ -508,6 +510,23 @@ namespace Crowny
                 if (!normalized.Result.Succeeded)
                     return normalized.Result;
                 return ApplyState(instance->second, normalized.State);
+            }
+
+            ScriptInvocationResult InvokeButton(uint64_t handle, uint64_t methodId,
+                                                const Vector<ScriptValue>& arguments) override
+            {
+                const auto instance = m_Instances.find(handle);
+                if (instance == m_Instances.end() || instance->second.Runtime.GetInstance() == nullptr)
+                    return { StaleHandle(), false, {} };
+                if (m_InvokeManagedButton == nullptr)
+                    return { Failure("managed.mono.button_bridge_missing",
+                                     "CrownySharp does not expose the shared inspector button invoker."), false, {} };
+                MonoString* encodedArguments = MonoUtils::ToMonoString(WriteManagedArgumentsJson(arguments));
+                void* parameters[3] = { instance->second.Runtime.GetInstance(), &methodId, encodedArguments };
+                MonoString* encodedResult = reinterpret_cast<MonoString*>(m_InvokeManagedButton->Invoke(nullptr, parameters));
+                if (encodedResult == nullptr)
+                    return { Failure("managed.mono.button_failed", "The shared inspector button invocation failed."), false, {} };
+                return ParseManagedInvocationResultJson(MonoUtils::FromMonoString(encodedResult), ManagedBackendId::Mono);
             }
 
             Vector<ManagedDiagnostic> Update() override
@@ -675,8 +694,7 @@ namespace Crowny
                         return StaleHandle();
                     const ScriptTypeIdentity& identity = script->GetTypeIdentity();
                     MonoClass* scriptClass = MonoManager::Get().FindClass(identity.Assembly, identity.Namespace, identity.TypeName);
-                    ScriptEntityBehaviour* behaviour =
-                      ScriptSceneObjectManager::Get().GetManagedScriptComponent(instance->second.RuntimeInstanceId);
+                    ScriptEntityBehaviour* behaviour = ScriptSceneObjectManager::Get().GetManagedScriptComponent(instance->second.RuntimeInstanceId);
                     if (scriptClass == nullptr || behaviour == nullptr ||
                         !instance->second.Runtime.Bind(behaviour->GetManagedInstance(), scriptClass))
                         return Failure("managed.mono.reload_bind_failed", "Mono could not rebind a managed script after assembly reload.");
@@ -755,6 +773,13 @@ namespace Crowny
                 m_PrepareManagedScript = lifecycle->GetMethod("TryPrepare", 1);
                 if (m_PrepareManagedScript == nullptr)
                     return Failure("managed.mono.lifecycle_bridge_invalid", "CrownySharp's shared script lifecycle has an incompatible surface.");
+
+                MonoClass* buttonInvoker = engine.GetClass(CROWNY_NS, "ManagedButtonInvoker");
+                if (buttonInvoker == nullptr)
+                    return Failure("managed.mono.button_bridge_missing", "CrownySharp does not contain the shared inspector button invoker.");
+                m_InvokeManagedButton = buttonInvoker->GetMethod("Invoke", 3);
+                if (m_InvokeManagedButton == nullptr)
+                    return Failure("managed.mono.button_bridge_invalid", "CrownySharp's inspector button invoker has an incompatible surface.");
                 return ManagedOperationResult::Success();
             }
 
@@ -792,6 +817,7 @@ namespace Crowny
             MonoMethod* m_CaptureManagedState = nullptr;
             MonoMethod* m_PrepareManagedScript = nullptr;
             MonoMethod* m_TryApplyManagedState = nullptr;
+            MonoMethod* m_InvokeManagedButton = nullptr;
             uint64_t m_NextHandle = 1;
             bool m_Started = false;
             bool m_ProgramLoaded = false;

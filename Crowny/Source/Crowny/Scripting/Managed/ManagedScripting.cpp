@@ -188,6 +188,16 @@ namespace Crowny
         return slot != nullptr ? m_Backend->ApplyState(slot->BackendHandle, state) : StaleHandle(m_Config.Backend);
     }
 
+    ScriptInvocationResult ManagedScripting::InvokeButton(ScriptInstanceHandle handle, uint64_t methodId,
+                                                           const Vector<ScriptValue>& arguments)
+    {
+        if (ManagedOperationResult ready = RequireStarted(); !ready.Succeeded)
+            return { std::move(ready), false, {} };
+        const InstanceSlot* slot = Resolve(handle);
+        return slot != nullptr ? m_Backend->InvokeButton(slot->BackendHandle, methodId, arguments)
+                               : ScriptInvocationResult{ StaleHandle(m_Config.Backend), false, {} };
+    }
+
     Vector<ManagedDiagnostic> ManagedScripting::Update() { return IsStarted() ? m_Backend->Update() : Vector<ManagedDiagnostic>{}; }
 
     void ManagedScripting::NotifyEntityDestroyed(const Entity& entity)

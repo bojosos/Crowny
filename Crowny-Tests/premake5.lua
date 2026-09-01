@@ -34,9 +34,13 @@ project "Crowny-Tests"
 		"%{wks.location}/Crowny-Editor/Source/Panels/AssetBrowserSelection.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/ComponentMenuModel.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/MaterialInspectorSchemaCache.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Panels/ScriptInspectorPath.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Panels/ScriptInspectorProgressBar.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Panels/ScriptInspectorSearch.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/ViewportHudText.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Serialization/ProjectSettingsSerializer.cpp",
 		"%{wks.location}/Crowny-Editor/Source/UI/Properties.cpp",
+		"%{wks.location}/Crowny-Editor/Source/UI/EnumButtonsModel.cpp",
 		"%{wks.location}/Crowny-Editor/Source/UI/PopupLabelId.cpp",
 	}
 

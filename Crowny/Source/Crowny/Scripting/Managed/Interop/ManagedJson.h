@@ -8,5 +8,7 @@ namespace Crowny
     ManagedOperationResult ParseManagedStateJson(StringView json, ScriptState& state, ManagedBackendId backend,
                                                  const ScriptTypeSchema* schema = nullptr);
     String WriteManagedStateJson(const ScriptState& state);
+    String WriteManagedArgumentsJson(const Vector<ScriptValue>& arguments);
+    ScriptInvocationResult ParseManagedInvocationResultJson(StringView json, ManagedBackendId backend);
     Vector<ManagedDiagnostic> ParseManagedDiagnosticsJson(StringView json, ManagedBackendId backend);
 } // namespace Crowny

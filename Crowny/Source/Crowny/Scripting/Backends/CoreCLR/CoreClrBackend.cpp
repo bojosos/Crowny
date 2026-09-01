@@ -480,6 +480,28 @@ namespace Crowny
                 return normalized.Result;
             }
 
+            ScriptInvocationResult InvokeButton(uint64_t handle, uint64_t methodId,
+                                                const Vector<ScriptValue>& arguments) override
+            {
+                const auto instance = m_Instances.find(handle);
+                if (instance == m_Instances.end())
+                    return { StaleHandle(), false, {} };
+                const String json = WriteManagedArgumentsJson(arguments);
+                const cw_managed_blob blob{ reinterpret_cast<const uint8_t*>(json.data()), json.size() };
+                Vector<uint8_t> bytes;
+                cw_managed_blob_writer writer{ sizeof(writer), &bytes, &WriteBlob };
+                const cw_managed_status status = m_Api.invoke_button(instance->second.ManagedHandle, methodId, blob, &writer);
+                if (status != CW_MANAGED_STATUS_OK)
+                    return { StatusFailure(status, "managed.coreclr.button_failed", "Managed inspector button invocation failed."), false, {} };
+                if (bytes.empty())
+                    return { ManagedOperationResult::Failure("managed.coreclr.button_result_empty",
+                                                             "The managed host returned an empty button result.", ManagedBackendId::CoreCLR),
+                             false,
+                             {} };
+                return ParseManagedInvocationResultJson(StringView(reinterpret_cast<const char*>(bytes.data()), bytes.size()),
+                                                        ManagedBackendId::CoreCLR);
+            }
+
             Vector<ManagedDiagnostic> Update() override
             {
                 CollectManagedDiagnostics();

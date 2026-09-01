@@ -1,5 +1,7 @@
 #pragma once
 
+#include "UI/EnumButtonsModel.h"
+
 #include "UI/UIUtils.h"
 
 #include "Editor/EditorAssets.h"
@@ -9,6 +11,8 @@
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
+#include <algorithm>
+#include <limits>
 #include <type_traits>
 
 namespace Crowny
@@ -38,6 +42,24 @@ namespace Crowny
             Midline
         };
 
+        inline StringView CurrentPropertyTooltip;
+
+        class ScopedPropertyTooltip
+        {
+        public:
+            explicit ScopedPropertyTooltip(StringView tooltip) : m_Previous(CurrentPropertyTooltip) { CurrentPropertyTooltip = tooltip; }
+            ~ScopedPropertyTooltip() { CurrentPropertyTooltip = m_Previous; }
+
+        private:
+            StringView m_Previous;
+        };
+
+        static void ShowCurrentPropertyTooltip()
+        {
+            if (!CurrentPropertyTooltip.empty())
+                SetTooltip(CurrentPropertyTooltip, 0.0f);
+        }
+
         struct PropertyIconTab
         {
             const char* Tooltip = "";
@@ -66,6 +88,7 @@ namespace Crowny
             }
 
             ImGui::Text("%s", label);
+            ShowCurrentPropertyTooltip();
             ImGui::NextColumn();
             ShiftCursorY(4.0f);
             ImGui::PushItemWidth(-1);
@@ -78,6 +101,7 @@ namespace Crowny
         {
             ShiftCursor(10.0f, 9.0f);
             ImGui::Text("%s", label);
+            ShowCurrentPropertyTooltip();
             if (std::strlen(helpText) != 0)
             {
                 ImGui::SameLine();
@@ -93,6 +117,7 @@ namespace Crowny
 
         static void Post()
         {
+            ShowCurrentPropertyTooltip();
             // if (ImGui::IsItemDeactivatedAfterEdit() && scope.BeforeValueChangedCallback)
             // {
             //     scope.BeforeValueChangedCallback();
@@ -108,12 +133,22 @@ namespace Crowny
             Underline();
         }
 
-        template <typename TUnderlying, typename TValueAt>
-        static bool QuickTabsImpl(const char* label, std::initializer_list<const char*> buttonNameList, const TValueAt& valueAt, TUnderlying& value)
+        static const char* QuickTabName(const char* name) { return name; }
+
+        template <typename TName> static const char* QuickTabName(const TName& name) { return name.c_str(); }
+
+        template <typename TUnderlying> static TUnderlying QuickTabFlagValue(size_t index)
+        {
+            using TUnsigned = std::make_unsigned_t<TUnderlying>;
+            return index < std::numeric_limits<TUnsigned>::digits ? static_cast<TUnderlying>(TUnsigned{ 1 } << index) : TUnderlying{};
+        }
+
+        template <typename TUnderlying, typename TNameAt, typename TValueAt>
+        static bool QuickTabsImpl(const char* label, size_t buttonCount, TNameAt&& nameAt, TValueAt&& valueAt, TUnderlying& value)
         {
             Pre(label);
 
-            if (buttonNameList.size() == 0u)
+            if (buttonCount == 0u)
             {
                 Post();
                 return false;
@@ -123,12 +158,12 @@ namespace Crowny
             const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
             {
                 UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-                float columnWidth = ImGui::GetContentRegionAvail().x;
-                float minButtonSize = columnWidth / static_cast<float>(buttonNameList.size());
-                uint32_t index = 0u;
+                const float columnWidth = ImGui::GetContentRegionAvail().x;
+                const float minButtonSize = columnWidth / static_cast<float>(buttonCount);
                 ImGui::PushID(label);
-                for (const char* buttonName : buttonNameList)
+                for (size_t index = 0; index < buttonCount; ++index)
                 {
+                    const char* buttonName = nameAt(index);
                     const TUnderlying optionValue = valueAt(index);
 
                     if (!mixed && (value & optionValue))
@@ -149,7 +184,7 @@ namespace Crowny
                         buttonClicked = true;
                     }
                     ImGui::PopID();
-                    if (++index < buttonNameList.size())
+                    if (index + 1u < buttonCount)
                         ImGui::SameLine();
 
                     ImGui::PopStyleColor(2);
@@ -165,7 +200,20 @@ namespace Crowny
         static bool QuickTabs(const char* label, std::initializer_list<const char*> buttonNameList, const Vector<TUnderlying>& enumValues,
                               TUnderlying& value)
         {
-            return QuickTabsImpl(label, buttonNameList, [&enumValues](uint32_t index) { return enumValues[index]; }, value);
+            const size_t buttonCount = buttonNameList.size() == enumValues.size() ? buttonNameList.size() : 0u;
+            return QuickTabsImpl(
+              label, buttonCount, [&](size_t index) { return buttonNameList.begin()[index]; },
+              [&](size_t index) { return enumValues[index]; }, value);
+        }
+
+        template <typename TUnderlying = int32_t>
+        static bool QuickTabs(const char* label, std::initializer_list<const char*> buttonNameList,
+                              std::initializer_list<TUnderlying> enumValues, TUnderlying& value)
+        {
+            const size_t buttonCount = buttonNameList.size() == enumValues.size() ? buttonNameList.size() : 0u;
+            return QuickTabsImpl(
+              label, buttonCount, [&](size_t index) { return buttonNameList.begin()[index]; },
+              [&](size_t index) { return enumValues.begin()[index]; }, value);
         }
 
         static void DrawPropertyIconGlyph(const PropertyIconTab& tab, const ImRect& bounds, ImU32 color)
@@ -280,59 +328,70 @@ namespace Crowny
         template <typename TUnderlying = int32_t>
         static bool QuickTabs(const char* label, const Vector<String>& buttons, const Vector<TUnderlying>& enumValues, TUnderlying& value)
         {
+            const size_t buttonCount = buttons.size() == enumValues.size() ? buttons.size() : 0u;
+            return QuickTabsImpl(
+              label, buttonCount, [&](size_t index) { return QuickTabName(buttons[index]); },
+              [&](size_t index) { return enumValues[index]; }, value);
+        }
+
+        template <typename Options, typename TUnderlying = int32_t>
+        static bool QuickTabs(const char* label, const Options& options, TUnderlying& value)
+        {
+            return QuickTabsImpl(
+              label, options.size(), [&](size_t index) { return QuickTabName(options[index].Name); },
+              [&](size_t index) { return static_cast<TUnderlying>(options[index].Value); }, value);
+        }
+
+        template <typename NameAt, typename ValueAt>
+        static bool EnumButtons(const char* label, size_t buttonCount, uint64_t& value, bool flags, NameAt&& nameAt, ValueAt&& valueAt)
+        {
             Pre(label);
 
-            if (buttons.empty())
+            if (buttonCount == 0)
             {
+                ImGui::TextDisabled("No enum options available");
                 Post();
                 return false;
             }
 
-            bool buttonClicked = false;
+            bool modified = false;
             const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
+            UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+            const float columnWidth = ImGui::GetContentRegionAvail().x;
+            const float minButtonSize = columnWidth / static_cast<float>(buttonCount);
+            ImGui::PushID(label);
+            for (size_t index = 0; index < buttonCount; ++index)
             {
-                UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-                float columnWidth = ImGui::GetContentRegionAvail().x;
-                float minButtonSize = columnWidth / buttons.size();
-                ImGui::PushID(label);
-                for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++)
-                {
-                    if (!mixed && (value & enumValues[i]))
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_ButtonActive);
-                    else
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_Button);
-
-                    ImGui::PushID(static_cast<int>(i));
-                    if (ImGui::Button(buttons[i].c_str(), ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i].c_str()).x), 0.0f)))
-                    {
-                        value ^= enumValues[i];
-                        buttonClicked = true;
-                    }
-                    ImGui::PopID();
-                    if (i + 1u < buttons.size())
-                        ImGui::SameLine();
-
-                    ImGui::PopStyleColor();
-                }
+                const String& button = nameAt(index);
+                const uint64_t enumValue = valueAt(index);
+                const bool selected = !mixed && EnumButtonsModel::IsSelected(value, enumValue, flags);
+                ImGui::PushStyleColor(ImGuiCol_Button, selected ? ImGuiCol_ButtonActive : ImGuiCol_Button);
+                ImGui::PushID(static_cast<int>(index));
+                const bool clicked =
+                  ImGui::Button(button.c_str(), ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(button.c_str()).x), 0.0f));
                 ImGui::PopID();
+                ImGui::PopStyleColor();
+                if (clicked)
+                {
+                    const uint64_t nextValue = EnumButtonsModel::Select(value, enumValue, flags);
+                    modified |= nextValue != value;
+                    value = nextValue;
+                }
+                UndoRedo::Get().OnItemInteract(clicked);
+                if (index + 1u < buttonCount)
+                    ImGui::SameLine();
             }
-            UndoRedo::Get().OnItemInteract(buttonClicked);
+            ImGui::PopID();
             Post();
-
-            return buttonClicked;
+            return modified;
         }
 
         template <typename TEnum, typename TUnderlying = int32_t>
         static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList, Flags<TEnum, TUnderlying>& value)
         {
-            uint32_t pow = 1;
-            const auto valueAt = [&pow](uint32_t) {
-                const TUnderlying result = static_cast<TUnderlying>(pow);
-                pow *= 2;
-                return result;
-            };
-            TUnderlying underlying = (TUnderlying)value;
-            bool modified = QuickTabsImpl(label, buttonNameList, valueAt, underlying);
+            TUnderlying underlying = value.GetBits();
+            const bool modified = QuickTabsImpl(label, buttonNameList.size(), [&](size_t index) { return buttonNameList.begin()[index]; },
+                                                QuickTabFlagValue<TUnderlying>, underlying);
             value = Flags<TEnum, TUnderlying>(underlying);
             return modified;
         }
@@ -340,13 +399,25 @@ namespace Crowny
         template <typename TUnderlying = int32_t>
         static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList, TUnderlying& value)
         {
-            uint32_t pow = 1;
-            const auto valueAt = [&pow](uint32_t) {
-                const TUnderlying result = static_cast<TUnderlying>(pow);
-                pow *= 2;
-                return result;
-            };
-            return QuickTabsImpl(label, buttonNameList, valueAt, value);
+            return QuickTabsImpl(label, buttonNameList.size(), [&](size_t index) { return buttonNameList.begin()[index]; },
+                                 QuickTabFlagValue<TUnderlying>, value);
+        }
+
+        template <typename Names, typename TEnum, typename TUnderlying = int32_t>
+        static bool QuickTabsP(const char* label, const Names& buttonNames, Flags<TEnum, TUnderlying>& value)
+        {
+            TUnderlying underlying = value.GetBits();
+            const bool modified = QuickTabsImpl(
+              label, buttonNames.size(), [&](size_t index) { return QuickTabName(buttonNames[index]); }, QuickTabFlagValue<TUnderlying>, underlying);
+            value = Flags<TEnum, TUnderlying>(underlying);
+            return modified;
+        }
+
+        template <typename Names, typename TUnderlying = int32_t>
+        static bool QuickTabsP(const char* label, const Names& buttonNames, TUnderlying& value)
+        {
+            return QuickTabsImpl(
+              label, buttonNames.size(), [&](size_t index) { return QuickTabName(buttonNames[index]); }, QuickTabFlagValue<TUnderlying>, value);
         }
 
         static bool PropertyInput(const char* label, int8_t& value, int8_t step = 1, int8_t stepFast = 1)
@@ -454,12 +525,14 @@ namespace Crowny
             return modified;
         }
 
-        static bool PropertyMultiline(const char* label, String& value)
+        static bool PropertyMultiline(const char* label, String& value, int32_t lines = 8)
         {
             Pre(label);
             const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
 
-            const bool modified = ImGui::InputTextMultiline(GenerateID(), &value);
+            const float height =
+              ImGui::GetTextLineHeightWithSpacing() * static_cast<float>(std::clamp(lines, 1, 100)) + ImGui::GetStyle().FramePadding.y * 2.0f;
+            const bool modified = ImGui::InputTextMultiline(GenerateID(), &value, ImVec2(0.0f, height));
 
             if (mixed && value.empty() && !ImGui::IsItemActive())
             {
@@ -492,6 +565,19 @@ namespace Crowny
             UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
+        }
+
+        static ImGuiColorEditFlags ColorEditFlags(bool showAlpha, bool hdr)
+        {
+            ImGuiColorEditFlags flags = showAlpha ? ImGuiColorEditFlags_None : ImGuiColorEditFlags_NoAlpha;
+            if (hdr)
+                flags |= ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float;
+            return flags;
+        }
+
+        static bool PropertyColor(const char* label, glm::vec4& value, bool showAlpha, bool hdr)
+        {
+            return PropertyColor(label, value, ColorEditFlags(showAlpha, hdr));
         }
 
         static bool Property(const char* label, float& value, float delta = 0.1f, float min = 0.0f, float max = 1.0f, const char* helpText = "")
@@ -665,7 +751,8 @@ namespace Crowny
             return modified;
         }
 
-        static bool PropertyFilepath(const char* label, FileDialogType type, String& value, const String& title = {}, const Path& initialDir = {})
+        template <typename DialogOptionsProvider>
+        static bool PropertyFilepathLazy(const char* label, String& value, DialogOptionsProvider&& dialogOptionsProvider)
         {
             ShiftCursor(10.0f, 9.0f);
             ImGui::Text("%s", label);
@@ -686,9 +773,12 @@ namespace Crowny
             if (clicked)
             {
                 Vector<Path> outPaths;
-                const Path& initialDirToUse = initialDir.empty() ? ProjectLibrary::Get().GetAssetFolder() : initialDir;
-                const String& titleToUse = title.empty() ? label : title;
-                if (FileSystem::OpenFileDialog(type, outPaths, titleToUse, initialDirToUse) && outPaths.size() > 0)
+                FileDialogOptions options = dialogOptionsProvider();
+                if (options.InitialDirectory.empty())
+                    options.InitialDirectory = ProjectLibrary::Get().GetAssetFolder();
+                if (options.Title.empty())
+                    options.Title = label;
+                if (FileSystem::OpenFileDialog(options, outPaths) && !outPaths.empty())
                 {
                     value = outPaths[0].string();
                     modified = true;
@@ -699,6 +789,17 @@ namespace Crowny
             Post();
 
             return modified;
+        }
+
+        static bool PropertyFilepath(const char* label, String& value, const FileDialogOptions& dialogOptions)
+        {
+            return PropertyFilepathLazy(label, value, [&]() { return dialogOptions; });
+        }
+
+        static bool PropertyFilepath(const char* label, FileDialogType type, String& value, const String& title = {}, const Path& initialDir = {},
+                                     const Vector<DialogFilter>& filters = {})
+        {
+            return PropertyFilepath(label, value, { type, title, initialDir, filters, {} });
         }
 
         template <typename TEnum, typename TUnderlying = int32_t>
@@ -801,8 +902,7 @@ namespace Crowny
         }
 
         template <typename Type, typename Selector, typename TUnderlying = int32_t>
-        static bool PropertyDropdown(const char* label, const Vector<Type>& options, TUnderlying& selected,
-                                     const Selector& selector)
+        static bool PropertyDropdown(const char* label, const Vector<Type>& options, TUnderlying& selected, const Selector& selector)
         {
             TUnderlying selectedIndex = (TUnderlying)selected;
             Pre(label);
@@ -899,6 +999,28 @@ namespace Crowny
             Post();
 
             return modified;
+        }
+
+        template <typename Options>
+        static bool EnumButtons(const char* label, const Options& options, uint64_t& value, bool flags)
+        {
+            return EnumButtons(
+              label, options.size(), value, flags, [&](size_t index) -> const String& { return options[index].Name; },
+              [&](size_t index) { return options[index].Value; });
+        }
+
+        static bool EnumButtons(const char* label, const Vector<String>& buttons, const Vector<uint64_t>& enumValues, uint64_t& value, bool flags)
+        {
+            if (buttons.size() != enumValues.size())
+            {
+                Pre(label);
+                ImGui::TextDisabled("No enum options available");
+                Post();
+                return false;
+            }
+            return EnumButtons(
+              label, buttons.size(), value, flags, [&](size_t index) -> const String& { return buttons[index]; },
+              [&](size_t index) { return enumValues[index]; });
         }
 
     } // namespace UI

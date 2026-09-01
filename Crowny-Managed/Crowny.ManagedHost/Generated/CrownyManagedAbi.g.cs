@@ -1254,12 +1254,13 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<uint, NativeUuid, uint, NativeStatus> NotifySceneEvent;
         public delegate* unmanaged[Cdecl]<ulong, NativeBlobWriter*, NativeStatus> CaptureState;
         public delegate* unmanaged[Cdecl]<ulong, NativeBlob, NativeStatus> ApplyState;
+        public delegate* unmanaged[Cdecl]<ulong, ulong, NativeBlob, NativeBlobWriter*, NativeStatus> InvokeButton;
         public delegate* unmanaged[Cdecl]<NativeBlobWriter*, NativeStatus> CollectDiagnostics;
     }
 
     public static class NativeAbi
     {
-        public const uint Version = 13;
+        public const uint Version = 14;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

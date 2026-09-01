@@ -284,7 +284,7 @@ namespace Crowny
                 break;
             }
         }
-        fileDialog->SetTitle(UTF8::ToWide(title).c_str());
+        fileDialog->SetTitle(UTF8::ToWide(titleString).c_str());
         fileDialog->SetFileName(UTF8::ToWide(filename).c_str());
 
         const bool isMultiselected = type == FileDialogType::Multiselect;

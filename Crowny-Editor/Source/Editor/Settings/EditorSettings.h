@@ -50,6 +50,10 @@ namespace Crowny
         bool ScrollToBottom = true;
         uint32_t MaxCallstackLength = 10;
 
+        // Script inspector dictionary presentation overrides, keyed by stable ImGui property ID.
+        Map<String, uint32_t> DictionaryLayouts;
+        Map<String, uint32_t> DictionaryLayoutRevisions;
+
         // Code Editor
         Path CodeEditorPath;
 

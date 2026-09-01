@@ -117,6 +117,15 @@ namespace Crowny
                 return normalized.Result;
             }
 
+            ScriptInvocationResult InvokeButton(uint64_t, uint64_t, const Vector<ScriptValue>&) override
+            {
+                return { ManagedOperationResult::Failure("managed.generated.button_unavailable",
+                                                         "Generated metadata programs cannot execute inspector buttons.",
+                                                         ManagedBackendId::GeneratedMetadata),
+                         false,
+                         {} };
+            }
+
             Vector<ManagedDiagnostic> Update() override { return {}; }
 
         private:

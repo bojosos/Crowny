@@ -143,6 +143,16 @@ namespace Crowny
             return entity && entity.HasComponent<T>() ? &entity.GetComponent<T>() : nullptr;
         }
 
+        cw_managed_status WriteBorrowedStringView(const String& value, cw_managed_string_view* result)
+        {
+            if (result == nullptr)
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+            if (value.size() > std::numeric_limits<uint32_t>::max())
+                return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
+            *result = { reinterpret_cast<const uint8_t*>(value.data()), static_cast<uint32_t>(value.size()) };
+            return CW_MANAGED_STATUS_OK;
+        }
+
         Collider2D* ResolveCollider2D(Entity entity)
         {
             if (!entity)
@@ -211,10 +221,12 @@ namespace Crowny
             }
         }
 
-        String Decode(cw_managed_string_view value)
+        StringView DecodeView(cw_managed_string_view value)
         {
-            return value.data == nullptr ? String() : String(reinterpret_cast<const char*>(value.data), value.length);
+            return value.data == nullptr ? StringView() : StringView(reinterpret_cast<const char*>(value.data), value.length);
         }
+
+        String Decode(cw_managed_string_view value) { return String(DecodeView(value)); }
 
         bool HasComponent(Entity entity, StringView name)
         {
@@ -340,13 +352,7 @@ namespace Crowny
                 const Entity entity = ResolveEntity(entityId);
                 if (!entity)
                     return CW_MANAGED_STATUS_STALE_HANDLE;
-                thread_local String storage;
-                storage = entity.GetName();
-                if (storage.size() > std::numeric_limits<uint32_t>::max())
-                    return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
-                name->data = reinterpret_cast<const uint8_t*>(storage.data());
-                name->length = static_cast<uint32_t>(storage.size());
-                return CW_MANAGED_STATUS_OK;
+                return WriteBorrowedStringView(entity.GetName(), name);
             });
         }
 
@@ -358,7 +364,10 @@ namespace Crowny
                 Entity entity = ResolveEntity(entityId);
                 if (!entity)
                     return CW_MANAGED_STATUS_STALE_HANDLE;
-                entity.GetComponent<TagComponent>().Tag = Decode(name);
+                String& currentName = entity.GetComponent<TagComponent>().Tag;
+                const StringView nextName = DecodeView(name);
+                if (currentName != nextName)
+                    currentName.assign(nextName);
                 return CW_MANAGED_STATUS_OK;
             });
         }
@@ -1424,11 +1433,7 @@ namespace Crowny
                     return CW_MANAGED_STATUS_STALE_HANDLE;
                 thread_local String storage;
                 storage = asset->GetName();
-                if (storage.size() > std::numeric_limits<uint32_t>::max())
-                    return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
-                result->data = reinterpret_cast<const uint8_t*>(storage.data());
-                result->length = static_cast<uint32_t>(storage.size());
-                return CW_MANAGED_STATUS_OK;
+                return WriteBorrowedStringView(storage, result);
             });
         }
 
@@ -2121,21 +2126,6 @@ namespace Crowny
         CW_ANIMATION_COMMAND(AnimationComponentStop, animation->Stop())
 #undef CW_ANIMATION_COMMAND
 
-        Vector<DialogFilter> DecodeDialogFilters(cw_managed_string_view extensions)
-        {
-            Vector<DialogFilter> result;
-            for (String extension : StringUtils::SplitString(Decode(extensions), ","))
-            {
-                const size_t first = extension.find_first_not_of(" \t\r\n.");
-                const size_t last = extension.find_last_not_of(" \t\r\n");
-                if (first == String::npos || last < first)
-                    continue;
-                extension = extension.substr(first, last - first + 1);
-                result.push_back({ extension, "*." + extension });
-            }
-            return result;
-        }
-
         cw_managed_status RunFileDialog(FileDialogType type, cw_managed_string_view title, cw_managed_string_view directory,
                                         cw_managed_string_view extensions, cw_managed_string_view defaultName, cw_managed_string_view* result)
         {
@@ -2144,9 +2134,13 @@ namespace Crowny
             *result = {};
 #if defined(CW_PLATFORM_WIN32) || defined(CW_PLATFORM_LINUX)
             Vector<Path> paths;
-            if (!FileSystem::OpenFileDialog(type, paths, Decode(title), Path(Decode(directory)), DecodeDialogFilters(extensions),
-                                            Decode(defaultName)) ||
-                paths.empty())
+            FileDialogOptions options;
+            options.Type = type;
+            options.Title = Decode(title);
+            options.InitialDirectory = Path(Decode(directory));
+            options.Filters = FileSystem::ParseDialogFilters(Decode(extensions));
+            options.DefaultName = Decode(defaultName);
+            if (!FileSystem::OpenFileDialog(options, paths) || paths.empty())
                 return CW_MANAGED_STATUS_OK;
             thread_local String storage;
             storage = paths.front().string();
@@ -2312,13 +2306,9 @@ namespace Crowny
                 Physics2D* physics = Physics2D::TryGet();
                 if (physics == nullptr)
                     return CW_MANAGED_STATUS_NOT_INITIALIZED;
-                thread_local String storage;
-                storage = layer >= 0 && layer < 32 ? physics->GetLayerName(layer) : String();
-                if (storage.size() > std::numeric_limits<uint32_t>::max())
-                    return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
-                result->data = reinterpret_cast<const uint8_t*>(storage.data());
-                result->length = static_cast<uint32_t>(storage.size());
-                return CW_MANAGED_STATUS_OK;
+                static const String empty;
+                const String& name = layer >= 0 && layer < 32 ? physics->GetLayerName(layer) : empty;
+                return WriteBorrowedStringView(name, result);
             });
         }
 
@@ -2826,13 +2816,7 @@ namespace Crowny
                     return CW_MANAGED_STATUS_STALE_HANDLE;
                 if (result == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
-                thread_local String storage;
-                storage = component->Text;
-                if (storage.size() > std::numeric_limits<uint32_t>::max())
-                    return CW_MANAGED_STATUS_BUFFER_WRITE_FAILED;
-                result->data = reinterpret_cast<const uint8_t*>(storage.data());
-                result->length = static_cast<uint32_t>(storage.size());
-                return CW_MANAGED_STATUS_OK;
+                return WriteBorrowedStringView(component->Text, result);
             });
         }
 
@@ -2844,7 +2828,9 @@ namespace Crowny
                     return CW_MANAGED_STATUS_STALE_HANDLE;
                 if (value.data == nullptr && value.length != 0)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
-                component->Text = Decode(value);
+                const StringView text = DecodeView(value);
+                if (component->Text != text)
+                    component->Text.assign(text);
                 return CW_MANAGED_STATUS_OK;
             });
         }
@@ -3055,10 +3041,7 @@ namespace Crowny
                 Physics2D* physics = Physics2D::IsStartedUp() ? Physics2D::TryGet() : nullptr;
                 if (physics == nullptr)
                     return CW_MANAGED_STATUS_NOT_INITIALIZED;
-                thread_local String storage;
-                storage = physics->GetLayerName(static_cast<uint32_t>(layer));
-                *result = { reinterpret_cast<const uint8_t*>(storage.data()), static_cast<uint32_t>(storage.size()) };
-                return CW_MANAGED_STATUS_OK;
+                return WriteBorrowedStringView(physics->GetLayerName(static_cast<uint32_t>(layer)), result);
             });
         }
 

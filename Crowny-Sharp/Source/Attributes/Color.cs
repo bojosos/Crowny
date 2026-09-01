@@ -5,34 +5,59 @@ namespace Crowny
     /// <summary>
     /// ColorUsage can be used to control how color fields are displayed.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true, AllowMultiple = false)]
     public class ColorUsage : Attribute
     {
-#pragma warning disable 0414
-        private bool hdr;
-        private bool showAlpha;
-#pragma warning restore 0414
-
         /// <summary>
         /// Creates a ColorUsage attribute.
         /// </summary>
         /// <param name="showAlpha">If false then the alpha channel is hidden in color picker and color palettes.</param>
         public ColorUsage(bool showAlpha)
+            : this(showAlpha, false)
         {
-            this.showAlpha = showAlpha;
-            this.hdr = false;
         }
 
         /// <summary>
         /// Creates a ColorUsage attribute.
         /// </summary>
-        /// <param name="hdr">If set to true if the color should be displayed with hdr.</param>
         /// <param name="showAlpha">If false then the alpha channel is hidden in color picker and color palettes.</param>
-        public ColorUsage(bool hdr, bool showAlpha)
+        /// <param name="hdr">If true the color picker accepts HDR component values.</param>
+        public ColorUsage(bool showAlpha, bool hdr)
         {
-            this.hdr = hdr;
             this.showAlpha = showAlpha;
+            this.hdr = hdr;
         }
+
+        /// <summary>
+        /// Creates a ColorUsage attribute with the legacy HDR picker limits. Unity no longer uses the four limit values.
+        /// </summary>
+        [Obsolete("Brightness and exposure parameters are no longer used. Use ColorUsage(bool showAlpha, bool hdr) instead.")]
+        public ColorUsage(bool showAlpha, bool hdr, float minBrightness, float maxBrightness, float minExposureValue, float maxExposureValue)
+            : this(showAlpha, hdr)
+        {
+            this.minBrightness = minBrightness;
+            this.maxBrightness = maxBrightness;
+            this.minExposureValue = minExposureValue;
+            this.maxExposureValue = maxExposureValue;
+        }
+
+        /// <summary>Gets whether the inspector shows and edits the alpha channel.</summary>
+        public bool showAlpha { get; private set; }
+
+        /// <summary>Gets whether the inspector treats the color as HDR.</summary>
+        public bool hdr { get; private set; }
+
+        [Obsolete("This property is no longer used.")]
+        public float minBrightness { get; private set; }
+
+        [Obsolete("This property is no longer used.")]
+        public float maxBrightness { get; private set; }
+
+        [Obsolete("This property is no longer used.")]
+        public float minExposureValue { get; private set; }
+
+        [Obsolete("This property is no longer used.")]
+        public float maxExposureValue { get; private set; }
     }
 
     /// <summary>

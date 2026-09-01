@@ -34,6 +34,14 @@ namespace Crowny
                                     std::to_string(sequence.fetch_add(1, std::memory_order_relaxed));
             return path.parent_path() / filename;
         }
+
+        String ShellQuote(StringView value)
+        {
+            String result = "'";
+            for (char character : value)
+                result += character == '\'' ? "'\\''" : String(1, character);
+            return result + "'";
+        }
     } // namespace
 
     static Ref<DataStream> OpenPackedFile(const Path& path)
@@ -211,30 +219,54 @@ namespace Crowny
     bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title, const Path& initialDir,
                                     const Vector<DialogFilter>& filter, const String& filename)
     {
-        String add;
-        // TODO: Check if all of these work, make it more configurable
+        String command = "zenity --file-selection";
+        String titleString = title;
         switch (type)
         {
         case FileDialogType::OpenFile:
-            add = "title=\"Open file\"";
+            if (titleString.empty())
+                titleString = "Open File";
             break;
         case FileDialogType::SaveFile:
-            add = "title=\"Save file\" --save";
+            if (titleString.empty())
+                titleString = "Save File";
+            command += " --save";
             break;
         case FileDialogType::Multiselect:
-            add = " --multiple title=\"Open files\"";
+            if (titleString.empty())
+                titleString = "Open Files";
+            command += " --multiple --separator='|'";
             break;
         case FileDialogType::OpenFolder:
-            add = " --directory title=\"Open folder\"";
+            if (titleString.empty())
+                titleString = "Open Folder";
+            command += " --directory";
             break;
         }
 
-        String execResult = PlatformUtils::Exec("zenity --file-selection --filename=\"" + initialDir.string() + "\"" + add);
-        execResult = execResult.erase(execResult.find_last_not_of(" \n\r\t") + 1);
-        for (const String& str : StringUtils::SplitString(execResult, "|"))
-            outPaths.push_back(Path(std::move(str)));
+        command += " --title=" + ShellQuote(titleString);
+        Path initialSelection = initialDir;
+        if (!filename.empty())
+            initialSelection /= filename;
+        else if (!initialSelection.empty())
+            initialSelection /= "";
+        if (!initialSelection.empty())
+            command += " --filename=" + ShellQuote(initialSelection.string());
+        for (const DialogFilter& entry : filter)
+            command += " --file-filter=" + ShellQuote(entry.Name + " | " + entry.FilterSpec);
 
-        return true;
+        String execResult = PlatformUtils::Exec(command);
+        const size_t last = execResult.find_last_not_of(" \n\r\t");
+        if (last == String::npos)
+            return false;
+        execResult.erase(last + 1);
+        for (const String& str : StringUtils::SplitString(execResult, "|"))
+        {
+            if (!str.empty())
+                outPaths.push_back(Path(str));
+        }
+
+        return !outPaths.empty();
     }
 
     static bool ZenityCheck()

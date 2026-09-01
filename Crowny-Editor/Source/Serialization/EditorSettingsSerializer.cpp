@@ -34,6 +34,8 @@ namespace Crowny
         out << YAML::Key << "EnableConsoleErrorMessages" << YAML::Value << settings->EnableConsoleErrorMessages;
         out << YAML::Key << "CollapseConsole" << YAML::Value << settings->CollapseConsole;
         out << YAML::Key << "ScrollToBottom" << YAML::Value << settings->ScrollToBottom;
+        out << YAML::Key << "DictionaryLayouts" << YAML::Value << settings->DictionaryLayouts;
+        out << YAML::Key << "DictionaryLayoutRevisions" << YAML::Value << settings->DictionaryLayoutRevisions;
         out << YAML::Key << "CodeEditorPath" << YAML::Value << settings->CodeEditorPath.string();
 
         out << YAML::Key << "RecentProjects" << YAML::Value << YAML::BeginSeq;
@@ -79,6 +81,10 @@ namespace Crowny
             editorSettings->CollapseConsole = infos.as<bool>(false);
         if (const YAML::Node& infos = node["ScrollToBottom"])
             editorSettings->ScrollToBottom = infos.as<bool>(true);
+        if (const YAML::Node& layouts = node["DictionaryLayouts"])
+            editorSettings->DictionaryLayouts = layouts.as<Map<String, uint32_t>>();
+        if (const YAML::Node& revisions = node["DictionaryLayoutRevisions"])
+            editorSettings->DictionaryLayoutRevisions = revisions.as<Map<String, uint32_t>>();
         editorSettings->CodeEditorPath = node["CodeEditorPath"].as<String>(String());
         if (const YAML::Node& showColliders = node["ShowPhysicsColliders"])
             editorSettings->ShowPhysicsColliders = showColliders.as<bool>(false);

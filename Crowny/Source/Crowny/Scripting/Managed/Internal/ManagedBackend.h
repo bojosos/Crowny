@@ -50,6 +50,7 @@ namespace Crowny
         virtual ManagedOperationResult Dispatch(uint64_t handle, const ScriptEvent& event) = 0;
         virtual ManagedBackendStateResult CaptureState(uint64_t handle) = 0;
         virtual ManagedOperationResult ApplyState(uint64_t handle, const ScriptState& state) = 0;
+        virtual ScriptInvocationResult InvokeButton(uint64_t handle, uint64_t methodId, const Vector<ScriptValue>& arguments) = 0;
         virtual Vector<ManagedDiagnostic> Update() = 0;
         virtual void NotifyEntityDestroyed(const Entity&) {}
         virtual void NotifyComponentDestroyed(uint64_t) {}

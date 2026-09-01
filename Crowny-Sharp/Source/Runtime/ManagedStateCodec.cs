@@ -33,6 +33,7 @@ namespace Crowny
                 if (!member.IsSerializable)
                     continue;
                 EncodedValue encoded = EncodeValue(member.GetValue(instance), member.ValueType, visited);
+                ManagedScriptCatalog.WriteInspectorAttributes(encoded.Metadata, member, instance);
                 metadata.Add(member.Name, encoded.Metadata);
                 fields.Add(member.Name, encoded.Value);
             }
@@ -231,6 +232,7 @@ namespace Crowny
                     if (member.IsSerializable)
                     {
                         EncodedValue encoded = EncodeValue(member.GetValue(value), member.ValueType, visited);
+                        ManagedScriptCatalog.WriteInspectorAttributes(encoded.Metadata, member, value);
                         members.Add(member.Name, encoded.Value);
                         memberMetadata.Add(member.Name, encoded.Metadata);
                     }
@@ -441,13 +443,30 @@ namespace Crowny
             Dictionary<string, object> metadata = new Dictionary<string, object>(StringComparer.Ordinal);
             string kind = type == null ? "Object" : ScriptMetadata.ValueKind(type);
             metadata.Add("Kind", kind);
-            if (type != null && (kind == "Enum" || kind == "Entity" || kind == "Component" || kind == "Asset" || kind == "Object"))
+            if (type != null &&
+                (kind == "Enum" || kind == "Entity" || kind == "Component" || kind == "Asset" || kind == "Object" || kind == "Dictionary"))
             {
                 metadata.Add("Assembly", type.Assembly.GetName().Name ?? string.Empty);
                 metadata.Add("Namespace", type.Namespace ?? string.Empty);
                 metadata.Add("TypeName", GetTypeName(type));
             }
+            if (type != null && kind == "Enum")
+            {
+                Type underlyingType = Enum.GetUnderlyingType(type);
+                metadata.Add("EnumUnsigned", underlyingType == typeof(byte) || underlyingType == typeof(ushort) ||
+                                             underlyingType == typeof(uint) || underlyingType == typeof(ulong));
+            }
             return metadata;
+        }
+
+        internal static object EncodeInspectorValue(object value, Type declaredType)
+        {
+            return EncodeValue(value, declaredType, new HashSet<object>(ReferenceComparer.Instance)).Value;
+        }
+
+        internal static object ReadInspectorValue(object value, Type declaredType)
+        {
+            return ReadValue(value, declaredType);
         }
 
         private sealed class EncodedValue

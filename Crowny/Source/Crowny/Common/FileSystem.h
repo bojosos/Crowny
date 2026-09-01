@@ -19,6 +19,15 @@ namespace Crowny
         String FilterSpec;
     };
 
+    struct FileDialogOptions
+    {
+        FileDialogType Type = FileDialogType::OpenFile;
+        String Title;
+        Path InitialDirectory;
+        Vector<DialogFilter> Filters;
+        String DefaultName;
+    };
+
     class FileSystem
     {
     public:
@@ -37,6 +46,8 @@ namespace Crowny
         static bool WriteTextFileAtomic(const Path& path, StringView text, String* outError = nullptr);
         static bool OpenFileDialog(FileDialogType type, Vector<Path>& outpaths, const String& title = {}, const Path& initialDir = {},
                                    const Vector<DialogFilter>& filters = {}, const String& filename = {});
+        static bool OpenFileDialog(const FileDialogOptions& options, Vector<Path>& outPaths);
+        static Vector<DialogFilter> ParseDialogFilters(StringView extensions);
 
         static Ref<DataStream> OpenFile(const Path& filepath, bool readOnly = true);
         static Ref<DataStream> CreateAndOpenFile(const Path& filepath);

@@ -103,10 +103,13 @@ TEST_CASE("Undo transactions coalesce continuous edits into one action", "[Edito
 
     UndoRedo::StartUp();
     UndoRedo::Get().RegisterAction(action);
+    const uint64_t initialAppliedVersion = UndoRedo::Get().GetActionAppliedVersion();
     UndoRedo::Get().Undo();
     CHECK(value == 1);
+    CHECK(UndoRedo::Get().GetActionAppliedVersion() == initialAppliedVersion + 1);
     UndoRedo::Get().Redo();
     CHECK(value == 5);
+    CHECK(UndoRedo::Get().GetActionAppliedVersion() == initialAppliedVersion + 2);
     UndoRedo::Shutdown();
 }
 

@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 13u
+#define CW_MANAGED_ABI_VERSION 14u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -1771,6 +1771,10 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_notify_scene_event_fn)(uin
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capture_state_fn)(cw_managed_instance instance,
                                                                        cw_managed_blob_writer* output);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_apply_state_fn)(cw_managed_instance instance, cw_managed_blob state);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_invoke_button_fn)(cw_managed_instance instance,
+                                                                       uint64_t method_id,
+                                                                       cw_managed_blob arguments,
+                                                                       cw_managed_blob_writer* output);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_collect_diagnostics_fn)(cw_managed_blob_writer* output);
 
 typedef struct cw_managed_program_api
@@ -1788,6 +1792,7 @@ typedef struct cw_managed_program_api
     cw_managed_notify_scene_event_fn notify_scene_event;
     cw_managed_capture_state_fn capture_state;
     cw_managed_apply_state_fn apply_state;
+    cw_managed_invoke_button_fn invoke_button;
     cw_managed_collect_diagnostics_fn collect_diagnostics;
 } cw_managed_program_api;
 

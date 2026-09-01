@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <limits>
+
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scene/SceneManager.h"
@@ -185,7 +187,7 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
 {
-    CHECK(CW_MANAGED_ABI_VERSION == 13);
+    CHECK(CW_MANAGED_ABI_VERSION == 14);
 
     cw_managed_program_api api{};
     api.size = sizeof(api);
@@ -222,9 +224,7 @@ TEST_CASE("Managed host ABI exposes complete typed bindings and stable value lay
 TEST_CASE("Managed entity parent accepts the empty UUID as unparent", "[Scripting][Managed][Contract][Hierarchy]")
 {
     const UUID childId("11111111-2222-3333-4444-555555555555");
-    const cw_managed_uuid managedChildId = {
-        { 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 }
-    };
+    const cw_managed_uuid managedChildId = { { 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 } };
     Ref<Scene> scene = CreateRef<Scene>(false);
     ScopedActiveScene activeScene(scene);
     Entity parent = scene->CreateEntity("Parent");
@@ -241,17 +241,12 @@ TEST_CASE("Managed entity parent accepts the empty UUID as unparent", "[Scriptin
     CHECK(parent.GetChildCount() == 0u);
 }
 
-TEST_CASE("Managed collider material overrides round trip through the shared host table",
-          "[Scripting][Managed][Contract][Physics]")
+TEST_CASE("Managed collider material overrides round trip through the shared host table", "[Scripting][Managed][Contract][Physics]")
 {
     const UUID entity2DId("11111111-2222-3333-4444-555555555555");
     const UUID entity3DId("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-    const cw_managed_uuid managedEntity2DId = {
-        { 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 }
-    };
-    const cw_managed_uuid managedEntity3DId = {
-        { 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee }
-    };
+    const cw_managed_uuid managedEntity2DId = { { 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 } };
+    const cw_managed_uuid managedEntity3DId = { { 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee } };
 
     Ref<Scene> scene = CreateRef<Scene>(false);
     ScopedActiveScene activeScene(scene);
@@ -265,8 +260,8 @@ TEST_CASE("Managed collider material overrides round trip through the shared hos
     int context = 0;
 
     cw_managed_physics_material_override override2D{};
-    override2D.fields = static_cast<uint32_t>(PhysicsMaterialOverrideBits::Friction) |
-                        static_cast<uint32_t>(PhysicsMaterialOverrideBits::RestitutionCombine);
+    override2D.fields =
+      static_cast<uint32_t>(PhysicsMaterialOverrideBits::Friction) | static_cast<uint32_t>(PhysicsMaterialOverrideBits::RestitutionCombine);
     override2D.friction = 0.85f;
     override2D.restitution_combine = static_cast<int32_t>(PhysicsCombineMode::Multiply);
     REQUIRE(api.collider2d_set_material_override(&context, managedEntity2DId, &override2D) == CW_MANAGED_STATUS_OK);
@@ -279,8 +274,8 @@ TEST_CASE("Managed collider material overrides round trip through the shared hos
     CHECK(entity2D.GetComponent<BoxCollider2DComponent>().GetMaterialData().Friction == 0.85f);
 
     cw_managed_physics_material_override override3D{};
-    override3D.fields = static_cast<uint32_t>(PhysicsMaterialOverrideBits::Density) |
-                        static_cast<uint32_t>(PhysicsMaterialOverrideBits::RestitutionThreshold);
+    override3D.fields =
+      static_cast<uint32_t>(PhysicsMaterialOverrideBits::Density) | static_cast<uint32_t>(PhysicsMaterialOverrideBits::RestitutionThreshold);
     override3D.density = 2.5f;
     override3D.restitution_threshold = 1.75f;
     REQUIRE(api.collider3d_set_material_override(&context, managedEntity3DId, &override3D) == CW_MANAGED_STATUS_OK);
@@ -354,9 +349,58 @@ TEST_CASE("CoreCLR adapter loads a published private package", "[Scripting][Mana
     REQUIRE(created.Result.Succeeded);
     CHECK(entity.HasComponent<CameraComponent>());
 
+    REQUIRE(probe->Methods.size() == 1);
+    const ScriptMethodSchema& button = probe->Methods.front();
+    REQUIRE(button.Parameters.size() == 1);
+    const ScriptInvocationResult invocation = scripting.InvokeButton(created.Handle, button.StableId,
+                                                                      { button.Parameters.front().DefaultValue });
+    INFO(DescribeDiagnostics(invocation.Result));
+    REQUIRE(invocation.Result.Succeeded);
+    REQUIRE(invocation.HasReturnValue);
+    CHECK(invocation.ReturnValue.SignedValue == 3);
+
+    const auto conditionalField = std::find_if(probe->Fields.begin(), probe->Fields.end(),
+                                                [](const ScriptFieldSchema& field) { return field.Name == "conditionalValue"; });
+    REQUIRE(conditionalField != probe->Fields.end());
+    const ScriptConditionalSettings* conditions = conditionalField->Attributes.Get<ScriptConditionalSettings>();
+    REQUIRE(conditions != nullptr);
+    REQUIRE(conditions->Rules.size() == 2);
+    CHECK(conditions->Rules[0].Effect == ScriptConditionEffect::Show);
+    CHECK(conditions->Rules[0].Condition == "advanced");
+    CHECK(conditions->Rules[1].Effect == ScriptConditionEffect::Enable);
+    CHECK(conditions->Rules[1].Condition == "CanEdit");
+    const ScriptOnValueChangedSettings* valueChanged = conditionalField->Attributes.Get<ScriptOnValueChangedSettings>();
+    REQUIRE(valueChanged != nullptr);
+    REQUIRE(valueChanged->Actions.size() == 1);
+    CHECK(valueChanged->Actions.front().PassValue);
+    CHECK(valueChanged->Actions.front().InvokeOnUndoRedo);
+
+    const ScriptStateResult callbackInput = scripting.CaptureState(created.Handle);
+    INFO(DescribeDiagnostics(callbackInput.Result));
+    REQUIRE(callbackInput.Result.Succeeded);
+    ScriptState edited = callbackInput.State;
+    edited.Root.Members.at("advanced") = ScriptValue::Boolean(true);
+    edited.Root.Members.at("conditionalValue") = ScriptValue::Signed(7);
+    REQUIRE(scripting.ApplyState(created.Handle, edited).Succeeded);
+    const ScriptInvocationResult callback =
+      scripting.InvokeButton(created.Handle, valueChanged->Actions.front().MethodId, { ScriptValue::Signed(7) });
+    INFO(DescribeDiagnostics(callback.Result));
+    REQUIRE(callback.Result.Succeeded);
+
     const ScriptStateResult beforeReload = scripting.CaptureState(created.Handle);
     INFO(DescribeDiagnostics(beforeReload.Result));
     REQUIRE(beforeReload.Result.Succeeded);
+    REQUIRE(beforeReload.State.Root.Members.contains("value"));
+    CHECK(beforeReload.State.Root.Members.at("value").SignedValue == 3);
+    CHECK(beforeReload.State.Root.Members.at("callbackValue").SignedValue == 7);
+    const ScriptConditionalSettings* resolvedConditions =
+      beforeReload.State.Root.Members.at("conditionalValue").Attributes.Get<ScriptConditionalSettings>();
+    REQUIRE(resolvedConditions != nullptr);
+    REQUIRE(resolvedConditions->Rules.size() == 2);
+    CHECK(resolvedConditions->Rules[0].HasResolvedResult);
+    CHECK(resolvedConditions->Rules[0].ResolvedResult);
+    CHECK(resolvedConditions->Rules[1].HasResolvedResult);
+    CHECK(resolvedConditions->Rules[1].ResolvedResult);
     ManagedProgramDefinition replacement = loaded.Package.Program;
     replacement.Generation = 2;
     const ManagedOperationResult reloaded = scripting.ReloadProgram(replacement);
@@ -415,6 +459,469 @@ TEST_CASE("Managed catalog preserves unambiguous nested script identities", "[Sc
     REQUIRE(event != String::npos);
     invalid.replace(event, 5, "Unknown");
     CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
+}
+
+TEST_CASE("Managed catalog preserves searchable inspector settings", "[Scripting][Managed][Contract]")
+{
+    const String json =
+      R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+      R"("TypeName":"Inventory","BaseType":null,"RunInEditor":false,"Searchable":{"FilterOptions":15,"FuzzySearch":true,"Recursive":false},)"
+      R"("Events":[],"Fields":[{"StableId":12,"Name":"Items","ValueKind":"List","ElementKind":"Object","KeyKind":null,)"
+      R"("DeclaredType":null,"IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,)"
+      R"("Searchable":{"FilterOptions":9,"FuzzySearch":false,"Recursive":true}}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    REQUIRE(catalog.Types.size() == 1);
+    const ScriptSearchSettings* typeSearch = catalog.Types.front().Attributes.Get<ScriptSearchSettings>();
+    REQUIRE(typeSearch != nullptr);
+    CHECK(typeSearch->FilterOptions == ScriptSearchFilterOptions::All);
+    CHECK(typeSearch->FuzzySearch);
+    CHECK_FALSE(typeSearch->Recursive);
+    const ScriptSearchSettings* fieldSearch = catalog.Types.front().Fields.front().Attributes.Get<ScriptSearchSettings>();
+    REQUIRE(fieldSearch != nullptr);
+    CHECK(fieldSearch->FilterOptions ==
+          (ScriptSearchFilterOptions::PropertyName | ScriptSearchFilterOptions::ValueToString));
+    CHECK_FALSE(fieldSearch->FuzzySearch);
+    CHECK(fieldSearch->Recursive);
+
+    String invalid = json;
+    const size_t options = invalid.find("\"FilterOptions\":15");
+    REQUIRE(options != String::npos);
+    invalid.replace(options, String("\"FilterOptions\":15").size(), "\"FilterOptions\":16");
+    CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
+}
+
+TEST_CASE("Managed inspector attributes are cached by settings type", "[Scripting][Managed][Contract]")
+{
+    ScriptInspectorAttributeSet attributes;
+    attributes.Set(ScriptTooltipSettings{ "Cached tooltip" });
+    attributes.Set(ScriptMultilineSettings{ 6 });
+
+    const ScriptTooltipSettings* tooltip = attributes.Get<ScriptTooltipSettings>();
+    const ScriptMultilineSettings* multiline = attributes.Get<ScriptMultilineSettings>();
+    REQUIRE(tooltip != nullptr);
+    REQUIRE(multiline != nullptr);
+    CHECK(tooltip->Text == "Cached tooltip");
+    CHECK(multiline->Lines == 6);
+    CHECK_FALSE(attributes.Has<ScriptSearchSettings>());
+
+    const ScriptInspectorAttributeSet copy = attributes;
+    REQUIRE(copy.Get<ScriptTooltipSettings>() != nullptr);
+    CHECK(copy.Get<ScriptTooltipSettings>()->Text == "Cached tooltip");
+}
+
+TEST_CASE("Managed JSON preserves conditional and value-changed inspector settings", "[Scripting][Managed][Contract]")
+{
+    const String json =
+      R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+      R"("TypeName":"ConditionalExample","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[{)"
+      R"("StableId":12,"Name":"Target","ValueKind":"SignedInteger","ElementKind":null,"KeyKind":null,)"
+      R"("DeclaredType":null,"IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,)"
+      R"("Conditions":[{"Effect":0,"Condition":"Advanced","Animate":false,"HasValue":false,"ValueKind":"Null","Value":null},)"
+      R"({"Effect":3,"Condition":"Mode","Animate":true,"HasValue":true,"ValueKind":"SignedInteger","Value":2}],)"
+      R"("OnValueChanged":[{"Action":"TargetChanged","MethodId":42,"IncludeChildren":true,"InvokeOnInitialize":true,)"
+      R"("InvokeOnUndoRedo":false,"PassValue":true}]}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    const ScriptFieldSchema& field = catalog.Types.front().Fields.front();
+    const ScriptConditionalSettings* conditions = field.Attributes.Get<ScriptConditionalSettings>();
+    REQUIRE(conditions != nullptr);
+    REQUIRE(conditions->Rules.size() == 2);
+    CHECK(conditions->Rules[0].Effect == ScriptConditionEffect::Show);
+    CHECK(conditions->Rules[0].Condition == "Advanced");
+    CHECK_FALSE(conditions->Rules[0].Animate);
+    CHECK_FALSE(conditions->Rules[0].HasValue);
+    CHECK(conditions->Rules[1].Effect == ScriptConditionEffect::Disable);
+    CHECK(conditions->Rules[1].HasValue);
+    CHECK(conditions->Rules[1].Value.SignedValue == 2);
+
+    const ScriptOnValueChangedSettings* valueChanged = field.Attributes.Get<ScriptOnValueChangedSettings>();
+    REQUIRE(valueChanged != nullptr);
+    REQUIRE(valueChanged->Actions.size() == 1);
+    const ScriptValueChangedAction& action = valueChanged->Actions.front();
+    CHECK(action.Action == "TargetChanged");
+    CHECK(action.MethodId == 42);
+    CHECK(action.IncludeChildren);
+    CHECK(action.InvokeOnInitialize);
+    CHECK_FALSE(action.InvokeOnUndoRedo);
+    CHECK(action.PassValue);
+
+    String invalid = json;
+    const size_t methodId = invalid.find("\"MethodId\":42");
+    REQUIRE(methodId != String::npos);
+    invalid.replace(methodId, String("\"MethodId\":42").size(), "\"MethodId\":0");
+    CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
+}
+
+TEST_CASE("Managed catalog preserves inspector button methods", "[Scripting][Managed][Contract]")
+{
+    const String json =
+      R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+      R"("TypeName":"Actions","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[],"Methods":[{)"
+      R"("StableId":21,"Name":"AddScore","IsStatic":false,"ReturnKind":"SignedInteger","DeclaredReturnType":null,)"
+      R"("Parameters":[{"Name":"amount","ValueKind":"SignedInteger","DeclaredType":null,"HasDefaultValue":true,"DefaultValue":5}],)"
+      R"("Button":{"Name":"Add Score","ButtonHeight":30,"ButtonAlignment":0.25,"Stretch":false,"Style":2,)"
+      R"("DisplayParameters":true,"Expanded":true,"DrawResult":true,"DirtyOnClick":false,"Icon":"plus","IconAlignment":1}}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    REQUIRE(catalog.Types.size() == 1);
+    REQUIRE(catalog.Types.front().Methods.size() == 1);
+    const ScriptMethodSchema& method = catalog.Types.front().Methods.front();
+    CHECK(method.StableId == 21);
+    CHECK(method.Name == "AddScore");
+    CHECK(method.ReturnKind == ScriptValueKind::SignedInteger);
+    REQUIRE(method.Parameters.size() == 1);
+    CHECK(method.Parameters.front().Name == "amount");
+    CHECK(method.Parameters.front().HasDefaultValue);
+    CHECK(method.Parameters.front().DefaultValue.SignedValue == 5);
+    const ScriptButtonSettings* settings = method.Attributes.Get<ScriptButtonSettings>();
+    REQUIRE(settings != nullptr);
+    CHECK(settings->Name == "Add Score");
+    CHECK(settings->ButtonHeight == 30);
+    CHECK(settings->ButtonAlignment == 0.25f);
+    CHECK_FALSE(settings->Stretch);
+    CHECK(settings->Style == ScriptButtonStyle::FoldoutButton);
+    CHECK(settings->Expanded);
+    CHECK_FALSE(settings->DirtyOnClick);
+    CHECK(settings->Icon == "plus");
+    CHECK(settings->IconAlignment == ScriptButtonIconAlignment::Right);
+
+    const Vector<ScriptValue> arguments = { ScriptValue::Signed(9), ScriptValue::Text("go") };
+    CHECK(WriteManagedArgumentsJson(arguments) == R"([9,"go"])");
+    const ScriptInvocationResult result =
+      ParseManagedInvocationResultJson(R"({"HasResult":true,"ResultKind":"String","Result":"done"})", ManagedBackendId::CoreCLR);
+    REQUIRE(result.Result.Succeeded);
+    REQUIRE(result.HasReturnValue);
+    CHECK(result.ReturnValue.Kind == ScriptValueKind::String);
+    CHECK(result.ReturnValue.StringValue == "done");
+}
+
+TEST_CASE("Managed catalog preserves progress bar inspector settings", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"Player","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[{"StableId":12,)"
+                        R"("Name":"Health","ValueKind":"Float","ElementKind":null,"KeyKind":null,"DeclaredType":null,)"
+                        R"("IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,"ProgressBar":{)"
+                        R"("Min":0,"Max":100,"MinGetter":"","MaxGetter":"MaxHealth","R":0.2,"G":0.6,"B":0.3,"Height":18,)"
+                        R"("Segmented":true,"DrawValueLabel":true,"ValueLabelAlignment":2,"ColorGetter":"HealthColor",)"
+                        R"("BackgroundColorGetter":"BarBackground","CustomValueStringGetter":"HealthLabel"}}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    REQUIRE(catalog.Types.size() == 1);
+    const ScriptProgressBarSettings* progressBar =
+      catalog.Types.front().Fields.front().Attributes.Get<ScriptProgressBarSettings>();
+    REQUIRE(progressBar != nullptr);
+    const ScriptProgressBarSettings& settings = *progressBar;
+    CHECK(settings.Min == 0.0);
+    CHECK(settings.Max == 100.0);
+    CHECK(settings.MaxGetter == "MaxHealth");
+    CHECK(settings.Color == glm::vec3(0.2f, 0.6f, 0.3f));
+    CHECK(settings.Height == 18);
+    CHECK(settings.Segmented);
+    CHECK(settings.DrawValueLabel);
+    CHECK(settings.ValueLabelAlignment == ScriptProgressBarLabelAlignment::Right);
+    CHECK(settings.ColorGetter == "HealthColor");
+    CHECK(settings.BackgroundColorGetter == "BarBackground");
+    CHECK(settings.CustomValueStringGetter == "HealthLabel");
+
+    String invalid = json;
+    const size_t height = invalid.find("\"Height\":18");
+    REQUIRE(height != String::npos);
+    invalid.replace(height, String("\"Height\":18").size(), "\"Height\":0");
+    CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
+}
+
+TEST_CASE("Managed catalog preserves path and multiline inspector settings", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game","TypeName":"Paths",)"
+                        R"("BaseType":null,"RunInEditor":false,"Events":[],"Fields":[)"
+                        R"({"StableId":12,"Name":"Source","ValueKind":"String","ElementKind":null,"KeyKind":null,"DeclaredType":null,)"
+                        R"("IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,"FilePath":{)"
+                        R"("AbsolutePath":false,"ParentFolder":"$Root","RequireExistingPath":true,"UseBackslashes":false,)"
+                        R"("Extensions":"$Extensions","IncludeFileExtension":false}},)"
+                        R"({"StableId":13,"Name":"Output","ValueKind":"String","ElementKind":null,"KeyKind":null,"DeclaredType":null,)"
+                        R"("IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,"FolderPath":{)"
+                        R"("AbsolutePath":true,"ParentFolder":"","RequireExistingPath":false,"UseBackslashes":true}},)"
+                        R"({"StableId":14,"Name":"Description","ValueKind":"String","ElementKind":null,"KeyKind":null,"DeclaredType":null,)"
+                        R"("IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,"Multiline":{"Lines":7}}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    REQUIRE(catalog.Types.front().Fields.size() == 3);
+    const ScriptPathSettings* fileSettings = catalog.Types.front().Fields[0].Attributes.Get<ScriptPathSettings>();
+    REQUIRE(fileSettings != nullptr);
+    const ScriptPathSettings& file = *fileSettings;
+    CHECK(file.Kind == ScriptPathKind::File);
+    CHECK(file.ParentFolder == "$Root");
+    CHECK(file.Extensions == "$Extensions");
+    CHECK(file.RequireExistingPath);
+    CHECK_FALSE(file.IncludeFileExtension);
+    const ScriptPathSettings* folderSettings = catalog.Types.front().Fields[1].Attributes.Get<ScriptPathSettings>();
+    REQUIRE(folderSettings != nullptr);
+    const ScriptPathSettings& folder = *folderSettings;
+    CHECK(folder.Kind == ScriptPathKind::Folder);
+    CHECK(folder.AbsolutePath);
+    CHECK(folder.UseBackslashes);
+    const ScriptMultilineSettings* multiline = catalog.Types.front().Fields[2].Attributes.Get<ScriptMultilineSettings>();
+    REQUIRE(multiline != nullptr);
+    CHECK(multiline->Lines == 7);
+}
+
+TEST_CASE("Managed catalog preserves enum button options and flags", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game","TypeName":"Access",)"
+                        R"("BaseType":null,"RunInEditor":false,"Events":[],"Fields":[{"StableId":12,"Name":"Permissions",)"
+                        R"("ValueKind":"Enum","ElementKind":null,"KeyKind":null,"DeclaredType":null,"IsNullable":false,)"
+                        R"("IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,"EnumButtons":{"IsFlags":true,)"
+                        R"("IsUnsigned":true,"IncludeObsolete":false,"Options":[{"Name":"None","Value":0},{"Name":"Read","Value":1},)"
+                        R"({"Name":"Write","Value":2},{"Name":"All","Value":3}]}}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    const ScriptEnumButtonsSettings* enumButtons =
+      catalog.Types.front().Fields.front().Attributes.Get<ScriptEnumButtonsSettings>();
+    REQUIRE(enumButtons != nullptr);
+    const ScriptEnumButtonsSettings& settings = *enumButtons;
+    CHECK(settings.IsFlags);
+    CHECK(settings.IsUnsigned);
+    CHECK_FALSE(settings.IncludeObsolete);
+    REQUIRE(settings.Options.size() == 4);
+    CHECK(settings.Options[3].Name == "All");
+    CHECK(settings.Options[3].Value == 3);
+
+    String invalid = json;
+    const size_t kind = invalid.find("\"ValueKind\":\"Enum\"");
+    REQUIRE(kind != String::npos);
+    invalid.replace(kind, String("\"ValueKind\":\"Enum\"").size(), "\"ValueKind\":\"String\"");
+    CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
+}
+
+TEST_CASE("Managed state preserves unsigned enum bits", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"StateVersion":1,"Assembly":"GameAssembly","Namespace":"Game","TypeName":"Access",)"
+                        R"("Metadata":{"Permissions":{"Kind":"Enum","Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"Permissions","EnumUnsigned":true}},"Fields":{"Permissions":18446744073709551615}})";
+
+    ScriptFieldSchema permissions;
+    permissions.Name = "Permissions";
+    permissions.ValueKind = ScriptValueKind::Enum;
+    ScriptTypeSchema schema;
+    schema.Fields.push_back(permissions);
+
+    ScriptState state;
+    REQUIRE(ParseManagedStateJson(json, state, ManagedBackendId::CoreCLR, &schema).Succeeded);
+    const ScriptValue& value = state.Root.Members.at("Permissions");
+    CHECK(value.Kind == ScriptValueKind::Enum);
+    CHECK(value.EnumUnsigned);
+    CHECK(static_cast<uint64_t>(value.SignedValue) == std::numeric_limits<uint64_t>::max());
+
+    const String encoded = WriteManagedStateJson(state);
+    CHECK(encoded.find("18446744073709551615") != String::npos);
+}
+
+TEST_CASE("Managed catalog preserves every dictionary display layout", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"ManifestVersion":2,"DictionaryDisplays":[{"TargetType":{"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"NestedDictionary"},"Layout":1,"KeyLabel":"Nested key","ValueLabel":"Nested value",)"
+                        R"("KeyColumnFraction":0.35}],"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"DictionaryExample","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[)"
+                        R"({"StableId":12,"Name":"Columns","ValueKind":"Dictionary","ElementKind":"Float","KeyKind":"String",)"
+                        R"("DeclaredType":{"Assembly":"GameAssembly","Namespace":"Game","TypeName":"ColumnsDictionary"},"IsNullable":false,)"
+                        R"("IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,"DictionaryDisplay":{"Layout":0,"KeyLabel":"Name",)"
+                        R"("ValueLabel":"Amount","KeyColumnFraction":0.6}},)"
+                        R"({"StableId":13,"Name":"Visible","ValueKind":"Dictionary","ElementKind":"Object","KeyKind":"SignedInteger",)"
+                        R"("DeclaredType":{"Assembly":"GameAssembly","Namespace":"Game","TypeName":"VisibleDictionary"},"IsNullable":false,)"
+                        R"("IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,"DictionaryDisplay":{"Layout":2,"KeyLabel":"",)"
+                        R"("ValueLabel":"","KeyColumnFraction":0.5}}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    REQUIRE(catalog.DictionaryDisplays.size() == 1);
+    CHECK(catalog.DictionaryDisplays.front().Display.Layout == ScriptDictionaryLayout::OneColumnWithValueFoldout);
+    CHECK(catalog.DictionaryDisplays.front().Display.KeyColumnFraction == Catch::Approx(0.35f));
+    REQUIRE(catalog.Types.front().Fields.size() == 2);
+    const ScriptDictionaryDisplaySettings* columnSettings =
+      catalog.Types.front().Fields[0].Attributes.Get<ScriptDictionaryDisplaySettings>();
+    REQUIRE(columnSettings != nullptr);
+    const ScriptDictionaryDisplaySettings& columns = *columnSettings;
+    CHECK(columns.Layout == ScriptDictionaryLayout::TwoColumns);
+    CHECK(columns.KeyLabel == "Name");
+    CHECK(columns.ValueLabel == "Amount");
+    CHECK(columns.KeyColumnFraction == Catch::Approx(0.6f));
+    const ScriptDictionaryDisplaySettings* visibleSettings =
+      catalog.Types.front().Fields[1].Attributes.Get<ScriptDictionaryDisplaySettings>();
+    REQUIRE(visibleSettings != nullptr);
+    const ScriptDictionaryDisplaySettings& visible = *visibleSettings;
+    CHECK(visible.Layout == ScriptDictionaryLayout::OneColumnWithValueVisible);
+    CHECK(visible.KeyLabel == "Key");
+    CHECK(visible.ValueLabel == "Value");
+
+    const ScriptTypeIdentity nestedType{ "GameAssembly", "Game", "NestedDictionary" };
+    REQUIRE(catalog.FindDictionaryDisplay(nestedType) != nullptr);
+    CHECK(catalog.FindDictionaryDisplay(nestedType)->ValueLabel == "Nested value");
+
+    String invalid = json;
+    const size_t fraction = invalid.find("\"KeyColumnFraction\":0.6");
+    REQUIRE(fraction != String::npos);
+    invalid.replace(fraction, String("\"KeyColumnFraction\":0.6").size(), "\"KeyColumnFraction\":1.5");
+    CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
+}
+
+TEST_CASE("Managed state preserves nested dictionary display settings", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"StateVersion":1,"Assembly":"GameAssembly","Namespace":"Game","TypeName":"DictionaryExample",)"
+                        R"("Metadata":{"Values":{"Kind":"Dictionary","Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"ValuesDictionary","DictionaryDisplay":{"Layout":2,"KeyLabel":"Code","ValueLabel":"Text",)"
+                        R"("KeyColumnFraction":0.4},"Elements":[]}},"Fields":{"Values":[]}})";
+
+    ScriptFieldSchema values;
+    values.Name = "Values";
+    values.ValueKind = ScriptValueKind::Dictionary;
+    ScriptTypeSchema schema;
+    schema.Fields.push_back(values);
+    ScriptState state;
+    REQUIRE(ParseManagedStateJson(json, state, ManagedBackendId::CoreCLR, &schema).Succeeded);
+    const ScriptValue& dictionary = state.Root.Members.at("Values");
+    const ScriptDictionaryDisplaySettings* dictionaryDisplay = dictionary.Attributes.Get<ScriptDictionaryDisplaySettings>();
+    REQUIRE(dictionaryDisplay != nullptr);
+    CHECK(dictionaryDisplay->Layout == ScriptDictionaryLayout::OneColumnWithValueVisible);
+    CHECK(dictionaryDisplay->KeyLabel == "Code");
+    CHECK(dictionaryDisplay->ValueLabel == "Text");
+    CHECK(WriteManagedStateJson(state).find("\"DictionaryDisplay\"") != String::npos);
+}
+
+TEST_CASE("Managed catalog preserves field tooltips", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"ManifestVersion":2,"Types":[{"StableId":21,"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"TooltipExample","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[)"
+                        R"({"StableId":22,"Name":"Health","ValueKind":"SignedInteger","ElementKind":null,"KeyKind":null,)"
+                        R"("DeclaredType":null,"IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,)"
+                        R"("Tooltip":"Health value between 0 and 100."}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    REQUIRE(catalog.Types.size() == 1);
+    REQUIRE(catalog.Types.front().Fields.size() == 1);
+    const ScriptTooltipSettings* tooltip = catalog.Types.front().Fields.front().Attributes.Get<ScriptTooltipSettings>();
+    REQUIRE(tooltip != nullptr);
+    CHECK(tooltip->Text == "Health value between 0 and 100.");
+
+    String invalid = json;
+    const size_t tooltip = invalid.find("\"Tooltip\":\"Health value between 0 and 100.\"");
+    REQUIRE(tooltip != String::npos);
+    invalid.replace(tooltip, String("\"Tooltip\":\"Health value between 0 and 100.\"").size(), "\"Tooltip\":42");
+    CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
+}
+
+TEST_CASE("Managed labels do not replace serialized member names", "[Scripting][Managed][Contract]")
+{
+    const String catalogJson = R"({"ManifestVersion":2,"Types":[{"StableId":41,"Assembly":"GameAssembly","Namespace":"Game",)"
+                               R"("TypeName":"LabelExample","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[)"
+                               R"({"StableId":42,"Name":"internalHealth","ValueKind":"SignedInteger","ElementKind":null,)"
+                               R"("KeyKind":null,"DeclaredType":null,"IsNullable":false,"IsSerializable":true,)"
+                               R"("IsInspectable":true,"IsReadOnly":false,"Label":"Health"}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(catalogJson, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    const ScriptFieldSchema& field = catalog.Types.front().Fields.front();
+    CHECK(field.Name == "internalHealth");
+    const ScriptLabelSettings* label = field.Attributes.Get<ScriptLabelSettings>();
+    REQUIRE(label != nullptr);
+    CHECK(label->Text == "Health");
+
+    const String stateJson = R"({"StateVersion":1,"Assembly":"GameAssembly","Namespace":"Game","TypeName":"LabelExample",)"
+                             R"("Metadata":{"internalHealth":{"Kind":"SignedInteger","Label":"Health"}},)"
+                             R"("Fields":{"internalHealth":75}})";
+    ScriptState state;
+    REQUIRE(ParseManagedStateJson(stateJson, state, ManagedBackendId::CoreCLR, &catalog.Types.front()).Succeeded);
+    REQUIRE(state.Root.Members.find("internalHealth") != state.Root.Members.end());
+    CHECK(state.Root.Members.find("Health") == state.Root.Members.end());
+
+    const String encoded = WriteManagedStateJson(state);
+    CHECK(encoded.find("\"Fields\":{\"internalHealth\":75}") != String::npos);
+    CHECK(encoded.find("\"Label\":\"Health\"") != String::npos);
+}
+
+TEST_CASE("Managed state preserves nested tooltips", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"StateVersion":1,"Assembly":"GameAssembly","Namespace":"Game","TypeName":"TooltipExample",)"
+                        R"("Metadata":{"Settings":{"Kind":"Object","Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"Settings","Members":{"Speed":{"Kind":"Float","Tooltip":"Units per second."}}}},)"
+                        R"("Fields":{"Settings":{"Speed":3.5}}})";
+
+    ScriptFieldSchema settings;
+    settings.Name = "Settings";
+    settings.ValueKind = ScriptValueKind::Object;
+    ScriptTypeSchema schema;
+    schema.Fields.push_back(settings);
+
+    ScriptState state;
+    REQUIRE(ParseManagedStateJson(json, state, ManagedBackendId::CoreCLR, &schema).Succeeded);
+    const ScriptValue& speed = state.Root.Members.at("Settings").Members.at("Speed");
+    const ScriptTooltipSettings* tooltip = speed.Attributes.Get<ScriptTooltipSettings>();
+    REQUIRE(tooltip != nullptr);
+    CHECK(tooltip->Text == "Units per second.");
+    CHECK(WriteManagedStateJson(state).find("\"Tooltip\":\"Units per second.\"") != String::npos);
+}
+
+TEST_CASE("Managed catalog preserves color usage settings", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"ManifestVersion":2,"Types":[{"StableId":31,"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"ColorUsageExample","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[)"
+                        R"({"StableId":32,"Name":"Opaque","ValueKind":"Color","ElementKind":null,"KeyKind":null,"DeclaredType":null,)"
+                        R"("IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,)"
+                        R"("ColorUsage":{"ShowAlpha":false,"Hdr":false}},)"
+                        R"({"StableId":33,"Name":"Emission","ValueKind":"Color","ElementKind":null,"KeyKind":null,"DeclaredType":null,)"
+                        R"("IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,)"
+                        R"("ColorUsage":{"ShowAlpha":true,"Hdr":true}}]}]})";
+
+    ScriptCatalog catalog;
+    REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
+    REQUIRE(catalog.Types.front().Fields.size() == 2);
+    const ScriptColorUsageSettings* opaqueSettings = catalog.Types.front().Fields[0].Attributes.Get<ScriptColorUsageSettings>();
+    REQUIRE(opaqueSettings != nullptr);
+    const ScriptColorUsageSettings& opaque = *opaqueSettings;
+    CHECK_FALSE(opaque.ShowAlpha);
+    CHECK_FALSE(opaque.Hdr);
+    const ScriptColorUsageSettings* emissionSettings = catalog.Types.front().Fields[1].Attributes.Get<ScriptColorUsageSettings>();
+    REQUIRE(emissionSettings != nullptr);
+    const ScriptColorUsageSettings& emission = *emissionSettings;
+    CHECK(emission.ShowAlpha);
+    CHECK(emission.Hdr);
+
+    String invalid = json;
+    const size_t kind = invalid.find("\"ValueKind\":\"Color\"");
+    REQUIRE(kind != String::npos);
+    invalid.replace(kind, String("\"ValueKind\":\"Color\"").size(), "\"ValueKind\":\"String\"");
+    CHECK_FALSE(ParseManagedCatalogJson(invalid, catalog, ManagedBackendId::CoreCLR).Succeeded);
+}
+
+TEST_CASE("Managed state preserves nested color usage settings", "[Scripting][Managed][Contract]")
+{
+    const String json = R"({"StateVersion":1,"Assembly":"GameAssembly","Namespace":"Game","TypeName":"ColorUsageExample",)"
+                        R"("Metadata":{"Settings":{"Kind":"Object","Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"Settings","Members":{"Emission":{"Kind":"Color",)"
+                        R"("ColorUsage":{"ShowAlpha":false,"Hdr":true}}}}},)"
+                        R"("Fields":{"Settings":{"Emission":[2.0,1.5,0.5,0.75]}}})";
+
+    ScriptFieldSchema settings;
+    settings.Name = "Settings";
+    settings.ValueKind = ScriptValueKind::Object;
+    ScriptTypeSchema schema;
+    schema.Fields.push_back(settings);
+
+    ScriptState state;
+    REQUIRE(ParseManagedStateJson(json, state, ManagedBackendId::CoreCLR, &schema).Succeeded);
+    const ScriptValue& emission = state.Root.Members.at("Settings").Members.at("Emission");
+    const ScriptColorUsageSettings* colorUsage = emission.Attributes.Get<ScriptColorUsageSettings>();
+    REQUIRE(colorUsage != nullptr);
+    CHECK_FALSE(colorUsage->ShowAlpha);
+    CHECK(colorUsage->Hdr);
+    CHECK(WriteManagedStateJson(state).find("\"ColorUsage\"") != String::npos);
 }
 
 TEST_CASE("CoreCLR package manifest resolves only package-local artifacts", "[Scripting][Managed][CoreCLR]")

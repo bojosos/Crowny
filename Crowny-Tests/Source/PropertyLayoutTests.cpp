@@ -67,6 +67,8 @@ namespace
         bool ItemWidthBalanced = false;
         bool IdBalanced = false;
         bool ColumnsFinalized = false;
+        float MultilineHeight = 0.0f;
+        float ExpectedMultilineHeight = 0.0f;
     };
 
     StackObservations DrawMultilineProperty(bool disabled)
@@ -87,9 +89,11 @@ namespace
         const int rowItemWidthDepth = window->DC.ItemWidthStack.Size;
 
         String value = "Line one\nLine two";
-        UI::PropertyMultiline("Text", value);
+        UI::PropertyMultiline("Text", value, 3);
 
         StackObservations observations;
+        observations.MultilineHeight = ImGui::GetItemRectSize().y;
+        observations.ExpectedMultilineHeight = ImGui::GetTextLineHeightWithSpacing() * 3.0f + ImGui::GetStyle().FramePadding.y * 2.0f;
         observations.RowStyleBalanced = context.StyleVarStack.Size == rowStyleDepth;
         observations.ItemWidthBalanced = window->DC.ItemWidthStack.Size == rowItemWidthDepth;
         if (disabled)
@@ -157,6 +161,7 @@ TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[E
         CHECK(observations.ItemWidthBalanced);
         CHECK(observations.IdBalanced);
         CHECK(observations.ColumnsFinalized);
+        CHECK(observations.MultilineHeight == Approx(observations.ExpectedMultilineHeight));
     }
 }
 

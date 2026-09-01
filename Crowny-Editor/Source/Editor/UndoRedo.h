@@ -118,6 +118,7 @@ namespace Crowny
 
         bool CanUndo() const { return m_RecordingEnabled && !m_UndoStack.empty(); }
         bool CanRedo() const { return m_RecordingEnabled && !m_RedoStack.empty(); }
+        uint64_t GetActionAppliedVersion() const { return m_ActionAppliedVersion; }
         const String& GetUndoName() const;
         const String& GetRedoName() const;
         void Clear();
@@ -152,6 +153,7 @@ namespace Crowny
         Ref<RetainedUndoActionFactory> m_RetainedFactory;
         UndoTransaction m_Transaction;
         ActionAppliedCallback m_ActionApplied;
+        uint64_t m_ActionAppliedVersion = 0;
         bool m_ComponentScopeOpen = false;
         bool m_CommitPending = false;
         bool m_RecordingEnabled = true;

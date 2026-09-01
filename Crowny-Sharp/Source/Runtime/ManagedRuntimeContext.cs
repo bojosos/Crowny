@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Crowny
 {
@@ -185,10 +184,10 @@ namespace Crowny
 
         private static string DecodeString(ManagedNativeStringView value)
         {
-            if (value.Data == null || value.Length == 0)
-                return string.Empty;
-            return Encoding.UTF8.GetString(value.Data, checked((int)value.Length));
+            return ManagedStringCache.Decode(value.Data, value.Length);
         }
+
+        private static byte[] EncodeString(string value) { return ManagedStringCache.Encode(value); }
 
         private static string DecodeOptionalString(ManagedNativeStringView value)
         {

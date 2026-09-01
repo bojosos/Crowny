@@ -31,6 +31,7 @@ namespace Crowny
         ManagedOperationResult Dispatch(ScriptInstanceHandle handle, const ScriptEvent& event);
         ScriptStateResult CaptureState(ScriptInstanceHandle handle);
         ManagedOperationResult ApplyState(ScriptInstanceHandle handle, const ScriptState& state);
+        ScriptInvocationResult InvokeButton(ScriptInstanceHandle handle, uint64_t methodId, const Vector<ScriptValue>& arguments);
         Vector<ManagedDiagnostic> Update();
         void NotifyEntityDestroyed(const Entity& entity);
         void NotifyComponentDestroyed(uint64_t instanceId);

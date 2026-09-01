@@ -175,6 +175,13 @@ internal sealed class ManagedProgram
             throw new InvalidOperationException(error);
     }
 
+    internal byte[] InvokeButton(ulong handle, ulong methodId, ReadOnlySpan<byte> arguments)
+    {
+        ScriptRecord record = Get(handle);
+        string encoded = ManagedButtonInvoker.Invoke(record.Instance, methodId, System.Text.Encoding.UTF8.GetString(arguments));
+        return System.Text.Encoding.UTF8.GetBytes(encoded);
+    }
+
     private ScriptRecord Get(ulong handle) =>
         _instances.TryGetValue(handle, out ScriptRecord? record) ? record : throw new KeyNotFoundException($"Unknown script handle {handle}.");
 

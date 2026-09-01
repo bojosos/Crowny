@@ -35,6 +35,7 @@ public static unsafe class Bootstrap
             NotifySceneEvent = &NotifySceneEvent,
             CaptureState = &CaptureState,
             ApplyState = &ApplyState,
+            InvokeButton = &InvokeButton,
             CollectDiagnostics = &CollectDiagnostics
         };
         return NativeStatus.Ok;
@@ -251,6 +252,24 @@ public static unsafe class Bootstrap
         try
         {
             Program.ApplyState(instance, AsSpan(state));
+            return NativeStatus.Ok;
+        }
+        catch (Exception error)
+        {
+            return Record(error, error is KeyNotFoundException ? NativeStatus.StaleHandle : NativeStatus.ManagedException);
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static NativeStatus InvokeButton(ulong instance, ulong methodId, NativeBlob arguments, NativeBlobWriter* output)
+    {
+        if (!_initialized)
+            return NativeStatus.NotInitialized;
+        if (!IsValid(arguments) || output is null)
+            return NativeStatus.InvalidArgument;
+        try
+        {
+            Write(output, Program.InvokeButton(instance, methodId, AsSpan(arguments)));
             return NativeStatus.Ok;
         }
         catch (Exception error)

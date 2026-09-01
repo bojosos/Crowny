@@ -20,6 +20,8 @@ namespace Crowny
 
         bool IsSetAny(const Flags<Enum, Storage>& value) const { return (m_Bits & value.m_Bits) != 0; }
 
+        Storage GetBits() const { return m_Bits; }
+
         Flags<Enum, Storage>& Set(Enum value)
         {
             m_Bits |= static_cast<Storage>(value);

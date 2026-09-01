@@ -26,9 +26,9 @@ namespace Crowny
         /// </summary>
         /// <param name="title">The title of the dialog.</param>
         /// <param name="directory">The default directory the dialog opens in.</param>
-        /// <param name="extension">A comma separated list of strings to be used for extension filters in the dialog. Do not used precede with a period.</param>
+        /// <param name="extension">A comma-separated list of extension filters. Leading periods are optional.</param>
         /// <returns>Returns the selected path.</returns>
-        public static string OpenFileDialog(string title, string directory, string extension)
+        public static string OpenFileDialog(string title = "Open File", string directory = "", string extension = "")
         {
             return ManagedRuntimeContext.FileDialogOpenFile(title, directory, extension);
         }
@@ -39,7 +39,7 @@ namespace Crowny
         /// <param name="title">The title of the dialog.</param>
         /// <param name="directory">The default directory the dialog opens in.</param>
         /// <returns>Returns the selected path.</returns>
-        public static string OpenFolderDialog(string title, string directory)
+        public static string OpenFolderDialog(string title = "Open Folder", string directory = "")
         {
             return ManagedRuntimeContext.FileDialogOpenFolder(title, directory);
         }
@@ -50,21 +50,21 @@ namespace Crowny
         /// <param name="title">The title of the dialog.</param>
         /// <param name="directory">The default directory the dialog opens in.</param>
         /// <param name="defaultName">The default name of the file.</param>
-        /// <param name="extension">A comma separated list of strings to be used for extension filters in the dialog. Do not used precede with a period.</param>
+        /// <param name="extension">A comma-separated list of extension filters. Leading periods are optional.</param>
         /// <returns>Returns the selected path.</returns>
-        public static string SaveFileDialog(string title, string directory, string defaultName, string extension)
+        public static string SaveFileDialog(string title = "Save File", string directory = "", string defaultName = "", string extension = "")
         {
             return ManagedRuntimeContext.FileDialogSaveFile(title, directory, defaultName, extension);
         }
 
         /// <summary>
-        /// Open a file dialog.
+        /// Open a folder selection dialog with a default folder name.
         /// </summary>
         /// <param name="title">The title of the dialog.</param>
         /// <param name="directory">The default directory the dialog opens in.</param>
         /// <param name="defaultName">The default name of the folder.</param>
         /// <returns>Returns the selected path.</returns>
-        public static string SaveFolderDialog(string title, string directory, string defaultName)
+        public static string SaveFolderDialog(string title = "Save Folder", string directory = "", string defaultName = "")
         {
             return ManagedRuntimeContext.FileDialogSaveFolder(title, directory, defaultName);
         }

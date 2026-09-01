@@ -152,6 +152,7 @@ namespace Crowny
         m_UndoStack.pop_back();
         action->Revert();
         m_RedoStack.push_back(action);
+        ++m_ActionAppliedVersion;
         if (m_ActionApplied)
             m_ActionApplied(action);
         return action;
@@ -167,6 +168,7 @@ namespace Crowny
         m_RedoStack.pop_back();
         action->Commit();
         m_UndoStack.push_back(action);
+        ++m_ActionAppliedVersion;
         if (m_ActionApplied)
             m_ActionApplied(action);
         return action;

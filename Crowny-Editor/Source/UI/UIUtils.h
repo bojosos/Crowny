@@ -220,7 +220,7 @@ namespace Crowny
 
         static bool IsItemHovered(float delayInSeconds = 0.1f, ImGuiHoveredFlags flags = 0)
         {
-            return ImGui::IsItemHovered() && GImGui->HoveredIdTimer > delayInSeconds;
+            return ImGui::IsItemHovered(flags) && (delayInSeconds <= 0.0f || GImGui->HoveredIdTimer > delayInSeconds);
         }
 
         static void SetTooltip(const StringView text, float delayInSeconds = 0.02f, bool allowWhenDisabled = true, ImVec2 padding = ImVec2(5, 5))
@@ -229,7 +229,7 @@ namespace Crowny
             {
                 ScopedStyle tooltipPadding(ImGuiStyleVar_WindowPadding, padding);
                 ScopedColor textCol(ImGuiCol_Text, IM_COL32(210, 210, 210, 255));
-                ImGui::SetTooltip("%s", text.data());
+                ImGui::SetTooltip("%.*s", static_cast<int>(text.size()), text.data());
             }
         }
 
