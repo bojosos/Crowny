@@ -58,6 +58,19 @@ Status: CPU deformation is integrated across culling bounds, depth, shadows, vel
 
 > Do we have allocators for things like vertex buffers, index buffers, pipelines? Look at here I think it would make sense to have pools for those so we can easily get already pre-allocated buffers, tehy have for gpu buffers it seems samplers etc https://github.com/GameFoundry/B3DFramework/tree/master/Source/Engine/Core/GpuBackend
 
+### Integration ledger
+
+This ledger uses commit and stash object hashes because branch tips and `stash@{n}` positions move. Do not reapply a parked snapshot just because its original worktree still exists.
+
+- `e0337302` contains the transient GPU texture pool and render-graph reuse integration. The old `codex/render-texture-pool` tip is an ancestor of `the-new-age`; it does not contain missing texture-pool work.
+- `60a2bf50` contains Basis/KTX2 texture-array support, `a9fcc934` contains unchanged deformation-upload settling, `b5627693` contains custom opaque forward routing, and `afa1ac74` contains the independent depth/object-ID output matrix.
+- `fd7d5002` contains the focused Vulkan renderer validation repairs. `87e1c4d4` contains the toon presets, editor controls, managed API, serialization migration, and silhouette capture.
+- `0b86b3cd` contains owned Vulkan vertex layouts and the white vertex-color fallback. `6a8995e0` contains typed binding probes for compute and lightweight graphics materials.
+- Stashes `68ef704b`, `0ec5a829`, `bcbff3ef`, `c8d3b10c`, `4d41587a`, `642906d8`, and `0ae11a9e` are parked pre-rebase forms of the two preceding Vulkan fixes. Keep them only until the final stash cleanup confirms their patch identity.
+- Stashes `a99b22c7`, `ec2db65c`, and `7b3c02bf` are parked pre-rebase forms of `87e1c4d4`. Stash `d8eb6c7f` combines that same source patch with cooker outputs.
+- Stash `48746471` is the 74-file pre-rebase toon snapshot. Its source work is represented by `fd7d5002`, `87e1c4d4`, `0b86b3cd`, and `6a8995e0`; its `.asset` and `.cwpack` entries are generated cooker output. Preserve it until a final semantic cleanup audit, but do not integrate it wholesale.
+- Runtime-scene and unrelated managed baseline stashes remain user-owned. Renderer cleanup must not drop them.
+
 ## 1. Mip generation and rendering
 
 Status: core integration, isolated GPU mip-selection coverage, and deterministic compressed-array codec fixtures delivered
