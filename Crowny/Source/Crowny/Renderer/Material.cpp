@@ -13,6 +13,31 @@ namespace Crowny
         StringView GetNameView(const String& name) { return name; }
         StringView GetNameView(HashedString name) { return name.GetView(); }
         HashedString GetPropertyName(MaterialPropertyID name) { return HashedString(StringIDTable::GetString(name.Value)); }
+
+        template <typename Name>
+        bool SetTextureForReflectedPasses(const Vector<Material::PassData>& passes, const Name& name,
+                                          const Ref<Texture>& texture)
+        {
+            bool assigned = false;
+            for (const Material::PassData& pass : passes)
+            {
+                if (!pass.Pipeline || !pass.Uniforms)
+                    continue;
+
+                const Ref<UniformParamInfo>& paramInfo = pass.Pipeline->GetParamInfo();
+                const Ref<UniformDesc>& fragment = paramInfo ? paramInfo->GetUniformDesc(FRAGMENT_SHADER) : nullptr;
+                if (!fragment)
+                    continue;
+
+                const auto binding = fragment->Textures.find(name);
+                if (binding == fragment->Textures.end())
+                    continue;
+
+                pass.Uniforms->SetTexture(binding->second.Set, binding->second.Slot, texture);
+                assigned = true;
+            }
+            return assigned;
+        }
     } // namespace
 
     Material::Material(const AssetHandle<Shader>& shader) : m_Shader(shader)
@@ -497,22 +522,22 @@ namespace Crowny
     void Material::SetTexture(const String& name, const AssetHandle<Texture>& texture)
     {
         m_TextureHandles[name] = texture;
-        for (const auto& pass : m_Passes)
-            pass.Uniforms->SetTexture(FRAGMENT_SHADER, name, texture.GetInternalPtr());
+        if (!SetTextureForReflectedPasses(m_Passes, name, texture.GetInternalPtr()))
+            CW_ENGINE_WARN("Texture with name {} does not exist in any fragment shader pass", name);
         ++m_ParamVersion;
     }
 
     void Material::SetTexture(const String& name, const Ref<Texture>& texture)
     {
-        for (const auto& pass : m_Passes)
-            pass.Uniforms->SetTexture(FRAGMENT_SHADER, name, texture);
+        if (!SetTextureForReflectedPasses(m_Passes, name, texture))
+            CW_ENGINE_WARN("Texture with name {} does not exist in any fragment shader pass", name);
         ++m_ParamVersion;
     }
 
     void Material::SetTexture(HashedString name, const Ref<Texture>& texture)
     {
-        for (const auto& pass : m_Passes)
-            pass.Uniforms->SetTexture(FRAGMENT_SHADER, name, texture);
+        if (!SetTextureForReflectedPasses(m_Passes, name, texture))
+            CW_ENGINE_WARN("Texture with name {} does not exist in any fragment shader pass", name.GetView());
         ++m_ParamVersion;
     }
 
@@ -613,18 +638,10 @@ namespace Crowny
 
     void MaterialTextureHandle::Set(const AssetHandle<Texture>& tex)
     {
-        m_Material->m_TextureHandles[m_Name] = tex;
-        for (const auto& pass : m_Material->m_Passes)
-            pass.Uniforms->SetTexture(FRAGMENT_SHADER, m_Name, tex.GetInternalPtr());
-        ++m_Material->m_ParamVersion;
+        m_Material->SetTexture(m_Name, tex);
     }
 
-    void MaterialTextureHandle::Set(const Ref<Texture>& tex)
-    {
-        for (const auto& pass : m_Material->m_Passes)
-            pass.Uniforms->SetTexture(FRAGMENT_SHADER, m_Name, tex);
-        ++m_Material->m_ParamVersion;
-    }
+    void MaterialTextureHandle::Set(const Ref<Texture>& tex) { m_Material->SetTexture(m_Name, tex); }
 
     AssetHandle<Texture> MaterialTextureHandle::Get() const { return m_Material->GetTextureHandle(m_Name); }
 
