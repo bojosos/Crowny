@@ -111,6 +111,15 @@ project "Crowny-Editor"
 			"GLFW_INCLUDE_NONE"
 		}
 
+	filter "system:macosx"
+		defines
+		{
+			"CW",
+			"CW_EDITOR",
+			"CW_MACOSX",
+			"GLFW_INCLUDE_NONE"
+		}
+
 	filter "configurations:Debug or DebugASan"
 		defines "CW_DEBUG"
 		runtime "Debug"

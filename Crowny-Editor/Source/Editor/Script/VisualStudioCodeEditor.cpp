@@ -21,16 +21,42 @@
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/StringUtils.h"
 
+#include <algorithm>
+#include <cstdint>
+
 #include <rapidjson/document.h>
 
 namespace Crowny
 {
     using Microsoft::WRL::ComPtr;
 
-    constexpr uint32_t RETRY_INTERVAL_MS = 100; // Wait 100ms between retry
-    constexpr uint32_t TIMEOUT_MS = 10000;      // Wait for 10s
+    constexpr uint32_t COM_RETRY_INTERVAL_MS = 100;
+    constexpr uint32_t COM_CALL_TIMEOUT_MS = 10000;
 
-    inline static WString QuoteString(const WString& str) { return L"\"" + str + L"\""; }
+    WString QuoteArgument(const WString& value)
+    {
+        WString result = L"\"";
+        size_t slashCount = 0;
+        for (const wchar_t character : value)
+        {
+            if (character == L'\\')
+            {
+                ++slashCount;
+                continue;
+            }
+
+            if (character == L'\"')
+                result.append(slashCount * 2 + 1, L'\\');
+            else
+                result.append(slashCount, L'\\');
+            result += character;
+            slashCount = 0;
+        }
+
+        result.append(slashCount * 2, L'\\');
+        result += L'\"';
+        return result;
+    }
 
     static Path FindToolInAncestors(Path directory, const Path& relativePath)
     {
@@ -107,25 +133,53 @@ namespace Crowny
         BSTR m_Value = nullptr;
     };
 
-    struct VSProjectInfo
+    static String FormatWindowsError(DWORD error)
     {
-        WString GUID;
-        WString Name;
-        Path path;
-    };
-
-    static String ErrorCodeToMsg(DWORD error)
-    {
-        CW_ENGINE_ASSERT(error != 0);
         LPSTR messageBuffer = nullptr;
+        const DWORD size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error,
+                                          MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&messageBuffer), 0, nullptr);
+        if (size == 0 || messageBuffer == nullptr)
+            return fmt::format("Win32 error 0x{:08X}", error);
 
-        size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error,
-                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
-
-        std::string message(messageBuffer, size);
-
+        String message(messageBuffer, size);
         LocalFree(messageBuffer);
+        while (!message.empty() && (message.back() == '\r' || message.back() == '\n' || message.back() == ' '))
+            message.pop_back();
         return message;
+    }
+
+    static bool PathsReferToSameFile(const Path& lhs, const Path& rhs)
+    {
+        if (lhs.empty() || rhs.empty())
+            return false;
+
+        std::error_code error;
+        if (fs::equivalent(lhs, rhs, error))
+            return true;
+
+        error.clear();
+        Path normalizedLhs = fs::weakly_canonical(lhs, error);
+        if (error)
+        {
+            error.clear();
+            normalizedLhs = fs::absolute(lhs, error);
+        }
+        if (error)
+            normalizedLhs = lhs;
+
+        error.clear();
+        Path normalizedRhs = fs::weakly_canonical(rhs, error);
+        if (error)
+        {
+            error.clear();
+            normalizedRhs = fs::absolute(rhs, error);
+        }
+        if (error)
+            normalizedRhs = rhs;
+
+        const WString lhsText = normalizedLhs.lexically_normal().wstring();
+        const WString rhsText = normalizedRhs.lexically_normal().wstring();
+        return CompareStringOrdinal(lhsText.c_str(), -1, rhsText.c_str(), -1, TRUE) == CSTR_EQUAL;
     }
 
     class VSMessageFilter : public IMessageFilter
@@ -137,12 +191,9 @@ namespace Crowny
 
         DWORD __stdcall RetryRejectedCall(HTASK htaskCallee, DWORD dwTickCount, DWORD dwRejectType) override
         {
-            if ((dwRejectType == SERVERCALL_RETRYLATER || dwRejectType == SERVERCALL_REJECTED) && dwTickCount < TIMEOUT_MS)
-                return RETRY_INTERVAL_MS;
-
-            if (dwRejectType == SERVERCALL_RETRYLATER)
-                return 99;
-            return -1;
+            if (dwRejectType == SERVERCALL_RETRYLATER && dwTickCount < COM_CALL_TIMEOUT_MS)
+                return COM_RETRY_INTERVAL_MS;
+            return static_cast<DWORD>(-1);
         }
 
         DWORD __stdcall MessagePending(HTASK htaskCallee, DWORD dwTickCount, DWORD dwPendingType) override { return PENDINGMSG_WAITDEFPROCESS; }
@@ -180,10 +231,79 @@ namespace Crowny
         LONG m_RefCount = 1;
     };
 
+    class ComApartmentScope
+    {
+    public:
+        ComApartmentScope() : m_Result(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)) {}
+
+        ~ComApartmentScope()
+        {
+            if (SUCCEEDED(m_Result))
+                CoUninitialize();
+        }
+
+        bool IsUsable() const { return SUCCEEDED(m_Result) || m_Result == RPC_E_CHANGED_MODE; }
+        bool SupportsMessageFilter() const { return SUCCEEDED(m_Result); }
+        HRESULT Result() const { return m_Result; }
+
+    private:
+        HRESULT m_Result;
+    };
+
+    class MessageFilterScope
+    {
+    public:
+        explicit MessageFilterScope(bool supported)
+        {
+            if (!supported)
+                return;
+
+            VSMessageFilter* filter = new VSMessageFilter();
+            const HRESULT result = CoRegisterMessageFilter(filter, &m_Previous);
+            filter->Release();
+            if (SUCCEEDED(result))
+            {
+                m_Registered = true;
+                return;
+            }
+
+            if (m_Previous != nullptr)
+            {
+                m_Previous->Release();
+                m_Previous = nullptr;
+            }
+            CW_ENGINE_WARN("Could not register the Visual Studio COM retry filter: {}", FormatWindowsError(static_cast<DWORD>(result)));
+        }
+
+        ~MessageFilterScope()
+        {
+            if (m_Registered)
+            {
+                IMessageFilter* replacedFilter = nullptr;
+                const HRESULT result = CoRegisterMessageFilter(m_Previous, &replacedFilter);
+                if (replacedFilter != nullptr)
+                    replacedFilter->Release();
+                if (FAILED(result))
+                    CW_ENGINE_WARN("Could not restore the previous Visual Studio COM retry filter: {}",
+                                   FormatWindowsError(static_cast<DWORD>(result)));
+            }
+
+            if (m_Previous != nullptr)
+                m_Previous->Release();
+        }
+
+        MessageFilterScope(const MessageFilterScope&) = delete;
+        MessageFilterScope& operator=(const MessageFilterScope&) = delete;
+
+    private:
+        IMessageFilter* m_Previous = nullptr;
+        bool m_Registered = false;
+    };
+
     class VisualStudio
     {
     public:
-        static ComPtr<EnvDTE::_DTE> FindRunningInstance(const Path& solutionPath, const Path& vsExePath)
+        static ComPtr<EnvDTE::_DTE> FindRunningInstance(const Path& solutionPath, const Path& vsExePath, DWORD expectedProcessId = 0)
         {
             ComPtr<IRunningObjectTable> runningObjectTable;
             if (FAILED(GetRunningObjectTable(0, runningObjectTable.ReleaseAndGetAddressOf())))
@@ -205,72 +325,53 @@ namespace Crowny
                     continue;
 
                 ComPtr<EnvDTE::_DTE> dte;
-                curObject.As(&dte);
-
-                if (dte == nullptr)
+                if (FAILED(curObject.As(&dte)) || dte == nullptr)
                     continue;
 
                 ComPtr<EnvDTE::_Solution> solution;
                 if (FAILED(dte->get_Solution(solution.ReleaseAndGetAddressOf())))
                     continue;
 
-                ScopedBstr vsFullName;
-                if (FAILED(dte->get_FullName(vsFullName.Put())))
-                    continue;
-                Path curPath = WString(vsFullName.Get());
                 ScopedBstr solutionName;
-                if (FAILED(solution->get_FullName(solutionName.Put())))
+                if (FAILED(solution->get_FullName(solutionName.Put())) || solutionName.Get() == nullptr)
                     continue;
                 Path curSolPath = WString(solutionName.Get());
-                if (curSolPath.empty())
+                if (curSolPath.empty() || !PathsReferToSameFile(curSolPath, solutionPath))
                     continue;
 
-                if (fs::equivalent(curSolPath, solutionPath))
+                if (!vsExePath.empty())
                 {
-                    if (!vsExePath.empty())
-                    {
-                        if (fs::equivalent(curPath, vsExePath))
-                            CW_ENGINE_WARN("The running Visual studio instance does not seem to be the version "
-                                           "requested in the user prefs.");
-                    }
-                    else
-                        CW_ENGINE_WARN("Visual Studio version not selected in user prefs. Using the running version");
-
-                    return dte;
+                    ScopedBstr runningExecutable;
+                    if (FAILED(dte->get_FullName(runningExecutable.Put())) || runningExecutable.Get() == nullptr ||
+                        !PathsReferToSameFile(Path(WString(runningExecutable.Get())), vsExePath))
+                        continue;
                 }
+
+                if (expectedProcessId != 0)
+                {
+                    const DWORD runningProcessId = GetProcessId(dte);
+                    if (runningProcessId != 0 && runningProcessId != expectedProcessId)
+                        continue;
+                }
+
+                return dte;
             }
             return nullptr;
         }
 
-        static ComPtr<EnvDTE::_DTE> CreateInstance(const CLSID& clsID, const Path& solutionPath)
+        static DWORD GetProcessId(const ComPtr<EnvDTE::_DTE>& dte)
         {
-            ComPtr<EnvDTE::_DTE> dte;
-            if (FAILED(
-                  ::CoCreateInstance(clsID, nullptr, CLSCTX_LOCAL_SERVER, EnvDTE::IID__DTE, reinterpret_cast<void**>(dte.ReleaseAndGetAddressOf()))))
-                return nullptr;
+            ComPtr<EnvDTE::Window> mainWindow;
+            if (FAILED(dte->get_MainWindow(mainWindow.ReleaseAndGetAddressOf())) || mainWindow == nullptr)
+                return 0;
 
-            dte->put_UserControl(VARIANT_TRUE);
+            LONG windowValue = 0;
+            if (FAILED(mainWindow->get_HWnd(&windowValue)) || windowValue == 0)
+                return 0;
 
-            ComPtr<EnvDTE::_Solution> solution;
-            if (FAILED(dte->get_Solution(solution.ReleaseAndGetAddressOf())))
-                return nullptr;
-
-            WString widePath = solutionPath.wstring();
-            ScopedBstr bstrSolution(widePath.c_str());
-            if (FAILED(solution->Open(bstrSolution.Get())))
-                return nullptr;
-
-            uint32_t elapsed = 0;
-            while (elapsed < TIMEOUT_MS)
-            {
-                ComPtr<EnvDTE::Window> window;
-                if (SUCCEEDED(dte->get_MainWindow(window.ReleaseAndGetAddressOf())))
-                    return dte;
-                Sleep(RETRY_INTERVAL_MS);
-                elapsed += RETRY_INTERVAL_MS;
-            }
-
-            return nullptr;
+            DWORD processId = 0;
+            GetWindowThreadProcessId(reinterpret_cast<HWND>(static_cast<intptr_t>(windowValue)), &processId);
+            return processId;
         }
 
         static bool OpenFile(const ComPtr<EnvDTE::_DTE>& dte, const Path& filePath, uint32_t line)
@@ -286,6 +387,10 @@ namespace Crowny
             ComPtr<EnvDTE::Window> window;
             if (FAILED(itemOperations->OpenFile(bstrFilePath.Get(), bstrKind.Get(), window.ReleaseAndGetAddressOf())))
                 return false;
+
+            if (window != nullptr)
+                window->Activate();
+
             ComPtr<EnvDTE::Document> activeDocument;
             if (line > 0 && SUCCEEDED(dte->get_ActiveDocument(activeDocument.ReleaseAndGetAddressOf())))
             {
@@ -301,20 +406,33 @@ namespace Crowny
                 }
             }
 
-            window.Reset();
-            if (SUCCEEDED(dte->get_MainWindow(window.ReleaseAndGetAddressOf())))
+            ComPtr<EnvDTE::Window> mainWindow;
+            if (SUCCEEDED(dte->get_MainWindow(mainWindow.ReleaseAndGetAddressOf())) && mainWindow != nullptr)
             {
-                window->Activate();
+                mainWindow->Activate();
 
-                HWND hWnd;
-                window->get_HWnd((LONG*)&hWnd);
-                SetForegroundWindow(hWnd);
+                LONG windowValue = 0;
+                if (SUCCEEDED(mainWindow->get_HWnd(&windowValue)) && windowValue != 0)
+                    SetForegroundWindow(reinterpret_cast<HWND>(static_cast<intptr_t>(windowValue)));
             }
             return true;
         }
 
         static bool StartVisualStudioProcess(const Path& vsExePath, const Path& solutionPath, DWORD& processId)
         {
+            std::error_code error;
+            if (!fs::is_regular_file(vsExePath, error))
+            {
+                CW_ENGINE_WARN("Visual Studio executable does not exist: {}", vsExePath.string());
+                return false;
+            }
+            error.clear();
+            if (!fs::is_regular_file(solutionPath, error))
+            {
+                CW_ENGINE_WARN("Visual Studio solution does not exist: {}", solutionPath.string());
+                return false;
+            }
+
             STARTUPINFOW si;
             PROCESS_INFORMATION pi;
             BOOL result;
@@ -324,15 +442,15 @@ namespace Crowny
 
             std::wstring startingDirectory = vsExePath.parent_path();
             std::wstringstream commandLineStream;
-            commandLineStream << QuoteString(vsExePath) << L" ";
-            commandLineStream << QuoteString(solutionPath);
+            commandLineStream << QuoteArgument(vsExePath.wstring()) << L" ";
+            commandLineStream << QuoteArgument(solutionPath.wstring());
 
             WString commandLine = commandLineStream.str();
             result = CreateProcessW(vsExePath.c_str(), commandLine.data(), nullptr, nullptr, false, 0, nullptr, startingDirectory.c_str(), &si, &pi);
             if (!result)
             {
                 DWORD error = GetLastError();
-                CW_ENGINE_ERROR("Starting Visual Studio process failed: {}", ErrorCodeToMsg(error));
+                CW_ENGINE_ERROR("Starting Visual Studio process failed: {}", FormatWindowsError(error));
                 return false;
             }
             processId = pi.dwProcessId;
@@ -341,23 +459,41 @@ namespace Crowny
             return true;
         }
 
-        static void ReloadSolution(const Path& solutionPath, const Path& editorPath)
+        static bool ReloadSolution(const Path& solutionPath, const Path& editorPath)
         {
             ComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, editorPath);
-            // Only try and reload the solution if we have a running visual studio instance.
             if (dte == nullptr)
-            {
-                return;
-            }
+                return false;
+
             ComPtr<EnvDTE::_Solution> solution;
             if (FAILED(dte->get_Solution(solution.ReleaseAndGetAddressOf())))
-                return;
+                return false;
 
-            if (!SUCCEEDED(solution->Close(false)))
-                return;
-            ScopedBstr bstrSolution(solutionPath.c_str());
-            if (!SUCCEEDED(solution->Open(bstrSolution.Get())))
-                CW_ENGINE_WARN("Couldn't reopen solution.");
+            VARIANT_BOOL saved = VARIANT_FALSE;
+            if (FAILED(solution->get_Saved(&saved)))
+            {
+                CW_ENGINE_WARN("Could not determine whether Visual Studio has unsaved solution changes; skipping automatic reload.");
+                return false;
+            }
+            if (saved == VARIANT_FALSE)
+            {
+                CW_ENGINE_WARN("Visual Studio has unsaved solution changes; skipping automatic reload.");
+                return false;
+            }
+
+            if (FAILED(solution->Close(false)))
+            {
+                CW_ENGINE_WARN("Could not close Visual Studio solution before reload.");
+                return false;
+            }
+            const WString solutionText = solutionPath.wstring();
+            ScopedBstr bstrSolution(solutionText.c_str());
+            if (FAILED(solution->Open(bstrSolution.Get())))
+            {
+                CW_ENGINE_WARN("Could not reopen Visual Studio solution.");
+                return false;
+            }
+            return true;
         }
     };
 
@@ -365,11 +501,13 @@ namespace Crowny
 
     void VisualStudioCodeEditor::OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const
     {
-        if (!SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+        ComApartmentScope apartment;
+        if (!apartment.IsUsable())
         {
-            CW_ENGINE_WARN("Couldn't initialize COM");
+            CW_ENGINE_WARN("Could not initialize COM for Visual Studio automation: {}", FormatWindowsError(static_cast<DWORD>(apartment.Result())));
             return;
         }
+        MessageFilterScope messageFilter(apartment.SupportsMessageFilter());
 
         ComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, m_ExecPath);
         if (dte == nullptr)
@@ -377,43 +515,31 @@ namespace Crowny
             DWORD processId = 0;
             if (!VisualStudio::StartVisualStudioProcess(m_ExecPath, solutionPath, processId))
                 return;
-            int timeWaited = 0;
-            int TIMEOUT_MS = 90;
-            while (timeWaited < TIMEOUT_MS)
+
+            uint32_t timeWaited = 0;
+            while (timeWaited < COM_CALL_TIMEOUT_MS)
             {
-                dte = VisualStudio::FindRunningInstance(solutionPath, m_ExecPath);
+                dte = VisualStudio::FindRunningInstance(solutionPath, m_ExecPath, processId);
                 if (dte != nullptr)
                     break;
-                Sleep(RETRY_INTERVAL_MS);
-                timeWaited += RETRY_INTERVAL_MS;
+                Sleep(COM_RETRY_INTERVAL_MS);
+                timeWaited += COM_RETRY_INTERVAL_MS;
             }
         }
 
         if (dte == nullptr)
         {
-            CoUninitialize();
+            CW_ENGINE_WARN("Visual Studio did not expose automation for {} within {} ms.", solutionPath.string(), COM_CALL_TIMEOUT_MS);
             return;
         }
 
-        VSMessageFilter* newFilter = new VSMessageFilter();
-        IMessageFilter* oldFilter;
-
-        CoRegisterMessageFilter(newFilter, &oldFilter);
-        ComPtr<EnvDTE::Window> window;
-        if (SUCCEEDED(dte->get_MainWindow(window.ReleaseAndGetAddressOf())))
-            window->Activate();
-
-        VisualStudio::OpenFile(dte, filePath, line);
-        CoRegisterMessageFilter(oldFilter, nullptr);
-
-        window.Reset();
-        dte.Reset();
-        CoUninitialize();
+        if (!VisualStudio::OpenFile(dte, filePath, line))
+            CW_ENGINE_WARN("Visual Studio could not open {}.", filePath.string());
     }
 
-    void VisualStudioCodeEditor::Sync(const CodeSolutionData& data, const Path& solutionPath) const
+    bool VisualStudioCodeEditor::Sync(const CodeSolutionData& data, const Path& solutionPath) const
     {
-        CSProjectVersion csProjectVersion;
+        CSProjectVersion csProjectVersion = CSProjectVersion::VS2022;
         switch (m_Version)
         {
         case VisualStudioVersion::VS2008:
@@ -440,90 +566,223 @@ namespace Crowny
         case VisualStudioVersion::VS2022:
             csProjectVersion = CSProjectVersion::VS2022;
             break;
+        case VisualStudioVersion::VS2026:
+            csProjectVersion = CSProjectVersion::VS2026;
+            break;
         }
 
-        String solutionString = CSProject::GenerateSolution(csProjectVersion, data);
-        solutionString = StringUtils::Replace(solutionString, "\n", "\n\r");
-        Path solutionPathCopy = solutionPath;
-        solutionPathCopy = solutionPath / (data.Name + ".sln");
-
-        for (const CodeProjectData& project : data.Projects)
+        const bool hasCoreClrProject = std::any_of(data.Projects.begin(), data.Projects.end(),
+                                                   [](const CodeProjectData& project) { return project.Runtime == CSharpProjectRuntime::CoreCLR; });
+        if (hasCoreClrProject && m_Version != VisualStudioVersion::VS2022 && m_Version != VisualStudioVersion::VS2026)
         {
-            String projectString = CSProject::GenerateProject(csProjectVersion, project);
-            projectString = StringUtils::Replace(projectString, "\n", "\n\r");
-
-            const Path projectPath = solutionPath / (project.Name + ".csproj");
-
-            Ref<DataStream> projectStream = FileSystem::CreateAndOpenFile(projectPath);
-            projectStream->Write(projectString.c_str(), projectString.size() * sizeof(String::value_type));
-            projectStream->Close();
+            CW_ENGINE_WARN("CoreCLR script projects target .NET 10. Open this solution with Visual Studio 2022 or newer and the matching .NET SDK.");
         }
 
-        Ref<DataStream> solutionStream = FileSystem::CreateAndOpenFile(solutionPathCopy);
-        solutionStream->Write(solutionString.c_str(), solutionString.size() * sizeof(String::value_type));
-        solutionStream->Close();
+        bool changed = false;
+        if (!CSProject::WriteSolution(csProjectVersion, data, solutionPath, &changed))
+            return false;
+        return changed;
     }
 
     void VisualStudioCodeEditor::ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const
     {
-        Path solutionPathCopy = solutionPath;
-        solutionPathCopy = solutionPath / (data.Name + ".sln");
-        VisualStudio::ReloadSolution(solutionPathCopy, m_ExecPath);
+        ComApartmentScope apartment;
+        if (!apartment.IsUsable())
+        {
+            CW_ENGINE_WARN("Could not initialize COM for Visual Studio solution reload: {}",
+                           FormatWindowsError(static_cast<DWORD>(apartment.Result())));
+            return;
+        }
+        MessageFilterScope messageFilter(apartment.SupportsMessageFilter());
+
+        const Path generatedSolutionPath = solutionPath / (data.Name + ".sln");
+        VisualStudio::ReloadSolution(generatedSolutionPath, m_ExecPath);
     }
 
     void VisualStudioCodeEditor::SetEditorExecutablePath(const Path& path) { m_ExecPath = path; }
 
+    namespace
+    {
+        CodeEditorVersion GetCodeEditorVersion(const String& productLineVersion)
+        {
+            static const Map<String, CodeEditorVersion> versions = {
+                { "2008", CodeEditorVersion::VS2008 }, { "2010", CodeEditorVersion::VS2010 }, { "2012", CodeEditorVersion::VS2012 },
+                { "2013", CodeEditorVersion::VS2013 }, { "2015", CodeEditorVersion::VS2015 }, { "2017", CodeEditorVersion::VS2017 },
+                { "2019", CodeEditorVersion::VS2019 }, { "2022", CodeEditorVersion::VS2022 }, { "2026", CodeEditorVersion::VS2026 },
+            };
+            const auto version = versions.find(productLineVersion);
+            if (version != versions.end())
+                return version->second;
+
+            CW_ENGINE_WARN("Visual Studio {} is not explicitly listed. Using the Visual Studio 2026 project format.", productLineVersion);
+            return CodeEditorVersion::VS2026;
+        }
+
+        VisualStudioVersion GetVisualStudioVersion(CodeEditorVersion version)
+        {
+            switch (version)
+            {
+            case CodeEditorVersion::VS2008:
+                return VisualStudioVersion::VS2008;
+            case CodeEditorVersion::VS2010:
+                return VisualStudioVersion::VS2010;
+            case CodeEditorVersion::VS2012:
+                return VisualStudioVersion::VS2012;
+            case CodeEditorVersion::VS2013:
+                return VisualStudioVersion::VS2013;
+            case CodeEditorVersion::VS2015:
+                return VisualStudioVersion::VS2015;
+            case CodeEditorVersion::VS2017:
+                return VisualStudioVersion::VS2017;
+            case CodeEditorVersion::VS2019:
+                return VisualStudioVersion::VS2019;
+            case CodeEditorVersion::VS2022:
+                return VisualStudioVersion::VS2022;
+            case CodeEditorVersion::VS2026:
+                return VisualStudioVersion::VS2026;
+            case CodeEditorVersion::VSCode:
+            case CodeEditorVersion::MonoDevelop:
+            case CodeEditorVersion::None:
+                return VisualStudioVersion::VS2022;
+            }
+
+            return VisualStudioVersion::VS2022;
+        }
+
+        bool ReadVisualStudioRegistryValue(const wchar_t* key, const wchar_t* valueName, WString& value)
+        {
+            DWORD byteCount = 0;
+            const LONG sizeStatus =
+              RegGetValueW(HKEY_LOCAL_MACHINE, key, valueName, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, nullptr, &byteCount);
+            if (sizeStatus != ERROR_SUCCESS || byteCount < sizeof(wchar_t))
+                return false;
+
+            Vector<wchar_t> buffer(byteCount / sizeof(wchar_t));
+            const LONG readStatus =
+              RegGetValueW(HKEY_LOCAL_MACHINE, key, valueName, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, buffer.data(), &byteCount);
+            if (readStatus != ERROR_SUCCESS)
+                return false;
+
+            value = buffer.data();
+            return !value.empty();
+        }
+
+        void AddLegacyVisualStudioInstallations(Vector<CodeEditorInstallation>& installations)
+        {
+            struct LegacyVisualStudio
+            {
+                const wchar_t* RegistryVersion;
+                CodeEditorVersion Version;
+                const char* Name;
+            };
+            static const std::array<LegacyVisualStudio, 6> versions = {
+                { L"9.0", CodeEditorVersion::VS2008, "Visual Studio 2008" },  { L"10.0", CodeEditorVersion::VS2010, "Visual Studio 2010" },
+                { L"11.0", CodeEditorVersion::VS2012, "Visual Studio 2012" }, { L"12.0", CodeEditorVersion::VS2013, "Visual Studio 2013" },
+                { L"14.0", CodeEditorVersion::VS2015, "Visual Studio 2015" }, { L"15.0", CodeEditorVersion::VS2017, "Visual Studio 2017" },
+            };
+            static const std::array<const wchar_t*, 2> registryKeys = {
+                L"SOFTWARE\\Microsoft\\VisualStudio\\SxS\\VS7",
+                L"SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\SxS\\VS7",
+            };
+
+            for (const wchar_t* registryKey : registryKeys)
+            {
+                for (const LegacyVisualStudio& version : versions)
+                {
+                    WString installationDirectory;
+                    if (!ReadVisualStudioRegistryValue(registryKey, version.RegistryVersion, installationDirectory))
+                        continue;
+
+                    const Path root = installationDirectory;
+                    const Vector<Path> candidates = { root / "devenv.exe", root / "Common7" / "IDE" / "devenv.exe" };
+                    for (const Path& candidate : candidates)
+                    {
+                        std::error_code error;
+                        if (!fs::is_regular_file(candidate, error))
+                            continue;
+
+                        const Path executablePath = candidate.lexically_normal();
+                        const bool alreadyAdded =
+                          std::any_of(installations.begin(), installations.end(), [&](const CodeEditorInstallation& installation) {
+                              return installation.ExecutablePath.lexically_normal() == executablePath;
+                          });
+                        if (!alreadyAdded)
+                            installations.push_back({ executablePath, false, version.Name, version.Version });
+                        break;
+                    }
+                }
+            }
+        }
+    } // namespace
+
     VisualStudioCodeEditorFactory::VisualStudioCodeEditorFactory()
     {
-        Map<String, CodeEditorVersion> vsVersions = {
-            { "2008", CodeEditorVersion::VS2008 }, { "2010", CodeEditorVersion::VS2010 }, { "2012", CodeEditorVersion::VS2012 },
-            { "2013", CodeEditorVersion::VS2013 }, { "2015", CodeEditorVersion::VS2015 }, { "2017", CodeEditorVersion::VS2017 },
-            { "2019", CodeEditorVersion::VS2019 }, { "2022", CodeEditorVersion::VS2022 },
-        };
         using namespace rapidjson;
 
         const Path vswherePath = FindVsWhere();
         if (vswherePath.empty())
         {
-            CW_ENGINE_WARN("Could not find vswhere.exe; Visual Studio integration is unavailable.");
-            return;
+            CW_ENGINE_WARN("Could not find vswhere.exe. Searching the legacy Visual Studio registry entries.");
+        }
+        else
+        {
+            const String vswhereCommand = "\"" + vswherePath.string() + "\" -prerelease -format json -utf8";
+            String jsonResult = PlatformUtils::Exec(vswhereCommand);
+            Document document;
+            document.Parse(jsonResult);
+            if (document.HasParseError() || !document.IsArray())
+            {
+                CW_ENGINE_WARN("vswhere.exe returned invalid installation data.");
+            }
+            else
+            {
+                for (const Value& val : document.GetArray())
+                {
+                    if (!val.IsObject())
+                        continue;
+
+                    const auto productPath = val.FindMember("productPath");
+                    const auto displayName = val.FindMember("displayName");
+                    const auto catalogMember = val.FindMember("catalog");
+                    if (productPath == val.MemberEnd() || !productPath->value.IsString() || displayName == val.MemberEnd() ||
+                        !displayName->value.IsString() || catalogMember == val.MemberEnd() || !catalogMember->value.IsObject())
+                    {
+                        CW_ENGINE_WARN("vswhere.exe returned an incomplete Visual Studio installation record.");
+                        continue;
+                    }
+
+                    const auto& catalog = catalogMember->value;
+                    const auto displayVersion = catalog.FindMember("productDisplayVersion");
+                    const auto productLineVersion = catalog.FindMember("productLineVersion");
+                    if (displayVersion == catalog.MemberEnd() || !displayVersion->value.IsString() || productLineVersion == catalog.MemberEnd() ||
+                        !productLineVersion->value.IsString())
+                    {
+                        CW_ENGINE_WARN("vswhere.exe returned an incomplete Visual Studio catalog record.");
+                        continue;
+                    }
+
+                    const auto prerelease = val.FindMember("isPrerelease");
+                    const bool isPrerelease = prerelease != val.MemberEnd() && prerelease->value.IsBool() && prerelease->value.GetBool();
+                    const String displayVersionString = displayVersion->value.GetString();
+                    const String productLineVersionString = productLineVersion->value.GetString();
+                    const String name = String(displayName->value.GetString()) + " [" + displayVersionString + "]";
+                    m_SupportedEditors.push_back(
+                      { Path(productPath->value.GetString()), isPrerelease, name, GetCodeEditorVersion(productLineVersionString) });
+                }
+            }
         }
 
-        const String vswhereCommand = "\"" + vswherePath.string() + "\" -prerelease -format json -utf8";
-        String jsonResult = PlatformUtils::Exec(vswhereCommand);
-        Document document;
-        document.Parse(jsonResult);
-        if (document.HasParseError() || !document.IsArray())
-        {
-            CW_ENGINE_WARN("vswhere.exe returned invalid installation data.");
-            return;
-        }
-        for (const Value& val : document.GetArray())
-        {
-            const bool isPrerelease = val.FindMember("isPrerelease")->value.GetBool();
-            const Path productPath = val.FindMember("productPath")->value.GetString();
-            const String displayName = val.FindMember("displayName")->value.GetString();
-            const auto& catalog = val.FindMember("catalog")->value;
-            const String displayVersion = catalog.FindMember("productDisplayVersion")->value.GetString();
-            const String name = displayName + " [" + displayVersion + "]";
-            const String versionString = catalog.FindMember("productLineVersion")->value.GetString();
-            const CodeEditorVersion version = vsVersions[versionString]; // TODO: get this
-            m_SupportedEditors.push_back({ productPath, isPrerelease, name, version });
-        }
+        AddLegacyVisualStudioInstallations(m_SupportedEditors);
+        if (m_SupportedEditors.empty())
+            CW_ENGINE_WARN("No supported Visual Studio installation was found.");
     }
 
     CodeEditor* VisualStudioCodeEditorFactory::Create(const Path& executablePath) const
     {
-        Map<CodeEditorVersion, VisualStudioVersion> versionData = {
-            { CodeEditorVersion::VS2008, VisualStudioVersion::VS2008 }, { CodeEditorVersion::VS2010, VisualStudioVersion::VS2010 },
-            { CodeEditorVersion::VS2012, VisualStudioVersion::VS2012 }, { CodeEditorVersion::VS2013, VisualStudioVersion::VS2013 },
-            { CodeEditorVersion::VS2015, VisualStudioVersion::VS2015 }, { CodeEditorVersion::VS2017, VisualStudioVersion::VS2017 },
-            { CodeEditorVersion::VS2019, VisualStudioVersion::VS2019 }, { CodeEditorVersion::VS2022, VisualStudioVersion::VS2022 },
-        };
         for (const CodeEditorInstallation& install : m_SupportedEditors)
         {
             if (install.ExecutablePath == executablePath)
-                return new VisualStudioCodeEditor(versionData[install.Version], executablePath);
+                return new VisualStudioCodeEditor(GetVisualStudioVersion(install.Version), executablePath);
         }
         return nullptr;
     }

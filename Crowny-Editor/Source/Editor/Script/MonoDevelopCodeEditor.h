@@ -8,7 +8,7 @@ namespace Crowny
     {
     public:
         virtual void OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const override;
-        virtual void Sync(const CodeSolutionData& data, const Path& solutionPath) const override {};
+        bool Sync(const CodeSolutionData& data, const Path& solutionPath) const override { return false; };
         virtual void SetEditorExecutablePath(const Path& path) override {};
         virtual void ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const override {};
 

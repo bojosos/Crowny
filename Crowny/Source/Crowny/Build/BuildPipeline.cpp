@@ -1556,9 +1556,40 @@ namespace Crowny
                         compileValidation.Error("pipeline.managed.output_invalid", "The compiler output is not a valid IL-only managed assembly.",
                                                 managed.OutputAssembly.string());
                 }
+                Vector<BuildPipelineArtifact> managedDependencies;
+                if (compiled.Succeeded() && compileValidation.IsValid() && m_Operations.ValidateProducedArtifacts)
+                {
+                    ManagedDependencyRequest dependencyRequest;
+                    dependencyRequest.Roots = { managed.OutputAssembly };
+                    dependencyRequest.FrameworkDirectories = { snapshot.Toolchain.ReferenceDirectory };
+                    for (const Path& reference : managed.References)
+                        dependencyRequest.SearchDirectories.push_back(ResolveProjectPath(managed.ProjectRoot, reference).parent_path());
+                    const ManagedDependencyResult dependencies = ResolveManagedDependencyClosure(dependencyRequest);
+                    for (const ManagedBuildDiagnostic& diagnostic : dependencies.Diagnostics)
+                        compileValidation.Error(diagnostic.Code, diagnostic.Message, diagnostic.Subject.string());
+
+                    Map<String, Path> stagedNames;
+                    for (const Path& dependency : dependencies.Assemblies)
+                    {
+                        if (NormalizePathText(dependency) == NormalizePathText(managed.OutputAssembly) ||
+                            IsWithin(snapshot.Toolchain.ReferenceDirectory, dependency))
+                            continue;
+                        const String filename = NormalizePathText(dependency.filename());
+                        const auto existing = stagedNames.find(filename);
+                        if (existing != stagedNames.end() && NormalizePathText(existing->second) != NormalizePathText(dependency))
+                        {
+                            compileValidation.Error("pipeline.managed.dependency_collision",
+                                                    "Managed runtime dependencies must have unique filenames.", dependency.string());
+                            continue;
+                        }
+                        stagedNames.insert_or_assign(filename, dependency);
+                        managedDependencies.push_back({ dependency, Path("Managed/Dependencies") / dependency.filename() });
+                    }
+                }
                 if (!finishStage(BuildPipelineStage::CompileManaged, std::move(compileValidation)))
                     return report;
                 artifacts.push_back({ managed.OutputAssembly, "Managed/Game.dll" });
+                artifacts.insert(artifacts.end(), managedDependencies.begin(), managedDependencies.end());
                 Path pdb = managed.OutputAssembly;
                 pdb.replace_extension(".pdb");
                 if (snapshot.Target.IncludeSymbols && fs::is_regular_file(pdb))

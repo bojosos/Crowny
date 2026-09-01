@@ -19,9 +19,9 @@
 #include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
-#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
+#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/PrefabUtils.h"
@@ -53,6 +53,7 @@
 
 #include "Build/BuildManager.h"
 #include "Editor/Script/CodeEditor.h"
+#include "Editor/Script/ManagedProjectDependencies.h"
 #include "Editor/Script/ScriptProjectGenerator.h"
 
 #ifdef CW_PLATFORM_WIN32
@@ -91,8 +92,7 @@ namespace Crowny
                 if (entry->Type != LibraryEntryType::File)
                     continue;
                 const auto* file = static_cast<const FileEntry*>(entry.get());
-                const Ref<CSharpScriptImportOptions> options =
-                  StaticRefCast<CSharpScriptImportOptions>(file->Metadata->ImportOptions);
+                const Ref<CSharpScriptImportOptions> options = StaticRefCast<CSharpScriptImportOptions>(file->Metadata->ImportOptions);
                 if (options == nullptr || !options->IsEditorScript)
                     scripts.push_back(file->Filepath);
             }
@@ -110,35 +110,41 @@ namespace Crowny
             return artifact != program.Artifacts.end() ? &*artifact : nullptr;
         }
 
-        bool WriteCoreClrGameProject(const Path& projectFile, const Vector<Path>& scripts, const Path& apiAssembly)
+        bool WriteCoreClrGameProject(const Path& projectFile, const Vector<Path>& scripts, const Path& apiAssembly,
+                                     const Vector<ManagedProjectDependency>& dependencies)
         {
             StringStream sourceItems;
             for (const Path& script : scripts)
                 sourceItems << "    <Compile Include=\"" << EscapeXml(fs::absolute(script).generic_string()) << "\" />\n";
 
-            const String project =
-              "<Project Sdk=\"Microsoft.NET.Sdk\">\n"
-              "  <PropertyGroup>\n"
-              "    <TargetFramework>net10.0</TargetFramework>\n"
-              "    <AssemblyName>GameAssembly</AssemblyName>\n"
-              "    <RootNamespace>GameAssembly</RootNamespace>\n"
-              "    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>\n"
-              "    <Nullable>disable</Nullable>\n"
-              "    <Deterministic>true</Deterministic>\n"
-              "    <GenerateDependencyFile>true</GenerateDependencyFile>\n"
-              "  </PropertyGroup>\n"
-              "  <ItemGroup>\n" +
-              sourceItems.str() +
-              "  </ItemGroup>\n"
-              "  <ItemGroup>\n"
-              "    <Reference Include=\"CrownySharp\">\n"
-              "      <HintPath>" +
-              EscapeXml(fs::absolute(apiAssembly).generic_string()) +
-              "</HintPath>\n"
-              "      <Private>true</Private>\n"
-              "    </Reference>\n"
-              "  </ItemGroup>\n"
-              "</Project>\n";
+            StringStream referenceItems;
+            const auto writeReference = [&](StringView name, const Path& assembly) {
+                referenceItems << "    <Reference Include=\"" << EscapeXml(String(name)) << "\">\n"
+                               << "      <HintPath>" << EscapeXml(fs::absolute(assembly).generic_string()) << "</HintPath>\n"
+                               << "      <Private>true</Private>\n"
+                               << "    </Reference>\n";
+            };
+            writeReference("CrownySharp", apiAssembly);
+            for (const ManagedProjectDependency& dependency : dependencies)
+                writeReference(dependency.Name, dependency.Filepath);
+
+            const String project = "<Project Sdk=\"Microsoft.NET.Sdk\">\n"
+                                   "  <PropertyGroup>\n"
+                                   "    <TargetFramework>net10.0</TargetFramework>\n"
+                                   "    <AssemblyName>GameAssembly</AssemblyName>\n"
+                                   "    <RootNamespace>GameAssembly</RootNamespace>\n"
+                                   "    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>\n"
+                                   "    <Nullable>disable</Nullable>\n"
+                                   "    <Deterministic>true</Deterministic>\n"
+                                   "    <GenerateDependencyFile>true</GenerateDependencyFile>\n"
+                                   "  </PropertyGroup>\n"
+                                   "  <ItemGroup>\n" +
+                                   sourceItems.str() +
+                                   "  </ItemGroup>\n"
+                                   "  <ItemGroup>\n" +
+                                   referenceItems.str() +
+                                   "  </ItemGroup>\n"
+                                   "</Project>\n";
             return FileSystem::WriteTextFile(projectFile, project);
         }
 
@@ -147,6 +153,74 @@ namespace Crowny
             for (const ManagedBuildDiagnostic& diagnostic : diagnostics)
                 CW_ENGINE_ERROR("Managed build [{}] {}{}", diagnostic.Code, diagnostic.Message,
                                 diagnostic.Subject.empty() ? String() : " (" + diagnostic.Subject.string() + ")");
+        }
+
+        bool StageMonoDependencies(const Vector<ManagedProjectDependency>& dependencies, const Path& stagingDirectory,
+                                   Vector<ManagedProgramArtifact>& artifacts, Vector<Path>& stagedDependencies)
+        {
+            if (dependencies.empty())
+                return true;
+
+            const Path dependencyDirectory = stagingDirectory / "Dependencies";
+            std::error_code error;
+            fs::create_directories(dependencyDirectory, error);
+            if (error)
+            {
+                CW_ENGINE_ERROR("Could not create managed dependency staging directory {}: {}", dependencyDirectory.string(), error.message());
+                return false;
+            }
+
+            for (const ManagedProjectDependency& dependency : dependencies)
+            {
+                const Path destination = dependencyDirectory / dependency.Filepath.filename();
+                String publishError;
+                if (!PublishManagedArtifact(dependency.Filepath, destination, &publishError))
+                {
+                    CW_ENGINE_ERROR("Could not stage managed dependency {}: {}", dependency.Filepath.string(), publishError);
+                    return false;
+                }
+                artifacts.push_back({ ManagedProgramArtifactKind::DependencyAssembly, dependency.Name, destination });
+                stagedDependencies.push_back(destination);
+            }
+            return true;
+        }
+
+        Vector<Path> CollectCoreClrRuntimeDependencies(const Path& stagingDirectory, const Path& gameAssembly)
+        {
+            Vector<Path> dependencies;
+            std::error_code error;
+            for (const fs::directory_entry& entry : fs::directory_iterator(stagingDirectory, error))
+            {
+                if (error)
+                    break;
+                String extension = entry.path().extension().string();
+                StringUtils::ToLower(extension);
+                if (!entry.is_regular_file(error) || extension != ".dll")
+                    continue;
+                if (entry.path().lexically_normal() != gameAssembly.lexically_normal())
+                    dependencies.push_back(entry.path());
+            }
+            std::sort(dependencies.begin(), dependencies.end());
+            dependencies.erase(std::unique(dependencies.begin(), dependencies.end()), dependencies.end());
+            return dependencies;
+        }
+
+        bool PublishManagedDependencies(const Vector<Path>& dependencies, const Path& destinationDirectory, String& error)
+        {
+            if (dependencies.empty())
+                return true;
+
+            std::error_code filesystemError;
+            fs::create_directories(destinationDirectory, filesystemError);
+            if (filesystemError)
+            {
+                error = filesystemError.message();
+                return false;
+            }
+            for (const Path& dependency : dependencies)
+                if (!PublishManagedArtifact(dependency, destinationDirectory / dependency.filename(), &error))
+                    return false;
+            return true;
         }
     } // namespace
 
@@ -248,7 +322,7 @@ namespace Crowny
 
         CodeEditorManager::StartUp();
         const Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
-        if (editorSettings->CodeEditorPath.extension() == ".exe" && fs::exists(editorSettings->CodeEditorPath))
+        if (!editorSettings->CodeEditorPath.empty() && fs::exists(editorSettings->CodeEditorPath))
             CodeEditorManager::Get().SetActive(editorSettings->CodeEditorPath);
         else
         {
@@ -258,17 +332,7 @@ namespace Crowny
         }
 
         BuildManager::StartUp();
-        const ApplicationDesc& applicationDesc = Application::TryGet()->GetApplicationDesc();
-        Path engineAssemblyPath = applicationDesc.EngineAssemblyPath;
-        if (engineAssemblyPath.empty())
-        {
-            CW_ENGINE_WARN("Cannot add the engine assembly to the generated script solution because EngineAssemblyPath is empty.");
-            return;
-        }
-
-        if (engineAssemblyPath.is_relative())
-            engineAssemblyPath = applicationDesc.WorkingDirectory / engineAssemblyPath;
-        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY, { CROWNY_ASSEMBLY, engineAssemblyPath.lexically_normal() });
+        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
     }
 
     void EditorLayer::BuildGame()
@@ -506,8 +570,7 @@ namespace Crowny
             CW_ENGINE_ERROR("Managed build generations are exhausted for this editor process.");
             return false;
         }
-        m_ManagedBuildGeneration =
-          std::max<uint64_t>(m_ManagedBuildGeneration + 1, std::max<uint64_t>(m_AssemblyReloadDebouncer.GetGeneration(), 2));
+        m_ManagedBuildGeneration = std::max<uint64_t>(m_ManagedBuildGeneration + 1, std::max<uint64_t>(m_AssemblyReloadDebouncer.GetGeneration(), 2));
         const uint64_t generation = m_ManagedBuildGeneration;
         const Path stagingDirectory = assemblyDirectory / ".staging" / std::to_string(generation);
         std::error_code fsError;
@@ -533,6 +596,7 @@ namespace Crowny
         }
         const Path stagedGameAssembly = stagingDirectory / "GameAssembly.dll";
         const Path stagedGameDependencies = stagingDirectory / "GameAssembly.deps.json";
+        Vector<Path> stagedRuntimeDependencies;
         ManagedProgramDefinition program;
         program.Generation = generation;
 
@@ -556,13 +620,40 @@ namespace Crowny
                 CW_ENGINE_ERROR("The CoreCLR package does not contain the CrownySharp API assembly beside its managed host.");
                 return false;
             }
+
+            DotNetSdk sdk = LocateDotNetSdk(description.WorkingDirectory / ".deps" / "dotnet");
+            if (!sdk.IsValid())
+            {
+                LogManagedBuildDiagnostics(sdk.Diagnostics);
+                return false;
+            }
+
+            ManagedProjectDependencyRequest dependencyRequest;
+            dependencyRequest.ProjectRoot = Editor::Get().GetProjectPath();
+            dependencyRequest.DeclaredAssemblies = Editor::Get().GetProjectSettings()->ManagedAssemblyReferences;
+            dependencyRequest.SearchDirectories = { apiAssembly.parent_path() };
+            dependencyRequest.FrameworkDirectories = FindDotNetFrameworkReferenceDirectories(sdk);
+            dependencyRequest.ExcludedAssemblies = { apiAssembly };
+            dependencyRequest.ReservedAssemblyNames = { "CrownySharp" };
+            if (!dependencyRequest.DeclaredAssemblies.empty() && dependencyRequest.FrameworkDirectories.empty())
+            {
+                LogManagedBuildDiagnostics(
+                  { { "MPD107", "The .NET reference pack for net10.0 could not be found beside the selected SDK.", sdk.Executable } });
+                return false;
+            }
+            const ManagedProjectDependencyPlan dependencyPlan = ResolveManagedProjectDependencies(dependencyRequest);
+            if (!dependencyPlan.Succeeded())
+            {
+                LogManagedBuildDiagnostics(dependencyPlan.Diagnostics);
+                return false;
+            }
+
             const Path projectFile = stagingDirectory / "GameAssembly.Managed.csproj";
-            if (!WriteCoreClrGameProject(projectFile, scripts, apiAssembly))
+            if (!WriteCoreClrGameProject(projectFile, scripts, apiAssembly, dependencyPlan.Assemblies))
             {
                 CW_ENGINE_ERROR("Could not write the SDK-style game project at {}.", projectFile.string());
                 return false;
             }
-            DotNetSdk sdk = LocateDotNetSdk(description.WorkingDirectory / ".deps" / "dotnet");
             ManagedSdkBuildRequest request;
             request.ProjectFile = projectFile;
             request.OutputDirectory = stagingDirectory;
@@ -576,6 +667,7 @@ namespace Crowny
                     CW_ENGINE_ERROR("{}", result.StandardError);
                 return false;
             }
+            stagedRuntimeDependencies = CollectCoreClrRuntimeDependencies(stagingDirectory, stagedGameAssembly);
             program = std::move(package.Package.Program);
             program.Generation = generation;
             std::erase_if(program.Artifacts, [](const ManagedProgramArtifact& artifact) {
@@ -591,11 +683,28 @@ namespace Crowny
             if (engineAssemblyPath.is_relative())
                 engineAssemblyPath = description.WorkingDirectory / engineAssemblyPath;
             ManagedToolchain toolchain = LocateManagedToolchain(description.Script.RuntimeRoot);
+
+            ManagedProjectDependencyRequest dependencyRequest;
+            dependencyRequest.ProjectRoot = Editor::Get().GetProjectPath();
+            dependencyRequest.DeclaredAssemblies = Editor::Get().GetProjectSettings()->ManagedAssemblyReferences;
+            dependencyRequest.SearchDirectories = { engineAssemblyPath.parent_path() };
+            dependencyRequest.FrameworkDirectories = { toolchain.ReferenceDirectory };
+            dependencyRequest.ExcludedAssemblies = { engineAssemblyPath };
+            dependencyRequest.ReservedAssemblyNames = { CROWNY_ASSEMBLY };
+            const ManagedProjectDependencyPlan dependencyPlan = ResolveManagedProjectDependencies(dependencyRequest);
+            if (!dependencyPlan.Succeeded())
+            {
+                LogManagedBuildDiagnostics(dependencyPlan.Diagnostics);
+                return false;
+            }
+
             ManagedBuildRequest request;
             request.ProjectRoot = Editor::Get().GetProjectPath();
             request.OutputAssembly = stagedGameAssembly;
             request.Sources = scripts;
             request.References = { engineAssemblyPath };
+            for (const ManagedProjectDependency& dependency : dependencyPlan.Assemblies)
+                request.References.push_back(dependency.Filepath);
             request.Symbols = { "CROWNY_MONO" };
             ManagedCompileResult result = CompileManagedAssembly(request, toolchain);
             if (!result.Succeeded())
@@ -607,10 +716,10 @@ namespace Crowny
                     CW_ENGINE_ERROR("{}", result.StandardError);
                 return false;
             }
-            program.Artifacts = {
-                { ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, engineAssemblyPath },
-                { ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, stagedGameAssembly },
-            };
+            program.Artifacts = { { ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, engineAssemblyPath } };
+            if (!StageMonoDependencies(dependencyPlan.Assemblies, stagingDirectory, program.Artifacts, stagedRuntimeDependencies))
+                return false;
+            program.Artifacts.push_back({ ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, stagedGameAssembly });
         }
         else
         {
@@ -646,6 +755,20 @@ namespace Crowny
         if (description.Script.Backend == ManagedBackendPreset::CoreCLR &&
             !PublishManagedArtifact(stagedGameDependencies, assemblyDirectory / stagedGameDependencies.filename(), &publishError))
             CW_ENGINE_WARN("Reloaded game scripts, but could not publish the dependency manifest: {0}", publishError);
+
+        const Path dependencyDestination =
+          description.Script.Backend == ManagedBackendPreset::Mono ? assemblyDirectory / "Dependencies" : assemblyDirectory;
+        if (description.Script.Backend == ManagedBackendPreset::Mono)
+        {
+            // This directory is generated exclusively from the validated dependency plan. Replace it so removed references cannot reappear
+            // after a later domain restart.
+            std::error_code dependencyCleanupError;
+            fs::remove_all(dependencyDestination, dependencyCleanupError);
+            if (dependencyCleanupError)
+                CW_ENGINE_WARN("Reloaded game scripts, but could not remove stale managed dependencies: {0}", dependencyCleanupError.message());
+        }
+        if (!PublishManagedDependencies(stagedRuntimeDependencies, dependencyDestination, publishError))
+            CW_ENGINE_WARN("Reloaded game scripts, but could not publish a managed dependency: {0}", publishError);
 
         CW_ENGINE_INFO("Reloaded game scripts from {0}", gameAssemblyPath.string());
         return true;

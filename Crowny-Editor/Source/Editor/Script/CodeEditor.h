@@ -27,6 +27,7 @@ namespace Crowny
         // lineNumber 0 means it doesn't try to go to a line.
         void OpenFile(const Path& path, uint32_t lineNumber = 0) const;
 
+        void SyncSolution(const String& projectName) const;
         void SyncSolution(const String& projectName, const ScriptProjectReference& engineAssemblyRef) const;
         void SetEditorExecutablePath(const Path& path);
         Path GetSolutionPath() const;
@@ -48,7 +49,8 @@ namespace Crowny
         virtual ~CodeEditor() = default;
 
         virtual void OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const = 0;
-        virtual void Sync(const CodeSolutionData& data, const Path& solutionPath) const = 0;
+        // Returns true when solution or project files changed and the editor should reload them.
+        virtual bool Sync(const CodeSolutionData& data, const Path& solutionPath) const = 0;
         virtual void SetEditorExecutablePath(const Path& path) = 0;
         virtual void ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const = 0;
     };

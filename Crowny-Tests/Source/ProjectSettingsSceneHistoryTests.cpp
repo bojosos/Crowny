@@ -36,6 +36,21 @@ TEST_CASE("Project scene history serializes stable asset identities", "[Editor][
     CHECK(restored->RecentSceneIds[1] == recentId);
 }
 
+TEST_CASE("Project settings preserve managed assembly dependency declarations", "[Editor][ProjectSettings][ManagedDependencies]")
+{
+    Ref<ProjectSettings> settings = CreateRef<ProjectSettings>();
+    settings->ManagedAssemblyReferences = { "Dependencies/Gameplay.Tools.dll", "C:/Libraries/Shared.dll" };
+
+    const YAML::Node serialized = SerializeSettings(settings);
+    REQUIRE(serialized["ManagedAssemblyReferences"]);
+    REQUIRE(serialized["ManagedAssemblyReferences"].size() == 2);
+    CHECK(serialized["ManagedAssemblyReferences"][0].as<String>() == "Dependencies/Gameplay.Tools.dll");
+    CHECK(serialized["ManagedAssemblyReferences"][1].as<String>() == "C:/Libraries/Shared.dll");
+
+    const Ref<ProjectSettings> restored = ProjectSettingsSerializer::Deserialize(serialized);
+    CHECK(restored->ManagedAssemblyReferences == settings->ManagedAssemblyReferences);
+}
+
 TEST_CASE("Legacy project scene paths migrate without losing unresolved entries", "[Editor][ProjectSettings][SceneHistory]")
 {
     const Path lastPath = "C:/OldProject/Assets/Scenes/Main.cwscene";

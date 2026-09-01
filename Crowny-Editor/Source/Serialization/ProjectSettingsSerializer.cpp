@@ -263,6 +263,11 @@ namespace Crowny
 
         SerializeInputMap(settings->InputActions, out);
 
+        out << YAML::Key << "ManagedAssemblyReferences" << YAML::Value << YAML::BeginSeq;
+        for (const Path& assembly : settings->ManagedAssemblyReferences)
+            out << assembly.generic_string();
+        out << YAML::EndSeq;
+
         out << YAML::EndMap;
     }
 
@@ -301,6 +306,20 @@ namespace Crowny
 
         if (const YAML::Node inputNode = node["Input"])
             projectSettings->InputActions = DeserializeInputMap(inputNode);
+
+        if (const YAML::Node assemblies = node["ManagedAssemblyReferences"]; assemblies && assemblies.IsSequence())
+        {
+            Set<String> seen;
+            for (const YAML::Node& assembly : assemblies)
+            {
+                const Path path = assembly.as<String>(String());
+                if (path.empty())
+                    continue;
+                const String key = path.generic_string();
+                if (seen.insert(key).second)
+                    projectSettings->ManagedAssemblyReferences.push_back(path);
+            }
+        }
 
         return projectSettings;
     }

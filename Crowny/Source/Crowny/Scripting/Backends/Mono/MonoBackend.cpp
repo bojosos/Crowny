@@ -1,6 +1,8 @@
 #include "cwpch.h"
 
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Build/ManagedBuild.h"
+#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Backends/Mono/MonoBackend.h"
@@ -38,7 +40,72 @@ namespace Crowny
             return artifact == program.Artifacts.end() ? nullptr : &*artifact;
         }
 
-       Entity ResolveEntity(const UUID& uuid)
+        Vector<const ManagedProgramArtifact*> FindArtifacts(const ManagedProgramDefinition& program, ManagedProgramArtifactKind kind)
+        {
+            Vector<const ManagedProgramArtifact*> artifacts;
+            for (const ManagedProgramArtifact& artifact : program.Artifacts)
+                if (artifact.Kind == kind)
+                    artifacts.push_back(&artifact);
+            return artifacts;
+        }
+
+        Vector<ManagedProgramArtifact> DiscoverStagedDependencies(const Path& gameAssembly)
+        {
+            Vector<ManagedProgramArtifact> dependencies;
+            const Path directory = gameAssembly.parent_path() / "Dependencies";
+            std::error_code error;
+            if (!fs::is_directory(directory, error))
+                return dependencies;
+
+            Map<String, ManagedProgramArtifact> byIdentity;
+            Map<String, Vector<String>> references;
+            for (const fs::directory_entry& entry : fs::directory_iterator(directory, error))
+            {
+                if (error)
+                    break;
+                String extension = entry.path().extension().string();
+                StringUtils::ToLower(extension);
+                if (!entry.is_regular_file(error) || extension != ".dll")
+                    continue;
+
+                const ManagedAssemblyInspection inspection = InspectManagedAssembly(entry.path());
+                if (!inspection.IsPureManaged() || inspection.Identity.Name == CROWNY_ASSEMBLY || inspection.Identity.Name == GAME_ASSEMBLY)
+                    continue;
+
+                const String identity = inspection.Identity.ToString();
+                if (byIdentity.contains(identity))
+                {
+                    CW_ENGINE_WARN("Ignoring duplicate staged managed dependency {}.", entry.path().string());
+                    continue;
+                }
+                byIdentity.emplace(identity,
+                                   ManagedProgramArtifact{ ManagedProgramArtifactKind::DependencyAssembly, inspection.Identity.Name, entry.path() });
+                for (const ManagedAssemblyIdentity& reference : inspection.References)
+                    references[identity].push_back(reference.ToString());
+            }
+
+            Set<String> emitted;
+            Set<String> visiting;
+            std::function<void(const String&)> visit = [&](const String& identity) {
+                if (emitted.contains(identity) || !byIdentity.contains(identity) || !visiting.insert(identity).second)
+                    return;
+                for (const String& reference : references[identity])
+                    visit(reference);
+                visiting.erase(identity);
+                emitted.insert(identity);
+                dependencies.push_back(byIdentity.at(identity));
+            };
+            Vector<String> identities;
+            identities.reserve(byIdentity.size());
+            for (const auto& [identity, dependency] : byIdentity)
+                identities.push_back(identity);
+            std::sort(identities.begin(), identities.end());
+            for (const String& identity : identities)
+                visit(identity);
+            return dependencies;
+        }
+
+        Entity ResolveEntity(const UUID& uuid)
         {
             if (uuid == UUID::EMPTY || SceneManager::TryGet() == nullptr)
                 return {};
@@ -514,6 +581,27 @@ namespace Crowny
                     if (!bound.Succeeded)
                         return bound;
                     MonoBindingRegistry::Get().LoadAssembly(CROWNY_ASSEMBLY);
+                    Vector<const ManagedProgramArtifact*> dependencyArtifacts =
+                      FindArtifacts(program, ManagedProgramArtifactKind::DependencyAssembly);
+                    Vector<ManagedProgramArtifact> discoveredDependencies;
+                    if (dependencyArtifacts.empty() && game != nullptr && fs::is_regular_file(game->Filepath))
+                    {
+                        discoveredDependencies = DiscoverStagedDependencies(game->Filepath);
+                        for (const ManagedProgramArtifact& dependency : discoveredDependencies)
+                            dependencyArtifacts.push_back(&dependency);
+                    }
+                    for (const ManagedProgramArtifact* dependency : dependencyArtifacts)
+                    {
+                        if (dependency == nullptr || dependency->LogicalName.empty() || !fs::is_regular_file(dependency->Filepath))
+                            return Failure("managed.mono.dependency_assembly_missing",
+                                           "Mono requires every staged managed dependency to be present before the game assembly is loaded.");
+                        MonoAssembly* loadedDependency = MonoManager::Get().GetAssembly(dependency->LogicalName);
+                        if (loadedDependency == nullptr || !loadedDependency->IsLoaded())
+                            loadedDependency = &MonoManager::Get().LoadAssembly(dependency->Filepath, dependency->LogicalName);
+                        if (loadedDependency == nullptr || !loadedDependency->IsLoaded())
+                            return Failure("managed.mono.dependency_assembly_load_failed",
+                                           "Mono could not load a staged managed dependency before the game assembly.");
+                    }
                     if (game != nullptr && fs::is_regular_file(game->Filepath))
                     {
                         MonoAssembly* loadedGame = MonoManager::Get().GetAssembly(GAME_ASSEMBLY);
@@ -534,6 +622,20 @@ namespace Crowny
                 Vector<AssemblyRefreshInfo> assemblies;
                 if (const ManagedProgramArtifact* engine = FindArtifact(program, ManagedProgramArtifactKind::EngineAssembly))
                     assemblies.emplace_back(CROWNY_ASSEMBLY, engine->Filepath);
+                Vector<const ManagedProgramArtifact*> dependencyArtifacts = FindArtifacts(program, ManagedProgramArtifactKind::DependencyAssembly);
+                Vector<ManagedProgramArtifact> discoveredDependencies;
+                if (dependencyArtifacts.empty())
+                {
+                    if (const ManagedProgramArtifact* game = FindArtifact(program, ManagedProgramArtifactKind::GameAssembly))
+                    {
+                        discoveredDependencies = DiscoverStagedDependencies(game->Filepath);
+                        for (const ManagedProgramArtifact& dependency : discoveredDependencies)
+                            dependencyArtifacts.push_back(&dependency);
+                    }
+                }
+                for (const ManagedProgramArtifact* dependency : dependencyArtifacts)
+                    if (dependency != nullptr && !dependency->LogicalName.empty())
+                        assemblies.emplace_back(dependency->LogicalName, dependency->Filepath);
                 if (const ManagedProgramArtifact* game = FindArtifact(program, ManagedProgramArtifactKind::GameAssembly))
                     assemblies.emplace_back(GAME_ASSEMBLY, game->Filepath);
                 return assemblies;

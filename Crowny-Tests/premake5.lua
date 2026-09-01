@@ -25,6 +25,9 @@ project "Crowny-Tests"
 		"%{wks.location}/Crowny-Editor/Source/Editor/BoxCollider2DBoundsTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/PhysicsMaterialInspectorTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/ScriptInspectorTransaction.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Editor/Script/ManagedProjectDependencies.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Editor/Script/ScriptProjectGenerator.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Editor/Script/VSCodeEditor.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/UndoRedo.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/ViewportTransformInteraction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Panels/ConsoleViewModel.cpp",
@@ -86,6 +89,20 @@ project "Crowny-Tests"
 			"CW",
 			"CW_WINDOWS",
 			"CW_PLATFORM_WIN32",
+		}
+
+	filter "system:linux"
+		defines
+		{
+			"CW",
+			"CW_PLATFORM_LINUX",
+		}
+
+	filter "system:macosx"
+		defines
+		{
+			"CW",
+			"CW_MACOSX",
 		}
 
 	filter "configurations:Debug or DebugASan"

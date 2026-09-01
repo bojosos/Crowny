@@ -254,6 +254,7 @@ namespace Crowny
     {
         EngineAssembly,
         GameAssembly,
+        DependencyAssembly,
         Symbols,
         RuntimeConfig,
         DependencyManifest,
