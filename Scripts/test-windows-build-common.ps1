@@ -32,6 +32,11 @@ function Assert-True {
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) "Crowny build roots $([Guid]::NewGuid().ToString('N'))"
 $originalDependencyRoot = $env:CROWNY_DEPS_ROOT
 $originalCoordinationRoot = $env:CROWNY_BUILD_COORDINATION_ROOT
+$originalVulkanSdk = $env:VULKAN_SDK
+$originalVmaInclude = $env:CROWNY_VMA_INCLUDE
+$originalOpenALRoot = $env:CROWNY_OPENAL_ROOT
+$originalPhysicsRoot = $env:CROWNY_PHYSICS_ROOT
+$originalSpirvCrossRoot = $env:CROWNY_SPIRV_CROSS_ROOT
 
 try {
     $env:CROWNY_DEPS_ROOT = $null
@@ -76,6 +81,40 @@ try {
         -RelativePath "VulkanSDK" -ReadyRelativePath "VulkanSDK\Include\vulkan\vulkan.h"
     Assert-Equal -Expected (Join-Path $linkedRoot ".deps\VulkanSDK") -Actual $linkedVulkan `
         -Message "A ready worktree-local dependency component must take precedence."
+
+    $externalVulkanRoot = Join-Path $testRoot "external Vulkan SDK without VMA"
+    $externalVulkanHeader = Join-Path $externalVulkanRoot "Include\vulkan\vulkan.h"
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $externalVulkanHeader) | Out-Null
+    Set-Content -LiteralPath $externalVulkanHeader -Value "test"
+    $commonVmaHeader = Join-Path $mainRoot ".deps\VulkanSDK\Include\vma\vk_mem_alloc.h"
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $commonVmaHeader) | Out-Null
+    Set-Content -LiteralPath $commonVmaHeader -Value "test"
+    $env:VULKAN_SDK = $externalVulkanRoot
+    $env:CROWNY_VMA_INCLUDE = Join-Path $testRoot "invalid explicit VMA include"
+    $env:CROWNY_OPENAL_ROOT = "test-openal"
+    $env:CROWNY_PHYSICS_ROOT = "test-physics"
+    $env:CROWNY_SPIRV_CROSS_ROOT = "test-spirv-cross"
+    Initialize-CrownyBuildEnvironment -RepositoryRoot $linkedRoot
+    Assert-Equal -Expected (Split-Path -Parent (Split-Path -Parent $commonVmaHeader)) `
+        -Actual $env:CROWNY_VMA_INCLUDE `
+        -Message "A Vulkan SDK without VMA must fall back to the common cached VMA include."
+
+    $externalVmaHeader = Join-Path $externalVulkanRoot "Include\vma\vk_mem_alloc.h"
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $externalVmaHeader) | Out-Null
+    Set-Content -LiteralPath $externalVmaHeader -Value "test"
+    $env:CROWNY_VMA_INCLUDE = Join-Path $testRoot "invalid explicit VMA include"
+    Initialize-CrownyBuildEnvironment -RepositoryRoot $linkedRoot
+    Assert-Equal -Expected (Join-Path $externalVulkanRoot "Include") -Actual $env:CROWNY_VMA_INCLUDE `
+        -Message "A Vulkan SDK containing VMA must take precedence over the dependency cache."
+
+    $explicitVmaInclude = Join-Path $testRoot "explicit VMA include"
+    $explicitVmaHeader = Join-Path $explicitVmaInclude "vma\vk_mem_alloc.h"
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $explicitVmaHeader) | Out-Null
+    Set-Content -LiteralPath $explicitVmaHeader -Value "test"
+    $env:CROWNY_VMA_INCLUDE = $explicitVmaInclude
+    Initialize-CrownyBuildEnvironment -RepositoryRoot $linkedRoot
+    Assert-Equal -Expected $explicitVmaInclude -Actual $env:CROWNY_VMA_INCLUDE `
+        -Message "A ready explicit VMA include must take precedence."
 
     $explicitDependencyRoot = Join-Path $testRoot "explicit dependency cache"
     $explicitCoordinationRoot = Join-Path $testRoot "explicit coordination state"
@@ -170,6 +209,11 @@ try {
 finally {
     $env:CROWNY_DEPS_ROOT = $originalDependencyRoot
     $env:CROWNY_BUILD_COORDINATION_ROOT = $originalCoordinationRoot
+    $env:VULKAN_SDK = $originalVulkanSdk
+    $env:CROWNY_VMA_INCLUDE = $originalVmaInclude
+    $env:CROWNY_OPENAL_ROOT = $originalOpenALRoot
+    $env:CROWNY_PHYSICS_ROOT = $originalPhysicsRoot
+    $env:CROWNY_SPIRV_CROSS_ROOT = $originalSpirvCrossRoot
     if (Test-Path -LiteralPath $testRoot) {
         Remove-Item -LiteralPath $testRoot -Recurse -Force
     }

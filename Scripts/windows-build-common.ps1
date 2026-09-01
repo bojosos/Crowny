@@ -182,13 +182,21 @@ function Initialize-CrownyBuildEnvironment {
         $env:VULKAN_SDK = Get-CrownyDependencyPath -RepositoryRoot $RepositoryRoot `
             -RelativePath "VulkanSDK" -ReadyRelativePath "VulkanSDK\Include\vulkan\vulkan.h"
     }
-    if (-not $env:CROWNY_VMA_INCLUDE) {
+    $vmaHeader = if ($env:CROWNY_VMA_INCLUDE) {
+        Join-Path $env:CROWNY_VMA_INCLUDE "vma\vk_mem_alloc.h"
+    }
+    else {
+        ""
+    }
+    if (-not $vmaHeader -or -not (Test-Path -LiteralPath $vmaHeader -PathType Leaf)) {
         $vulkanInclude = Join-Path $env:VULKAN_SDK "Include"
-        if (Test-Path -LiteralPath (Join-Path $vulkanInclude "vma\vk_mem_alloc.h")) {
+        if (Test-Path -LiteralPath (Join-Path $vulkanInclude "vma\vk_mem_alloc.h") -PathType Leaf) {
             $env:CROWNY_VMA_INCLUDE = $vulkanInclude
         }
         else {
-            $env:CROWNY_VMA_INCLUDE = Join-Path $env:VULKAN_SDK "Include"
+            $env:CROWNY_VMA_INCLUDE = Get-CrownyDependencyPath -RepositoryRoot $RepositoryRoot `
+                -RelativePath "VulkanSDK\Include" `
+                -ReadyRelativePath "VulkanSDK\Include\vma\vk_mem_alloc.h"
         }
     }
     if (-not $env:CROWNY_OPENAL_ROOT) {
