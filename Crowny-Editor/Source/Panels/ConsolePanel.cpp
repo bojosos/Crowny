@@ -2,6 +2,7 @@
 
 #include "Editor/Script/CodeEditor.h"
 #include "Panels/ConsolePanel.h"
+#include "Panels/ConsoleSeverityToggleVisual.h"
 #include "UI/UIUtils.h"
 
 #include "Crowny/Common/PlatformUtils.h"
@@ -99,13 +100,25 @@ namespace Crowny
             const char* label = summary.Levels[levelIndex].Label.data();
             const float width = ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2.0f;
             const glm::vec4 color = GetRenderColor(level);
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(color.r, color.g, color.b, color.a));
-            if (ImGui::Selectable(label, m_EnabledLevels[levelIndex], ImGuiSelectableFlags_None, ImVec2(width, 0.0f)))
+            const bool enabled = m_EnabledLevels[levelIndex];
+            const ConsoleSeverityToggleVisual visual = BuildConsoleSeverityToggleVisual(color, enabled);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(visual.Text.r, visual.Text.g, visual.Text.b, visual.Text.a));
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(visual.Fill.r, visual.Fill.g, visual.Fill.b, visual.Fill.a));
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered,
+                                  ImVec4(visual.HoveredFill.r, visual.HoveredFill.g, visual.HoveredFill.b, visual.HoveredFill.a));
+            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(visual.ActiveFill.r, visual.ActiveFill.g, visual.ActiveFill.b, visual.ActiveFill.a));
+            if (ImGui::Selectable(label, enabled, ImGuiSelectableFlags_None, ImVec2(width, 0.0f)))
             {
-                m_EnabledLevels[levelIndex] = !m_EnabledLevels[levelIndex];
+                m_EnabledLevels[levelIndex] = !enabled;
                 m_FilterDirty = true;
             }
-            ImGui::PopStyleColor();
+            if (enabled)
+            {
+                const ImVec4 border(visual.Border.r, visual.Border.g, visual.Border.b, visual.Border.a);
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(border),
+                                                    ImGui::GetStyle().FrameRounding);
+            }
+            ImGui::PopStyleColor(4);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Show or hide %s messages", ConsoleBuffer::Message::GetLevelName(level));
             if (i + 1 < ConsoleBuffer::Message::Levels.size())
