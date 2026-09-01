@@ -346,7 +346,7 @@ namespace Crowny
 
         cw_managed_status CW_MANAGED_CALL GetEntityName(void* context, cw_managed_uuid entityId, cw_managed_string_view* name)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 if (name == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 const Entity entity = ResolveEntity(entityId);
@@ -1425,7 +1425,7 @@ namespace Crowny
 
         cw_managed_status CW_MANAGED_CALL AssetGetName(void* context, cw_managed_uuid assetId, cw_managed_string_view* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 if (result == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 const AssetHandle<Asset> asset = ResolveAsset<Asset>(assetId);
@@ -2300,7 +2300,7 @@ namespace Crowny
 
         cw_managed_status CW_MANAGED_CALL LayerMaskGetName(void* context, int32_t layer, cw_managed_string_view* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 if (result == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 Physics2D* physics = Physics2D::TryGet();
@@ -2810,7 +2810,7 @@ namespace Crowny
 
         cw_managed_status CW_MANAGED_CALL TextGetText(void* context, cw_managed_uuid entityId, cw_managed_string_view* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 TextComponent* component = ResolveComponent<TextComponent>(entityId);
                 if (component == nullptr)
                     return CW_MANAGED_STATUS_STALE_HANDLE;
@@ -3035,7 +3035,7 @@ namespace Crowny
 
         cw_managed_status CW_MANAGED_CALL Physics2DGetLayerName(void* context, int32_t layer, cw_managed_string_view* result)
         {
-            return Execute(context, [&]() {
+            return Execute(context, [&]() -> cw_managed_status {
                 if (result == nullptr || layer < 0 || layer >= static_cast<int32_t>(Physics2DLayerCount))
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 Physics2D* physics = Physics2D::IsStartedUp() ? Physics2D::TryGet() : nullptr;
