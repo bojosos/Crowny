@@ -2,6 +2,7 @@
 
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Log.h"
+#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedHostBindings.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoClass.h"
