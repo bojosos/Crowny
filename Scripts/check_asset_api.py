@@ -86,6 +86,10 @@ ALLOWLIST = (
     Allow("Crowny-Editor/Source/Editor/EditorBuiltInAssetCompiler.cpp", frozenset({"direct-import", "raw-read", "physical-stream", "physical-metadata", "raw-builtin-source"}), "editor build tooling"),
     Allow("Crowny-Editor/Source/Editor/EditorAssets.cpp", frozenset({"raw-read", "raw-builtin-source"}), "central built-in resource catalog using pack-aware FileSystem"),
     Allow("Crowny-Editor/Source/Editor/AssetPreviewService.cpp", frozenset({"raw-read"}), "source preview decode boundary"),
+    Allow("Crowny-Editor/Source/Editor/Script/ScriptProjectGenerator.cpp", frozenset({"raw-read"}),
+          "generated IDE project and solution merge"),
+    Allow("Crowny-Editor/Source/Editor/Script/VSCodeEditor.cpp", frozenset({"raw-read"}),
+          "user-owned VS Code workspace configuration merge"),
     Allow("Crowny-Editor/Source/Panels/ComponentRenderer.cpp", frozenset({"direct-import"}), "explicit user file-dialog import"),
 )
 
@@ -171,6 +175,8 @@ def self_test() -> None:
     assert is_allowed("Crowny/Source/Crowny/Scene/SceneRenderer.cpp", "direct-import", "Importer::Get().Import(\"RayTrace.glsl\")")
     assert not is_allowed("Crowny/Source/Crowny/Scene/SceneRenderer.cpp", "direct-import", "Importer::Get().Import(path)")
     assert is_allowed("Crowny-Editor/Source/Editor/ImportScheduler.cpp", "direct-import", "Importer::Get().ImportDeferred(path)")
+    assert is_allowed("Crowny-Editor/Source/Editor/Script/ScriptProjectGenerator.cpp", "raw-read", "FileSystem::ReadTextFile(path)")
+    assert is_allowed("Crowny-Editor/Source/Editor/Script/VSCodeEditor.cpp", "raw-read", "FileSystem::ReadTextFile(path)")
 
 
 def main() -> int:
