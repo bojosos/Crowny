@@ -27,6 +27,13 @@ namespace Crowny
             ScriptTypeIdentity Identity;
         };
 
+        struct CategoryEntry
+        {
+            String Name;
+            size_t FirstComponentIndex = 0;
+            size_t ComponentCount = 0;
+        };
+
         struct SearchResults
         {
             Vector<size_t> ComponentIndices;
@@ -43,6 +50,7 @@ namespace Crowny
         void SetScripts(uint64_t fingerprint, Vector<ScriptEntry> scripts);
 
         const Vector<ComponentEntry>& GetComponents();
+        const Vector<CategoryEntry>& GetCategories();
         const Vector<ScriptEntry>& GetScripts() const { return m_Scripts; }
         const SearchResults& Search(StringView query);
 
@@ -50,6 +58,7 @@ namespace Crowny
         void SortComponents();
 
         Vector<ComponentEntry> m_Components;
+        Vector<CategoryEntry> m_Categories;
         Vector<ScriptEntry> m_Scripts;
         SearchResults m_SearchResults;
         String m_Query;

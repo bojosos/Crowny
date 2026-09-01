@@ -137,57 +137,106 @@ namespace Crowny
         return nullptr;
     }
 
+    static ImVec4 GetComponentMenuSecondaryTextColor()
+    {
+        ImVec4 color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+        color.w *= 0.72f;
+        return color;
+    }
+
     static void RenderMenuSectionLabel(StringView label)
     {
-        ImGui::Dummy(ImVec2(0.0f, 3.0f));
-        ImGui::TextDisabled("%.*s", static_cast<int>(label.size()), label.data());
-        ImGui::Dummy(ImVec2(0.0f, 1.0f));
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, GetComponentMenuSecondaryTextColor());
+        ImGui::TextUnformatted(label.data(), label.data() + label.size());
+        ImGui::PopStyleColor();
+        ImGui::Dummy(ImVec2(0.0f, 2.0f));
+    }
+
+    enum class ComponentMenuRowAction
+    {
+        Add,
+        Navigate,
+        Added,
+    };
+
+    static bool RenderComponentMenuRow(StringView name, StringView detail, ComponentMenuRowAction action)
+    {
+        const float lineHeight = ImGui::GetTextLineHeight();
+        const float rowHeight = lineHeight + 14.0f;
+        const bool disabled = action == ComponentMenuRowAction::Added;
+        const ImGuiSelectableFlags flags = disabled ? ImGuiSelectableFlags_Disabled : ImGuiSelectableFlags_None;
+        const bool clicked = ImGui::Selectable("##ComponentMenuItem", false, flags, ImVec2(0.0f, rowHeight));
+        const bool hovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled);
+
+        const ImVec2 rowMin = ImGui::GetItemRectMin();
+        const ImVec2 rowMax = ImGui::GetItemRectMax();
+        const float textX = rowMin.x + 9.0f;
+        const float textY = rowMin.y + (rowHeight - lineHeight) * 0.5f;
+        const float trailingWidth = action == ComponentMenuRowAction::Added ? 61.0f : 34.0f;
+        const float textMaxX = rowMax.x - trailingWidth;
+        const ImVec4 secondaryText = GetComponentMenuSecondaryTextColor();
+        const ImU32 titleColor = disabled ? ImGui::GetColorU32(secondaryText) : ImGui::GetColorU32(ImGuiCol_Text);
+        const ImU32 detailColor = ImGui::GetColorU32(secondaryText);
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+        float titleMaxX = textMaxX;
+        if (!detail.empty())
+        {
+            const float availableWidth = textMaxX - textX;
+            const float detailWidth = std::min(ImGui::CalcTextSize(detail.data(), detail.data() + detail.size()).x, availableWidth * 0.42f);
+            const float detailX = textMaxX - detailWidth;
+            if (detailX - textX >= 110.0f)
+            {
+                titleMaxX = detailX - 12.0f;
+                drawList->PushClipRect(ImVec2(detailX, rowMin.y), ImVec2(textMaxX, rowMax.y), true);
+                drawList->AddText(ImVec2(detailX, textY), detailColor, detail.data(), detail.data() + detail.size());
+                drawList->PopClipRect();
+            }
+        }
+
+        drawList->PushClipRect(ImVec2(textX, rowMin.y), ImVec2(titleMaxX, rowMax.y), true);
+        drawList->AddText(ImVec2(textX, textY), titleColor, name.data(), name.data() + name.size());
+        drawList->PopClipRect();
+
+        if (textX + ImGui::CalcTextSize(name.data(), name.data() + name.size()).x > titleMaxX && hovered)
+            ImGui::SetTooltip("%.*s", static_cast<int>(name.size()), name.data());
+
+        if (action == ComponentMenuRowAction::Added)
+        {
+            const char* badgeText = "Added";
+            const ImVec2 badgeTextSize = ImGui::CalcTextSize(badgeText);
+            const ImVec2 badgeMax(rowMax.x - 7.0f, rowMin.y + (rowHeight + badgeTextSize.y) * 0.5f + 3.0f);
+            const ImVec2 badgeMin(badgeMax.x - badgeTextSize.x - 12.0f, badgeMax.y - badgeTextSize.y - 6.0f);
+            drawList->AddRectFilled(badgeMin, badgeMax, ImGui::GetColorU32(ImGuiCol_FrameBg), 3.0f);
+            drawList->AddText(badgeMin + ImVec2(6.0f, 3.0f), detailColor, badgeText);
+        }
+        else if (action == ComponentMenuRowAction::Navigate)
+        {
+            const ImVec2 center(rowMax.x - 15.0f, (rowMin.y + rowMax.y) * 0.5f);
+            drawList->AddTriangleFilled(center + ImVec2(-3.0f, -5.0f), center + ImVec2(-3.0f, 5.0f), center + ImVec2(3.0f, 0.0f),
+                                        detailColor);
+        }
+        else
+        {
+            const ImVec2 buttonMin(rowMax.x - 29.0f, rowMin.y + 4.0f);
+            const ImVec2 buttonMax(rowMax.x - 7.0f, rowMax.y - 4.0f);
+            drawList->AddRectFilled(buttonMin, buttonMax, ImGui::GetColorU32(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_FrameBg), 3.0f);
+            drawList->AddRect(buttonMin, buttonMax, ImGui::GetColorU32(ImGuiCol_Border), 3.0f);
+            const ImVec2 center((buttonMin.x + buttonMax.x) * 0.5f, (buttonMin.y + buttonMax.y) * 0.5f);
+            const ImU32 plusColor = ImGui::GetColorU32(ImGuiCol_Text);
+            drawList->AddLine(center + ImVec2(-4.0f, 0.0f), center + ImVec2(4.0f, 0.0f), plusColor, 1.5f);
+            drawList->AddLine(center + ImVec2(0.0f, -4.0f), center + ImVec2(0.0f, 4.0f), plusColor, 1.5f);
+        }
+
+        if (hovered && !disabled)
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        return clicked;
     }
 
     static bool RenderComponentMenuItem(StringView name, StringView detail, bool alreadyAdded)
     {
-        const float lineHeight = ImGui::GetTextLineHeight();
-        const float rowHeight = lineHeight * 2.0f + 11.0f;
-        const ImGuiSelectableFlags flags = alreadyAdded ? ImGuiSelectableFlags_Disabled : ImGuiSelectableFlags_None;
-        const bool clicked = ImGui::Selectable("##ComponentMenuItem", false, flags, ImVec2(0.0f, rowHeight));
-
-        const ImVec2 rowMin = ImGui::GetItemRectMin();
-        const ImVec2 rowMax = ImGui::GetItemRectMax();
-        const float textX = rowMin.x + ImGui::GetStyle().FramePadding.x + 3.0f;
-        const float titleY = rowMin.y + 5.0f;
-        const ImU32 titleColor = ImGui::GetColorU32(alreadyAdded ? ImGuiCol_TextDisabled : ImGuiCol_Text);
-        const ImU32 detailColor = ImGui::GetColorU32(ImGuiCol_TextDisabled);
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        const float trailingWidth = alreadyAdded ? ImGui::CalcTextSize("Added").x + 28.0f : ImGui::CalcTextSize("+").x + 24.0f;
-        const float textMaxX = rowMax.x - trailingWidth;
-
-        drawList->PushClipRect(rowMin, ImVec2(textMaxX, rowMax.y), true);
-        drawList->AddText(ImVec2(textX, titleY), titleColor, name.data(), name.data() + name.size());
-        drawList->AddText(ImVec2(textX, titleY + lineHeight), detailColor, detail.data(), detail.data() + detail.size());
-        drawList->PopClipRect();
-
-        if (textX + ImGui::CalcTextSize(name.data(), name.data() + name.size()).x > textMaxX &&
-            ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-            ImGui::SetTooltip("%.*s", static_cast<int>(name.size()), name.data());
-
-        if (alreadyAdded)
-        {
-            const char* badgeText = "Added";
-            const ImVec2 badgeTextSize = ImGui::CalcTextSize(badgeText);
-            const float badgePaddingX = 6.0f;
-            const float badgePaddingY = 2.0f;
-            const ImVec2 badgeMax(rowMax.x - 7.0f, rowMin.y + 6.0f + badgeTextSize.y + badgePaddingY * 2.0f);
-            const ImVec2 badgeMin(badgeMax.x - badgeTextSize.x - badgePaddingX * 2.0f, rowMin.y + 6.0f);
-            drawList->AddRectFilled(badgeMin, badgeMax, ImGui::GetColorU32(ImGuiCol_FrameBg), 3.0f);
-            drawList->AddText(badgeMin + ImVec2(badgePaddingX, badgePaddingY), detailColor, badgeText);
-        }
-        else
-        {
-            const ImVec2 plusSize = ImGui::CalcTextSize("+");
-            drawList->AddText(ImVec2(rowMax.x - plusSize.x - 10.0f, rowMin.y + (rowHeight - plusSize.y) * 0.5f), detailColor, "+");
-        }
-
-        return clicked;
+        return RenderComponentMenuRow(name, detail, alreadyAdded ? ComponentMenuRowAction::Added : ComponentMenuRowAction::Add);
     }
 
     struct PrefabOverrideEntry
@@ -551,6 +600,15 @@ namespace Crowny
             scene->AddScriptComponent(entity, "Sandbox", className);
     }
 
+    static void RenderComponentMenuEmptyState(StringView title, StringView hint)
+    {
+        ImGui::Dummy(ImVec2(0.0f, 18.0f));
+        ImGui::TextUnformatted(title.data(), title.data() + title.size());
+        ImGui::PushStyleColor(ImGuiCol_Text, GetComponentMenuSecondaryTextColor());
+        ImGui::TextWrapped("%.*s", static_cast<int>(hint.size()), hint.data());
+        ImGui::PopStyleColor();
+    }
+
     static void RenderSearchResults(const Ref<Scene>& scene, const Vector<Entity>& entities, const entt::registry& registry,
                                     const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
                                     ComponentMenuModel& menu, const String& query)
@@ -561,12 +619,13 @@ namespace Crowny
         const size_t matchCount = results.GetMatchCount();
         if (matchCount == 0)
         {
-            ImGui::Dummy(ImVec2(0.0f, 12.0f));
-            ImGui::TextWrapped("No components or scripts match \"%s\".", query.c_str());
+            RenderComponentMenuEmptyState("No matches", "Try another name or clear the search to browse categories.");
         }
         else
         {
-            ImGui::TextDisabled("%zu %s", matchCount, matchCount == 1 ? "result" : "results");
+            ImGui::PushStyleColor(ImGuiCol_Text, GetComponentMenuSecondaryTextColor());
+            ImGui::Text("%zu %s", matchCount, matchCount == 1 ? "result" : "results");
+            ImGui::PopStyleColor();
 
             if (!results.ComponentIndices.empty())
             {
@@ -580,7 +639,7 @@ namespace Crowny
                     const size_t presence =
                       std::count_if(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, typeId); });
                     const bool alreadyAdded = presence == entities.size();
-                    const StringView detail = presence == 0u ? StringView(entry.Detail) : StringView("Add to missing selected entities");
+                    const StringView detail = presence == 0u ? StringView(entry.Group) : StringView("Missing from selection");
                     if (RenderComponentMenuItem(entry.Name, detail, alreadyAdded))
                     {
                         const ComponentEditor::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
@@ -630,12 +689,12 @@ namespace Crowny
 
         if (IsValidScriptClassName(query) && !results.ScriptNameDeclared)
         {
-            ImGui::Dummy(ImVec2(0.0f, 5.0f));
+            ImGui::Dummy(ImVec2(0.0f, 6.0f));
             ImGui::Separator();
-            RenderMenuSectionLabel("Create a C# script");
-            ImGui::TextWrapped("Create %s.cs and attach it to %zu selected %s.", query.c_str(), entities.size(),
-                               entities.size() == 1u ? "entity" : "entities");
-            const bool createRequested = ImGui::Button(results.CreateScriptLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f));
+            RenderMenuSectionLabel("Create script");
+            ImGui::PushID("CreateScript");
+            const bool createRequested = RenderComponentMenuRow(results.CreateScriptLabel, "C# script", ComponentMenuRowAction::Add);
+            ImGui::PopID();
             if (createRequested || (matchCount == 0 && Input::IsKeyPressed(Key::Enter)))
             {
                 CreateNewScript(scene, entities, query);
@@ -644,46 +703,85 @@ namespace Crowny
         }
     }
 
+    static bool RenderComponentMenuBackRow(StringView category)
+    {
+        const float lineHeight = ImGui::GetTextLineHeight();
+        const float rowHeight = lineHeight + 14.0f;
+        ImGui::PushID("ComponentMenuBack");
+        const bool clicked = ImGui::Selectable("##Back", false, ImGuiSelectableFlags_None, ImVec2(0.0f, rowHeight));
+        const bool hovered = ImGui::IsItemHovered();
+        const ImVec2 rowMin = ImGui::GetItemRectMin();
+        const ImVec2 rowMax = ImGui::GetItemRectMax();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        const ImU32 secondaryColor = ImGui::GetColorU32(GetComponentMenuSecondaryTextColor());
+        const float textY = rowMin.y + (rowHeight - lineHeight) * 0.5f;
+        const ImVec2 arrowCenter(rowMin.x + 12.0f, (rowMin.y + rowMax.y) * 0.5f);
+        drawList->AddTriangleFilled(arrowCenter + ImVec2(3.0f, -5.0f), arrowCenter + ImVec2(3.0f, 5.0f),
+                                    arrowCenter + ImVec2(-3.0f, 0.0f), secondaryColor);
+        const float rootX = rowMin.x + 25.0f;
+        drawList->AddText(ImVec2(rootX, textY), secondaryColor, "All components");
+        const float separatorX = rootX + ImGui::CalcTextSize("All components").x + 8.0f;
+        drawList->AddText(ImVec2(separatorX, textY), secondaryColor, "/");
+        drawList->AddText(ImVec2(separatorX + 12.0f, textY), ImGui::GetColorU32(ImGuiCol_Text), category.data(),
+                          category.data() + category.size());
+        if (hovered)
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        ImGui::PopID();
+        return clicked;
+    }
+
     static void RenderCategoryBrowser(const Ref<Scene>& scene, const Vector<Entity>& entities, const entt::registry& registry,
                                       const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
-                                      ComponentMenuModel& menu)
+                                      ComponentMenuModel& menu, String& selectedCategory, bool& browsingScripts)
     {
         const Vector<ComponentMenuModel::ComponentEntry>& components = menu.GetComponents();
-        StringView currentGroup;
-        bool hasCurrentGroup = false;
-        ImGui::PushID("ComponentBrowser");
-        for (const ComponentMenuModel::ComponentEntry& entry : components)
-        {
-            if (!hasCurrentGroup || entry.Group != currentGroup)
-            {
-                currentGroup = entry.Group;
-                hasCurrentGroup = true;
-                RenderMenuSectionLabel(currentGroup);
-            }
+        const Vector<ComponentMenuModel::CategoryEntry>& categories = menu.GetCategories();
+        const Vector<ComponentMenuModel::ScriptEntry>& scripts = menu.GetScripts();
+        const size_t visibleScriptCount =
+          std::count_if(scripts.begin(), scripts.end(), [](const ComponentMenuModel::ScriptEntry& entry) { return entry.Visible; });
 
-            const auto typeId = static_cast<ComponentEditor::ComponentTypeID>(entry.Id);
-            ImGui::PushID(typeId);
-            const bool alreadyAdded =
-              std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, typeId); });
-            if (RenderComponentMenuItem(entry.Name, "Built-in component", alreadyAdded))
+        if (selectedCategory.empty() && !browsingScripts)
+        {
+            RenderMenuSectionLabel("Categories");
+            ImGui::PushID("ComponentCategories");
+            for (const ComponentMenuModel::CategoryEntry& category : categories)
             {
-                const ComponentEditor::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
-                if (info != nullptr)
+                String countLabel = std::to_string(category.ComponentCount);
+                countLabel += category.ComponentCount == 1u ? " component" : " components";
+                ImGui::PushID(category.Name.c_str());
+                const bool selected = RenderComponentMenuRow(category.Name, countLabel, ComponentMenuRowAction::Navigate);
+                ImGui::PopID();
+                if (selected)
                 {
-                    AddComponentToEntities(scene, entities, registry, typeId, *info);
-                    ImGui::CloseCurrentPopup();
+                    selectedCategory = category.Name;
+                    ImGui::PopID();
+                    return;
                 }
             }
             ImGui::PopID();
-        }
-        ImGui::PopID();
 
-        const Vector<ComponentMenuModel::ScriptEntry>& scripts = menu.GetScripts();
-        const bool hasVisibleScripts =
-          std::any_of(scripts.begin(), scripts.end(), [](const ComponentMenuModel::ScriptEntry& entry) { return entry.Visible; });
-        if (hasVisibleScripts)
+            if (visibleScriptCount != 0u)
+            {
+                String countLabel = std::to_string(visibleScriptCount);
+                countLabel += visibleScriptCount == 1u ? " script" : " scripts";
+                ImGui::PushID("ScriptsCategory");
+                browsingScripts = RenderComponentMenuRow("Scripts", countLabel, ComponentMenuRowAction::Navigate);
+                ImGui::PopID();
+            }
+            return;
+        }
+
+        const StringView categoryLabel = browsingScripts ? StringView("Scripts") : StringView(selectedCategory);
+        if (RenderComponentMenuBackRow(categoryLabel))
         {
-            RenderMenuSectionLabel("Scripts");
+            selectedCategory.clear();
+            browsingScripts = false;
+            return;
+        }
+        ImGui::Separator();
+
+        if (browsingScripts)
+        {
             ImGui::PushID("ScriptBrowser");
             for (const ComponentMenuModel::ScriptEntry& script : scripts)
             {
@@ -693,9 +791,8 @@ namespace Crowny
                 ImGui::PushID(scriptName.c_str());
                 const bool alreadyAdded =
                   std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, script.Identity); });
-                if (RenderComponentMenuItem(scriptName, "C# script", alreadyAdded))
+                if (RenderComponentMenuItem(scriptName, {}, alreadyAdded))
                 {
-                    ComponentEditor::ComponentInfo dummy;
                     Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Add script" : "Add scripts");
                     for (Entity entity : entities)
                     {
@@ -712,17 +809,49 @@ namespace Crowny
                 ImGui::PopID();
             }
             ImGui::PopID();
+            return;
         }
+
+        const auto selected = std::find_if(categories.begin(), categories.end(),
+                                           [&](const ComponentMenuModel::CategoryEntry& category) { return category.Name == selectedCategory; });
+        if (selected == categories.end())
+        {
+            selectedCategory.clear();
+            return;
+        }
+
+        ImGui::PushID("ComponentBrowser");
+        const size_t lastComponentIndex = selected->FirstComponentIndex + selected->ComponentCount;
+        for (size_t componentIndex = selected->FirstComponentIndex; componentIndex < lastComponentIndex; componentIndex++)
+        {
+            const ComponentMenuModel::ComponentEntry& entry = components[componentIndex];
+            const auto typeId = static_cast<ComponentEditor::ComponentTypeID>(entry.Id);
+            ImGui::PushID(typeId);
+            const bool alreadyAdded =
+              std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, typeId); });
+            if (RenderComponentMenuItem(entry.Name, {}, alreadyAdded))
+            {
+                const ComponentEditor::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
+                if (info != nullptr)
+                {
+                    AddComponentToEntities(scene, entities, registry, typeId, *info);
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+            ImGui::PopID();
+        }
+        ImGui::PopID();
     }
 
     static void RenderAddComponentPopup(const Ref<Scene>& scene, Entity primary, const Vector<Entity>& entities, const entt::registry& registry,
                                         const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
-                                        ComponentMenuModel& menu, String& query, bool& grabSearchFocus)
+                                        ComponentMenuModel& menu, String& query, String& selectedCategory, bool& browsingScripts,
+                                        bool& grabSearchFocus)
     {
-        ImGui::SetNextWindowSize(ImVec2(370.0f, 460.0f), ImGuiCond_Appearing);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(320.0f, 360.0f), ImVec2(480.0f, 620.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 10.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 4.0f));
+        ImGui::SetNextWindowSize(ImVec2(400.0f, 500.0f), ImGuiCond_Appearing);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(340.0f, 400.0f), ImVec2(540.0f, 680.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 12.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 6.0f));
         if (!ImGui::BeginPopup("Add Component"))
         {
             ImGui::PopStyleVar(2);
@@ -732,25 +861,32 @@ namespace Crowny
         if (ImGui::IsWindowAppearing())
         {
             query.clear();
+            selectedCategory.clear();
+            browsingScripts = false;
             grabSearchFocus = true;
         }
 
         SynchronizeScriptCatalog(menu);
 
-        ImGui::TextUnformatted("Add component");
+        ImGui::TextUnformatted("Add Component");
+        ImGui::PushStyleColor(ImGuiCol_Text, GetComponentMenuSecondaryTextColor());
         if (entities.size() == 1u)
-            ImGui::TextDisabled("Choose a component for %s", primary.GetName().c_str());
+            ImGui::Text("Add to %s", primary.GetName().c_str());
         else
-            ImGui::TextDisabled("Add to %zu selected entities", entities.size());
-        ImGui::Dummy(ImVec2(0.0f, 3.0f));
+            ImGui::Text("Add to %zu selected entities", entities.size());
+        ImGui::PopStyleColor();
+        ImGui::Dummy(ImVec2(0.0f, 2.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, 6.0f));
         UIUtils::SearchWidget(query, "Search components and scripts...", &grabSearchFocus);
+        ImGui::PopStyleVar();
+        ImGui::Dummy(ImVec2(0.0f, 2.0f));
         ImGui::Separator();
 
-        ImGui::BeginChild("##AddComponentResults", ImVec2(0.0f, 0.0f), false);
+        ImGui::BeginChild("##AddComponentResults", ImVec2(0.0f, 0.0f), true);
         if (!query.empty())
             RenderSearchResults(scene, entities, registry, componentInfos, menu, query);
         else
-            RenderCategoryBrowser(scene, entities, registry, componentInfos, menu);
+            RenderCategoryBrowser(scene, entities, registry, componentInfos, menu, selectedCategory, browsingScripts);
         ImGui::EndChild();
 
         ImGui::EndPopup();
@@ -815,7 +951,7 @@ namespace Crowny
             ImGui::OpenPopup("Add Component");
 
         RenderAddComponentPopup(scene, primary, m_SelectionScratch, registry, m_ComponentInfos, m_ComponentMenu, m_ComponentSearch,
-                                m_GrabComponentSearchFocus);
+                                m_ComponentBrowserCategory, m_ComponentBrowserScripts, m_GrabComponentSearchFocus);
         ImGui::PopID();
     }
 

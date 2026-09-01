@@ -201,6 +201,8 @@ namespace Crowny
         String m_CurrentComponentGroup;
         ComponentMenuModel m_ComponentMenu;
         String m_ComponentSearch;
+        String m_ComponentBrowserCategory;
+        bool m_ComponentBrowserScripts = false;
         bool m_GrabComponentSearchFocus = true;
         Vector<Entity> m_SelectionScratch;
         Vector<UUID> m_UndoSelection;

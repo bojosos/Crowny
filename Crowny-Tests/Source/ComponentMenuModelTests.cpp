@@ -54,6 +54,23 @@ TEST_CASE("Component menu model retains sorted catalogs and filtered results", "
     CHECK(hidden.CreateScriptLabel == "Create \"HiddenButDeclared.cs\"");
 }
 
+TEST_CASE("Component menu model projects sorted component categories", "[Editor][ComponentMenu]")
+{
+    ComponentMenuModel menu = MakeMenu();
+    const Vector<ComponentMenuModel::CategoryEntry>& categories = menu.GetCategories();
+
+    REQUIRE(categories.size() == 3u);
+    CHECK(categories[0].Name == "Core");
+    CHECK(categories[0].FirstComponentIndex == 0u);
+    CHECK(categories[0].ComponentCount == 1u);
+    CHECK(categories[1].Name == "Physics");
+    CHECK(categories[1].FirstComponentIndex == 1u);
+    CHECK(categories[1].ComponentCount == 1u);
+    CHECK(categories[2].Name == "Rendering");
+    CHECK(categories[2].FirstComponentIndex == 2u);
+    CHECK(categories[2].ComponentCount == 2u);
+}
+
 TEST_CASE("Component menu model invalidates results only when inputs change", "[Editor][ComponentMenu]")
 {
     ComponentMenuModel menu = MakeMenu();
@@ -62,6 +79,10 @@ TEST_CASE("Component menu model invalidates results only when inputs change", "[
 
     menu.AddComponent(5u, "Player Input", "Input");
     CHECK(menu.Search("player").GetMatchCount() == 2u);
+    REQUIRE(menu.GetCategories().size() == 4u);
+    CHECK(menu.GetCategories()[1].Name == "Input");
+    CHECK(menu.GetCategories()[1].FirstComponentIndex == 1u);
+    CHECK(menu.GetCategories()[1].ComponentCount == 1u);
 
     menu.SetScripts(101u, { { "WorldController", true } });
     CHECK(menu.HasScriptCatalog(101u));
@@ -83,12 +104,13 @@ TEST_CASE("Component menu model allocates nothing for a stable visible query", "
     {
         observedMatches += menu.Search("rendering").GetMatchCount();
         observedMatches += menu.GetComponents().size();
+        observedMatches += menu.GetCategories().size();
         observedMatches += menu.GetScripts().size();
     }
     const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
     const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
 
-    CHECK(observedMatches == 240u * 9u);
+    CHECK(observedMatches == 240u * 12u);
     CHECK(menu.Search("rendering").ComponentIndices.data() == componentIndices);
     CHECK(menu.Search("rendering").CreateScriptLabel.data() == createLabel);
     CHECK(delta.AllocationCount == 0u);
