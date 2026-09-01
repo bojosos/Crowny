@@ -595,8 +595,10 @@ namespace Crowny
         }
         ProjectLibrary::Get().Refresh(path);
 
-        // The project graph synchronizer batches this with the script reload request.
-        CodeEditorManager::Get().NotifyProjectInputChanged(path);
+        Path engineAssemblyPath = Application::TryGet()->GetApplicationDesc().EngineAssemblyPath;
+        if (engineAssemblyPath.is_relative())
+            engineAssemblyPath = Application::TryGet()->GetWorkingDirectory() / engineAssemblyPath;
+        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY, { CROWNY_ASSEMBLY, engineAssemblyPath });
 
         // Keep the serialized attachment while the new type is absent from the
         // runtime catalog. The next managed reload will create its instances.

@@ -1294,7 +1294,7 @@ namespace Crowny
                 {
                     dependencies.erase(dependencies.begin() + static_cast<ptrdiff_t>(removeIndex));
                     Editor::Get().SaveProjectSettings();
-                    CodeEditorManager::Get().NotifyProjectSettingsChanged();
+                    CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
                 }
 
                 if (ImGui::Button("Add assembly..."))
@@ -1312,7 +1312,7 @@ namespace Crowny
                         if (std::find(dependencies.begin(), dependencies.end(), assembly) == dependencies.end())
                             dependencies.push_back(assembly);
                         Editor::Get().SaveProjectSettings();
-                        CodeEditorManager::Get().NotifyProjectSettingsChanged();
+                        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
                     }
                 }
                 ImGui::SameLine();

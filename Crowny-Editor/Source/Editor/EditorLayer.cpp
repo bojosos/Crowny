@@ -141,9 +141,9 @@ namespace Crowny
 
         EditorAssets::Load();
 
-        Editor::StartUp([this](const Path& path, FileWatch::Change) {
-            if (CodeEditorManager::IsStartedUp())
-                CodeEditorManager::Get().NotifyProjectInputChanged(path);
+        Editor::StartUp([this](const Path& path, FileWatch::Change changeType) {
+            if (changeType != FileWatch::FileModified && changeType != FileWatch::FileAdded && changeType != FileWatch::FileNewRenamed)
+                return;
             {
                 Lock lock(m_FileWatchMutex);
                 m_FileWatchQueue.push_back(path);
@@ -640,9 +640,6 @@ namespace Crowny
         // Process completed async imports (GPU init on main thread)
         if (ProjectLibrary::IsStartedUp() && ProjectLibrary::Get().IsImporting())
             ProjectLibrary::Get().ProcessCompletedImports();
-
-        if (CodeEditorManager::IsStartedUp())
-            CodeEditorManager::Get().Update();
 
         if (m_Temp) // Delay scene reload
         {

@@ -151,11 +151,13 @@ namespace Crowny
             return Project(m_PropertyName, std::move(reader), std::move(writer), std::move(equal));
         }
 
-        template <typename Member> auto Member(StringView propertyName, Member Value::* member) const
+        template <typename Owner, typename MemberType>
+            requires(std::is_same_v<Owner, Value>)
+        auto Member(StringView propertyName, MemberType Owner::* memberPointer) const
         {
             return Project(
-              propertyName, [member](const Value& value) { return value.*member; },
-              [member](Value& value, const Member& memberValue) { value.*member = memberValue; });
+              propertyName, [memberPointer](const Value& value) { return value.*memberPointer; },
+              [memberPointer](Value& value, const MemberType& memberValue) { value.*memberPointer = memberValue; });
         }
 
         auto Element(size_t index) const

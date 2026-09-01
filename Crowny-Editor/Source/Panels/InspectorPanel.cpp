@@ -332,24 +332,27 @@ namespace Crowny
                         UndoRedo::Get().RegisterAction(change.Action);
                         break;
                     }
-                    case AssetType::Font:
+                    case AssetType::Font: {
                         const AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(fileEntry));
                         const SelectionComponentChange change =
                           AddComponentToSelection<TextComponent>(selectedEntities, [&](Entity, TextComponent& component) { component.Font = font; });
                         UndoRedo::Get().RegisterAction(change.Action);
                         break;
-                    case AssetType::Mesh:
+                    }
+                    case AssetType::Mesh: {
                         const AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(fileEntry));
                         const SelectionComponentChange change = AddComponentToSelection<MeshRendererComponent>(
                           selectedEntities, [&](Entity, MeshRendererComponent& component) { component.MeshHandle = mesh; });
                         UndoRedo::Get().RegisterAction(change.Action);
                         break;
-                    case AssetType::Texture:
+                    }
+                    case AssetType::Texture: {
                         const AssetHandle<Texture> texture = static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
                         const SelectionComponentChange change = AddComponentToSelection<SpriteRendererComponent>(
                           selectedEntities, [&](Entity, SpriteRendererComponent& component) { component.Texture = texture; });
                         UndoRedo::Get().RegisterAction(change.Action);
                         break;
+                    }
                     }
                 }
             }

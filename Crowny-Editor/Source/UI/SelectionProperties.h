@@ -8,9 +8,9 @@
 
 namespace Crowny::UI
 {
-    template <SelectionPropertyBinding Property, typename Drawer> static bool EditSelectionProperty(Property&& property, Drawer&& drawer)
+    template <SelectionPropertyBinding Binding, typename Drawer> static bool EditSelectionProperty(Binding&& property, Drawer&& drawer)
     {
-        using Value = typename std::remove_cvref_t<Property>::ValueType;
+        using Value = typename std::remove_cvref_t<Binding>::ValueType;
         SelectionPropertyValue<Value> state = property.Read();
         if (!state)
             return false;
@@ -65,19 +65,19 @@ namespace Crowny::UI
         return layout;
     }
 
-    template <SelectionPropertyBinding Property, typename... Args>
-        requires(SelectionVectorLength<typename std::remove_cvref_t<Property>::ValueType>::value == 0u)
-    static bool Property(const char* label, Property&& property, Args&&... args)
+    template <SelectionPropertyBinding Binding, typename... Args>
+        requires(SelectionVectorLength<typename std::remove_cvref_t<Binding>::ValueType>::value == 0u)
+    static bool Property(const char* label, Binding&& property, Args&&... args)
     {
-        return EditSelectionProperty(std::forward<Property>(property),
+        return EditSelectionProperty(std::forward<Binding>(property),
                                      [&](auto& value) { return Property(label, value, std::forward<Args>(args)...); });
     }
 
-    template <SelectionPropertyBinding Property>
-        requires(SelectionVectorLength<typename std::remove_cvref_t<Property>::ValueType>::value != 0u)
-    static bool Property(const char* label, Property&& property, const SelectionVectorPropertyOptions& options)
+    template <SelectionPropertyBinding Binding>
+        requires(SelectionVectorLength<typename std::remove_cvref_t<Binding>::ValueType>::value != 0u)
+    static bool Property(const char* label, Binding&& property, const SelectionVectorPropertyOptions& options)
     {
-        constexpr size_t length = SelectionVectorLength<typename std::remove_cvref_t<Property>::ValueType>::value;
+        constexpr size_t length = SelectionVectorLength<typename std::remove_cvref_t<Binding>::ValueType>::value;
         constexpr const char* formats[] = { "X %.3f", "Y %.3f", "Z %.3f", "W %.3f" };
         constexpr const char* axisLabels[] = { "X", "Y", "Z", "W" };
         constexpr ImU32 axisColors[] = { Colors::AxisX, Colors::AxisY, Colors::AxisZ, Colors::Accent };
@@ -150,56 +150,56 @@ namespace Crowny::UI
         return changed;
     }
 
-    template <SelectionPropertyBinding Property>
-        requires(SelectionVectorLength<typename std::remove_cvref_t<Property>::ValueType>::value != 0u)
-    static bool Property(const char* label, Property&& property, float speed = 0.1f, float minimum = 0.0f, float maximum = 0.0f)
+    template <SelectionPropertyBinding Binding>
+        requires(SelectionVectorLength<typename std::remove_cvref_t<Binding>::ValueType>::value != 0u)
+    static bool Property(const char* label, Binding&& property, float speed = 0.1f, float minimum = 0.0f, float maximum = 0.0f)
     {
-        return Property(label, std::forward<Property>(property), SelectionVectorPropertyOptions{ speed, minimum, maximum });
+        return Property(label, std::forward<Binding>(property), SelectionVectorPropertyOptions{ speed, minimum, maximum });
     }
 
-    template <SelectionPropertyBinding Property> static bool PropertyColor(const char* label, Property&& property, ImGuiColorEditFlags flags = 0)
+    template <SelectionPropertyBinding Binding> static bool PropertyColor(const char* label, Binding&& property, ImGuiColorEditFlags flags = 0)
     {
-        return EditSelectionProperty(std::forward<Property>(property), [&](auto& value) { return PropertyColor(label, value, flags); });
+        return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertyColor(label, value, flags); });
     }
 
-    template <SelectionPropertyBinding Property> static bool PropertyColor(const char* label, Property&& property, bool showAlpha, bool hdr)
+    template <SelectionPropertyBinding Binding> static bool PropertyColor(const char* label, Binding&& property, bool showAlpha, bool hdr)
     {
-        return EditSelectionProperty(std::forward<Property>(property), [&](auto& value) { return PropertyColor(label, value, showAlpha, hdr); });
+        return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertyColor(label, value, showAlpha, hdr); });
     }
 
-    template <SelectionPropertyBinding Property> static bool PropertyMultiline(const char* label, Property&& property, int32_t lines = 8)
+    template <SelectionPropertyBinding Binding> static bool PropertyMultiline(const char* label, Binding&& property, int32_t lines = 8)
     {
-        return EditSelectionProperty(std::forward<Property>(property), [&](auto& value) { return PropertyMultiline(label, value, lines); });
+        return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertyMultiline(label, value, lines); });
     }
 
-    template <SelectionPropertyBinding Property, typename Minimum, typename Maximum>
-    static bool PropertySlider(const char* label, Property&& property, Minimum minimum, Maximum maximum)
+    template <SelectionPropertyBinding Binding, typename Minimum, typename Maximum>
+    static bool PropertySlider(const char* label, Binding&& property, Minimum minimum, Maximum maximum)
     {
-        return EditSelectionProperty(std::forward<Property>(property), [&](auto& value) { return PropertySlider(label, value, minimum, maximum); });
+        return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertySlider(label, value, minimum, maximum); });
     }
 
-    template <SelectionPropertyBinding Property>
-    static bool PropertyDropdown(const char* label, std::initializer_list<const char*> options, Property&& property)
+    template <SelectionPropertyBinding Binding>
+    static bool PropertyDropdown(const char* label, std::initializer_list<const char*> options, Binding&& property)
     {
-        return EditSelectionProperty(std::forward<Property>(property), [&](auto& value) { return PropertyDropdown(label, options, value); });
+        return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertyDropdown(label, options, value); });
     }
 
-    template <SelectionPropertyBinding Property> static bool PropertyDropdown(const char* label, const Vector<String>& options, Property&& property)
+    template <SelectionPropertyBinding Binding> static bool PropertyDropdown(const char* label, const Vector<String>& options, Binding&& property)
     {
-        return EditSelectionProperty(std::forward<Property>(property), [&](auto& value) { return PropertyDropdown(label, options, value); });
+        return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertyDropdown(label, options, value); });
     }
 
-    template <SelectionPropertyBinding Property>
-    static bool PropertyIconTabs(const char* label, std::initializer_list<PropertyIconTab> tabs, Property&& property)
+    template <SelectionPropertyBinding Binding>
+    static bool PropertyIconTabs(const char* label, std::initializer_list<PropertyIconTab> tabs, Binding&& property)
     {
-        return EditSelectionProperty(std::forward<Property>(property), [&](auto& value) { return PropertyIconTabs(label, tabs, value); });
+        return EditSelectionProperty(std::forward<Binding>(property), [&](auto& value) { return PropertyIconTabs(label, tabs, value); });
     }
 
-    template <typename Enum, SelectionPropertyBinding Property>
+    template <typename Enum, SelectionPropertyBinding Binding>
     static bool PropertyFlags(const char* label, std::initializer_list<const char*> buttonLabels, std::initializer_list<Enum> bits,
-                              Property&& property)
+                              Binding&& property)
     {
-        using FlagsType = typename std::remove_cvref_t<Property>::ValueType;
+        using FlagsType = typename std::remove_cvref_t<Binding>::ValueType;
         if (buttonLabels.size() != bits.size() || bits.size() == 0u)
             return false;
 
@@ -247,11 +247,11 @@ namespace Crowny::UI
         return changed;
     }
 
-    template <typename AssetType, SelectionPropertyBinding Property>
-        requires(std::is_same_v<typename std::remove_cvref_t<Property>::ValueType, AssetHandle<AssetType>>)
-    static bool PropertyAsset(const char* label, Property&& property)
+    template <typename AssetType, SelectionPropertyBinding Binding>
+        requires(std::is_same_v<typename std::remove_cvref_t<Binding>::ValueType, AssetHandle<AssetType>>)
+    static bool PropertyAsset(const char* label, Binding&& property)
     {
-        return EditSelectionProperty(std::forward<Property>(property),
+        return EditSelectionProperty(std::forward<Binding>(property),
                                      [&](AssetHandle<AssetType>& value) { return UIUtils::AssetReference<AssetType>(label, value); });
     }
 } // namespace Crowny::UI
