@@ -4,13 +4,16 @@ param(
     [string]$Configuration = "Release",
     [ValidateSet("SSE4.1", "AVX2")]
     [string]$Simd = "AVX2",
+    [string]$DependencyRoot = "",
     [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "windows-build-common.ps1")
+$dependencyRoot = (Get-CrownyBuildRoots -RepositoryRoot $repositoryRoot -DependencyRoot $DependencyRoot).DependencyRoot
 $sourceRoot = Join-Path $repositoryRoot "Crowny\Dependencies\openal-soft"
-$openALRoot = Join-Path $repositoryRoot ".deps\openal"
+$openALRoot = Join-Path $dependencyRoot "openal"
 $buildRoot = Join-Path $openALRoot "build"
 $library = Join-Path $openALRoot "lib\OpenAL32.lib"
 $runtime = Join-Path $openALRoot "bin\OpenAL32.dll"

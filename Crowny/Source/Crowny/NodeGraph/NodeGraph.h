@@ -12,6 +12,7 @@
 namespace Crowny
 {
     class MeshData;
+    class NodeGraphEvaluator;
 
     struct GraphInput
     {
@@ -34,6 +35,7 @@ namespace Crowny
 
         NodeGraph();
         NodeGraph(UUID id);
+        ~NodeGraph();
 
         // Node management
         Node* AddNode(Ref<Node> node);
@@ -87,6 +89,7 @@ namespace Crowny
         Pin* FindPinByID(UUID pinId) const;
         bool WouldCreateCycle(UUID outputNodeId, UUID inputNodeId, UUID replacedInputPinId) const;
         void InvalidateEvaluation();
+        NodeGraphEvaluator& GetEvaluator();
 
         UUID m_ID;
         String m_Name = "Untitled Graph";
@@ -100,6 +103,8 @@ namespace Crowny
         uint32_t m_CachedEvaluationVersion = std::numeric_limits<uint32_t>::max();
         Ref<MeshData> m_CachedGeometry;
         String m_LastEvaluationError;
+        Scope<NodeGraphEvaluator> m_Evaluator;
+        uint32_t m_EvaluatorVersion = std::numeric_limits<uint32_t>::max();
     };
 
 } // namespace Crowny

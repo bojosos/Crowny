@@ -5,12 +5,15 @@ param(
     [string]$VulkanVersion = "1.4.357.0",
     [ValidateSet("SSE4.1", "AVX2")]
     [string]$Simd = "AVX2",
+    [string]$DependencyRoot = "",
     [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$dependencyRoot = Join-Path $repositoryRoot ".deps\spirv-cross"
+. (Join-Path $PSScriptRoot "windows-build-common.ps1")
+$dependencyCacheRoot = (Get-CrownyBuildRoots -RepositoryRoot $repositoryRoot -DependencyRoot $DependencyRoot).DependencyRoot
+$dependencyRoot = Join-Path $dependencyCacheRoot "spirv-cross"
 $sourceRoot = Join-Path $dependencyRoot "source"
 $buildRoot = Join-Path $dependencyRoot "build\$Configuration"
 $installRoot = Join-Path $dependencyRoot "install\$Configuration"

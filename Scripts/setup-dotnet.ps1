@@ -2,6 +2,7 @@
 param(
     [string] $Version = "",
     [string] $InstallDirectory = "",
+    [string] $DependencyRoot = "",
     [ValidateSet("x64", "arm64")]
     [string] $Architecture = "x64"
 )
@@ -10,7 +11,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$dependencyRoot = Join-Path $repositoryRoot ".deps"
+. (Join-Path $PSScriptRoot "windows-build-common.ps1")
+$dependencyRoot = (Get-CrownyBuildRoots -RepositoryRoot $repositoryRoot -DependencyRoot $DependencyRoot).DependencyRoot
 $downloadRoot = Join-Path $dependencyRoot "downloads"
 $globalJsonPath = Join-Path $repositoryRoot "global.json"
 $installerSha256 = "E8B873E18A81E5C4CD8AB69D84DAC8FEAD291D50B3C44633CD7FDDAD709A13D6"

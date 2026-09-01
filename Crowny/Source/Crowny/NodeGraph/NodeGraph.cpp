@@ -11,6 +11,8 @@ namespace Crowny
 
     NodeGraph::NodeGraph(UUID id) : m_ID(id) {}
 
+    NodeGraph::~NodeGraph() = default;
+
     Node* NodeGraph::AddNode(Ref<Node> node)
     {
         if (!node || node->GetID().Empty() || m_Nodes.find(node->GetID()) != m_Nodes.end() || m_Pins.find(node->GetID()) != m_Pins.end() ||
@@ -253,7 +255,7 @@ namespace Crowny
     {
         if (m_CachedEvaluationVersion == m_EvaluationVersion)
             return m_CachedGeometry;
-        NodeGraphEvaluator evaluator(*this);
+        NodeGraphEvaluator& evaluator = GetEvaluator();
         m_CachedGeometry = evaluator.EvaluateGeometry();
         m_LastEvaluationError = evaluator.GetError();
         m_CachedEvaluationVersion = m_EvaluationVersion;
@@ -262,10 +264,20 @@ namespace Crowny
 
     Ref<MeshData> NodeGraph::EvaluateGeometry(const UnorderedMap<UUID, PinValue>& inputValues)
     {
-        NodeGraphEvaluator evaluator(*this, inputValues);
-        Ref<MeshData> result = evaluator.EvaluateGeometry();
+        NodeGraphEvaluator& evaluator = GetEvaluator();
+        Ref<MeshData> result = evaluator.EvaluateGeometry(inputValues);
         m_LastEvaluationError = evaluator.GetError();
         return result;
+    }
+
+    NodeGraphEvaluator& NodeGraph::GetEvaluator()
+    {
+        if (!m_Evaluator || m_EvaluatorVersion != m_EvaluationVersion)
+        {
+            m_Evaluator = CreateScope<NodeGraphEvaluator>(*this);
+            m_EvaluatorVersion = m_EvaluationVersion;
+        }
+        return *m_Evaluator;
     }
 
     UUID NodeGraph::AddInput(StringID name, PinDataType type) { return AddInput(name, type, DefaultPinValue(type)); }

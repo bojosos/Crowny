@@ -219,7 +219,11 @@ namespace Crowny
         m_ComponentEditor.RegisterComponent<ManagedScriptComponent>("C# Script");
     }
 
-    InspectorPanel::~InspectorPanel() { FlushPendingAssetSaves(); }
+    InspectorPanel::~InspectorPanel()
+    {
+        ResetPhysicsMaterialUndoTransaction(true);
+        FlushPendingAssetSaves();
+    }
 
     void InspectorPanel::HandleInspectorDragDrop(Entity selectedEntity)
     {
@@ -317,6 +321,7 @@ namespace Crowny
 
     void InspectorPanel::Render()
     {
+        SaveReadyAssets();
         if (!BeginPanel())
         {
             EndPanel();
@@ -389,6 +394,8 @@ namespace Crowny
             ImGui::TextDisabled("Select an entity or asset to inspect it.");
             break;
         }
+
+        SaveReadyAssets();
 
         ImGui::EndChild();
         if (m_InspectorMode == InspectorMode::GameObject && m_InspectedEntity)
@@ -518,7 +525,6 @@ namespace Crowny
         }
 
         UI::EndPropertyGrid();
-        SaveReadyAssets();
     }
 
     void InspectorPanel::RenderPhysicsMaterialInspector()
@@ -526,11 +532,15 @@ namespace Crowny
         AssetHandle<Asset> asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
         if (!asset)
         {
+            ResetPhysicsMaterialUndoTransaction(false);
             ImGui::TextDisabled("The physics material could not be loaded.");
             return;
         }
 
         const Ref<Asset> inspectedAsset = asset.GetInternalPtr();
+        UndoRedo& undoRedo = UndoRedo::Get();
+        if (undoRedo.BeginComponentScope(m_PhysicsMaterialUndo))
+            m_PhysicsMaterialUndo->Capture(m_InspectedAssetPath, inspectedAsset, m_AssetSaveTracker);
         const auto applyEdit = [this, &inspectedAsset](bool changed, auto&& apply) {
             if (changed)
                 apply();
@@ -550,12 +560,11 @@ namespace Crowny
             applyEdit(UI::Property("Density", density, 0.05f, 0.0f, 0.0f), [&]() { material->SetDensity(density); });
             applyEdit(UI::Property("Friction", friction, 0.05f, 0.0f, 0.0f), [&]() { material->SetFriction(friction); });
             applyEdit(UI::Property("Restitution", restitution, 0.05f, 0.0f, 1.0f), [&]() { material->SetRestitution(restitution); });
-            applyEdit(UI::Property("Restitution Threshold", threshold, 0.05f, 0.0f, 0.0f),
-                      [&]() { material->SetRestitutionThreshold(threshold); });
+            applyEdit(UI::Property("Restitution Threshold", threshold, 0.05f, 0.0f, 0.0f), [&]() { material->SetRestitutionThreshold(threshold); });
             applyEdit(UI::PropertyDropdown("Friction Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, frictionCombine),
                       [&]() { material->SetFrictionCombine(frictionCombine); });
-            const bool restitutionCombineChanged = UI::PropertyDropdown(
-              "Restitution Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, restitutionCombine);
+            const bool restitutionCombineChanged =
+              UI::PropertyDropdown("Restitution Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, restitutionCombine);
             applyEdit(restitutionCombineChanged, [&]() { material->SetRestitutionCombine(restitutionCombine); });
             UI::EndPropertyGrid();
         };
@@ -567,13 +576,12 @@ namespace Crowny
         else
             ImGui::TextDisabled("The selected asset is not a physics material.");
 
-        SaveReadyAssets();
+        undoRedo.EndComponentScope();
     }
 
     void InspectorPanel::ObserveAssetEdit(const Ref<Asset>& asset, bool changed)
     {
-        m_AssetSaveTracker.Observe(m_InspectedAssetPath, asset, changed, ImGui::IsItemActive(),
-                                   ImGui::IsItemDeactivatedAfterEdit());
+        m_AssetSaveTracker->Observe(m_InspectedAssetPath, asset, changed, ImGui::IsItemActive(), ImGui::IsItemDeactivatedAfterEdit());
     }
 
     void InspectorPanel::SaveReadyAssets()
@@ -582,17 +590,29 @@ namespace Crowny
         if (library == nullptr)
             return;
 
-        while (const std::optional<AssetSaveRequest> request = m_AssetSaveTracker.TakeReady())
+        while (const std::optional<AssetSaveRequest> request = m_AssetSaveTracker->TakeReady())
         {
             const bool saved = library->SaveEntry(request->Value, request->Filepath);
-            m_AssetSaveTracker.Resolve(request->Filepath, saved);
+            m_AssetSaveTracker->Resolve(request->Filepath, saved);
         }
     }
 
     void InspectorPanel::FlushPendingAssetSaves()
     {
-        m_AssetSaveTracker.Flush();
+        m_AssetSaveTracker->Flush();
         SaveReadyAssets();
+    }
+
+    void InspectorPanel::ResetPhysicsMaterialUndoTransaction(bool finishInteraction)
+    {
+        if (UndoRedo* undoRedo = UndoRedo::TryGet())
+        {
+            if (finishInteraction)
+                undoRedo->FinishComponentScope(m_PhysicsMaterialUndo);
+            else
+                undoRedo->CancelComponentScope(m_PhysicsMaterialUndo);
+        }
+        m_PhysicsMaterialUndo->Reset();
     }
 
     void InspectorPanel::RenderAudioClipImportInspector()
@@ -1158,6 +1178,8 @@ namespace Crowny
         const bool selectionChanged = m_InspectedAssetPath != filepath;
         if (selectionChanged)
         {
+            ResetPhysicsMaterialUndoTransaction(true);
+            m_ComponentEditor.ResetUndoTransactions(true);
             FlushPendingAssetSaves();
             m_MaterialSchemaCache.Reset();
         }
@@ -1167,8 +1189,11 @@ namespace Crowny
             if (m_InspectorMode != InspectorMode::Default)
             {
                 if (!selectionChanged)
+                {
+                    ResetPhysicsMaterialUndoTransaction(true);
+                    m_ComponentEditor.ResetUndoTransactions(true);
                     FlushPendingAssetSaves();
-                m_ComponentEditor.ResetUndoTransactions(true);
+                }
                 m_MaterialSchemaCache.Reset();
             }
             m_InspectorMode = InspectorMode::Default;
@@ -1256,7 +1281,10 @@ namespace Crowny
         const bool sameScene = m_InspectedEntity && primary && m_InspectedEntity.GetScene() == primary.GetScene();
         const bool sameSelection = m_InspectedEntity == primary && m_InspectedEntities == entities;
         if (m_InspectorMode != InspectorMode::GameObject || !sameSelection)
+        {
+            ResetPhysicsMaterialUndoTransaction(true);
             FlushPendingAssetSaves();
+        }
         if (!sameSelection)
             m_ComponentEditor.ResetUndoTransactions(sameScene);
         m_MaterialSchemaCache.Reset();
@@ -1270,6 +1298,7 @@ namespace Crowny
     {
         if (m_InspectorMode != mode)
         {
+            ResetPhysicsMaterialUndoTransaction(true);
             FlushPendingAssetSaves();
             m_ComponentEditor.ResetUndoTransactions(true);
             m_MaterialSchemaCache.Reset();
@@ -1278,6 +1307,10 @@ namespace Crowny
         m_HasPropertyChanged = false;
     }
 
-    void InspectorPanel::ResetUndoTransactions(bool finishInteraction) { m_ComponentEditor.ResetUndoTransactions(finishInteraction); }
+    void InspectorPanel::ResetUndoTransactions(bool finishInteraction)
+    {
+        ResetPhysicsMaterialUndoTransaction(finishInteraction);
+        m_ComponentEditor.ResetUndoTransactions(finishInteraction);
+    }
 
 } // namespace Crowny

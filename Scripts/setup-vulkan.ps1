@@ -6,7 +6,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$dependencyRoot = if ($DependencyRoot) { [IO.Path]::GetFullPath($DependencyRoot) } else { Join-Path $repositoryRoot ".deps" }
+. (Join-Path $PSScriptRoot "windows-build-common.ps1")
+$dependencyRoot = (Get-CrownyBuildRoots -RepositoryRoot $repositoryRoot -DependencyRoot $DependencyRoot).DependencyRoot
 $downloadRoot = Join-Path $dependencyRoot "downloads"
 $vulkanRoot = Join-Path $dependencyRoot "VulkanSDK"
 $vulkanInstallerSha256 = "81F474711E9042F4CD22B31B2F7A8870DB2E428B21586FB43DD80150BE97310D"

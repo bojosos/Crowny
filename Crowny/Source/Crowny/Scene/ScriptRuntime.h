@@ -18,6 +18,8 @@ namespace Crowny
         static void OnStart(const Ref<Scene>& scene);
         static void OnUpdate(Timestep timestep);
         static void OnUpdate(const Ref<Scene>& scene, Timestep timestep);
+        static void OnFixedUpdate(Timestep timestep);
+        static void OnFixedUpdate(const Ref<Scene>& scene, Timestep timestep);
         static void OnShutdown();
         static void OnShutdown(const Ref<Scene>& scene);
 

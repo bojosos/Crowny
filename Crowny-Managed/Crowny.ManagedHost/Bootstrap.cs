@@ -187,7 +187,7 @@ public static unsafe class Bootstrap
             return NativeStatus.NotInitialized;
         if (eventData is null || eventData->Size < (uint)sizeof(NativeEvent))
             return NativeStatus.InvalidArgument;
-        if ((uint)eventData->Kind > (uint)NativeEventKind.TriggerExit3D ||
+        if ((uint)eventData->Kind > (uint)NativeEventKind.FixedUpdate ||
             eventData->Payload.Length % (ulong)sizeof(NativeContactPoint) != 0 ||
             (eventData->Payload.Data is null && eventData->Payload.Length != 0) ||
             eventData->Payload.Length / (ulong)sizeof(NativeContactPoint) > int.MaxValue)

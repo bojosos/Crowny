@@ -36,6 +36,7 @@ namespace Crowny.ManagedHost.Interop
         TriggerEnter3D = 12,
         TriggerStay3D = 13,
         TriggerExit3D = 14,
+        FixedUpdate = 15,
     }
 
     [StructLayout(LayoutKind.Sequential)]

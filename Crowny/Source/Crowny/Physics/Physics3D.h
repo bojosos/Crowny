@@ -82,6 +82,5 @@ namespace Crowny
         Physics3DSettings m_Settings;
         PhysicsContactCallback3D m_ContactCallback;
         bool m_Simulating = false;
-        float m_TimestepAccumulator = 0.0f;
     };
 } // namespace Crowny

@@ -813,6 +813,8 @@ namespace Crowny
 
     void Scene::HandlePhysics3DContact(const PhysicsContactEvent3D& event)
     {
+        if (!m_RuntimeActive)
+            return;
         const auto firstFound = m_Physics3DEntities.find(event.BodyA);
         const auto secondFound = m_Physics3DEntities.find(event.BodyB);
         if (firstFound == m_Physics3DEntities.end() || secondFound == m_Physics3DEntities.end())
@@ -1030,13 +1032,9 @@ namespace Crowny
         BeginPhysics3D();
     }
 
-    void Scene::OnSimulationUpdate(Timestep ts)
+    void Scene::OnSimulationFixedUpdate(Timestep ts)
     {
-        SceneManager::CallbackScope callbackScope =
-          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
-        if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
-            Physics2D::TryGet()->Step(ts, this);
-        StepPhysics3D(ts);
+        OnFixedUpdate(ts);
     }
 
     void Scene::OnSimulationEnd()
@@ -1114,6 +1112,12 @@ namespace Crowny
         if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
             Physics2D::TryGet()->Step(ts, this);
         StepPhysics3D(ts);
+    }
+
+    void Scene::SynchronizePhysicsTransforms(float interpolationAlpha, Timestep extrapolationTime)
+    {
+        if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
+            Physics2D::TryGet()->SynchronizeTransforms(this, interpolationAlpha, extrapolationTime);
     }
 
     Entity Scene::CreateEntity(const String& name)

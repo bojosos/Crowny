@@ -129,6 +129,7 @@ namespace Crowny
 
             bindLifecycle(m_OnStart, "Start");
             bindLifecycle(m_OnUpdate, "Update");
+            bindLifecycle(m_OnFixedUpdate, "FixedUpdate");
             bindLifecycle(m_OnDestroy, "Destroy");
             bindEvent(m_OnCollisionEnter2D, "OnCollisionEnter2D", "Collision2D");
             bindEvent(m_OnCollisionStay2D, "OnCollisionStay2D", "Collision2D");
@@ -165,6 +166,10 @@ namespace Crowny
         case ScriptEventKind::Update:
             if (m_OnUpdate != nullptr)
                 MonoUtils::InvokeThunk(m_OnUpdate, m_Instance);
+            break;
+        case ScriptEventKind::FixedUpdate:
+            if (m_OnFixedUpdate != nullptr)
+                MonoUtils::InvokeThunk(m_OnFixedUpdate, m_Instance);
             break;
         case ScriptEventKind::Destroy:
             if (m_OnDestroy != nullptr)

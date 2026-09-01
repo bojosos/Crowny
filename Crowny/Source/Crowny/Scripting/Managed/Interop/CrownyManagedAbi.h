@@ -54,6 +54,7 @@ enum cw_managed_event_kind
     CW_MANAGED_EVENT_TRIGGER_ENTER_3_D = 12,
     CW_MANAGED_EVENT_TRIGGER_STAY_3_D = 13,
     CW_MANAGED_EVENT_TRIGGER_EXIT_3_D = 14,
+    CW_MANAGED_EVENT_FIXED_UPDATE = 15,
 };
 
 typedef struct cw_managed_string_view

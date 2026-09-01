@@ -353,7 +353,8 @@ namespace Crowny
         CollisionExit3D,
         TriggerEnter3D,
         TriggerStay3D,
-        TriggerExit3D
+        TriggerExit3D,
+        FixedUpdate = 15
     };
 
     struct ScriptContactPoint

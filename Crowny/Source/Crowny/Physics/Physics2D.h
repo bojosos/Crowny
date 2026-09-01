@@ -61,6 +61,7 @@ namespace Crowny
         void DestroyRigidbody(Entity entity);
         void DestroyFixture(Entity entity, Collider2D& collider);
         void Step(Timestep ts, Scene* scene);
+        void SynchronizeTransforms(Scene* scene, float interpolationAlpha, Timestep extrapolationTime);
         void StopSimulation(Scene* scene);
 
         bool IsSimulating() const;

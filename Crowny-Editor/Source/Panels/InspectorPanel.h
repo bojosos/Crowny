@@ -6,6 +6,7 @@
 #include "MaterialInspectorSchemaCache.h"
 
 #include "Editor/AssetSaveTracker.h"
+#include "Editor/PhysicsMaterialInspectorTransaction.h"
 
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
@@ -75,6 +76,7 @@ namespace Crowny
         void ObserveAssetEdit(const Ref<Asset>& asset, bool changed);
         void SaveReadyAssets();
         void FlushPendingAssetSaves();
+        void ResetPhysicsMaterialUndoTransaction(bool finishInteraction);
 
     private:
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
@@ -96,7 +98,8 @@ namespace Crowny
         ComponentEditor m_ComponentEditor; // Helper object for rendering components of entities
 
         MaterialInspectorSchemaCache m_MaterialSchemaCache;
-        AssetSaveTracker m_AssetSaveTracker;
+        Ref<AssetSaveTracker> m_AssetSaveTracker = CreateRef<AssetSaveTracker>();
+        Ref<PhysicsMaterialInspectorTransaction> m_PhysicsMaterialUndo = CreateRef<PhysicsMaterialInspectorTransaction>();
 
         std::function<void(AssetHandle<NodeGraphAsset>)> m_OpenNodeEditorCallback;
     };

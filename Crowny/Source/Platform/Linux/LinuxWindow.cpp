@@ -144,7 +144,7 @@ namespace Crowny
         InstallCallbacks();
         glfwSetInputMode(m_Window, GLFW_LOCK_KEY_MODS, GLFW_TRUE);
 
-        if (m_Mode != WindowMode::Fullscreen)
+        if (m_Mode != WindowMode::Fullscreen && !(m_Mode == WindowMode::Windowed && m_Desc.StartMaximized))
         {
             int monitorX = 0;
             int monitorY = 0;
