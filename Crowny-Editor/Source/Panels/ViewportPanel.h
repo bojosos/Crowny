@@ -6,12 +6,16 @@
 #include "Panels/ImGuiPanel.h"
 
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Events/Event.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 
 #include <imgui.h>
 
 #include <ImGuizmo.h>
+
+#include <functional>
+#include <utility>
 
 namespace Crowny
 {
@@ -45,6 +49,16 @@ namespace Crowny
         const FileEntry* m_FileEntry;
     };
 
+    /// Read/write access to the render-overlay state owned by the editor layer so the viewport's
+    /// top-right toolbar and the Settings > Viewport checkboxes always agree.
+    struct ViewportRenderOverlayBinding
+    {
+        std::function<bool()> IsWireframe;
+        std::function<void(bool)> SetWireframe;
+        std::function<bool()> IsShowingStatistics;
+        std::function<void(bool)> SetShowStatistics;
+    };
+
     class ViewportPanel : public ImGuiPanel
     {
     public:
@@ -59,11 +73,25 @@ namespace Crowny
         void SetEventCallback(const EventCallbackFn& onclicked);
         void SetEditorRenderTarget(const Ref<RenderTexture>& rt);
         void SetShowStatistics(bool show) { m_ShowStatistics = show; }
+        void SetRenderOverlayBinding(ViewportRenderOverlayBinding binding) { m_RenderOverlayBinding = std::move(binding); }
+
+        /// Handles files dropped from the OS shell. Returns true when the drop landed on the viewport image and
+        /// was consumed (the files are imported into the project and, once imported, placed in the scene).
+        bool OnWindowFileDrop(WindowFileDropEvent& fileDrop);
+        size_t GetPendingDropSpawnCount() const { return m_PendingDropSpawns.size(); }
 
         void SetGizmoMode(GizmoEditMode gizmoMode) { m_GizmoMode = gizmoMode; }
         void SetGizmoLocalMode(bool local) { m_LocalMode = local; }
+        void SetSnapEnabled(bool enabled) { m_SnapEnabled = enabled; }
+        void SetViewportSettingsCallbacks(std::function<void()> toggle, std::function<bool()> isOpen)
+        {
+            m_ToggleViewportSettings = std::move(toggle);
+            m_IsViewportSettingsOpen = std::move(isOpen);
+        }
+        void SetViewportSettingsHovered(bool hovered) { m_MouseOverHud |= hovered; }
 
         bool GetGizmoLocalMode() const { return m_LocalMode; }
+        bool GetSnapEnabled() const { return m_SnapEnabled; }
         GizmoEditMode GetGizmoMode() const { return m_GizmoMode; }
 
         void DisableGizmo() { m_GizmoMode = GizmoEditMode::None; }
@@ -73,12 +101,20 @@ namespace Crowny
         bool IsMouseOverHud() const { return m_MouseOverHud; }
 
     private:
+        struct PendingDropSpawn
+        {
+            Path AssetPath;
+            glm::vec2 ScreenPosition;
+            double QueuedAt = 0.0;
+        };
+
         void DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity primary, const Vector<Entity>& selectedEntities);
+        void DrawRenderOverlayToolbar(const ImVec2& imageMin, const ImVec2& imageMax);
+        void DrawRenderStatistics(const ImVec2& imageMin, const ImVec2& imageMax, float top);
+        bool IsShowingStatistics() const;
+        void ProcessPendingDropSpawns();
+        void QueueDropSpawn(const Path& assetPath, const glm::vec2& screenPosition);
         const Vector<Entity>& RefreshSelectionScratch(Entity primary);
-        const Vector<Entity>& GetTopLevelSelection(const Vector<Entity>& selectedEntities);
-        glm::mat4 GetSelectionPivot(Entity primary, const Vector<Entity>& selectedEntities) const;
-        void BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot);
-        void ApplyTransformInteraction(const glm::mat4& pivot);
         void EndTransformInteraction();
         void CancelTransformInteraction();
         void EndColliderBoundsInteraction(bool cancel);
@@ -95,11 +131,15 @@ namespace Crowny
         glm::vec4 m_ViewportBounds;
         std::function<Entity()> m_SelectedEntity;
         std::function<const Vector<Entity>&()> m_SelectedEntities;
+        std::function<void()> m_ToggleViewportSettings;
+        std::function<bool()> m_IsViewportSettingsOpen;
         Vector<Entity> m_SelectedEntitiesScratch;
-        Vector<Entity> m_TopLevelSelectionScratch;
         ViewportTransformInteraction m_TransformInteraction;
         BoxCollider2DBoundsTransaction m_ColliderBoundsTransaction;
         bool m_GizmoWasUsing = false;
+        ViewportRenderOverlayBinding m_RenderOverlayBinding;
+        Vector<PendingDropSpawn> m_PendingDropSpawns;
+        float m_TopRightOverlayBottom = 0.0f;
     };
 
 } // namespace Crowny

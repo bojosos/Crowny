@@ -27,7 +27,7 @@ TEST_CASE("Viewport HUD status preserves the entity-name truncation boundary", "
           "abcdefghijklmnopqrstuvwxy...  |  1280 x 720  |  View 5.0 m");
 }
 
-TEST_CASE("Viewport HUD status remains bounded for extreme values", "[Editor][Viewport][HUD]")
+TEST_CASE("Viewport HUD status remains bounded for extreme Counts", "[Editor][Viewport][HUD]")
 {
     const String longName(4096u, 'x');
     const ViewportHudStatus status = FormatViewportHudStatus(longName, true, 1u, std::numeric_limits<int32_t>::min(),

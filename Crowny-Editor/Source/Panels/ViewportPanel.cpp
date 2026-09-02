@@ -1,13 +1,17 @@
 #include "cwepch.h"
 
 #include "Editor/Editor.h"
+#include "Editor/EditorAssets.h"
 #include "Editor/EditorLayer.h"
+#include "Editor/ProjectLibrary.h"
 #include "Editor/ViewportTransformInteraction.h"
 
 #include "Crowny/Application/Application.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
+#include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Scene/SceneRenderer.h"
 
 #include "Panels/ViewportHudText.h"
@@ -25,10 +29,19 @@ namespace Crowny
 
     namespace
     {
+        // Mesh sources (.obj/.gltf/.glb/.fbx/...) that have not produced metadata yet, e.g. because the
+        // library has not imported them, are still accepted: the drop triggers the import and then spawns.
+        bool IsPendingMeshSource(const FileEntry* fileEntry)
+        {
+            return fileEntry != nullptr && fileEntry->Metadata == nullptr && IsViewportMeshExtension(fileEntry->Filepath.extension().string());
+        }
+
         bool IsSupportedViewportAsset(const FileEntry* fileEntry)
         {
-            if (fileEntry == nullptr || fileEntry->Metadata == nullptr)
+            if (fileEntry == nullptr)
                 return false;
+            if (fileEntry->Metadata == nullptr)
+                return IsPendingMeshSource(fileEntry);
 
             const AssetType assetType = fileEntry->Metadata->Type;
             return assetType == AssetType::Scene || assetType == AssetType::Material || assetType == AssetType::Mesh ||
@@ -39,6 +52,8 @@ namespace Crowny
         {
             if (!IsSupportedViewportAsset(fileEntry))
                 return "This asset cannot be used in the viewport";
+            if (fileEntry->Metadata == nullptr)
+                return "Drop to import and create mesh entity";
 
             switch (fileEntry->Metadata->Type)
             {
@@ -69,40 +84,6 @@ namespace Crowny
             return static_cast<const FileEntry*>(entry);
         }
 
-        const char* GetGizmoLabel(GizmoEditMode mode)
-        {
-            switch (mode)
-            {
-            case GizmoEditMode::None:
-                return "Select";
-            case GizmoEditMode::Translate:
-                return "Move";
-            case GizmoEditMode::Rotate:
-                return "Rotate";
-            case GizmoEditMode::Scale:
-                return "Scale";
-            case GizmoEditMode::Bounds:
-                return "Bounds";
-            default:
-                return "Select";
-            }
-        }
-
-        bool HudButton(const char* label, bool active, const ImVec2& size)
-        {
-            if (active)
-            {
-                ImGui::PushStyleColor(ImGuiCol_Button, UI::Colors::Accent);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UI::Colors::AccentHover);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, UI::Colors::AccentPress);
-            }
-
-            const bool pressed = ImGui::Button(label, size);
-            if (active)
-                ImGui::PopStyleColor(3);
-            return pressed;
-        }
-
         void FormatStatisticCount(char* output, size_t outputSize, uint64_t value)
         {
             if (value >= 1'000'000'000ull)
@@ -113,6 +94,86 @@ namespace Crowny
                 snprintf(output, outputSize, "%.1fK", static_cast<double>(value) / 1'000.0);
             else
                 snprintf(output, outputSize, "%llu", static_cast<unsigned long long>(value));
+        }
+
+        bool SameFileContents(const Path& left, const Path& right)
+        {
+            std::error_code error;
+            const uintmax_t leftSize = fs::file_size(left, error);
+            if (error)
+                return false;
+            const uintmax_t rightSize = fs::file_size(right, error);
+            return !error && leftSize == rightSize;
+        }
+
+        // Picks a destination inside the asset folder for an external file. Re-uses an existing copy with the same
+        // size (dropping the same model twice just adds another instance) and otherwise appends " (n)".
+        Path ResolveDropDestination(const Path& source, const Path& assetFolder)
+        {
+            Path destination = assetFolder / source.filename();
+            if (!fs::exists(destination) || SameFileContents(source, destination))
+                return destination;
+
+            const String stem = source.stem().string();
+            const String extension = source.extension().string();
+            for (uint32_t index = 1; index < 1000; index++)
+            {
+                destination = assetFolder / (stem + " (" + std::to_string(index) + ")" + extension);
+                if (!fs::exists(destination) || SameFileContents(source, destination))
+                    return destination;
+            }
+            return {};
+        }
+
+        bool CopyDropFile(const Path& source, const Path& destination)
+        {
+            if (fs::exists(destination) && SameFileContents(source, destination))
+                return true;
+            std::error_code error;
+            fs::create_directories(destination.parent_path(), error);
+            error.clear();
+            fs::copy_file(source, destination, fs::copy_options::overwrite_existing, error);
+            if (error)
+            {
+                CW_ENGINE_ERROR("Failed to import dropped file '{}' into '{}': {}", source, destination, error.message());
+                return false;
+            }
+            return true;
+        }
+
+        // Copies the external file (plus glTF buffers/images and OBJ material libraries it references) into the
+        // project's asset folder. Files already inside the asset folder are used in place. Returns the in-project path.
+        Path ImportExternalDropFile(const Path& source, const Path& assetFolder)
+        {
+            std::error_code error;
+            if (!fs::is_regular_file(source, error) || error)
+                return {};
+
+            const Path normalizedSource = source.lexically_normal();
+            if (AssetFileSystemScanner::IsPathWithin(assetFolder, normalizedSource))
+                return normalizedSource;
+
+            const Path destination = ResolveDropDestination(normalizedSource, assetFolder);
+            if (destination.empty() || !CopyDropFile(normalizedSource, destination))
+                return {};
+
+            if (ClassifyViewportDropFile(normalizedSource) == ViewportDropFileKind::Mesh)
+            {
+                const String contents = FileSystem::ReadTextFile(normalizedSource);
+                for (const Path& reference : CollectMeshSidecarReferences(normalizedSource, contents))
+                {
+                    const Path sidecarSource = (normalizedSource.parent_path() / reference).lexically_normal();
+                    const Path sidecarDestination = (destination.parent_path() / reference).lexically_normal();
+                    if (!AssetFileSystemScanner::IsPathWithin(assetFolder, sidecarDestination) || !fs::is_regular_file(sidecarSource, error) || error)
+                    {
+                        error.clear();
+                        CW_ENGINE_WARN("Dropped mesh '{}' references '{}', which could not be copied alongside it.", normalizedSource, reference);
+                        continue;
+                    }
+                    CopyDropFile(sidecarSource, sidecarDestination);
+                }
+            }
+            return destination;
         }
 
     } // namespace
@@ -128,9 +189,27 @@ namespace Crowny
         case GizmoEditMode::Scale:
             return ImGuizmo::SCALE;
         case GizmoEditMode::Bounds:
-            return ImGuizmo::BOUNDS;
+            // ImGuizmo::BOUNDS requires explicit local bounds. The collider path
+            // supplies those separately; generic selections use scale handles.
+            return ImGuizmo::SCALE;
         }
         return ImGuizmo::TRANSLATE;
+    }
+
+    static SelectionTransformOperation GetSelectionTransformOperation(GizmoEditMode gizmoMode)
+    {
+        switch (gizmoMode)
+        {
+        case GizmoEditMode::Rotate:
+            return SelectionTransformOperation::Rotate;
+        case GizmoEditMode::Scale:
+        case GizmoEditMode::Bounds:
+            return SelectionTransformOperation::Scale;
+        case GizmoEditMode::None:
+        case GizmoEditMode::Translate:
+            return SelectionTransformOperation::Translate;
+        }
+        return SelectionTransformOperation::Translate;
     }
 
     ViewportPanel::ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<const Vector<Entity>&()> selectedEntities)
@@ -163,59 +242,6 @@ namespace Crowny
         return m_SelectedEntitiesScratch;
     }
 
-    const Vector<Entity>& ViewportPanel::GetTopLevelSelection(const Vector<Entity>& selectedEntities)
-    {
-        m_TopLevelSelectionScratch.clear();
-        m_TopLevelSelectionScratch.reserve(selectedEntities.size());
-        for (Entity entity : selectedEntities)
-        {
-            if (!entity)
-                continue;
-            bool selectedAncestor = false;
-            for (Entity parent = entity.GetParent(); parent; parent = parent.GetParent())
-            {
-                if (std::find(selectedEntities.begin(), selectedEntities.end(), parent) != selectedEntities.end())
-                {
-                    selectedAncestor = true;
-                    break;
-                }
-            }
-            if (!selectedAncestor)
-                m_TopLevelSelectionScratch.push_back(entity);
-        }
-        return m_TopLevelSelectionScratch;
-    }
-
-    glm::mat4 ViewportPanel::GetSelectionPivot(Entity primary, const Vector<Entity>& selectedEntities) const
-    {
-        glm::vec3 minimum(FLT_MAX);
-        glm::vec3 maximum(-FLT_MAX);
-        for (Entity entity : selectedEntities)
-        {
-            if (!entity)
-                continue;
-            const glm::vec3 position = entity.GetWorldPosition();
-            minimum = glm::min(minimum, position);
-            maximum = glm::max(maximum, position);
-        }
-        const glm::vec3 center = minimum.x == FLT_MAX ? glm::vec3(0.0f) : (minimum + maximum) * 0.5f;
-        glm::mat4 pivot = glm::translate(glm::mat4(1.0f), center);
-        if (m_LocalMode && primary)
-            pivot *= glm::mat4_cast(primary.GetWorldRotation());
-        return pivot;
-    }
-
-    void ViewportPanel::BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot)
-    {
-        if (m_TransformInteraction.IsActive())
-            EndTransformInteraction();
-
-        const Vector<Entity>& topLevelSelection = GetTopLevelSelection(selectedEntities);
-        m_TransformInteraction.Begin(topLevelSelection, pivot);
-    }
-
-    void ViewportPanel::ApplyTransformInteraction(const glm::mat4& pivot) { m_TransformInteraction.Update(pivot); }
-
     void ViewportPanel::EndTransformInteraction()
     {
         const ViewportTransformResolution resolution = m_TransformInteraction.Resolve(false, false);
@@ -244,140 +270,98 @@ namespace Crowny
     {
         const float viewportWidth = imageMax.x - imageMin.x;
         const float viewportHeight = imageMax.y - imageMin.y;
-        if (viewportWidth < 155.0f || viewportHeight < 72.0f)
+        if (viewportWidth < 154.0f || viewportHeight < 58.0f)
             return;
 
-        const bool compact = viewportWidth < 430.0f;
-        const bool showSpace = viewportWidth >= 245.0f;
-        const bool showSnapValue = viewportWidth >= 355.0f;
-        const bool showHelp = viewportWidth >= 205.0f;
+        const bool compactStrip = viewportWidth < 170.0f;
         const float padding = 4.0f;
-        const float spacing = 4.0f;
-        const float buttonHeight = ImGui::GetFrameHeight();
-        const float modeWidth = compact ? 64.0f : 78.0f;
-        const float spaceWidth = compact ? 51.0f : 58.0f;
-        const float snapWidth = 50.0f;
-        const float valueWidth = 67.0f;
-        const float helpWidth = 26.0f;
-
-        float hudWidth = padding * 2.0f + modeWidth + spacing + snapWidth;
-        if (showSpace)
-            hudWidth += spacing + spaceWidth;
-        if (showSnapValue)
-            hudWidth += spacing + valueWidth;
-        if (showHelp)
-            hudWidth += spacing + helpWidth;
-
-        const ImVec2 hudMin(imageMin.x + 8.0f, imageMax.y - buttonHeight - padding * 2.0f - 8.0f);
-        const ImVec2 hudMax(hudMin.x + hudWidth, hudMin.y + buttonHeight + padding * 2.0f);
-        m_MouseOverHud = ImGui::IsMouseHoveringRect(hudMin, hudMax, false);
-        ImGui::GetWindowDrawList()->AddRectFilled(hudMin, hudMax, IM_COL32(27, 24, 22, 224), 5.0f);
-        ImGui::GetWindowDrawList()->AddRect(hudMin, hudMax, IM_COL32(76, 68, 61, 210), 5.0f);
+        const float spacing = 2.0f;
+        const float settingsGap = compactStrip ? 3.0f : 5.0f;
+        const float buttonSize = compactStrip ? 20.0f : 22.0f;
+        constexpr size_t ButtonCount = 6u;
+        const float hudWidth = padding * 2.0f + buttonSize * static_cast<float>(ButtonCount) + spacing * 4.0f + settingsGap * 2.0f;
+        const ImVec2 hudMin(imageMin.x + 6.0f, imageMin.y + 5.0f);
+        const ImVec2 hudMax(hudMin.x + hudWidth, hudMin.y + buttonSize + padding * 2.0f);
+        m_MouseOverHud |= ImGui::IsMouseHoveringRect(hudMin, hudMax, false);
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(hudMin, hudMax, IM_COL32(27, 24, 22, 220), 4.0f);
+        drawList->AddRect(hudMin, hudMax, IM_COL32(90, 81, 73, 180), 4.0f);
 
         const ImVec2 savedCursor = ImGui::GetCursorScreenPos();
         ImGui::SetCursorScreenPos(ImVec2(hudMin.x + padding, hudMin.y + padding));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 3.0f));
+        ImGui::PushID("ViewportToolStrip");
 
-        if (HudButton(GetGizmoLabel(m_GizmoMode), m_GizmoMode != GizmoEditMode::None, ImVec2(modeWidth, buttonHeight)))
-            ImGui::OpenPopup("##ViewportGizmoMenu");
-        UI::SetTooltip("Choose a gizmo. Shortcuts: Q, W, E, R, T");
-
-        if (ImGui::BeginPopup("##ViewportGizmoMenu"))
-        {
-            m_MouseOverHud |= ImGui::IsWindowHovered();
-            if (ImGui::MenuItem("Select", "Q", m_GizmoMode == GizmoEditMode::None))
-                m_GizmoMode = GizmoEditMode::None;
-            if (ImGui::MenuItem("Move", "W", m_GizmoMode == GizmoEditMode::Translate))
-                m_GizmoMode = GizmoEditMode::Translate;
-            if (ImGui::MenuItem("Rotate", "E", m_GizmoMode == GizmoEditMode::Rotate))
-                m_GizmoMode = GizmoEditMode::Rotate;
-            if (ImGui::MenuItem("Scale", "R", m_GizmoMode == GizmoEditMode::Scale))
-                m_GizmoMode = GizmoEditMode::Scale;
-            if (ImGui::MenuItem("Bounds", "T", m_GizmoMode == GizmoEditMode::Bounds))
-                m_GizmoMode = GizmoEditMode::Bounds;
-            ImGui::EndPopup();
-        }
-
-        if (showSpace)
-        {
-            const bool supportsTransformSpace = m_GizmoMode == GizmoEditMode::Translate || m_GizmoMode == GizmoEditMode::Rotate;
-            ImGui::SameLine();
+        const ImU32 neutralTint = IM_COL32(166, 158, 150, 255);
+        const ImU32 hoverTint = IM_COL32(235, 232, 228, 255);
+        const auto drawIconButton = [&](const char* id, const Ref<Texture>& icon, bool active, StringView tooltip, bool settings = false) {
+            ImGui::PushID(id);
+            const bool clicked = ImGui::InvisibleButton("##icon", ImVec2(buttonSize, buttonSize));
+            const ImRect bounds = UI::GetItemRect();
+            if (active || settings)
             {
-                UI::ScopedDisable disable(!supportsTransformSpace);
-                const bool useLocalSpace = m_LocalMode || !supportsTransformSpace;
-                if (HudButton(useLocalSpace ? "Local" : "World", !useLocalSpace, ImVec2(spaceWidth, buttonHeight)))
-                    m_LocalMode = !m_LocalMode;
+                const ImU32 fill = active ? IM_COL32(196, 123, 48, 42) : IM_COL32(255, 255, 255, 12);
+                drawList->AddRectFilled(bounds.Min, bounds.Max, fill, settings ? 4.0f : 3.0f);
             }
-            UI::SetTooltip(supportsTransformSpace ? "Change transform space" : "Scale and bounds use local space");
-        }
+            if (settings)
+                drawList->AddRect(bounds.Min, bounds.Max, active ? UI::Colors::Accent : IM_COL32(104, 94, 85, 190), 4.0f);
 
-        const bool modifierSnap = Input::IsKeyPressed(Key::LeftControl) || Input::IsKeyPressed(Key::RightControl);
+            const float iconPadding = 2.5f;
+            ImRect iconBounds(ImVec2(bounds.Min.x + iconPadding, bounds.Min.y + iconPadding),
+                              ImVec2(bounds.Max.x - iconPadding, bounds.Max.y - iconPadding));
+            // Letterbox the icon inside the square button so non-square source textures keep their aspect ratio
+            // instead of being stretched to the button.
+            if (icon && icon->GetWidth() > 0 && icon->GetHeight() > 0)
+            {
+                const float aspect = static_cast<float>(icon->GetWidth()) / static_cast<float>(icon->GetHeight());
+                float width = iconBounds.GetWidth();
+                float height = iconBounds.GetHeight();
+                if (aspect > 1.0f)
+                    height = width / aspect;
+                else
+                    width = height * aspect;
+                const ImVec2 center = iconBounds.GetCenter();
+                iconBounds = ImRect(ImVec2(center.x - width * 0.5f, center.y - height * 0.5f), ImVec2(center.x + width * 0.5f, center.y + height * 0.5f));
+            }
+            UI::DrawButtonImage(icon, active ? UI::Colors::Accent : neutralTint, active ? UI::Colors::AccentHover : hoverTint,
+                                UI::Colors::AccentPress, iconBounds);
+            UI::SetTooltip(tooltip);
+            ImGui::PopID();
+            return clicked;
+        };
+
+        const EditorAssetsLibrary assets = EditorAssets::Get();
+        if (drawIconButton("Select", assets.ArrowPointerIcon, m_GizmoMode == GizmoEditMode::None, "Select (Q)"))
+            m_GizmoMode = GizmoEditMode::None;
         ImGui::SameLine();
-        if (HudButton("Snap", m_SnapEnabled || modifierSnap, ImVec2(snapWidth, buttonHeight)))
-            m_SnapEnabled = !m_SnapEnabled;
-        UI::SetTooltip(m_SnapEnabled ? "Snapping is on. Click to turn it off" : "Click to keep snapping on. Hold Ctrl to use it temporarily");
+        if (drawIconButton("Move", assets.ArrowsIcon, m_GizmoMode == GizmoEditMode::Translate, "Move (W)"))
+            m_GizmoMode = GizmoEditMode::Translate;
+        ImGui::SameLine();
+        if (drawIconButton("Rotate", assets.RotateIcon, m_GizmoMode == GizmoEditMode::Rotate, "Rotate (E)"))
+            m_GizmoMode = GizmoEditMode::Rotate;
+        ImGui::SameLine();
+        if (drawIconButton("Scale", assets.MaximizeIcon, m_GizmoMode == GizmoEditMode::Scale || m_GizmoMode == GizmoEditMode::Bounds,
+                           "Scale (R). Bounds editing: T"))
+            m_GizmoMode = GizmoEditMode::Scale;
+        ImGui::SameLine();
+        if (drawIconButton("Space", assets.GlobeIcon, m_LocalMode, m_LocalMode ? "Local transform space (X)" : "World transform space (X)"))
+            m_LocalMode = !m_LocalMode;
 
-        Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
-        if (showSnapValue)
-        {
-            char snapLabel[32];
-            if (m_GizmoMode == GizmoEditMode::Rotate)
-                snprintf(snapLabel, sizeof(snapLabel), "%.1f deg", editorSettings->GridRotateSnap);
-            else if (m_GizmoMode == GizmoEditMode::Scale)
-                snprintf(snapLabel, sizeof(snapLabel), "%.2f", editorSettings->GridScaleSnap);
-            else
-                snprintf(snapLabel, sizeof(snapLabel), "%.2f m", editorSettings->GridMoveSnap.x);
+        ImGui::SameLine(0.0f, settingsGap);
+        const ImVec2 separatorTop = ImGui::GetCursorScreenPos();
+        drawList->AddLine(ImVec2(separatorTop.x - settingsGap * 0.5f, separatorTop.y + 3.0f),
+                          ImVec2(separatorTop.x - settingsGap * 0.5f, separatorTop.y + buttonSize - 3.0f), IM_COL32(104, 94, 85, 150));
+        const bool settingsOpen = m_IsViewportSettingsOpen && m_IsViewportSettingsOpen();
+        if (drawIconButton("Settings", assets.SettingsIcon, settingsOpen, "Viewport, grid, snapping, and physics gizmo settings", true) &&
+            m_ToggleViewportSettings)
+            m_ToggleViewportSettings();
 
-            ImGui::SameLine();
-            if (ImGui::Button(snapLabel, ImVec2(valueWidth, buttonHeight)))
-                ImGui::OpenPopup("##ViewportSnapSettings");
-            UI::SetTooltip("Edit snap increments");
-        }
-
-        if (showHelp)
-        {
-            ImGui::SameLine();
-            if (ImGui::Button("?", ImVec2(helpWidth, buttonHeight)))
-                ImGui::OpenPopup("##ViewportNavigationHelp");
-            UI::SetTooltip("Viewport controls");
-        }
-
-        if (ImGui::BeginPopup("##ViewportSnapSettings"))
-        {
-            m_MouseOverHud |= ImGui::IsWindowHovered();
-            ImGui::TextDisabled("Snap increments");
-            ImGui::Separator();
-            ImGui::SetNextItemWidth(190.0f);
-            if (ImGui::DragFloat3("Move", glm::value_ptr(editorSettings->GridMoveSnap), 0.01f, 0.001f, 1000.0f, "%.3f m"))
-                editorSettings->GridMoveSnap = glm::max(editorSettings->GridMoveSnap, glm::vec3(0.001f));
-            ImGui::SetNextItemWidth(190.0f);
-            editorSettings->GridRotateSnap = std::max(editorSettings->GridRotateSnap, 0.1f);
-            ImGui::DragFloat("Rotate", &editorSettings->GridRotateSnap, 0.5f, 0.1f, 180.0f, "%.1f deg");
-            ImGui::SetNextItemWidth(190.0f);
-            editorSettings->GridScaleSnap = std::max(editorSettings->GridScaleSnap, 0.001f);
-            ImGui::DragFloat("Scale", &editorSettings->GridScaleSnap, 0.01f, 0.001f, 10.0f, "%.3f");
-            ImGui::Spacing();
-            ImGui::TextDisabled("Hold Ctrl for temporary snapping.");
-            ImGui::EndPopup();
-        }
-
-        if (ImGui::BeginPopup("##ViewportNavigationHelp"))
-        {
-            m_MouseOverHud |= ImGui::IsWindowHovered();
-            ImGui::TextDisabled("Camera");
-            ImGui::Separator();
-            ImGui::TextUnformatted("Alt + left drag    Orbit");
-            ImGui::TextUnformatted("Alt + middle drag  Pan");
-            ImGui::TextUnformatted("Alt + right drag   Zoom");
-            ImGui::TextUnformatted("Mouse wheel        Zoom");
-            ImGui::TextUnformatted("F                  Frame selection");
-            ImGui::EndPopup();
-        }
-
-        ImGui::PopStyleVar(3);
+        ImGui::PopID();
+        ImGui::PopStyleVar();
         ImGui::SetCursorScreenPos(savedCursor);
+        ImGui::Dummy(ImVec2(0.0f, 0.0f));
+
+        DrawRenderOverlayToolbar(imageMin, imageMax);
 
         if (viewportWidth >= 670.0f)
         {
@@ -387,17 +371,122 @@ namespace Crowny
               FormatViewportHudStatus(entityName, static_cast<bool>(selectedEntity), selectedEntities.size(), static_cast<int32_t>(m_ViewportSize.x),
                                       static_cast<int32_t>(m_ViewportSize.y), camera.GetDistance());
             const ImVec2 textSize = ImGui::CalcTextSize(status.Text.data());
-            const ImVec2 statusMin(imageMax.x - textSize.x - 16.0f, hudMin.y);
-            const ImVec2 statusMax(imageMax.x - 8.0f, hudMax.y);
-            if (statusMin.x > hudMax.x + 8.0f)
+            const ImVec2 statusMin(imageMax.x - textSize.x - 16.0f, imageMax.y - ImGui::GetFrameHeight() - 12.0f);
+            const ImVec2 statusMax(imageMax.x - 8.0f, imageMax.y - 8.0f);
+            if (statusMin.x > imageMin.x + 8.0f)
             {
                 ImGui::GetWindowDrawList()->AddRectFilled(statusMin, statusMax, IM_COL32(27, 24, 22, 210), 5.0f);
-                ImGui::GetWindowDrawList()->AddText(ImVec2(statusMin.x + 4.0f, statusMin.y + padding + ImGui::GetStyle().FramePadding.y),
+                ImGui::GetWindowDrawList()->AddText(ImVec2(statusMin.x + 4.0f, statusMin.y + ImGui::GetStyle().FramePadding.y),
                                                     IM_COL32(190, 184, 178, 255), status.Text.data());
             }
         }
 
-        if (m_ShowStatistics && viewportWidth >= 260.0f && viewportHeight >= 120.0f && RenderAPI::TryGet() != nullptr)
+        // Statistics live top-left under the tool strip so they never collide with the render toolbar or the view cube.
+        DrawRenderStatistics(imageMin, imageMax, hudMax.y + 6.0f);
+    }
+
+    bool ViewportPanel::IsShowingStatistics() const
+    {
+        return m_RenderOverlayBinding.IsShowingStatistics ? m_RenderOverlayBinding.IsShowingStatistics() : m_ShowStatistics;
+    }
+
+    void ViewportPanel::DrawRenderOverlayToolbar(const ImVec2& imageMin, const ImVec2& imageMax)
+    {
+        m_TopRightOverlayBottom = imageMin.y;
+        const float viewportWidth = imageMax.x - imageMin.x;
+        if (viewportWidth < 420.0f)
+            return;
+
+        const bool canToggleWireframe = static_cast<bool>(m_RenderOverlayBinding.IsWireframe) && static_cast<bool>(m_RenderOverlayBinding.SetWireframe);
+        const bool wireframe = canToggleWireframe && m_RenderOverlayBinding.IsWireframe();
+        const bool showStatistics = IsShowingStatistics();
+
+        const float padding = 4.0f;
+        const float spacing = 2.0f;
+        const float buttonSize = 22.0f;
+        const float textPadding = 8.0f;
+        const char* renderModeLabel = wireframe ? "Wireframe" : "Shaded";
+        const float renderModeWidth = ImGui::CalcTextSize(renderModeLabel).x + ImGui::CalcTextSize(" v").x + textPadding * 2.0f;
+        const float statisticsWidth = ImGui::CalcTextSize("Stats").x + textPadding * 2.0f;
+        const float separatorGap = 5.0f;
+        const float toolbarWidth = padding * 2.0f + renderModeWidth + separatorGap + statisticsWidth;
+        const ImVec2 toolbarMin(imageMax.x - toolbarWidth - 8.0f, imageMin.y + 5.0f);
+        const ImVec2 toolbarMax(toolbarMin.x + toolbarWidth, toolbarMin.y + buttonSize + padding * 2.0f);
+        m_TopRightOverlayBottom = toolbarMax.y;
+        m_MouseOverHud |= ImGui::IsMouseHoveringRect(toolbarMin, toolbarMax, false);
+
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(toolbarMin, toolbarMax, IM_COL32(27, 24, 22, 220), 4.0f);
+        drawList->AddRect(toolbarMin, toolbarMax, IM_COL32(90, 81, 73, 180), 4.0f);
+
+        const ImVec2 savedCursor = ImGui::GetCursorScreenPos();
+        ImGui::SetCursorScreenPos(ImVec2(toolbarMin.x + padding, toolbarMin.y + padding));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0.0f));
+        ImGui::PushID("ViewportRenderToolbar");
+
+        const ImU32 neutralText = IM_COL32(190, 184, 178, 255);
+        const ImU32 hoverText = IM_COL32(235, 232, 228, 255);
+        const auto drawTextButton = [&](const char* id, const char* label, float width, bool active, bool enabled, StringView tooltip) {
+            ImGui::PushID(id);
+            ImGui::BeginDisabled(!enabled);
+            const bool clicked = ImGui::InvisibleButton("##text", ImVec2(width, buttonSize));
+            ImGui::EndDisabled();
+            const ImRect bounds = UI::GetItemRect();
+            const bool hovered = enabled && ImGui::IsItemHovered();
+            if (active)
+                drawList->AddRectFilled(bounds.Min, bounds.Max, IM_COL32(196, 123, 48, 42), 3.0f);
+            else if (hovered)
+                drawList->AddRectFilled(bounds.Min, bounds.Max, IM_COL32(255, 255, 255, 12), 3.0f);
+            const ImU32 textColor = !enabled ? IM_COL32(120, 112, 105, 255) : active ? UI::Colors::Accent : hovered ? hoverText : neutralText;
+            const ImVec2 textSize = ImGui::CalcTextSize(label);
+            drawList->AddText(ImVec2(bounds.Min.x + (bounds.GetWidth() - textSize.x) * 0.5f, bounds.Min.y + (bounds.GetHeight() - textSize.y) * 0.5f),
+                              textColor, label);
+            UI::SetTooltip(tooltip);
+            ImGui::PopID();
+            return clicked;
+        };
+
+        char renderModeButton[32];
+        snprintf(renderModeButton, sizeof(renderModeButton), "%s v", renderModeLabel);
+        const ImVec2 renderModeButtonMin = ImGui::GetCursorScreenPos();
+        if (drawTextButton("RenderMode", renderModeButton, renderModeWidth, wireframe, canToggleWireframe,
+                           canToggleWireframe ? "Draw mode: Shaded or Wireframe (also in Settings > Viewport)" : "Draw mode is unavailable"))
+            ImGui::OpenPopup("##ViewportRenderModePopup");
+
+        ImGui::SameLine(0.0f, separatorGap);
+        const ImVec2 separatorTop = ImGui::GetCursorScreenPos();
+        drawList->AddLine(ImVec2(separatorTop.x - separatorGap * 0.5f, separatorTop.y + 3.0f),
+                          ImVec2(separatorTop.x - separatorGap * 0.5f, separatorTop.y + buttonSize - 3.0f), IM_COL32(104, 94, 85, 150));
+        if (drawTextButton("Statistics", "Stats", statisticsWidth, showStatistics, true,
+                           showStatistics ? "Hide rendering statistics (also in Settings > Viewport)" : "Show rendering statistics (also in Settings > Viewport)"))
+        {
+            if (m_RenderOverlayBinding.SetShowStatistics)
+                m_RenderOverlayBinding.SetShowStatistics(!showStatistics);
+            m_ShowStatistics = !showStatistics;
+        }
+
+        ImGui::SetNextWindowPos(ImVec2(renderModeButtonMin.x, toolbarMax.y + 2.0f));
+        if (ImGui::BeginPopup("##ViewportRenderModePopup"))
+        {
+            m_MouseOverHud |= ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+            if (ImGui::MenuItem("Shaded", nullptr, !wireframe) && canToggleWireframe)
+                m_RenderOverlayBinding.SetWireframe(false);
+            if (ImGui::MenuItem("Wireframe", nullptr, wireframe) && canToggleWireframe)
+                m_RenderOverlayBinding.SetWireframe(true);
+            ImGui::EndPopup();
+        }
+
+        ImGui::PopID();
+        ImGui::PopStyleVar();
+        ImGui::SetCursorScreenPos(savedCursor);
+        ImGui::Dummy(ImVec2(0.0f, 0.0f));
+    }
+
+    void ViewportPanel::DrawRenderStatistics(const ImVec2& imageMin, const ImVec2& imageMax, float top)
+    {
+        const float viewportWidth = imageMax.x - imageMin.x;
+        const float viewportHeight = imageMax.y - imageMin.y;
+        if (IsShowingStatistics() && viewportWidth >= 260.0f && viewportHeight >= 120.0f && RenderAPI::TryGet() != nullptr)
         {
             const RenderFrameStatistics frame = RenderAPI::TryGet()->GetFrameStatistics();
             const SceneRenderStatistics scene = SceneRenderer::GetStatistics();
@@ -422,8 +511,10 @@ namespace Crowny
                 textWidth = std::max(textWidth, ImGui::CalcTextSize(lines[line]).x);
 
             const float lineHeight = ImGui::GetTextLineHeight();
-            const ImVec2 statisticsMin(imageMax.x - textWidth - 24.0f, imageMin.y + 8.0f);
-            const ImVec2 statisticsMax(imageMax.x - 8.0f, statisticsMin.y + lineHeight * lineCount + 16.0f);
+            const ImVec2 statisticsMin(imageMin.x + 6.0f, top);
+            const ImVec2 statisticsMax(statisticsMin.x + textWidth + 16.0f, statisticsMin.y + lineHeight * lineCount + 16.0f);
+            if (statisticsMax.y > imageMax.y - 8.0f || statisticsMax.x > imageMax.x - 8.0f)
+                return;
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             drawList->AddRectFilled(statisticsMin, statisticsMax, IM_COL32(27, 24, 22, 224), 5.0f);
             drawList->AddRect(statisticsMin, statisticsMax, IM_COL32(76, 68, 61, 210), 5.0f);
@@ -456,6 +547,7 @@ namespace Crowny
     void ViewportPanel::Render()
     {
         m_MouseOverHud = false;
+        ProcessPendingDropSpawns();
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         if (!BeginPanel())
         {
@@ -488,7 +580,8 @@ namespace Crowny
                     const Vector<Entity>& selectedEntities = RefreshSelectionScratch(selectedEntity);
                     if (!selectedEntities.empty())
                     {
-                        const glm::mat4 pivot = GetSelectionPivot(selectedEntity, selectedEntities);
+                        const glm::mat4 pivot = ViewportTransformInteraction::CalculatePivot(
+                          selectedEntities, selectedEntity, m_LocalMode ? SelectionTransformSpace::Local : SelectionTransformSpace::World);
                         EditorLayer::GetEditorCamera().Focus(glm::vec3(pivot[3]));
                     }
                 }
@@ -536,9 +629,19 @@ namespace Crowny
             if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(IsSupportedViewportAsset))
             {
                 const ImVec2 mousePosition = ImGui::GetMousePos();
-                ImGuiViewportSceneDraggedEvent fileDragEvent(fileEntry, glm::vec2(mousePosition.x, mousePosition.y));
-                if (OnEvent)
-                    OnEvent(fileDragEvent);
+                if (IsPendingMeshSource(fileEntry))
+                {
+                    // Not imported yet (e.g. a .gltf/.glb the library skipped): import now, spawn once metadata exists.
+                    if (ProjectLibrary::TryGet() != nullptr)
+                        ProjectLibrary::Get().Reimport(fileEntry->Filepath);
+                    QueueDropSpawn(fileEntry->Filepath, glm::vec2(mousePosition.x, mousePosition.y));
+                }
+                else
+                {
+                    ImGuiViewportSceneDraggedEvent fileDragEvent(fileEntry, glm::vec2(mousePosition.x, mousePosition.y));
+                    if (OnEvent)
+                        OnEvent(fileDragEvent);
+                }
             }
             ImGui::EndDragDropTarget();
         }
@@ -565,7 +668,7 @@ namespace Crowny
                 const float value = std::max(editorSettings->GridRotateSnap, 0.1f);
                 snapValues[0] = snapValues[1] = snapValues[2] = value;
             }
-            else if (m_GizmoMode == GizmoEditMode::Scale)
+            else if (m_GizmoMode == GizmoEditMode::Scale || m_GizmoMode == GizmoEditMode::Bounds)
             {
                 const float value = std::max(editorSettings->GridScaleSnap, 0.001f);
                 snapValues[0] = snapValues[1] = snapValues[2] = value;
@@ -631,27 +734,20 @@ namespace Crowny
                 if (m_ColliderBoundsTransaction.IsActive())
                     EndColliderBoundsInteraction(Input::IsKeyPressed(Key::Escape));
 
-                glm::mat4 transform = m_TransformInteraction.IsActive() ? m_TransformInteraction.GetCurrentPivot()
-                                      : selectedEntities.size() > 1u    ? GetSelectionPivot(selected, selectedEntities)
-                                                                        : selected.GetWorldMatrix();
-                const glm::mat4 originalTransform = transform;
-                const bool supportsWorldSpace = m_GizmoMode == GizmoEditMode::Translate || m_GizmoMode == GizmoEditMode::Rotate;
-                const ImGuizmo::OPERATION operation = m_GizmoMode == GizmoEditMode::Bounds ? ImGuizmo::SCALE : GetImGuizmoMode(m_GizmoMode);
-                const bool manipulated = ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), operation,
-                                                              !m_LocalMode && supportsWorldSpace ? ImGuizmo::WORLD : ImGuizmo::LOCAL,
+                const SelectionTransformOperation selectionOperation = GetSelectionTransformOperation(m_GizmoMode);
+                const SelectionTransformSpace selectionSpace =
+                  m_LocalMode || m_GizmoMode == GizmoEditMode::Bounds ? SelectionTransformSpace::Local : SelectionTransformSpace::World;
+                glm::mat4 transform = m_TransformInteraction.IsActive()
+                                        ? m_TransformInteraction.GetCurrentPivot()
+                                        : ViewportTransformInteraction::CalculatePivot(selectedEntities, selected, selectionSpace);
+                const ImGuizmo::OPERATION operation = GetImGuizmoMode(m_GizmoMode);
+                const bool manipulated = ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), operation, ImGuizmo::LOCAL,
                                                               glm::value_ptr(transform), nullptr, snap ? snapValues : nullptr);
-                if (manipulated)
-                {
-                    if (!m_GizmoWasUsing)
-                        BeginTransformInteraction(selectedEntities, originalTransform);
-                    ApplyTransformInteraction(transform);
-                }
-
                 const bool usingGizmo = ImGuizmo::IsUsing();
-                const ViewportTransformResolution resolution = m_TransformInteraction.Resolve(usingGizmo, Input::IsKeyPressed(Key::Escape));
-                UndoRedo::Get().RegisterAction(resolution.Action);
-                // Keep the capture latched until ImGuizmo releases the mouse so
-                // an Escape cancellation cannot begin a second transaction.
+                const ViewportTransformFrameResult frame = m_TransformInteraction.ProcessGizmoFrame(
+                  selectedEntities, selected, selectionOperation, selectionSpace,
+                  ViewportGizmoFrame{ transform, manipulated, usingGizmo, Input::IsKeyPressed(Key::Escape) });
+                UndoRedo::Get().RegisterAction(frame.Resolution.Action);
                 m_GizmoWasUsing = usingGizmo;
             }
         }
@@ -664,8 +760,10 @@ namespace Crowny
             EndColliderBoundsInteraction(Input::IsKeyPressed(Key::Escape));
         const float viewportMinSize = std::min(m_ViewportSize.x, m_ViewportSize.y);
         const float viewCubeSize = std::clamp(viewportMinSize * 0.22f, 72.0f, 128.0f);
+        // The view cube sits below the top-right render toolbar (when that toolbar is visible).
+        const float viewCubeTop = m_TopRightOverlayBottom > imageMin.y ? m_TopRightOverlayBottom + 4.0f : imageMin.y + 4.0f;
         if (viewportMinSize >= 100.0f &&
-            ImGuizmo::ViewManipulate(glm::value_ptr(view), camera.GetDistance(), { imageMax.x - viewCubeSize - 8.0f, imageMin.y + 4.0f },
+            ImGuizmo::ViewManipulate(glm::value_ptr(view), camera.GetDistance(), { imageMax.x - viewCubeSize - 8.0f, viewCubeTop },
                                      ImVec2(viewCubeSize, viewCubeSize), 0x10101010))
         {
             // ViewManipulate modifies the view matrix in-place. Invert it to get the
@@ -687,6 +785,96 @@ namespace Crowny
     }
 
     void ViewportPanel::SetEventCallback(const EventCallbackFn& onEvent) { OnEvent = onEvent; }
+
+    void ViewportPanel::QueueDropSpawn(const Path& assetPath, const glm::vec2& screenPosition)
+    {
+        m_PendingDropSpawns.push_back(PendingDropSpawn{ assetPath.lexically_normal(), screenPosition, ImGui::GetTime() });
+    }
+
+    void ViewportPanel::ProcessPendingDropSpawns()
+    {
+        if (m_PendingDropSpawns.empty())
+            return;
+        if (ProjectLibrary::TryGet() == nullptr)
+        {
+            m_PendingDropSpawns.clear();
+            return;
+        }
+
+        constexpr double ImportTimeoutSeconds = 60.0;
+        const double now = ImGui::GetTime();
+        const bool importing = ProjectLibrary::Get().IsImporting();
+        for (size_t index = 0; index < m_PendingDropSpawns.size();)
+        {
+            const PendingDropSpawn& pending = m_PendingDropSpawns[index];
+            const Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(pending.AssetPath);
+            const FileEntry* fileEntry =
+              entry != nullptr && entry->Type == LibraryEntryType::File ? static_cast<const FileEntry*>(entry.get()) : nullptr;
+            if (fileEntry != nullptr && fileEntry->Metadata != nullptr)
+            {
+                if (IsSupportedViewportAsset(fileEntry))
+                {
+                    ImGuiViewportSceneDraggedEvent fileDragEvent(fileEntry, pending.ScreenPosition);
+                    if (OnEvent)
+                        OnEvent(fileDragEvent);
+                }
+                m_PendingDropSpawns.erase(m_PendingDropSpawns.begin() + static_cast<std::ptrdiff_t>(index));
+                continue;
+            }
+
+            const double waited = now - pending.QueuedAt;
+            // Give the scheduler a moment to pick the file up; afterwards an idle importer means the import failed.
+            const bool importFailed = !importing && waited > 2.0 && fileEntry != nullptr;
+            if (importFailed || waited > ImportTimeoutSeconds)
+            {
+                CW_ENGINE_WARN("Dropped file '{}' was not imported; nothing was added to the scene.", pending.AssetPath);
+                m_PendingDropSpawns.erase(m_PendingDropSpawns.begin() + static_cast<std::ptrdiff_t>(index));
+                continue;
+            }
+            index++;
+        }
+    }
+
+    bool ViewportPanel::OnWindowFileDrop(WindowFileDropEvent& fileDrop)
+    {
+        if (!IsShown() || !m_RenderTarget || fileDrop.GetPaths().empty())
+            return false;
+
+        // GLFW reports the drop in window-client pixels; ImGui works in the main viewport's coordinate space.
+        const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+        const glm::vec2 screenPosition =
+          fileDrop.GetMousePosition() + (mainViewport != nullptr ? glm::vec2(mainViewport->Pos.x, mainViewport->Pos.y) : glm::vec2(0.0f));
+        const bool insideViewport = screenPosition.x >= m_ViewportBounds.x && screenPosition.x < m_ViewportBounds.z &&
+                                    screenPosition.y >= m_ViewportBounds.y && screenPosition.y < m_ViewportBounds.w;
+        if (!insideViewport)
+            return false;
+
+        if (Editor::TryGet() == nullptr || !Editor::Get().IsProjectLoaded() || ProjectLibrary::TryGet() == nullptr)
+        {
+            CW_ENGINE_WARN("Ignoring dropped files: no project is loaded.");
+            return true;
+        }
+
+        const Path& assetFolder = ProjectLibrary::Get().GetAssetFolder();
+        bool imported = false;
+        for (const Path& source : fileDrop.GetPaths())
+        {
+            if (ClassifyViewportDropFile(source) == ViewportDropFileKind::Unsupported)
+            {
+                CW_ENGINE_WARN("Dropped file '{}' is not a supported asset type.", source);
+                continue;
+            }
+            const Path destination = ImportExternalDropFile(source, assetFolder);
+            if (destination.empty())
+                continue;
+            QueueDropSpawn(destination, screenPosition);
+            imported = true;
+        }
+
+        if (imported)
+            ProjectLibrary::Get().RefreshAsync(assetFolder);
+        return true;
+    }
 
     void ViewportPanel::SetEditorRenderTarget(const Ref<RenderTexture>& rt) { m_RenderTarget = rt; }
 
