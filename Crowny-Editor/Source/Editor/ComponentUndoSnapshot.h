@@ -23,12 +23,13 @@ namespace Crowny
 
                 if (snapshotIndex < m_Snapshots.size())
                 {
-                    auto& [cachedEntity, cachedComponent] = m_Snapshots[snapshotIndex];
-                    cachedEntity = entity;
-                    cachedComponent = entity.template GetComponent<T>();
+                    auto& cached = m_Snapshots[snapshotIndex];
+                    cached.Target = entity;
+                    cached.Component = entity.template GetComponent<T>();
+                    cached.Prefab = CapturePrefab(entity);
                 }
                 else
-                    m_Snapshots.emplace_back(entity, entity.template GetComponent<T>());
+                    m_Snapshots.push_back({ entity, entity.template GetComponent<T>(), CapturePrefab(entity) });
                 snapshotIndex++;
             }
 
@@ -64,7 +65,14 @@ namespace Crowny
         size_t Capacity() const { return m_Snapshots.capacity(); }
 
     private:
-        Vector<Pair<Entity, T>> m_Snapshots;
+        static std::optional<PrefabComponent> CapturePrefab(Entity entity)
+        {
+            if (!entity.HasComponent<PrefabComponent>())
+                return std::nullopt;
+            return entity.GetComponent<PrefabComponent>();
+        }
+
+        Vector<typename ChangeComponentsAction<T>::BeforeValue> m_Snapshots;
         mutable Ref<ChangeComponentsAction<T>> m_PendingAction;
     };
 } // namespace Crowny

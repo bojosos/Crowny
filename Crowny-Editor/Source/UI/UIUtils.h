@@ -10,6 +10,7 @@
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Editor/Editor.h"
 #include "Editor/ProjectLibrary.h"
+#include "UI/AssetSearchCandidates.h"
 #include "UI/PopupLabelId.h"
 
 #include "Crowny/Physics/Physics2D.h"
@@ -433,9 +434,11 @@ namespace Crowny
         }
 
         static bool SearchWidget(String& searchString, const char* hint = "Search...", bool* grabFocus = nullptr);
+        /** Name for an asset reference button: project asset name, built-in primitive mesh name, or the UUID if unknown. */
+        static String GetAssetDisplayName(const UUID& uuid);
 
         static bool ScriptSearchPopup(const UI::PopupLabelId& id, String& selectedScript, bool* cleared = nullptr,
-                                      const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
+                                      const char* hint = "Search scripts...", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
@@ -807,16 +810,14 @@ namespace Crowny
         }
 
         static bool AssetSearchPopup(const UI::PopupLabelId& id, AssetType assetType, AssetHandle<Asset>& assetHandle, bool* cleared = nullptr,
-                                     const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
+                                     const char* hint = nullptr, const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
             bool modified = false;
+            if (hint == nullptr)
+                hint = UI::GetAssetSearchHint(assetType);
 
-            String preview;
-            float itemHeight = size.y / 20.0f;
-
-            const auto view = SceneManager::TryGet()->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             AssetHandle<Asset> current = assetHandle;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -829,11 +830,18 @@ namespace Crowny
             if (BeginPopup(id.CStr(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
             {
                 static String searchString;
+                // Only one popup is open at a time, so the candidate list is rebuilt whenever a popup appears.
+                static Vector<UI::AssetSearchCandidate> candidates;
 
                 if (ImGui::GetCurrentWindow()->Appearing)
                 {
                     grabFocus = true;
                     searchString.clear();
+                    AssetManager* assetManager = AssetManager::TryGet();
+                    candidates = UI::CollectAssetSearchCandidates(ProjectLibrary::Get().GetRoot().get(), assetType,
+                                                                  [assetManager](const UUID& uuid) {
+                                                                      return assetManager == nullptr || assetManager->IsAssetRegistered(uuid);
+                                                                  });
                 }
 
                 // Search widget
@@ -886,22 +894,21 @@ namespace Crowny
                             }
                         }
 
-                        Vector<UUID> assets = ProjectLibrary::Get().GetAllAssets(assetType);
-                        for (const auto& uuid : assets)
+                        for (const UI::AssetSearchCandidate& candidate : candidates)
                         {
-                            String assetName = ProjectLibrary::Get().GetAssetName(uuid);
-                            if (assetName.empty())
-                                continue;
-                            if (!searchString.empty() && !StringUtils::IsSearchMathing(assetName, searchString))
+                            if (searching && !StringUtils::IsSearchMathing(candidate.Name, searchString))
                                 continue;
 
-                            bool isSelected = current && current.GetUUID() == uuid;
-                            if (ImGui::Selectable(assetName.c_str(), isSelected))
+                            // Names are not unique (several files may share a name), so key the row on the UUID.
+                            ImGui::PushID(static_cast<int>(std::hash<UUID>()(candidate.Uuid)));
+                            const bool isSelected = current && current.GetUUID() == candidate.Uuid;
+                            if (ImGui::Selectable(candidate.Name.c_str(), isSelected))
                             {
-                                assetHandle = AssetManager::TryGet()->LoadFromUUID(uuid);
+                                assetHandle = AssetManager::TryGet()->LoadFromUUID(candidate.Uuid);
                                 current = assetHandle;
                                 modified = true;
                             }
+                            ImGui::PopID();
 
                             if (forwardFocus)
                                 forwardFocus = false;
@@ -909,7 +916,6 @@ namespace Crowny
                                 ImGui::SetItemDefaultFocus();
                         }
 
-                        // ImGui::EndChild();
                         ImGui::EndListBox();
                     }
                 }
@@ -1002,7 +1008,7 @@ namespace Crowny
                 else if (assetHandle.IsLoaded())
                     buttonText = assetHandle->GetName();
                 else if (assetHandle.HasUUID())
-                    buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
+                    buttonText = UIUtils::GetAssetDisplayName(assetHandle.GetUUID());
                 const UI::PopupLabelId entitySearchPopupId = UI::GeneratePopupID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
@@ -1075,7 +1081,7 @@ namespace Crowny
                 else if (assetHandle.IsLoaded())
                     buttonText = assetHandle->GetName();
                 else if (assetHandle.HasUUID())
-                    buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
+                    buttonText = UIUtils::GetAssetDisplayName(assetHandle.GetUUID());
                 const UI::PopupLabelId entitySearchPopupId = UI::GeneratePopupID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
@@ -1174,7 +1180,7 @@ namespace Crowny
             CW_ENGINE_ASSERT(payload && payload->DataSize == sizeof(UUID));
             const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
             if (!payload || payload->DataSize != sizeof(UUID) || !scene)
-                return {};
+                return Entity::Invalid;
 
             return scene->TryGetEntityFromUuid(*static_cast<const UUID*>(payload->Data));
         }

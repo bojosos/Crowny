@@ -4,6 +4,8 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 
+#include <optional>
+
 namespace Crowny
 {
     class UndoAction : public RefCounted
@@ -52,7 +54,7 @@ namespace Crowny
                 if (Entity entity = action->GetFocusEntity())
                     return entity;
             }
-            return {};
+            return Entity::Invalid;
         }
 
     private:
@@ -252,12 +254,21 @@ namespace Crowny
     template <typename T> class ChangeComponentsAction : public UndoAction
     {
     public:
+        struct BeforeValue
+        {
+            Entity Target;
+            T Component;
+            std::optional<PrefabComponent> Prefab;
+        };
+
         struct Snapshot
         {
             Ref<Scene> SceneRef;
             UUID Target;
             T OldValue;
             T NewValue;
+            std::optional<PrefabComponent> OldPrefab;
+            std::optional<PrefabComponent> NewPrefab;
         };
 
         explicit ChangeComponentsAction(const Vector<Pair<Entity, T>>& oldValues) : UndoAction("Edit components")
@@ -266,7 +277,24 @@ namespace Crowny
             for (const auto& [entity, oldValue] : oldValues)
             {
                 if (entity && entity.template HasComponent<T>())
-                    m_Snapshots.push_back({ Ref<Scene>(entity.GetScene()), entity.GetUuid(), oldValue, entity.template GetComponent<T>() });
+                {
+                    const std::optional<PrefabComponent> prefab = CapturePrefab(entity);
+                    m_Snapshots.push_back(
+                      { Ref<Scene>(entity.GetScene()), entity.GetUuid(), oldValue, entity.template GetComponent<T>(), prefab, prefab });
+                }
+            }
+        }
+
+        explicit ChangeComponentsAction(const Vector<BeforeValue>& oldValues) : UndoAction("Edit components")
+        {
+            m_Snapshots.reserve(oldValues.size());
+            for (const BeforeValue& before : oldValues)
+            {
+                if (before.Target && before.Target.template HasComponent<T>())
+                {
+                    m_Snapshots.push_back({ Ref<Scene>(before.Target.GetScene()), before.Target.GetUuid(), before.Component,
+                                            before.Target.template GetComponent<T>(), before.Prefab, CapturePrefab(before.Target) });
+                }
             }
         }
 
@@ -276,7 +304,10 @@ namespace Crowny
             {
                 Entity target = snapshot.SceneRef ? snapshot.SceneRef->TryGetEntityFromUuid(snapshot.Target) : Entity{};
                 if (target && target.template HasComponent<T>())
+                {
                     snapshot.NewValue = target.template GetComponent<T>();
+                    snapshot.NewPrefab = CapturePrefab(target);
+                }
             }
         }
 
@@ -294,7 +325,24 @@ namespace Crowny
                 target.AddOrReplaceComponent<T>(oldValues ? snapshot.OldValue : snapshot.NewValue);
                 if constexpr (std::is_same_v<T, TransformComponent>)
                     target.NotifyTransformChanged();
+                if constexpr (!std::is_same_v<T, PrefabComponent>)
+                    ApplyPrefab(target, oldValues ? snapshot.OldPrefab : snapshot.NewPrefab);
             }
+        }
+
+        static std::optional<PrefabComponent> CapturePrefab(Entity entity)
+        {
+            if (!entity || !entity.HasComponent<PrefabComponent>())
+                return std::nullopt;
+            return entity.GetComponent<PrefabComponent>();
+        }
+
+        static void ApplyPrefab(Entity entity, const std::optional<PrefabComponent>& prefab)
+        {
+            if (prefab)
+                entity.AddOrReplaceComponent<PrefabComponent>(*prefab);
+            else if (entity.HasComponent<PrefabComponent>())
+                entity.RemoveComponent<PrefabComponent>();
         }
 
         Vector<Snapshot> m_Snapshots;

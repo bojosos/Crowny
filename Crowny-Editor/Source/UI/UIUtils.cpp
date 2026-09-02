@@ -5,6 +5,8 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
+#include "Crowny/Renderer/PrimitiveMeshLibrary.h"
+
 #include "Crowny/Ecs/Components.h"
 
 #include "Crowny/ImGui/ImGuiVulkanTexture.h"
@@ -116,6 +118,17 @@ namespace Crowny
         }
         else
             return UI::Property(label, value, DRAG_SENSITIVITY, minValue, maxValue);
+    }
+
+    String UIUtils::GetAssetDisplayName(const UUID& uuid)
+    {
+        String name = ProjectLibrary::Get().GetAssetName(uuid);
+        if (!name.empty())
+            return name;
+        PrimitiveMeshType primitive;
+        if (PrimitiveMeshLibrary::TryGetType(uuid, primitive))
+            return String(PrimitiveMeshLibrary::GetName(primitive)) + " (built-in)";
+        return uuid.ToString();
     }
 
     bool UIUtils::SearchWidget(String& searchString, const char* hint, bool* grabFocus)
