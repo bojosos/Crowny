@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ComponentEditor.h"
+#include "EntityInspector.h"
 #include "EditorPanelRegistration.h"
 #include "ImGuiPanel.h"
 #include "MaterialInspectorSchemaCache.h"
@@ -9,6 +9,7 @@
 
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
+#include "Crowny/Renderer/MaterialPresetLibrary.h"
 
 #include <functional>
 
@@ -55,6 +56,11 @@ namespace Crowny
 
     private:
         void RenderMaterialInspector();
+        bool DrawMaterialShaderPicker(Material& material);
+        bool DrawMaterialPresetRow(Material& material);
+        void RefreshMaterialShaderOptions();
+        void RefreshMaterialPresetOptions();
+        void SaveMaterialAsPreset(const Material& material);
         void RenderPhysicsMaterialInspector();
         void RenderAudioClipImportInspector();
         void RenderFontImportInspector();
@@ -65,7 +71,7 @@ namespace Crowny
         void RenderMeshImportInspector();
         void RenderPrefabInspector();
 
-        void HandleInspectorDragDrop(Entity selectedEntity);
+        void HandleInspectorDragDrop(const Vector<Entity>& selectedEntities);
 
         template <typename T> T* BeginImportInspector();
         void EndImportInspector(float xOffset, float width);
@@ -93,9 +99,23 @@ namespace Crowny
         Entity m_InspectedEntity;
         Vector<Entity> m_InspectedEntities;
 
-        ComponentEditor m_ComponentEditor; // Helper object for rendering components of entities
+        EntityInspector m_EntityInspector; // Renders the header, component list and Add Component popup for entities
 
         MaterialInspectorSchemaCache m_MaterialSchemaCache;
+
+        struct MaterialPickerState
+        {
+            bool BuiltInShadersLoaded = false;
+            Vector<MaterialShaderOption> BuiltInShaders;
+            Vector<MaterialShaderOption> ShaderOptions; // Built-in + project, rebuilt when the picker opens
+            bool ShowInternalShaders = false;
+            String ShaderSearch;
+            Vector<MaterialPresetEntry> PresetOptions; // Compatible presets, rebuilt when the picker opens
+            String PresetSearch;
+            String StatusMessage;
+            bool StatusIsError = false;
+            double StatusExpiry = 0.0;
+        } m_MaterialPicker;
         AssetSaveTracker m_AssetSaveTracker;
 
         std::function<void(AssetHandle<NodeGraphAsset>)> m_OpenNodeEditorCallback;

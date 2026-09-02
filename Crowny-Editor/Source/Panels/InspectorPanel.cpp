@@ -1,18 +1,24 @@
 #include "cwepch.h"
 
+#include "Crowny/Application/Application.h"
+#include "Crowny/Application/EngineRuntime.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Renderer/BuiltInShaderCatalog.h"
 #include "Crowny/Renderer/GpuMaterial.h"
+#include "Crowny/Renderer/MaterialPreset.h"
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Scene/SceneManager.h"
 
-#include "Panels/ComponentEditor.h"
+#include "Panels/EntityInspector.h"
+#include "Panels/ScriptComponentInspector.h"
 #include "Panels/InspectorPanel.h"
 
+#include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
 #include "UI/Properties.h"
@@ -26,6 +32,7 @@
 #include "Crowny/Import/ShaderImporter.h"
 #include "Crowny/Import/TextFileImporter.h"
 #include "Crowny/Import/TextureImporter.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/NodeGraph/NodeRegistry.h"
@@ -41,6 +48,59 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        ScriptTypeIdentity ResolveDroppedScriptIdentity(const FileEntry& entry, bool logAmbiguity)
+        {
+            const String typeName = entry.Filepath.stem().string();
+            const String defaultNamespace = Editor::Get().GetProjectPath().filename().string();
+            Application* application = Application::TryGet();
+            const ManagedScripting* managed = application != nullptr ? application->GetRuntime().GetManagedScripting() : nullptr;
+            if (managed == nullptr || !managed->IsStarted())
+                return { GAME_ASSEMBLY, defaultNamespace, typeName };
+
+            Vector<ScriptTypeIdentity> candidates;
+            for (const ScriptTypeSchema& type : managed->GetScriptCatalog().Types)
+            {
+                if (type.Identity.Assembly == GAME_ASSEMBLY && type.Identity.TypeName == typeName)
+                    candidates.push_back(type.Identity);
+            }
+            if (candidates.size() == 1u)
+                return candidates.front();
+
+            const auto defaultMatch = std::find_if(candidates.begin(), candidates.end(),
+                                                   [&](const ScriptTypeIdentity& identity) { return identity.Namespace == defaultNamespace; });
+            if (defaultMatch != candidates.end() && std::find_if(defaultMatch + 1, candidates.end(), [&](const ScriptTypeIdentity& identity) {
+                                                        return identity.Namespace == defaultNamespace;
+                                                    }) == candidates.end())
+                return *defaultMatch;
+
+            if (candidates.empty())
+                return { GAME_ASSEMBLY, defaultNamespace, typeName };
+
+            if (logAmbiguity)
+            {
+                CW_ENGINE_WARN("Cannot infer which managed type '{}' represents because multiple game scripts use that class name. "
+                               "Add it from the component menu instead.",
+                               typeName);
+            }
+            return {};
+        }
+
+        bool IsAttachableScript(const FileEntry& entry)
+        {
+            if (entry.Metadata == nullptr)
+                return false;
+            const Ref<CSharpScriptImportOptions> options = StaticRefCast<CSharpScriptImportOptions>(entry.Metadata->ImportOptions);
+            return options == nullptr || !options->IsEditorScript;
+        }
+
+        template <typename Component> bool SelectionHasMissingComponent(const Vector<Entity>& entities)
+        {
+            return std::any_of(entities.begin(), entities.end(), [](Entity entity) { return entity && !entity.HasComponent<Component>(); });
+        }
+    } // namespace
+
     template <typename T> T* InspectorPanel::BeginImportInspector()
     {
         UI::BeginPropertyGrid();
@@ -49,17 +109,20 @@ namespace Crowny
 
     InspectorPanel::InspectorPanel(const String& name) : ImGuiPanel(name)
     {
-        m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
+        // Built-in shaders need stable identifiers before any project material resolves its shader reference.
+        BuiltInShaderCatalog::EnsureRegistered();
+
+        m_EntityInspector.RegisterComponent<TransformComponent>("Transform");
 
         // Rendering
-        m_ComponentEditor.PushComponentGroup("Rendering");
-        m_ComponentEditor.RegisterComponent<CameraComponent>("Camera");
-        m_ComponentEditor.RegisterComponent<LightComponent>("Light");
-        m_ComponentEditor.RegisterComponent<MeshRendererComponent>("Mesh Filter");
-        m_ComponentEditor.RegisterComponent<AnimationComponent>("Animation");
-        m_ComponentEditor.RegisterComponent<TextComponent>("Text");
-        m_ComponentEditor.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
-        m_ComponentEditor.RegisterComponent<ProceduralMeshComponent>("Procedural Mesh", [this](Entity entity) {
+        m_EntityInspector.PushComponentGroup("Rendering");
+        m_EntityInspector.RegisterComponent<CameraComponent>("Camera");
+        m_EntityInspector.RegisterComponent<LightComponent>("Light");
+        m_EntityInspector.RegisterComponent<MeshRendererComponent>("Mesh Filter");
+        m_EntityInspector.RegisterComponent<AnimationComponent>("Animation");
+        m_EntityInspector.RegisterComponent<TextComponent>("Text");
+        m_EntityInspector.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
+        m_EntityInspector.RegisterComponent<ProceduralMeshComponent>("Procedural Mesh", [this](Entity entity) {
             auto& comp = entity.GetComponent<ProceduralMeshComponent>();
 
             AssetHandle<Asset> graphAsset = static_asset_cast<Asset>(comp.Graph);
@@ -196,49 +259,58 @@ namespace Crowny
                 comp.NeedsEvaluation = true;
             }
         });
-        m_ComponentEditor.PopComponentGroup();
+        m_EntityInspector.PopComponentGroup();
 
         // Physics
-        m_ComponentEditor.PushComponentGroup("Physics");
-        m_ComponentEditor.RegisterComponent<Rigidbody2DComponent>("Rigidbody 2D");
-        m_ComponentEditor.RegisterComponent<BoxCollider2DComponent>("Box Collider 2D");
-        m_ComponentEditor.RegisterComponent<CircleCollider2DComponent>("Circle Collider 2D");
-        m_ComponentEditor.RegisterComponent<Rigidbody3DComponent>("Rigidbody 3D");
-        m_ComponentEditor.RegisterComponent<BoxCollider3DComponent>("Box Collider 3D");
-        m_ComponentEditor.RegisterComponent<SphereCollider3DComponent>("Sphere Collider 3D");
-        m_ComponentEditor.RegisterComponent<CapsuleCollider3DComponent>("Capsule Collider 3D");
-        m_ComponentEditor.PopComponentGroup();
+        m_EntityInspector.PushComponentGroup("Physics");
+        m_EntityInspector.RegisterComponent<Rigidbody2DComponent>("Rigidbody 2D");
+        m_EntityInspector.RegisterComponent<BoxCollider2DComponent>("Box Collider 2D");
+        m_EntityInspector.RegisterComponent<CircleCollider2DComponent>("Circle Collider 2D");
+        m_EntityInspector.RegisterComponent<Rigidbody3DComponent>("Rigidbody 3D");
+        m_EntityInspector.RegisterComponent<BoxCollider3DComponent>("Box Collider 3D");
+        m_EntityInspector.RegisterComponent<SphereCollider3DComponent>("Sphere Collider 3D");
+        m_EntityInspector.RegisterComponent<CapsuleCollider3DComponent>("Capsule Collider 3D");
+        m_EntityInspector.PopComponentGroup();
 
         // Audio
-        m_ComponentEditor.PushComponentGroup("Audio");
-        m_ComponentEditor.RegisterComponent<AudioListenerComponent>("Audio Listener");
-        m_ComponentEditor.RegisterComponent<AudioSourceComponent>("Audio Source");
-        m_ComponentEditor.PopComponentGroup();
+        m_EntityInspector.PushComponentGroup("Audio");
+        m_EntityInspector.RegisterComponent<AudioListenerComponent>("Audio Listener");
+        m_EntityInspector.RegisterComponent<AudioSourceComponent>("Audio Source");
+        m_EntityInspector.PopComponentGroup();
 
         // Scripting
-        m_ComponentEditor.RegisterComponent<ManagedScriptComponent>("C# Script");
+        m_EntityInspector.RegisterComponent<ManagedScriptComponent>("C# Script");
     }
 
     InspectorPanel::~InspectorPanel() { FlushPendingAssetSaves(); }
 
-    void InspectorPanel::HandleInspectorDragDrop(Entity selectedEntity)
+    void InspectorPanel::HandleInspectorDragDrop(const Vector<Entity>& selectedEntities)
     {
         if (ImGui::BeginDragDropTarget()) // Add components when files are dropped on entities in the inspector (C#
                                           // script, AudioSource, etc...)
         {
-            auto hasComponentCallback = [selectedEntity](const FileEntry* entry) {
+            auto hasComponentCallback = [&](const FileEntry* entry) {
+                if (entry == nullptr || entry->Metadata == nullptr)
+                    return false;
                 switch (entry->Metadata->Type)
                 {
                 case AssetType::AudioClip:
-                    return !selectedEntity.HasComponent<AudioSourceComponent>();
+                    return SelectionHasMissingComponent<AudioSourceComponent>(selectedEntities);
                 case AssetType::Mesh:
-                    return !selectedEntity.HasComponent<MeshRendererComponent>();
-                case AssetType::ScriptCode:
-                    return true; // You can always add more scripts!!!
+                    return SelectionHasMissingComponent<MeshRendererComponent>(selectedEntities);
+                case AssetType::ScriptCode: {
+                    if (!IsAttachableScript(*entry))
+                        return false;
+                    const ScriptTypeIdentity identity = ResolveDroppedScriptIdentity(*entry, false);
+                    return !identity.IsValid() || std::any_of(selectedEntities.begin(), selectedEntities.end(), [&](Entity entity) {
+                        Scene* scene = entity ? entity.GetScene() : nullptr;
+                        return scene != nullptr && !scene->HasScriptComponent(entity, identity);
+                    });
+                }
                 case AssetType::Texture:
-                    return !selectedEntity.HasComponent<SpriteRendererComponent>();
+                    return SelectionHasMissingComponent<SpriteRendererComponent>(selectedEntities);
                 case AssetType::Font:
-                    return !selectedEntity.HasComponent<TextComponent>();
+                    return SelectionHasMissingComponent<TextComponent>(selectedEntities);
                 default:
                     return false;
                 }
@@ -250,64 +322,39 @@ namespace Crowny
                     switch (fileEntry->Metadata->Type)
                     {
                     case AssetType::AudioClip: {
-                        if (!selectedEntity.HasComponent<AudioSourceComponent>())
-                        {
-                            AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
-                            AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(fileEntry));
-                            audioSource.SetClip(clip);
-                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<AudioSourceComponent>>(selectedEntity));
-                        }
+                        const AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(fileEntry));
+                        const SelectionComponentChange change = AddComponentToSelection<AudioSourceComponent>(
+                          selectedEntities, [&](Entity, AudioSourceComponent& component) { component.SetClip(clip); });
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
                     }
                     case AssetType::ScriptCode: {
-                        const String className = fileEntry->Filepath.filename().replace_extension("").string();
-                        Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
-                        bool exists = false;
-                        if (selectedEntity.HasComponent<ManagedScriptComponent>())
-                        {
-                            auto& scripts = selectedEntity.GetComponent<ManagedScriptComponent>().Scripts;
-                            for (const auto& script : scripts)
-                            {
-                                if (script.GetTypeIdentity().TypeName == className)
-                                    exists = true;
-                            }
-                        }
-                        // TODO: Parse the namespace and class name
-                        if (!exists)
-                        {
-                            ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(selectedEntity);
-                            activeScene->AddScriptComponent(selectedEntity, "Sandbox", className);
-                            UndoRedo::Get().RegisterAction(CreateRef<ChangeScriptComponentAction>(selectedEntity, std::move(snapshot), "Add script"));
-                        }
+                        const ScriptTypeIdentity identity = ResolveDroppedScriptIdentity(*fileEntry, true);
+                        const SelectionComponentChange change = AddManagedScriptToSelection(selectedEntities, identity);
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
                     }
-                    case AssetType::Font:
-                        if (!selectedEntity.HasComponent<TextComponent>())
-                        {
-                            TextComponent& textComponent = selectedEntity.AddComponent<TextComponent>();
-                            AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(fileEntry));
-                            textComponent.Font = font;
-                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<TextComponent>>(selectedEntity));
-                        }
+                    case AssetType::Font: {
+                        const AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(fileEntry));
+                        const SelectionComponentChange change =
+                          AddComponentToSelection<TextComponent>(selectedEntities, [&](Entity, TextComponent& component) { component.Font = font; });
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
-                    case AssetType::Mesh:
-                        if (!selectedEntity.HasComponent<MeshRendererComponent>())
-                        {
-                            MeshRendererComponent& meshComponent = selectedEntity.AddComponent<MeshRendererComponent>();
-                            AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(fileEntry));
-                            meshComponent.MeshHandle = mesh;
-                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<MeshRendererComponent>>(selectedEntity));
-                        }
+                    }
+                    case AssetType::Mesh: {
+                        const AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(fileEntry));
+                        const SelectionComponentChange change = AddComponentToSelection<MeshRendererComponent>(
+                          selectedEntities, [&](Entity, MeshRendererComponent& component) { component.MeshHandle = mesh; });
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
-                    case AssetType::Texture:
-                        if (!selectedEntity.HasComponent<SpriteRendererComponent>())
-                        {
-                            SpriteRendererComponent& spriteComponent = selectedEntity.AddComponent<SpriteRendererComponent>();
-                            AssetHandle<Texture> texture = static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
-                            spriteComponent.Texture = texture;
-                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<SpriteRendererComponent>>(selectedEntity));
-                        }
+                    }
+                    case AssetType::Texture: {
+                        const AssetHandle<Texture> texture = static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
+                        const SelectionComponentChange change = AddComponentToSelection<SpriteRendererComponent>(
+                          selectedEntities, [&](Entity, SpriteRendererComponent& component) { component.Texture = texture; });
+                        UndoRedo::Get().RegisterAction(change.Action);
                         break;
+                    }
                     }
                 }
             }
@@ -343,7 +390,7 @@ namespace Crowny
         switch (m_InspectorMode)
         {
         case InspectorMode::GameObject:
-            m_ComponentEditor.Render(m_InspectedEntity, m_InspectedEntities);
+            m_EntityInspector.Render(m_InspectedEntity, m_InspectedEntities);
             break;
         case InspectorMode::Material:
             if (m_ImportOptions)
@@ -392,7 +439,7 @@ namespace Crowny
 
         ImGui::EndChild();
         if (m_InspectorMode == InspectorMode::GameObject && m_InspectedEntity)
-            HandleInspectorDragDrop(m_InspectedEntity);
+            HandleInspectorDragDrop(m_InspectedEntities);
         EndPanel();
     }
 
@@ -411,9 +458,16 @@ namespace Crowny
 
         UI::BeginPropertyGrid();
 
-        // Shader selector — allows changing the shader (like Unity's material type)
-        AssetHandle<Shader> currentShader = mat->GetShader();
-        applyEdit(UIUtils::AssetSearch<Shader>("Shader", currentShader), [&]() { mat->SetShader(currentShader); });
+        // Shader selector: built-in engine shaders and shaders imported into the project.
+        applyEdit(DrawMaterialShaderPicker(*mat), []() {});
+
+        if (!mat->GetShader())
+        {
+            UI::EndPropertyGrid();
+            ImGui::TextDisabled("This material has no shader. Pick one above to edit its parameters.");
+            SaveReadyAssets();
+            return;
+        }
 
         int32_t alphaMode = mat->HasAlphaModeOverride() ? static_cast<int32_t>(mat->GetAlphaMode()) + 1 : 0;
         const bool alphaModeChanged =
@@ -425,23 +479,7 @@ namespace Crowny
                 mat->SetAlphaMode(static_cast<AlphaMode>(alphaMode - 1));
         });
 
-        if (MaterialRenderClassifier::Classify(*mat).Model == MaterialModel::Toon)
-        {
-            UI::Pre("Apply Preset");
-            const float spacing = ImGui::GetStyle().ItemSpacing.x;
-            const float buttonWidth = std::max(1.0f, (ImGui::GetContentRegionAvail().x - spacing * 2.0f) / 3.0f);
-            ImGui::PushID("ToonMaterialPreset");
-            if (ImGui::Button("Classic", ImVec2(buttonWidth, 0.0f)))
-                mat->ApplyToonPreset(ToonMaterialPreset::Classic);
-            ImGui::SameLine();
-            if (ImGui::Button("Soft", ImVec2(buttonWidth, 0.0f)))
-                mat->ApplyToonPreset(ToonMaterialPreset::Soft);
-            ImGui::SameLine();
-            if (ImGui::Button("Hatched", ImVec2(buttonWidth, 0.0f)))
-                mat->ApplyToonPreset(ToonMaterialPreset::Hatched);
-            ImGui::PopID();
-            UI::Post();
-        }
+        applyEdit(DrawMaterialPresetRow(*mat), []() {});
 
         ImGui::Separator();
 
@@ -521,6 +559,310 @@ namespace Crowny
         SaveReadyAssets();
     }
 
+    namespace
+    {
+        constexpr double MATERIAL_STATUS_SECONDS = 4.0;
+
+        String DescribeShader(const AssetHandle<Shader>& shader, const Vector<MaterialShaderOption>& options)
+        {
+            if (!shader.HasUUID())
+                return "None";
+            for (const MaterialShaderOption& option : options)
+            {
+                if (option.Uuid == shader.GetUUID())
+                    return option.Name;
+            }
+            if (ProjectLibrary* library = ProjectLibrary::TryGet())
+            {
+                const String name = library->GetAssetName(shader.GetUUID());
+                if (!name.empty())
+                    return name;
+            }
+            Path assetPath;
+            if (AssetManager::TryGet() != nullptr && AssetManager::TryGet()->GetAssetPath(shader.GetUUID(), assetPath))
+                return assetPath.stem().string();
+            if (shader.IsLoaded() && !shader->GetName().empty())
+                return shader->GetName();
+            return shader.IsLoaded() ? String("Unnamed shader") : String("Missing shader");
+        }
+
+        bool DrawPickerSectionLabel(const char* label, bool& drawn)
+        {
+            if (drawn)
+                return true;
+            ImGui::TextDisabled("%s", label);
+            drawn = true;
+            return true;
+        }
+    } // namespace
+
+    void InspectorPanel::RefreshMaterialShaderOptions()
+    {
+        AssetManager* assetManager = AssetManager::TryGet();
+        if (!m_MaterialPicker.BuiltInShadersLoaded && assetManager != nullptr)
+        {
+            BuiltInShaderCatalog::EnsureRegistered();
+            m_MaterialPicker.BuiltInShaders.clear();
+            for (const BuiltInShaderEntry& entry : BuiltInShaderCatalog::Enumerate())
+            {
+                MaterialShaderOption option;
+                option.Name = entry.Name;
+                option.Uuid = entry.Uuid;
+                option.AssetPath = entry.AssetPath;
+                option.BuiltIn = true;
+                // Deserializing the shader asset is device free; it only reflects technique metadata.
+                const AssetHandle<Shader> shader = assetManager->Load<Shader>(entry.AssetPath);
+                option.MaterialCapable = shader && BuiltInShaderCatalog::IsMaterialShader(entry.AssetPath.generic_string(), *shader);
+                m_MaterialPicker.BuiltInShaders.push_back(std::move(option));
+            }
+            m_MaterialPicker.BuiltInShadersLoaded = true;
+        }
+
+        m_MaterialPicker.ShaderOptions = m_MaterialPicker.BuiltInShaders;
+        if (ProjectLibrary* library = ProjectLibrary::TryGet())
+        {
+            for (const UUID& uuid : library->GetAllAssets(AssetType::Shader))
+            {
+                MaterialShaderOption option;
+                option.Name = library->GetAssetName(uuid);
+                if (option.Name.empty())
+                    continue;
+                option.Uuid = uuid;
+                option.BuiltIn = false;
+                m_MaterialPicker.ShaderOptions.push_back(std::move(option));
+            }
+        }
+    }
+
+    bool InspectorPanel::DrawMaterialShaderPicker(Material& material)
+    {
+        bool changed = false;
+        const AssetHandle<Shader> currentShader = material.GetShader();
+
+        UI::Pre("Shader");
+        const ImVec2 originalAlign = ImGui::GetStyle().ButtonTextAlign;
+        ImGui::GetStyle().ButtonTextAlign = { 0.0f, 0.5f };
+        const String buttonText = DescribeShader(currentShader, m_MaterialPicker.ShaderOptions);
+        if (ImGui::Button(UI::GenerateLabelID(buttonText), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f)))
+            ImGui::OpenPopup("##MaterialShaderPicker");
+        ImGui::GetStyle().ButtonTextAlign = originalAlign;
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        {
+            if (currentShader.HasUUID())
+                ImGui::SetTooltip("%s\nClick to choose a built-in or project shader.", buttonText.c_str());
+            else
+                ImGui::SetTooltip("Click to choose a built-in or project shader.");
+        }
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(AssetType::Shader))
+            {
+                const AssetHandle<Shader> dropped = static_asset_cast<Shader>(ProjectLibrary::Get().Load(fileEntry));
+                if (dropped)
+                {
+                    material.SetShader(dropped);
+                    material.ApplyModelDefaults();
+                    changed = true;
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+
+        ImGui::SetNextWindowSize(ImVec2(std::max(260.0f, ImGui::GetItemRectSize().x), 0.0f));
+        if (UIUtils::BeginPopup("##MaterialShaderPicker", ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+        {
+            static bool grabFocus = false;
+            if (ImGui::GetCurrentWindow()->Appearing)
+            {
+                RefreshMaterialShaderOptions();
+                m_MaterialPicker.ShaderSearch.clear();
+                grabFocus = true;
+            }
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            UIUtils::SearchWidget(m_MaterialPicker.ShaderSearch, "Search shaders...", &grabFocus);
+            ImGui::Checkbox("Show internal shaders", &m_MaterialPicker.ShowInternalShaders);
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                ImGui::SetTooltip("Engine shaders without a material model (compute, depth, post-process). Materials using them cannot be rendered.");
+
+            const Vector<const MaterialShaderOption*> filtered =
+              FilterMaterialShaderOptions(m_MaterialPicker.ShaderOptions, m_MaterialPicker.ShaderSearch, m_MaterialPicker.ShowInternalShaders);
+            if (ImGui::BeginListBox("##MaterialShaderList", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 12.0f)))
+            {
+                bool builtInLabel = false;
+                bool projectLabel = false;
+                if (filtered.empty())
+                    ImGui::TextDisabled("No shaders match.");
+                for (const MaterialShaderOption* option : filtered)
+                {
+                    if (option->BuiltIn)
+                        DrawPickerSectionLabel("Built-in", builtInLabel);
+                    else
+                        DrawPickerSectionLabel("Project", projectLabel);
+
+                    const bool selected = currentShader.HasUUID() && currentShader.GetUUID() == option->Uuid;
+                    String label = option->Name;
+                    if (option->BuiltIn && !option->MaterialCapable)
+                        label += "  (internal)";
+                    ImGui::PushID(option);
+                    if (ImGui::Selectable(label.c_str(), selected))
+                    {
+                        AssetHandle<Shader> picked;
+                        if (AssetManager* assetManager = AssetManager::TryGet())
+                            picked = option->BuiltIn ? assetManager->Load<Shader>(option->AssetPath) : assetManager->LoadFromUUID<Shader>(option->Uuid);
+                        if (picked)
+                        {
+                            material.SetShader(picked);
+                            material.ApplyModelDefaults();
+                            changed = true;
+                        }
+                        else
+                        {
+                            m_MaterialPicker.StatusMessage = "Failed to load shader '" + option->Name + "'.";
+                            m_MaterialPicker.StatusIsError = true;
+                            m_MaterialPicker.StatusExpiry = ImGui::GetTime() + MATERIAL_STATUS_SECONDS;
+                        }
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopID();
+                    if (selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndListBox();
+            }
+            UIUtils::EndPopup();
+        }
+        UI::Post();
+        return changed;
+    }
+
+    void InspectorPanel::RefreshMaterialPresetOptions()
+    {
+        Vector<MaterialPresetEntry> entries = MaterialPresetLibrary::EnumerateBuiltIn();
+        ProjectLibrary* library = ProjectLibrary::TryGet();
+        AssetManager* assetManager = AssetManager::TryGet();
+        if (library != nullptr && assetManager != nullptr)
+        {
+            for (const UUID& uuid : library->GetAllAssets(AssetType::MaterialPreset))
+            {
+                const AssetHandle<MaterialPreset> preset = assetManager->LoadFromUUID<MaterialPreset>(uuid);
+                if (!preset)
+                    continue;
+                MaterialPresetEntry entry;
+                entry.Name = library->GetAssetName(uuid);
+                if (entry.Name.empty())
+                    entry.Name = preset->GetName();
+                entry.Uuid = uuid;
+                entry.SourcePath = library->UuidToPath(uuid);
+                entry.BuiltIn = false;
+                entry.Preset = preset.GetInternalPtr();
+                entries.push_back(std::move(entry));
+            }
+        }
+        m_MaterialPicker.PresetOptions = std::move(entries);
+    }
+
+    void InspectorPanel::SaveMaterialAsPreset(const Material& material)
+    {
+        ProjectLibrary* library = ProjectLibrary::TryGet();
+        if (library == nullptr || m_InspectedAssetPath.empty())
+            return;
+        const String materialName = m_InspectedAssetPath.stem().string();
+        const Path presetPath = EditorUtils::GetUniquePath(m_InspectedAssetPath.parent_path() / (materialName + " Preset" + MaterialPresetLibrary::PRESET_EXTENSION));
+        const Ref<MaterialPreset> preset = MaterialPreset::CaptureFromMaterial(material, presetPath.stem().string());
+        library->CreateEntry(preset, presetPath);
+        const bool saved = fs::is_regular_file(presetPath);
+        m_MaterialPicker.StatusMessage = saved ? "Saved preset '" + presetPath.filename().string() + "'." : "Failed to save the preset.";
+        m_MaterialPicker.StatusIsError = !saved;
+        m_MaterialPicker.StatusExpiry = ImGui::GetTime() + MATERIAL_STATUS_SECONDS;
+    }
+
+    bool InspectorPanel::DrawMaterialPresetRow(Material& material)
+    {
+        bool changed = false;
+        UI::Pre("Preset");
+        const float spacing = ImGui::GetStyle().ItemSpacing.x;
+        const float saveWidth = ImGui::CalcTextSize("Save as...").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+        const float applyWidth = std::max(1.0f, ImGui::GetContentRegionAvail().x - saveWidth - spacing);
+        if (ImGui::Button("Apply preset...", ImVec2(applyWidth, 0.0f)))
+            ImGui::OpenPopup("##MaterialPresetPicker");
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+            ImGui::SetTooltip("Apply a built-in or project preset. Texture assignments are kept.");
+        ImGui::SameLine(0.0f, spacing);
+        if (ImGui::Button("Save as...", ImVec2(saveWidth, 0.0f)))
+            SaveMaterialAsPreset(material);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+            ImGui::SetTooltip("Save the current parameter values as a .cwpreset next to this material.");
+
+        ImGui::SetNextWindowSize(ImVec2(std::max(260.0f, applyWidth + saveWidth + spacing), 0.0f));
+        if (UIUtils::BeginPopup("##MaterialPresetPicker", ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+        {
+            static bool grabFocus = false;
+            if (ImGui::GetCurrentWindow()->Appearing)
+            {
+                RefreshMaterialPresetOptions();
+                m_MaterialPicker.PresetOptions = MaterialPresetLibrary::FilterCompatible(material, std::move(m_MaterialPicker.PresetOptions));
+                m_MaterialPicker.PresetSearch.clear();
+                grabFocus = true;
+            }
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            UIUtils::SearchWidget(m_MaterialPicker.PresetSearch, "Search presets...", &grabFocus);
+            if (ImGui::BeginListBox("##MaterialPresetList", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 8.0f)))
+            {
+                bool builtInLabel = false;
+                bool projectLabel = false;
+                bool any = false;
+                for (const MaterialPresetEntry& entry : m_MaterialPicker.PresetOptions)
+                {
+                    if (!m_MaterialPicker.PresetSearch.empty() && !StringUtils::IsSearchMathing(entry.Name, m_MaterialPicker.PresetSearch))
+                        continue;
+                    any = true;
+                    if (entry.BuiltIn)
+                        DrawPickerSectionLabel("Built-in", builtInLabel);
+                    else
+                        DrawPickerSectionLabel("Project", projectLabel);
+                    ImGui::PushID(&entry);
+                    if (ImGui::Selectable(entry.Name.c_str(), false))
+                    {
+                        String error;
+                        if (entry.Preset != nullptr && entry.Preset->Validate(material.GetBindings(), &error) && material.ApplyPreset(*entry.Preset))
+                        {
+                            changed = true;
+                            m_MaterialPicker.StatusMessage = "Applied preset '" + entry.Name + "'.";
+                            m_MaterialPicker.StatusIsError = false;
+                        }
+                        else
+                        {
+                            m_MaterialPicker.StatusMessage = "Preset '" + entry.Name + "' does not fit this shader. " + error;
+                            m_MaterialPicker.StatusIsError = true;
+                        }
+                        m_MaterialPicker.StatusExpiry = ImGui::GetTime() + MATERIAL_STATUS_SECONDS;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopID();
+                }
+                if (!any)
+                    ImGui::TextDisabled("No compatible presets. Use 'Save as...' to create one.");
+                ImGui::EndListBox();
+            }
+            UIUtils::EndPopup();
+        }
+        UI::Post();
+
+        if (!m_MaterialPicker.StatusMessage.empty() && ImGui::GetTime() < m_MaterialPicker.StatusExpiry)
+        {
+            ImGui::NextColumn();
+            const ImVec4 color = m_MaterialPicker.StatusIsError ? ImVec4(1.0f, 0.45f, 0.35f, 1.0f) : ImVec4(0.55f, 0.85f, 0.55f, 1.0f);
+            ImGui::PushStyleColor(ImGuiCol_Text, color);
+            ImGui::TextWrapped("%s", m_MaterialPicker.StatusMessage.c_str());
+            ImGui::PopStyleColor();
+            ImGui::NextColumn();
+        }
+        else if (!m_MaterialPicker.StatusMessage.empty())
+            m_MaterialPicker.StatusMessage.clear();
+        return changed;
+    }
+
     void InspectorPanel::RenderPhysicsMaterialInspector()
     {
         AssetHandle<Asset> asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
@@ -550,12 +892,11 @@ namespace Crowny
             applyEdit(UI::Property("Density", density, 0.05f, 0.0f, 0.0f), [&]() { material->SetDensity(density); });
             applyEdit(UI::Property("Friction", friction, 0.05f, 0.0f, 0.0f), [&]() { material->SetFriction(friction); });
             applyEdit(UI::Property("Restitution", restitution, 0.05f, 0.0f, 1.0f), [&]() { material->SetRestitution(restitution); });
-            applyEdit(UI::Property("Restitution Threshold", threshold, 0.05f, 0.0f, 0.0f),
-                      [&]() { material->SetRestitutionThreshold(threshold); });
+            applyEdit(UI::Property("Restitution Threshold", threshold, 0.05f, 0.0f, 0.0f), [&]() { material->SetRestitutionThreshold(threshold); });
             applyEdit(UI::PropertyDropdown("Friction Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, frictionCombine),
                       [&]() { material->SetFrictionCombine(frictionCombine); });
-            const bool restitutionCombineChanged = UI::PropertyDropdown(
-              "Restitution Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, restitutionCombine);
+            const bool restitutionCombineChanged =
+              UI::PropertyDropdown("Restitution Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, restitutionCombine);
             applyEdit(restitutionCombineChanged, [&]() { material->SetRestitutionCombine(restitutionCombine); });
             UI::EndPropertyGrid();
         };
@@ -572,8 +913,7 @@ namespace Crowny
 
     void InspectorPanel::ObserveAssetEdit(const Ref<Asset>& asset, bool changed)
     {
-        m_AssetSaveTracker.Observe(m_InspectedAssetPath, asset, changed, ImGui::IsItemActive(),
-                                   ImGui::IsItemDeactivatedAfterEdit());
+        m_AssetSaveTracker.Observe(m_InspectedAssetPath, asset, changed, ImGui::IsItemActive(), ImGui::IsItemDeactivatedAfterEdit());
     }
 
     void InspectorPanel::SaveReadyAssets()
@@ -892,11 +1232,8 @@ namespace Crowny
         bool invalidRename = false;
         Vector<String> defineNames;
         defineNames.reserve(defines.size());
-        for (const auto& [name, value] : defines)
-        {
-            (void)value;
+        for (CW_MAYBE_UNUSED const auto& [name, value] : defines)
             defineNames.push_back(name);
-        }
         std::sort(defineNames.begin(), defineNames.end());
 
         ImGui::TextDisabled("Shader defines");
@@ -1123,9 +1460,8 @@ namespace Crowny
         DrawApplyRevert(xOffset, width);
     }
 
-    void InspectorPanel::DrawApplyRevert(float xOffset, float width)
+    void InspectorPanel::DrawApplyRevert(float xOffset, CW_MAYBE_UNUSED float width)
     {
-        (void)width;
         ImGui::Dummy(ImVec2(0.0f, 5.0f));
         ImGui::Separator();
         ImGui::SetCursorPosX(xOffset);
@@ -1168,7 +1504,7 @@ namespace Crowny
             {
                 if (!selectionChanged)
                     FlushPendingAssetSaves();
-                m_ComponentEditor.ResetUndoTransactions(true);
+                m_EntityInspector.ResetUndoTransactions(true);
                 m_MaterialSchemaCache.Reset();
             }
             m_InspectorMode = InspectorMode::Default;
@@ -1258,7 +1594,7 @@ namespace Crowny
         if (m_InspectorMode != InspectorMode::GameObject || !sameSelection)
             FlushPendingAssetSaves();
         if (!sameSelection)
-            m_ComponentEditor.ResetUndoTransactions(sameScene);
+            m_EntityInspector.ResetUndoTransactions(sameScene);
         m_MaterialSchemaCache.Reset();
         m_InspectorMode = InspectorMode::GameObject;
         m_InspectedEntity = primary;
@@ -1271,13 +1607,13 @@ namespace Crowny
         if (m_InspectorMode != mode)
         {
             FlushPendingAssetSaves();
-            m_ComponentEditor.ResetUndoTransactions(true);
+            m_EntityInspector.ResetUndoTransactions(true);
             m_MaterialSchemaCache.Reset();
         }
         m_InspectorMode = mode;
         m_HasPropertyChanged = false;
     }
 
-    void InspectorPanel::ResetUndoTransactions(bool finishInteraction) { m_ComponentEditor.ResetUndoTransactions(finishInteraction); }
+    void InspectorPanel::ResetUndoTransactions(bool finishInteraction) { m_EntityInspector.ResetUndoTransactions(finishInteraction); }
 
 } // namespace Crowny

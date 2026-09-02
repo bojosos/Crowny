@@ -2,6 +2,7 @@
 
 #include "Panels/MaterialInspectorSchemaCache.h"
 
+#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Renderer/Material.h"
 
 #include <algorithm>
@@ -114,6 +115,29 @@ namespace Crowny
             return annotation;
         }
     } // namespace
+
+    Vector<const MaterialShaderOption*> FilterMaterialShaderOptions(const Vector<MaterialShaderOption>& options, StringView search,
+                                                                    bool includeInternal)
+    {
+        Vector<const MaterialShaderOption*> result;
+        result.reserve(options.size());
+        for (const MaterialShaderOption& option : options)
+        {
+            if (option.BuiltIn && !option.MaterialCapable && !includeInternal)
+                continue;
+            if (!search.empty() && !StringUtils::IsSearchMathing(option.Name, search))
+                continue;
+            result.push_back(&option);
+        }
+        std::stable_sort(result.begin(), result.end(), [](const MaterialShaderOption* left, const MaterialShaderOption* right) {
+            if (left->BuiltIn != right->BuiltIn)
+                return left->BuiltIn;
+            if (left->BuiltIn && left->MaterialCapable != right->MaterialCapable)
+                return left->MaterialCapable;
+            return StringUtils::CaseInsensitiveCompare(left->Name, right->Name);
+        });
+        return result;
+    }
 
     const Vector<ShaderParameterDesc>& MaterialInspectorSchemaCache::Resolve(const Material& material)
     {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Uuid.h"
 #include "Crowny/Renderer/Material.h"
 
 #include <cstdint>
@@ -20,6 +21,23 @@ namespace Crowny
         virtual const UnorderedMap<String, AnnotationSet>& GetAnnotations(ShaderType shaderType) const = 0;
         virtual uint32_t GetBlockBindingSlot(const String& blockName) const = 0;
     };
+
+    /** One selectable shader in the material inspector's shader picker. */
+    struct MaterialShaderOption
+    {
+        String Name;
+        UUID Uuid;
+        Path AssetPath;              // Built-in shaders only: engine-relative asset path
+        bool BuiltIn = false;
+        bool MaterialCapable = true; // False for engine-internal shaders (compute, post-process, ...)
+    };
+
+    /**
+     * Returns the options matching `search` (case-insensitive substring), built-in shaders first.
+     * Internal built-in shaders are hidden unless `includeInternal` is set; project shaders always pass.
+     */
+    Vector<const MaterialShaderOption*> FilterMaterialShaderOptions(const Vector<MaterialShaderOption>& options, StringView search,
+                                                                    bool includeInternal);
 
     class MaterialInspectorSchemaCache
     {
