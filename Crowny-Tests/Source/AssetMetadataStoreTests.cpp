@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Editor/AssetLibraryServices.h"
+#include "UI/AssetSearchCandidates.h"
 
 #include "Crowny/Common/FileSystem.h"
 
@@ -294,4 +295,93 @@ TEST_CASE("Legacy dependent metadata migrates by type ordinal once", "[Assets][M
     CHECK_FALSE(migrated.Assignments[1].Metadata->SubassetKey.empty());
     CHECK_FALSE(migrated.Assignments[2].Metadata->SubassetKey.empty());
     CHECK(migrated.Orphans.empty());
+}
+
+TEST_CASE("Asset search candidates list each imported asset once with its own type", "[Editor][Assets][Search]")
+{
+    const Path root = Path("Assets");
+    Ref<DirectoryEntry> rootEntry = CreateRef<DirectoryEntry>(root, "Assets", nullptr);
+    Ref<DirectoryEntry> models = CreateRef<DirectoryEntry>(root / "Models", "Models", rootEntry.get());
+    rootEntry->Children.push_back(models);
+
+    // pirate.obj imports one mesh plus materials and textures that share the source file.
+    Ref<FileEntry> pirate = CreateRef<FileEntry>(root / "Models" / "pirate.obj", "pirate.obj", models.get());
+    const UUID pirateMesh = UuidGenerator::Generate();
+    const UUID bodyMaterial = UuidGenerator::Generate();
+    const UUID bodyMaterial2 = UuidGenerator::Generate();
+    const UUID skinTexture = UuidGenerator::Generate();
+    pirate->Metadata = MakeMetadata(pirateMesh, AssetType::Mesh);
+    pirate->DependentMetadata = { MakeMetadata(skinTexture, AssetType::Texture, "2:Skin#0"), MakeMetadata(bodyMaterial, AssetType::Material, "4:Body#0"),
+                                  MakeMetadata(bodyMaterial2, AssetType::Material, "4:Body#1") };
+    models->Children.push_back(pirate);
+
+    Ref<FileEntry> cube = CreateRef<FileEntry>(root / "cube.fbx", "cube.fbx", rootEntry.get());
+    const UUID cubeMesh = UuidGenerator::Generate();
+    cube->Metadata = MakeMetadata(cubeMesh, AssetType::Mesh);
+    rootEntry->Children.push_back(cube);
+
+    Ref<FileEntry> standalone = CreateRef<FileEntry>(root / "Wood.material", "Wood.material", rootEntry.get());
+    const UUID woodMaterial = UuidGenerator::Generate();
+    standalone->Metadata = MakeMetadata(woodMaterial, AssetType::Material);
+    rootEntry->Children.push_back(standalone);
+
+    SECTION("meshes exclude dependents of other types and appear exactly once")
+    {
+        const Vector<UI::AssetSearchCandidate> meshes = UI::CollectAssetSearchCandidates(rootEntry.get(), AssetType::Mesh);
+        REQUIRE(meshes.size() == 2);
+        CHECK(meshes[0].Name == "cube.fbx");
+        CHECK(meshes[0].Uuid == cubeMesh);
+        CHECK_FALSE(meshes[0].Subasset);
+        CHECK(meshes[1].Name == "pirate.obj");
+        CHECK(meshes[1].Uuid == pirateMesh);
+    }
+
+    SECTION("dependents are listed under their own type with a distinguishing name")
+    {
+        const Vector<UI::AssetSearchCandidate> materials = UI::CollectAssetSearchCandidates(rootEntry.get(), AssetType::Material);
+        REQUIRE(materials.size() == 3);
+        CHECK(materials[0].Name == "pirate.obj / Body");
+        CHECK(materials[0].Uuid == bodyMaterial);
+        CHECK(materials[0].Subasset);
+        CHECK(materials[1].Name == "pirate.obj / Body#1");
+        CHECK(materials[1].Uuid == bodyMaterial2);
+        CHECK(materials[2].Name == "Wood.material");
+        CHECK_FALSE(materials[2].Subasset);
+
+        const Vector<UI::AssetSearchCandidate> textures = UI::CollectAssetSearchCandidates(rootEntry.get(), AssetType::Texture);
+        REQUIRE(textures.size() == 1);
+        CHECK(textures[0].Name == "pirate.obj / Skin");
+        CHECK(textures[0].Uuid == skinTexture);
+    }
+
+    SECTION("duplicate registrations and unavailable assets are dropped")
+    {
+        // The same metadata reachable twice (e.g. a stale duplicate entry) must not produce two rows.
+        rootEntry->Children.push_back(cube);
+        const Vector<UI::AssetSearchCandidate> meshes = UI::CollectAssetSearchCandidates(rootEntry.get(), AssetType::Mesh);
+        REQUIRE(meshes.size() == 2);
+
+        const Vector<UI::AssetSearchCandidate> available =
+          UI::CollectAssetSearchCandidates(rootEntry.get(), AssetType::Mesh, [&](const UUID& uuid) { return uuid != cubeMesh; });
+        REQUIRE(available.size() == 1);
+        CHECK(available[0].Uuid == pirateMesh);
+    }
+
+    SECTION("a missing root yields nothing")
+    {
+        CHECK(UI::CollectAssetSearchCandidates(nullptr, AssetType::Mesh).empty());
+    }
+}
+
+TEST_CASE("Sub-asset display names strip importer key noise", "[Editor][Assets][Search]")
+{
+    CHECK(UI::FormatSubassetName("pirate.obj", *MakeMetadata(UuidGenerator::Generate(), AssetType::Material, "4:Body#0"), 0) == "pirate.obj / Body");
+    CHECK(UI::FormatSubassetName("pirate.obj", *MakeMetadata(UuidGenerator::Generate(), AssetType::Material, "4:Body#2"), 0) == "pirate.obj / Body#2");
+    CHECK(UI::FormatSubassetName("pirate.obj", *MakeMetadata(UuidGenerator::Generate(), AssetType::Material, "4:Hull/Deck#0"), 0) ==
+          "pirate.obj / Hull/Deck");
+    // Version-one metadata has no key; fall back to the dependent's position.
+    CHECK(UI::FormatSubassetName("pirate.obj", *MakeMetadata(UuidGenerator::Generate(), AssetType::Material), 2) == "pirate.obj / 3");
+    CHECK(String(UI::GetAssetSearchHint(AssetType::Mesh)) == "Search meshes...");
+    CHECK(String(UI::GetAssetSearchHint(AssetType::Material)) == "Search materials...");
+    CHECK(String(UI::GetAssetSearchHint(AssetType::None)) == "Search assets...");
 }

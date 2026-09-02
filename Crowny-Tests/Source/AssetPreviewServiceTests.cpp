@@ -136,3 +136,35 @@ TEST_CASE("Oversized preview requests share the bounded cache entry", "[Editor][
     CHECK(maximum == oversized);
     CHECK(oversized->Status == AssetPreviewStatus::Queued);
 }
+
+TEST_CASE("Mesh preview shading stays readable on every facet orientation", "[Editor][Assets][Preview]")
+{
+    const auto luminance = [](const glm::vec4& color) { return 0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b; };
+
+    const glm::vec4 towardsKey = ShadeMeshPreviewFacet(glm::vec3(-0.45f, -0.55f, 0.70f));
+    const glm::vec4 awayFromKey = ShadeMeshPreviewFacet(glm::vec3(0.45f, 0.55f, 0.70f));
+    const glm::vec4 backFacing = ShadeMeshPreviewFacet(glm::vec3(0.45f, 0.55f, -0.70f));
+    const glm::vec4 degenerate = ShadeMeshPreviewFacet(glm::vec3(0.0f));
+
+    CHECK(luminance(towardsKey) > luminance(awayFromKey));
+    CHECK(luminance(awayFromKey) > 0.3f); // No facet may fall back into the old near-black range.
+    CHECK(luminance(towardsKey) <= 1.0f);
+    CHECK(backFacing == towardsKey); // Winding does not change the shade: a flipped facet shades like its mirror.
+    CHECK(degenerate.a == 1.0f);
+    for (int component = 0; component < 3; component++)
+    {
+        CHECK(towardsKey[component] >= 0.0f);
+        CHECK(towardsKey[component] <= 1.0f);
+    }
+
+    CHECK(ShouldOutlineMeshPreview(12));
+    CHECK(ShouldOutlineMeshPreview(2500));
+    CHECK_FALSE(ShouldOutlineMeshPreview(0));
+    CHECK_FALSE(ShouldOutlineMeshPreview(100000));
+
+    const glm::vec4 top = GetMeshPreviewBackground(0.0f);
+    const glm::vec4 bottom = GetMeshPreviewBackground(1.0f);
+    CHECK(luminance(top) > luminance(bottom));
+    CHECK(luminance(bottom) > 0.1f);
+    CHECK(luminance(awayFromKey) > luminance(top)); // The mesh always separates from its background.
+}

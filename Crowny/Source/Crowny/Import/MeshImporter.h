@@ -40,7 +40,8 @@ namespace Crowny
         virtual Ref<Asset> Import(const Path& path, Ref<const ImportOptions> importOptions) override;
         virtual Vector<Ref<Asset>> ImportAll(const Path& path, Ref<const ImportOptions> importOptions) override;
 
-        static MeshImportResult Parse(const Path& path, const MeshImportOptions& importOptions);
+        /** Parses a mesh source without creating GPU assets. When parsing fails and `outError` is set, it receives the reader's message. */
+        static MeshImportResult Parse(const Path& path, const MeshImportOptions& importOptions, String* outError = nullptr);
 
         virtual Ref<ImportOptions> CreateImportOptions() const override;
     };

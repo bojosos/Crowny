@@ -1177,11 +1177,20 @@ namespace Crowny
 
     bool MeshImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return false; }
 
-    MeshImportResult MeshImporter::Parse(const Path& path, const MeshImportOptions& importOptions)
+    MeshImportResult MeshImporter::Parse(const Path& path, const MeshImportOptions& importOptions, String* outError)
     {
         Assimp::Importer importer;
         const aiScene* scene = ReadScene(importer, path, importOptions);
-        return scene ? ParseScene(*scene, importOptions) : MeshImportResult{};
+        if (scene == nullptr)
+        {
+            if (outError != nullptr)
+            {
+                const char* error = importer.GetErrorString();
+                *outError = error != nullptr && *error != 0 ? error : "The mesh reader produced no scene";
+            }
+            return {};
+        }
+        return ParseScene(*scene, importOptions);
     }
 
     Ref<Asset> MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)

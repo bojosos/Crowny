@@ -81,4 +81,57 @@ namespace Crowny
         }
         return preferredDestination;
     }
+    Vector<AssetBrowserImportOperation> PlanAssetBrowserImports(const Vector<Path>& sources, const Path& destinationFolder,
+                                                                const std::function<bool(const Path&)>& isDirectory,
+                                                                const std::function<Path(const Path&)>& makeUnique)
+    {
+        Vector<AssetBrowserImportOperation> operations;
+        if (destinationFolder.empty())
+            return operations;
+
+        const Path destination = destinationFolder.lexically_normal();
+        const auto isPrefixOf = [](const Path& prefix, const Path& path) {
+            auto prefixIt = prefix.begin();
+            auto pathIt = path.begin();
+            for (; prefixIt != prefix.end(); ++prefixIt, ++pathIt)
+            {
+                if (pathIt == path.end() || *pathIt != *prefixIt)
+                    return false;
+            }
+            return true;
+        };
+
+        UnorderedSet<Path, HashPath> plannedSources;
+        UnorderedSet<Path, HashPath> plannedDestinations;
+        for (const Path& rawSource : sources)
+        {
+            if (rawSource.empty())
+                continue;
+            Path source = rawSource.lexically_normal();
+            if (!source.has_filename())
+                source = source.parent_path();
+            const Path filename = source.filename();
+            if (source.empty() || filename.empty() || filename == "." || filename == "..")
+                continue;
+            if (!plannedSources.insert(source).second)
+                continue;
+
+            // Already in this folder, or a folder that contains the destination (copying it would recurse forever).
+            if (source.parent_path() == destination || source == destination)
+                continue;
+            const bool directory = isDirectory(source);
+            if (directory && isPrefixOf(source, destination))
+                continue;
+
+            Path wanted = destination / filename;
+            Path unique = makeUnique(wanted);
+            for (uint32_t attempt = 1; !plannedDestinations.insert(unique).second; attempt++)
+            {
+                Path retry = destination / (wanted.stem().string() + " (" + std::to_string(attempt) + ")" + wanted.extension().string());
+                unique = makeUnique(retry);
+            }
+            operations.push_back({ source, unique, directory });
+        }
+        return operations;
+    }
 } // namespace Crowny

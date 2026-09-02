@@ -1,4 +1,4 @@
-#include "cwepch.h"
+﻿#include "cwepch.h"
 
 #include "Editor/AssetPreviewService.h"
 
@@ -229,10 +229,12 @@ namespace Crowny
             options.ImportBones = false;
             options.GenerateMeshlets = false;
             options.GenerateLods = false;
-            const MeshImportResult mesh = MeshImporter::Parse(path, options);
+            String readerError;
+            const MeshImportResult mesh = MeshImporter::Parse(path, options, &readerError);
             if (!mesh || !mesh.Data)
             {
-                error = "Mesh source could not be parsed";
+                // Surface the reader's reason (unsupported glTF extension, missing buffer, ...) in the thumbnail tooltip.
+                error = readerError.empty() ? "Mesh source could not be parsed" : "Mesh source could not be parsed: " + readerError;
                 return nullptr;
             }
 
@@ -271,8 +273,11 @@ namespace Crowny
 
             Ref<PixelData> output = PixelData::Create(size, size, 1, TextureFormat::RGBA8);
             for (uint32_t y = 0; y < size; y++)
+            {
+                const glm::vec4 background = GetMeshPreviewBackground(static_cast<float>(y) / static_cast<float>(std::max(size - 1u, 1u)));
                 for (uint32_t x = 0; x < size; x++)
-                    output->SetColorAt(x, y, glm::vec4(0.045f, 0.052f, 0.065f, 1.0f));
+                    output->SetColorAt(x, y, background);
+            }
             Vector<float> depth(static_cast<size_t>(size) * size, std::numeric_limits<float>::max());
 
             Vector<SubMesh> subMeshes = mesh.SubMeshes;
@@ -284,6 +289,7 @@ namespace Crowny
                     sourceTriangleCount += subMesh.IndexCount / 3u;
             constexpr uint64_t MAX_PREVIEW_TRIANGLES = 100000;
             const uint64_t triangleStride = std::max<uint64_t>((sourceTriangleCount + MAX_PREVIEW_TRIANGLES - 1u) / MAX_PREVIEW_TRIANGLES, 1u);
+            const bool outline = ShouldOutlineMeshPreview(sourceTriangleCount);
 
             uint64_t visitedTriangles = 0;
             uint64_t renderedTriangles = 0;
@@ -314,9 +320,8 @@ namespace Crowny
                     const int32_t maxX = glm::clamp(static_cast<int32_t>(std::ceil(std::max({ a.x, b.x, c.x }))), 0, static_cast<int32_t>(size) - 1);
                     const int32_t minY = glm::clamp(static_cast<int32_t>(std::floor(std::min({ a.y, b.y, c.y }))), 0, static_cast<int32_t>(size) - 1);
                     const int32_t maxY = glm::clamp(static_cast<int32_t>(std::ceil(std::max({ a.y, b.y, c.y }))), 0, static_cast<int32_t>(size) - 1);
-                    const glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
-                    const float light = 0.25f + 0.65f * std::abs(glm::dot(normal, glm::normalize(glm::vec3(0.4f, 0.7f, 0.6f))));
-                    const glm::vec4 color(0.24f * light, 0.55f * light, 0.78f * light, 1.0f);
+                    const glm::vec4 color = ShadeMeshPreviewFacet(glm::cross(b - a, c - a));
+                    const glm::vec4 edgeColor(glm::vec3(color) * 0.6f, 1.0f);
                     for (int32_t y = minY; y <= maxY; y++)
                     {
                         for (int32_t x = minX; x <= maxX; x++)
@@ -336,12 +341,15 @@ namespace Crowny
                             }
                         }
                     }
-                    DrawLine(*output, static_cast<int32_t>(a.x), static_cast<int32_t>(a.y), static_cast<int32_t>(b.x), static_cast<int32_t>(b.y),
-                             glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
-                    DrawLine(*output, static_cast<int32_t>(b.x), static_cast<int32_t>(b.y), static_cast<int32_t>(c.x), static_cast<int32_t>(c.y),
-                             glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
-                    DrawLine(*output, static_cast<int32_t>(c.x), static_cast<int32_t>(c.y), static_cast<int32_t>(a.x), static_cast<int32_t>(a.y),
-                             glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
+                    if (outline)
+                    {
+                        DrawLine(*output, static_cast<int32_t>(a.x), static_cast<int32_t>(a.y), static_cast<int32_t>(b.x), static_cast<int32_t>(b.y),
+                                 edgeColor);
+                        DrawLine(*output, static_cast<int32_t>(b.x), static_cast<int32_t>(b.y), static_cast<int32_t>(c.x), static_cast<int32_t>(c.y),
+                                 edgeColor);
+                        DrawLine(*output, static_cast<int32_t>(c.x), static_cast<int32_t>(c.y), static_cast<int32_t>(a.x), static_cast<int32_t>(a.y),
+                                 edgeColor);
+                    }
                     renderedTriangles++;
                 }
             }
@@ -356,6 +364,32 @@ namespace Crowny
         }
 
     } // namespace
+
+    glm::vec4 ShadeMeshPreviewFacet(const glm::vec3& viewNormal)
+    {
+        // The thumbnail is written as display (sRGB-encoded) bytes, so these are perceptual values: a high ambient floor,
+        // a key light from the upper left, a soft fill from the lower right and a small specular lobe.
+        const glm::vec3 BASE_COLOR(0.58f, 0.71f, 0.86f);
+        glm::vec3 normal = glm::length(viewNormal) > 1e-12f ? glm::normalize(viewNormal) : glm::vec3(0.0f, 0.0f, 1.0f);
+        if (normal.z < 0.0f)
+            normal = -normal; // Winding is unknown: treat every facet as facing the viewer.
+
+        const glm::vec3 key = glm::normalize(glm::vec3(-0.45f, -0.55f, 0.70f));
+        const glm::vec3 fill = glm::normalize(glm::vec3(0.55f, 0.35f, 0.45f));
+        const glm::vec3 half = glm::normalize(key + glm::vec3(0.0f, 0.0f, 1.0f));
+        const float diffuse = std::max(glm::dot(normal, key), 0.0f);
+        const float fillTerm = std::max(glm::dot(normal, fill), 0.0f);
+        const float specular = std::pow(std::max(glm::dot(normal, half), 0.0f), 24.0f);
+        const float light = glm::clamp(0.42f + 0.52f * diffuse + 0.22f * fillTerm, 0.0f, 1.0f);
+        const glm::vec3 color = glm::clamp(BASE_COLOR * light + glm::vec3(0.16f * specular), 0.0f, 1.0f);
+        return glm::vec4(color, 1.0f);
+    }
+
+    glm::vec4 GetMeshPreviewBackground(float verticalFactor)
+    {
+        const float t = glm::clamp(verticalFactor, 0.0f, 1.0f);
+        return glm::vec4(glm::mix(glm::vec3(0.21f, 0.225f, 0.25f), glm::vec3(0.13f, 0.14f, 0.16f), t), 1.0f);
+    }
 
     void AssetPreviewService::ExecutePreviewWork(const Ref<WorkItem>& work)
     {

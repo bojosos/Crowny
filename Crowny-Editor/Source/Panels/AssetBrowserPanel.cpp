@@ -6,6 +6,7 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/StringUtils.h"
+#include "Crowny/Events/ApplicationEvent.h"
 
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/NodeGraph/NodeRegistry.h"
@@ -182,16 +183,11 @@ namespace Crowny
 
     void AssetBrowserPanel::Initialize()
     {
-        if (Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry.empty())
-            m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
-        else
-        {
-            LibraryEntry* entry = ProjectLibrary::Get().FindEntry(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry).get();
-            if (entry == nullptr || entry->Type == LibraryEntryType::File)
-                m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
-            else
-                m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
-        }
+        DirectoryEntry* entry = ResolveDirectory(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry);
+        if (entry == nullptr)
+            entry = ProjectLibrary::Get().GetRoot().get();
+        m_CurrentDirectoryEntry = entry;
+        m_CurrentDirectoryPath = entry != nullptr ? entry->Filepath : Path{};
         RecalculateDirectoryEntries();
 
         UpdateDisplayList();
@@ -200,20 +196,149 @@ namespace Crowny
     void AssetBrowserPanel::Unload()
     {
         m_CurrentDirectoryEntry = nullptr;
+        m_CurrentDirectoryPath.clear();
+        m_FolderFingerprint = {};
+        m_ContentRectValid = false;
         m_DirectoryPathEntries.clear();
         m_DisplayList.clear();
         m_DisplayPresentation.clear();
         m_PreviewService.Clear();
-        m_BackwardHistory = Stack<DirectoryEntry*>();
-        m_ForwardHistory = Stack<DirectoryEntry*>();
+        m_BackwardHistory = Stack<Path>();
+        m_ForwardHistory = Stack<Path>();
+    }
+
+    void AssetBrowserPanel::OnEvent(Event& e)
+    {
+        EventDispatcher dispatcher(e);
+        dispatcher.Dispatch<WindowFileDropEvent>(CW_BIND_EVENT_FN(AssetBrowserPanel::OnFileDrop));
+    }
+
+    bool AssetBrowserPanel::OnFileDrop(WindowFileDropEvent& e)
+    {
+        if (!IsShown() || !m_ContentRectValid || m_CurrentDirectoryEntry == nullptr || !ProjectLibrary::IsStartedUp())
+            return false;
+
+        // The drop position is reported in main-window space while ImGui (with viewports) lays windows out in screen space.
+        const ImVec2 origin = ImGui::GetMainViewport()->Pos;
+        const glm::vec2 position = e.GetMousePosition();
+        if (!IsAssetBrowserPointInside(origin.x + position.x, origin.y + position.y, m_ContentRectMin.x, m_ContentRectMin.y, m_ContentRectMax.x,
+                                       m_ContentRectMax.y))
+            return false;
+
+        ImportExternalPaths(e.GetPaths());
+        return true;
+    }
+
+    void AssetBrowserPanel::ImportExternalPaths(const Vector<Path>& paths)
+    {
+        if (m_CurrentDirectoryEntry == nullptr)
+            return;
+
+        const Vector<AssetBrowserImportOperation> operations = PlanAssetBrowserImports(
+          paths, m_CurrentDirectoryEntry->Filepath,
+          [](const Path& path) {
+              std::error_code error;
+              return fs::is_directory(path, error);
+          },
+          [](const Path& path) { return EditorUtils::GetUniquePath(path); });
+        if (operations.empty())
+            return;
+
+        // Imported entries must remain visible so the user can see what arrived.
+        m_SearchString.clear();
+        m_AssetFilter = AssetBrowserFilter::All;
+        m_SelectionSet.clear();
+        std::optional<Path> firstImported;
+        for (const AssetBrowserImportOperation& operation : operations)
+        {
+            std::error_code error;
+            if (operation.IsDirectory)
+                fs::copy(operation.Source, operation.Destination, fs::copy_options::recursive, error);
+            else
+                fs::copy_file(operation.Source, operation.Destination, error);
+            if (error)
+            {
+                CW_ENGINE_WARN("Could not import '{}' into '{}': {}", operation.Source, operation.Destination, error.message());
+                continue;
+            }
+            ProjectLibrary::Get().Refresh(operation.Destination);
+            const Ref<LibraryEntry> imported = ProjectLibrary::Get().FindEntry(operation.Destination);
+            if (imported == nullptr)
+                continue;
+            m_SelectionSet.insert(imported->Filepath);
+            if (!firstImported)
+                firstImported = imported->Filepath;
+        }
+        UpdateDisplayList(firstImported, firstImported);
+    }
+
+    DirectoryEntry* AssetBrowserPanel::ResolveDirectory(const Path& path) const
+    {
+        if (path.empty() || !ProjectLibrary::IsStartedUp())
+            return nullptr;
+        const Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(path);
+        if (entry == nullptr || entry->Type != LibraryEntryType::Directory)
+            return nullptr;
+        return static_cast<DirectoryEntry*>(entry.get());
+    }
+
+    AssetBrowserFolderFingerprint AssetBrowserPanel::ComputeFolderFingerprint() const
+    {
+        AssetBrowserFolderFingerprint fingerprint;
+        if (m_CurrentDirectoryEntry == nullptr)
+            return fingerprint;
+        for (const Ref<LibraryEntry>& child : m_CurrentDirectoryEntry->Children)
+        {
+            const bool isFile = child->Type == LibraryEntryType::File;
+            const FileEntry* fileEntry = isFile ? static_cast<const FileEntry*>(child.get()) : nullptr;
+            fingerprint.AddEntry(static_cast<uint64_t>(reinterpret_cast<uintptr_t>(child.get())), static_cast<int64_t>(child->LastUpdateTime),
+                                 fileEntry != nullptr ? fileEntry->Revision : 0u, fileEntry != nullptr ? fileEntry->Filesize : 0u, isFile);
+        }
+        return fingerprint;
+    }
+
+    void AssetBrowserPanel::SyncWithLibrary()
+    {
+        if (m_CurrentDirectoryEntry == nullptr || !ProjectLibrary::IsStartedUp())
+            return;
+
+        // File-watcher refreshes (EditorLayer::ExecuteProjectAssetRefresh -> ProjectLibrary::Refresh) mutate the library tree
+        // behind the panel. The tree view reads that tree directly; the folder listing is a cached copy, so rebuild it when
+        // the folder changed. The folder entry itself may have been replaced or removed, so resolve it before touching it.
+        DirectoryEntry* resolved = ResolveDirectory(m_CurrentDirectoryPath);
+        if (resolved == nullptr)
+        {
+            Path candidate = m_CurrentDirectoryPath.parent_path();
+            while (resolved == nullptr && !candidate.empty() && candidate != candidate.parent_path())
+            {
+                resolved = ResolveDirectory(candidate);
+                candidate = candidate.parent_path();
+            }
+            if (resolved == nullptr)
+                resolved = ProjectLibrary::Get().GetRoot().get();
+            if (resolved == nullptr)
+                return;
+            ApplyCurrentDirectory(resolved);
+            return;
+        }
+
+        if (resolved != m_CurrentDirectoryEntry)
+        {
+            m_CurrentDirectoryEntry = resolved;
+            RecalculateDirectoryEntries();
+        }
+        if (ComputeFolderFingerprint() != m_FolderFingerprint)
+            UpdateDisplayList();
     }
 
     void AssetBrowserPanel::Render()
     {
         m_PreviewService.Update();
+        SyncWithLibrary();
         UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 2.0f));
         if (!BeginPanel(ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
         {
+            m_ContentRectValid = false;
             EndPanel();
             return;
         }
@@ -223,6 +348,9 @@ namespace Crowny
 
         const float statusHeight = ImGui::GetFrameHeightWithSpacing();
         ImGui::BeginChild("AssetBrowser", ImVec2(0, -statusHeight), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
+        m_ContentRectMin = ImGui::GetWindowPos();
+        m_ContentRectMax = ImVec2(m_ContentRectMin.x + ImGui::GetWindowSize().x, m_ContentRectMin.y + ImGui::GetWindowSize().y);
+        m_ContentRectValid = true;
 
         // Right click not on a file
         if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
@@ -242,12 +370,11 @@ namespace Crowny
         DrawTreeView();
     }
 
-    void AssetBrowserPanel::SetCurrentDirectory(DirectoryEntry* entry)
+    void AssetBrowserPanel::ApplyCurrentDirectory(DirectoryEntry* entry)
     {
         m_PreviewService.CancelPending();
-        m_ForwardHistory = {};
-        m_BackwardHistory.push(m_CurrentDirectoryEntry);
         m_CurrentDirectoryEntry = entry;
+        m_CurrentDirectoryPath = entry != nullptr ? entry->Filepath : Path{};
 
         RecalculateDirectoryEntries();
         ClearSelection();
@@ -256,42 +383,47 @@ namespace Crowny
         m_RenamingText.clear();
         m_RequiresSort = true;
         UpdateDisplayList();
+    }
+
+    void AssetBrowserPanel::SetCurrentDirectory(DirectoryEntry* entry)
+    {
+        if (entry == nullptr)
+            return;
+        m_ForwardHistory = {};
+        if (!m_CurrentDirectoryPath.empty())
+            m_BackwardHistory.push(m_CurrentDirectoryPath);
+        ApplyCurrentDirectory(entry);
     }
 
     void AssetBrowserPanel::GoBackward()
     {
-        if (m_BackwardHistory.empty())
+        // Folders may have disappeared since they were visited; skip those instead of navigating to a stale entry.
+        while (!m_BackwardHistory.empty())
+        {
+            DirectoryEntry* entry = ResolveDirectory(m_BackwardHistory.top());
+            m_BackwardHistory.pop();
+            if (entry == nullptr || entry == m_CurrentDirectoryEntry)
+                continue;
+            if (!m_CurrentDirectoryPath.empty())
+                m_ForwardHistory.push(m_CurrentDirectoryPath);
+            ApplyCurrentDirectory(entry);
             return;
-
-        m_PreviewService.CancelPending();
-        m_ForwardHistory.push(m_CurrentDirectoryEntry);
-        m_CurrentDirectoryEntry = m_BackwardHistory.top();
-        RecalculateDirectoryEntries();
-        m_BackwardHistory.pop();
-        ClearSelection();
-
-        m_RenamingPath.clear();
-        m_RenamingText.clear();
-        m_RequiresSort = true;
-        UpdateDisplayList();
+        }
     }
 
     void AssetBrowserPanel::GoForward()
     {
-        if (m_ForwardHistory.empty())
+        while (!m_ForwardHistory.empty())
+        {
+            DirectoryEntry* entry = ResolveDirectory(m_ForwardHistory.top());
+            m_ForwardHistory.pop();
+            if (entry == nullptr || entry == m_CurrentDirectoryEntry)
+                continue;
+            if (!m_CurrentDirectoryPath.empty())
+                m_BackwardHistory.push(m_CurrentDirectoryPath);
+            ApplyCurrentDirectory(entry);
             return;
-
-        m_PreviewService.CancelPending();
-        m_BackwardHistory.push(m_CurrentDirectoryEntry);
-        m_CurrentDirectoryEntry = m_ForwardHistory.top();
-        RecalculateDirectoryEntries();
-        m_ForwardHistory.pop();
-        ClearSelection();
-
-        m_RenamingPath.clear();
-        m_RenamingText.clear();
-        m_RequiresSort = true;
-        UpdateDisplayList();
+        }
     }
 
     void AssetBrowserPanel::DrawHeader()
@@ -356,22 +488,25 @@ namespace Crowny
             UI::SetTooltip("Sort assets");
         };
         const auto drawView = [&]() {
-            const bool gridView = m_View == AssetBrowserView::Grid;
-            if (gridView)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            if (ImGui::Button("Grid"))
-                m_View = AssetBrowserView::Grid;
-            if (gridView)
-                ImGui::PopStyleColor();
-            UI::SetTooltip("Thumbnail grid");
+            // Segmented control: the active view is a filled accent button, the inactive one a flat muted label.
+            const auto drawSegment = [&](const char* label, AssetBrowserView view, const char* tooltip) {
+                const bool active = m_View == view;
+                const ImVec4 transparent(0.0f, 0.0f, 0.0f, 0.0f);
+                const ImVec4 accent = ImGui::ColorConvertU32ToFloat4(UI::Colors::Accent);
+                const ImVec4 accentHover = ImGui::ColorConvertU32ToFloat4(UI::Colors::AccentHover);
+                UI::ScopedColor button(ImGuiCol_Button, active ? accent : transparent);
+                UI::ScopedColor buttonHovered(ImGuiCol_ButtonHovered, active ? accentHover : ImGui::GetStyleColorVec4(ImGuiCol_FrameBgHovered));
+                UI::ScopedColor buttonActive(ImGuiCol_ButtonActive, active ? accent : ImGui::GetStyleColorVec4(ImGuiCol_FrameBgActive));
+                UI::ScopedColor text(ImGuiCol_Text,
+                                     active ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                if (ImGui::Button(label))
+                    m_View = view;
+                UI::SetTooltip(tooltip);
+            };
+            UI::ScopedStyle segmentSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(2.0f, ImGui::GetStyle().ItemSpacing.y));
+            drawSegment("Grid##assetView", AssetBrowserView::Grid, "Thumbnail grid");
             ImGui::SameLine();
-            if (!gridView)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            if (ImGui::Button("List"))
-                m_View = AssetBrowserView::List;
-            if (!gridView)
-                ImGui::PopStyleColor();
-            UI::SetTooltip("Detailed list");
+            drawSegment("List##assetView", AssetBrowserView::List, "Detailed list");
         };
         const auto drawThumbnailSize = [&]() {
             ImGui::SetNextItemWidth(-1.0f);
@@ -453,8 +588,16 @@ namespace Crowny
 
             const bool breadcrumbScrolls = NeedsAssetBrowserBreadcrumbScrollbar(breadcrumbContentWidth, ImGui::GetContentRegionAvail().x);
             const float breadcrumbHeight = ImGui::GetFrameHeight() + (breadcrumbScrolls ? ImGui::GetStyle().ScrollbarSize : 0.0f);
+            // The panel pushes a 2px vertical window padding; the breadcrumb strip must not inherit it, otherwise its
+            // text sits lower than the navigation buttons sharing this toolbar row. Every crumb is drawn at frame height
+            // (flat buttons for parents, frame-padded text for the current folder) so baselines line up with the buttons.
+            UI::ScopedStyle breadcrumbPadding(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             if (ImGui::BeginChild("##assetBreadcrumbs", ImVec2(0.0f, breadcrumbHeight), false, ImGuiWindowFlags_HorizontalScrollbar))
             {
+                const ImVec4 transparent(0.0f, 0.0f, 0.0f, 0.0f);
+                UI::ScopedColor crumbButton(ImGuiCol_Button, transparent);
+                UI::ScopedColor crumbHovered(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_FrameBgHovered));
+                UI::ScopedColor crumbActive(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_FrameBgActive));
                 for (size_t i = 0; i < m_DirectoryPathEntries.size(); i++)
                 {
                     DirectoryEntry* dirEntry = m_DirectoryPathEntries[i];
@@ -472,7 +615,7 @@ namespace Crowny
                         ImGui::AlignTextToFramePadding();
                         ImGui::TextUnformatted(dirEntry->ElementName.c_str());
                     }
-                    else if (ImGui::SmallButton(dirEntry->ElementName.c_str()))
+                    else if (ImGui::Button(dirEntry->ElementName.c_str()))
                         requestedDirectory = dirEntry;
                     UI::SetTooltip(dirEntry->Filepath.string());
                     if (!current)
@@ -950,6 +1093,7 @@ namespace Crowny
         m_RequiresSort = false;
         ReconcileSelection(selectionStartPath, selectionEndPath);
         UpdateDisplayPresentation();
+        m_FolderFingerprint = ComputeFolderFingerprint();
     }
 
     void AssetBrowserPanel::UpdateDisplayPresentation()

@@ -6,8 +6,22 @@
 
 #include "Editor/ProjectLibrary.h"
 
+#include <glm/glm.hpp>
+
 namespace Crowny
 {
+    /**
+     * Display-space colour of a mesh preview facet. `viewNormal` is the facet normal in preview space (x right, y down,
+     * z towards the viewer); orientation is ignored so winding does not matter. Every facet keeps a readable minimum
+     * brightness so dark back-facing regions do not swallow the thumbnail.
+     */
+    glm::vec4 ShadeMeshPreviewFacet(const glm::vec3& viewNormal);
+
+    /** Wireframe edges only help on light meshes; on dense ones they cover the shading and turn the thumbnail dark. */
+    constexpr bool ShouldOutlineMeshPreview(uint64_t triangleCount) { return triangleCount > 0 && triangleCount <= 2500; }
+
+    /** Background gradient sample for a mesh preview row (0 = top, 1 = bottom). */
+    glm::vec4 GetMeshPreviewBackground(float verticalFactor);
 
     enum class AssetPreviewStatus
     {

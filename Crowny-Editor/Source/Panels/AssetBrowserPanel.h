@@ -13,6 +13,8 @@
 
 namespace Crowny
 {
+    class Event;
+    class WindowFileDropEvent;
 
     enum class AssetBrowserItem
     {
@@ -65,6 +67,7 @@ namespace Crowny
         ~AssetBrowserPanel() = default;
 
         virtual void Render() override;
+        void OnEvent(Event& e);
 
         void Initialize();
         void Unload();
@@ -83,6 +86,12 @@ namespace Crowny
         };
 
         void SetCurrentDirectory(DirectoryEntry* entry);
+        void ApplyCurrentDirectory(DirectoryEntry* entry);
+        DirectoryEntry* ResolveDirectory(const Path& path) const;
+        void SyncWithLibrary();
+        AssetBrowserFolderFingerprint ComputeFolderFingerprint() const;
+        bool OnFileDrop(WindowFileDropEvent& e);
+        void ImportExternalPaths(const Vector<Path>& paths);
         void HandleOpen(LibraryEntry* entry);
         void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
         void DrawHeader();
@@ -128,9 +137,15 @@ namespace Crowny
         size_t m_LastCurrentDirectory = 0;
 
         DirectoryEntry* m_CurrentDirectoryEntry = nullptr;
+        Path m_CurrentDirectoryPath;
+        AssetBrowserFolderFingerprint m_FolderFingerprint;
+        ImVec2 m_ContentRectMin{ 0.0f, 0.0f };
+        ImVec2 m_ContentRectMax{ 0.0f, 0.0f };
+        bool m_ContentRectValid = false;
 
-        Stack<DirectoryEntry*> m_BackwardHistory;
-        Stack<DirectoryEntry*> m_ForwardHistory;
+        // Folder history is stored by path so a library rescan cannot leave dangling entry pointers behind.
+        Stack<Path> m_BackwardHistory;
+        Stack<Path> m_ForwardHistory;
         bool m_RequiresSort = true;
 
         FileSortingMode m_FileSortingMode = FileSortingMode::SortByName;

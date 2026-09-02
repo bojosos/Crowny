@@ -554,3 +554,92 @@ TEST_CASE("Font import metadata sanitizes the MSDF pixel range", "[Assets][Impor
     REQUIRE(aboveMaximum != nullptr);
     CHECK(aboveMaximum->AtlasPixelRange == Catch::Approx(FontImportOptions::MAX_ATLAS_PIXEL_RANGE));
 }
+
+namespace
+{
+    template <typename T> void AppendBytes(String& output, const T& value)
+    {
+        const char* bytes = reinterpret_cast<const char*>(&value);
+        output.append(bytes, sizeof(T));
+    }
+
+    // Packs the same triangle the text glTF tests use into a GLB container with a BIN chunk instead of a data URI.
+    String BuildTriangleGlb()
+    {
+        String bin;
+        const float positions[] = { 0, 0, 0, 1, 0, 0, 1, 1, 0 };
+        const float normals[] = { 0, 0, 1, 0, 0, 1, 0, 0, 1 };
+        const float tangents[] = { 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1 };
+        const uint16_t indices[] = { 0, 1, 2 };
+        for (float value : positions)
+            AppendBytes(bin, value);
+        for (float value : normals)
+            AppendBytes(bin, value);
+        for (float value : tangents)
+            AppendBytes(bin, value);
+        for (uint16_t value : indices)
+            AppendBytes(bin, value);
+        while (bin.size() % 4 != 0)
+            bin.push_back('\0');
+
+        String json = R"GLTF({"asset":{"version":"2.0"},"buffers":[{"byteLength":126}],)GLTF"
+                      R"GLTF("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36,"target":34962},{"buffer":0,"byteOffset":36,"byteLength":36,"target":34962},)GLTF"
+                      R"GLTF({"buffer":0,"byteOffset":72,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":120,"byteLength":6,"target":34963}],)GLTF"
+                      R"GLTF("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},)GLTF"
+                      R"GLTF({"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},)GLTF"
+                      R"GLTF({"bufferView":3,"componentType":5123,"count":3,"type":"SCALAR"}],)GLTF"
+                      R"GLTF("meshes":[{"name":"Triangle","primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TANGENT":2},"indices":3,"mode":4}]}],)GLTF"
+                      R"GLTF("nodes":[{"name":"Root","mesh":0}],"scenes":[{"nodes":[0]}],"scene":0})GLTF";
+        while (json.size() % 4 != 0)
+            json.push_back(' ');
+
+        String glb;
+        AppendBytes(glb, static_cast<uint32_t>(0x46546C67)); // 'glTF'
+        AppendBytes(glb, static_cast<uint32_t>(2));
+        AppendBytes(glb, static_cast<uint32_t>(12 + 8 + json.size() + 8 + bin.size()));
+        AppendBytes(glb, static_cast<uint32_t>(json.size()));
+        AppendBytes(glb, static_cast<uint32_t>(0x4E4F534A)); // 'JSON'
+        glb += json;
+        AppendBytes(glb, static_cast<uint32_t>(bin.size()));
+        AppendBytes(glb, static_cast<uint32_t>(0x004E4942)); // 'BIN'
+        glb += bin;
+        return glb;
+    }
+} // namespace
+
+TEST_CASE("Mesh importer accepts binary glTF containers", "[Assets][Importer][Mesh]")
+{
+    const TemporaryMeshFile source(BuildTriangleGlb(), "glb");
+
+    MeshImporter importer;
+    CHECK(importer.IsExtensionSupported("glb"));
+    CHECK(importer.IsExtensionSupported("gltf"));
+
+    String error;
+    const MeshImportResult result = MeshImporter::Parse(source.GetPath(), MeshImportOptions{}, &error);
+    CHECK(error.empty());
+    REQUIRE(result);
+    REQUIRE(result.Data != nullptr);
+    CHECK(result.Data->GetVertexCount() == 3);
+    CHECK(result.Data->GetIndexCount() == 3);
+    REQUIRE(result.SubMeshes.size() == 1);
+    CHECK(result.SubMeshes.front().MeshDrawMode == DrawMode::TRIANGLE_LIST);
+}
+
+TEST_CASE("Mesh parser reports the reader error for unreadable sources", "[Assets][Importer][Mesh]")
+{
+    // A GLB header that promises a BIN chunk which is not there.
+    String broken;
+    AppendBytes(broken, static_cast<uint32_t>(0x46546C67));
+    AppendBytes(broken, static_cast<uint32_t>(2));
+    AppendBytes(broken, static_cast<uint32_t>(64));
+    AppendBytes(broken, static_cast<uint32_t>(4));
+    AppendBytes(broken, static_cast<uint32_t>(0x4E4F534A));
+    broken += "{}  ";
+    const TemporaryMeshFile source(broken, "glb");
+
+    String error;
+    const MeshImportResult result = MeshImporter::Parse(source.GetPath(), MeshImportOptions{}, &error);
+    CHECK_FALSE(result);
+    CHECK_FALSE(error.empty());
+}
