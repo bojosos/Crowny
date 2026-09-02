@@ -9,6 +9,7 @@
 #include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetListener.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Renderer/PrimitiveMeshLibrary.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/BuiltInResourcePack.h"
 #include "Crowny/Common/ConsoleBuffer.h"
@@ -321,6 +322,10 @@ namespace Crowny
             ForwardRenderer::Init();
         }
         m_State->OwnsSceneManager = StartOwnedModule<SceneManager>(m_State->ServiceShutdownActions);
+        // Built-in primitive meshes (Cube, Sphere, ...) live under fixed UUIDs so scenes can reference them
+        // without a project asset; they need both the AssetManager and a started RenderAPI.
+        PrimitiveMeshLibrary::EnsureRegistered();
+        m_State->ServiceShutdownActions.emplace_back([]() { PrimitiveMeshLibrary::Shutdown(); });
         m_State->RendererResourcesStarted = true;
 
         if (!m_State->Description.DeferRuntimeServices)
