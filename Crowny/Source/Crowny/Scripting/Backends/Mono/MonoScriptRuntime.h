@@ -24,8 +24,11 @@ namespace Crowny
 
         MonoObject* m_Instance = nullptr;
         MonoClass* m_ScriptClass = nullptr;
+        LifecycleThunk m_OnAwake = nullptr;
         LifecycleThunk m_OnStart = nullptr;
         LifecycleThunk m_OnUpdate = nullptr;
+        LifecycleThunk m_OnLateUpdate = nullptr;
+        LifecycleThunk m_OnFixedUpdate = nullptr;
         LifecycleThunk m_OnDestroy = nullptr;
         EventThunk m_OnCollisionEnter2D = nullptr;
         EventThunk m_OnCollisionStay2D = nullptr;

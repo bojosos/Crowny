@@ -11,6 +11,12 @@
 #include "Crowny/Scripting/Managed/ManagedBackendSelection.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
+#include "Crowny/Application/Application.h"
+#include "Crowny/Application/EngineRuntime.h"
+#include "Crowny/Common/Timestep.h"
+#include "Crowny/Scene/ScriptRuntime.h"
+#include "Crowny/Scripting/Mono/Mono.h"
+#include "ManagedTestPaths.h"
 
 #include <cstddef>
 #include <cstdlib>
@@ -187,7 +193,7 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
 {
-    CHECK(CW_MANAGED_ABI_VERSION == 14);
+    CHECK(CW_MANAGED_ABI_VERSION == 15);
 
     cw_managed_program_api api{};
     api.size = sizeof(api);
@@ -961,4 +967,203 @@ TEST_CASE("CoreCLR package manifest resolves only package-local artifacts", "[Sc
     const ManagedProgramPackageResult escaped = LoadManagedProgramPackage(manifest);
     CHECK_FALSE(escaped.Result.Succeeded);
     CHECK(escaped.Result.HasDiagnosticCode("managed.package.runtime_path_invalid"));
+}
+
+namespace
+{
+    struct LifecycleEntry
+    {
+        String Callback;
+        int Sequence = 0;
+    };
+
+    // LifecycleProbe logs "Callback@Sequence" entries separated by commas.
+    Vector<LifecycleEntry> ParseLifecycleLog(const String& log)
+    {
+        Vector<LifecycleEntry> entries;
+        size_t begin = 0;
+        while (begin <= log.size())
+        {
+            size_t end = log.find(',', begin);
+            if (end == String::npos)
+                end = log.size();
+            const String entry = log.substr(begin, end - begin);
+            const size_t at = entry.find('@');
+            if (at != String::npos)
+                entries.push_back({ entry.substr(0, at), std::stoi(entry.substr(at + 1)) });
+            begin = end + 1;
+        }
+        return entries;
+    }
+
+    Vector<String> LifecycleNames(const Vector<LifecycleEntry>& entries)
+    {
+        Vector<String> names;
+        for (const LifecycleEntry& entry : entries)
+            names.push_back(entry.Callback);
+        return names;
+    }
+
+    int LifecycleSequence(const Vector<LifecycleEntry>& entries, StringView callback)
+    {
+        for (const LifecycleEntry& entry : entries)
+            if (entry.Callback == callback)
+                return entry.Sequence;
+        return -1;
+    }
+
+    Vector<LifecycleEntry> CaptureLifecycleLog(ManagedScripting& scripting, const ManagedScript& script)
+    {
+        const ScriptStateResult captured = scripting.CaptureState(script.GetRuntimeHandle());
+        REQUIRE(captured.Result.Succeeded);
+        REQUIRE(captured.State.Root.Members.contains("log"));
+        return ParseLifecycleLog(captured.State.Root.Members.at("log").StringValue);
+    }
+
+    size_t CountOccurrences(const String& text, StringView needle)
+    {
+        size_t count = 0;
+        for (size_t position = text.find(needle); position != String::npos; position = text.find(needle, position + needle.size()))
+            ++count;
+        return count;
+    }
+
+    ManagedScripting& StartMonoLifecycleFixture()
+    {
+        if (!Application::IsStartedUp())
+        {
+            ApplicationDesc description;
+            description.Name = "Test";
+            description.Headless = true;
+            description.WorkingDirectory = fs::current_path();
+            Application::StartUp(description);
+        }
+        const Path engineAssemblyPath = Crowny::Test::ResolveManagedAssembly("CrownySharp.dll", "Crowny-Sharp/CrownySharp.dll");
+        const Path gameAssemblyPath = Crowny::Test::ResolveManagedAssembly("GameAssembly.dll", "Crowny-Sandbox/GameAssembly.dll");
+        REQUIRE(fs::is_regular_file(engineAssemblyPath));
+        REQUIRE(fs::is_regular_file(gameAssemblyPath));
+        ManagedScripting* managedScripting = Application::Get().GetRuntime().GetManagedScripting();
+        REQUIRE(managedScripting != nullptr);
+        ManagedProgramDefinition program;
+        program.Generation = 1;
+        program.Artifacts.push_back({ ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, engineAssemblyPath });
+        program.Artifacts.push_back({ ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, gameAssemblyPath });
+        REQUIRE(managedScripting->LoadProgram(program).Succeeded);
+        return *managedScripting;
+    }
+} // namespace
+
+TEST_CASE("Mono lifecycle awakens every script before Start and runs Update before LateUpdate",
+          "[Scripting][Managed][Lifecycle][Mono][.ProcessIsolated]")
+{
+    ManagedScripting& scripting = StartMonoLifecycleFixture();
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    ScopedActiveScene activeScene(scene);
+    const ScriptTypeIdentity probe{ GAME_ASSEMBLY, "Sandbox", "LifecycleProbe" };
+    Entity first = scene->CreateEntity("Lifecycle first");
+    Entity second = scene->CreateEntity("Lifecycle second");
+    REQUIRE(scene->AddScriptComponent(first, probe, false));
+    REQUIRE(scene->AddScriptComponent(second, probe, false));
+    const auto firstScript = [&]() -> ManagedScript& { return first.GetComponent<ManagedScriptComponent>().Scripts.front(); };
+    const auto secondScript = [&]() -> ManagedScript& { return second.GetComponent<ManagedScriptComponent>().Scripts.front(); };
+    CHECK_FALSE(ScriptRuntime::IsScriptAwake(firstScript()));
+
+    ScriptRuntime::OnStart(scene);
+    REQUIRE(firstScript().GetRuntimeHandle().IsValid());
+    REQUIRE(secondScript().GetRuntimeHandle().IsValid());
+    CHECK(ScriptRuntime::IsScriptAwake(firstScript()));
+    CHECK(ScriptRuntime::IsScriptAwake(secondScript()));
+    Vector<LifecycleEntry> firstLog = CaptureLifecycleLog(scripting, firstScript());
+    Vector<LifecycleEntry> secondLog = CaptureLifecycleLog(scripting, secondScript());
+    CHECK(LifecycleNames(firstLog) == Vector<String>{ "Awake", "Start" });
+    CHECK(LifecycleNames(secondLog) == Vector<String>{ "Awake", "Start" });
+    // Both scripts awaken before either starts.
+    CHECK(LifecycleSequence(firstLog, "Awake") < LifecycleSequence(secondLog, "Start"));
+    CHECK(LifecycleSequence(secondLog, "Awake") < LifecycleSequence(firstLog, "Start"));
+
+    // OnStart is idempotent for awakened scripts.
+    ScriptRuntime::OnStart(scene);
+    CHECK(CaptureLifecycleLog(scripting, firstScript()).size() == 2);
+
+    const Timestep step(1.0f / 60.0f);
+    ScriptRuntime::OnUpdate(scene, step);
+    firstLog = CaptureLifecycleLog(scripting, firstScript());
+    secondLog = CaptureLifecycleLog(scripting, secondScript());
+    CHECK(LifecycleNames(firstLog) == Vector<String>{ "Awake", "Start", "Update", "LateUpdate" });
+    CHECK(LifecycleNames(secondLog) == Vector<String>{ "Awake", "Start", "Update", "LateUpdate" });
+    // Every Update finishes before the first LateUpdate of the frame.
+    CHECK(LifecycleSequence(firstLog, "Update") < LifecycleSequence(secondLog, "LateUpdate"));
+    CHECK(LifecycleSequence(secondLog, "Update") < LifecycleSequence(firstLog, "LateUpdate"));
+
+    // Split phases let a frame loop run animation between Update and LateUpdate.
+    ScriptRuntime::OnUpdate(scene, step, false);
+    CHECK(LifecycleNames(CaptureLifecycleLog(scripting, firstScript())).back() == "Update");
+    ScriptRuntime::OnLateUpdate(scene, step);
+    CHECK(LifecycleNames(CaptureLifecycleLog(scripting, firstScript())).back() == "LateUpdate");
+    ScriptRuntime::OnFixedUpdate(scene, Timestep(0.02f));
+    CHECK(LifecycleNames(CaptureLifecycleLog(scripting, firstScript())).back() == "FixedUpdate");
+
+    ScriptRuntime::OnShutdown(scene);
+}
+
+TEST_CASE("Mono lifecycle delivers OnDestroy on entity destruction and scene stop for awakened scripts only",
+          "[Scripting][Managed][Lifecycle][Mono][.ProcessIsolated]")
+{
+    ManagedScripting& scripting = StartMonoLifecycleFixture();
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    ScopedActiveScene activeScene(scene);
+    const ScriptTypeIdentity probe{ GAME_ASSEMBLY, "Sandbox", "LifecycleProbe" };
+    Entity sink = scene->CreateEntity("LifecycleProbeSink");
+    Entity kept = scene->CreateEntity("Lifecycle kept");
+    Entity destroyed = scene->CreateEntity("Lifecycle destroyed");
+    REQUIRE(scene->AddScriptComponent(kept, probe, false));
+    REQUIRE(scene->AddScriptComponent(destroyed, probe, false));
+    ScriptRuntime::OnStart(scene);
+    ScriptRuntime::OnUpdate(scene, Timestep(1.0f / 60.0f));
+    CHECK(sink.GetName() == "LifecycleProbeSink");
+
+    // Destroying the entity while other scripts stay alive delivers OnDestroy exactly once, with the full history.
+    scene->DestroyEntity(destroyed);
+    CHECK_FALSE(scene->TryGetEntityFromUuid(destroyed.GetUuid()));
+    String sinkName = sink.GetName();
+    CHECK(CountOccurrences(sinkName, "OnDestroy@") == 1);
+    CHECK(CountOccurrences(sinkName, "Awake@") == 1);
+    CHECK(CountOccurrences(sinkName, "LateUpdate@") == 1);
+    // Surviving scripts keep updating after a sibling was destroyed mid-scene.
+    ScriptRuntime::OnUpdate(scene, Timestep(1.0f / 60.0f));
+    CHECK(LifecycleNames(CaptureLifecycleLog(scripting, kept.GetComponent<ManagedScriptComponent>().Scripts.front())).size() == 6);
+
+    // A constructed but never awakened script (editor-style instance) is destroyed silently.
+    Entity silent = scene->CreateEntity("Lifecycle silent");
+    REQUIRE(scene->AddScriptComponent(silent, probe, false));
+    ManagedScript& silentScript = silent.GetComponent<ManagedScriptComponent>().Scripts.front();
+    REQUIRE(ScriptRuntime::CreateScript(silent, silentScript, false));
+    CHECK_FALSE(ScriptRuntime::IsScriptAwake(silent.GetComponent<ManagedScriptComponent>().Scripts.front()));
+    scene->DestroyEntity(silent);
+    CHECK(sink.GetName() == sinkName);
+
+    // Removing the script component (not the entity) also delivers OnDestroy.
+    Entity removed = scene->CreateEntity("Lifecycle removed");
+    REQUIRE(scene->AddScriptComponent(removed, probe, false));
+    // StartScript ignores scripts that were not constructed yet.
+    ScriptRuntime::StartScript(removed, removed.GetComponent<ManagedScriptComponent>().Scripts.front());
+    CHECK_FALSE(ScriptRuntime::IsScriptAwake(removed.GetComponent<ManagedScriptComponent>().Scripts.front()));
+    REQUIRE(ScriptRuntime::CreateScript(removed, removed.GetComponent<ManagedScriptComponent>().Scripts.front(), true));
+    CHECK(ScriptRuntime::IsScriptAwake(removed.GetComponent<ManagedScriptComponent>().Scripts.front()));
+    scene->RemoveScriptComponent(removed, probe);
+    sinkName = sink.GetName();
+    CHECK(CountOccurrences(sinkName, "OnDestroy@") == 2);
+    CHECK_FALSE(removed.HasComponent<ManagedScriptComponent>());
+
+    // Scene stop destroys every remaining awakened script and clears its runtime handle.
+    ScriptRuntime::OnShutdown(scene);
+    sinkName = sink.GetName();
+    CHECK(CountOccurrences(sinkName, "OnDestroy@") == 3);
+    const ManagedScript& keptScript = kept.GetComponent<ManagedScriptComponent>().Scripts.front();
+    CHECK_FALSE(keptScript.GetRuntimeHandle().IsValid());
+    CHECK_FALSE(ScriptRuntime::IsScriptAwake(keptScript));
+
+    // A second stop is a no-op: nothing is awake anymore.
+    ScriptRuntime::OnShutdown(scene);
+    CHECK(sink.GetName() == sinkName);
 }

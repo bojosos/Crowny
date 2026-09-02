@@ -269,7 +269,7 @@ namespace Crowny
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
     {
         if (!entity || entity.GetScene() != this || (m_RootEntity && entity == *m_RootEntity))
-            return {};
+            return Entity::Invalid;
 
         const Entity sourceParent = entity.GetParent();
         const uint32_t sourceSiblingIndex = entity.GetSiblingIndex();
@@ -301,7 +301,7 @@ namespace Crowny
             const auto& camera = view.get<CameraComponent>(entity);
             return Entity{ entity, this };
         }
-        return {};
+        return Entity::Invalid;
     }
 
     void Scene::OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity)
@@ -949,14 +949,13 @@ namespace Crowny
         const uint64_t runtimeInstanceId = script.InstanceId;
         if (initialize)
         {
-            ScriptRuntime::CreateScript(entity, script, false);
-            if (!entity.HasComponent<ManagedScriptComponent>())
+            // Only scenes that execute scripts awaken the instance (Awake, then Start). Editor scenes construct it
+            // for inspector state without awakening it, so removing the component later stays silent.
+            const bool awaken = m_RuntimeActive || (m_IsEditorScene && ScriptRuntime::RunsInEditor(state.Identity));
+            ScriptRuntime::CreateScript(entity, script, awaken);
+            if (!entity.HasComponent<ManagedScriptComponent>() ||
+                entity.GetComponent<ManagedScriptComponent>().FindScript(runtimeInstanceId) == nullptr)
                 return false;
-            ManagedScript* current = entity.GetComponent<ManagedScriptComponent>().FindScript(runtimeInstanceId);
-            if (current == nullptr)
-                return false;
-            if (m_RuntimeActive || (m_IsEditorScene && ScriptRuntime::RunsInEditor(current->GetTypeIdentity())))
-                ScriptRuntime::Dispatch(*current, ScriptEvent::Lifecycle(ScriptEventKind::Start));
         }
         return true;
     }
@@ -1157,7 +1156,7 @@ namespace Crowny
         if (entity != m_EntityMap.end() && m_Registry.valid(entity->second))
             return { entity->second, const_cast<Scene*>(this) };
 
-        return {};
+        return Entity::Invalid;
     }
 
     Entity Scene::GetEntityFromUuid(const UUID& uuid) const
@@ -1167,7 +1166,7 @@ namespace Crowny
             return entity;
 
         CW_ENGINE_ERROR("Entity with uuid {0} not found.", uuid);
-        return {};
+        return Entity::Invalid;
     }
 
     Entity Scene::GetRootEntity() const { return m_RootEntity ? *m_RootEntity : Entity{}; }
@@ -1181,7 +1180,7 @@ namespace Crowny
             if (tag.Tag == name)
                 return Entity(entity, const_cast<Scene*>(this));
         }
-        return Entity{};
+        return Entity::Invalid;
     }
 
     void Scene::OnViewportResize(uint32_t width, uint32_t height)

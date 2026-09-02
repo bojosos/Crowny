@@ -85,6 +85,52 @@ namespace Crowny
             return entity.GetComponent<ManagedScriptComponent>().FindScript(runtimeInstanceId);
         }
 
+        bool UsesFixedDeltaTime(ScriptEventKind kind)
+        {
+            switch (kind)
+            {
+            case ScriptEventKind::FixedUpdate:
+            case ScriptEventKind::CollisionEnter2D:
+            case ScriptEventKind::CollisionStay2D:
+            case ScriptEventKind::CollisionExit2D:
+            case ScriptEventKind::TriggerEnter2D:
+            case ScriptEventKind::TriggerStay2D:
+            case ScriptEventKind::TriggerExit2D:
+            case ScriptEventKind::CollisionEnter3D:
+            case ScriptEventKind::CollisionStay3D:
+            case ScriptEventKind::CollisionExit3D:
+            case ScriptEventKind::TriggerEnter3D:
+            case ScriptEventKind::TriggerStay3D:
+            case ScriptEventKind::TriggerExit3D:
+                return true;
+            default:
+                return false;
+            }
+        }
+
+        // Scripts that received Awake, keyed by ManagedScript::InstanceId (unique per occurrence, never reused).
+        // Unity delivers OnDestroy only to components that were awakened; editor-scene instances that exist for
+        // inspector state and scripts whose construction failed never enter this set.
+        UnorderedSet<uint64_t>& AwakeScripts()
+        {
+            static UnorderedSet<uint64_t> awake;
+            return awake;
+        }
+
+        // Every entry is re-resolved through the entity UUID and script instance id, so callbacks may destroy
+        // entities or add and remove scripts while the snapshot is walked.
+        void DispatchLifecycle(const Ref<Scene>& scene, const Vector<ScriptInvocation>& invocations, ScriptEventKind kind,
+                               float deltaTime)
+        {
+            for (const ScriptInvocation& invocation : invocations)
+            {
+                Entity entity;
+                ManagedScript* script = FindScript(scene, invocation, entity);
+                if (script != nullptr)
+                    ScriptRuntime::Dispatch(*script, ScriptEvent::Lifecycle(kind, deltaTime));
+            }
+        }
+
     } // namespace
 
     void ScriptRuntime::Init() {}
@@ -122,19 +168,34 @@ namespace Crowny
 
         current->SetRuntimeHandle(created.Handle);
         if (dispatchStart)
-            Dispatch(*current, ScriptEvent::Lifecycle(ScriptEventKind::Start));
+            StartScript(entity, *current);
         return true;
     }
+
+    void ScriptRuntime::StartScript(Entity entity, ManagedScript& script)
+    {
+        if (!script.GetRuntimeHandle().IsValid() || !AwakeScripts().insert(script.InstanceId).second)
+            return;
+        const uint64_t instanceId = script.InstanceId;
+        Dispatch(script, ScriptEvent::Lifecycle(ScriptEventKind::Awake));
+        // Awake may add or remove scripts on the same entity and relocate the script vector.
+        ManagedScript* current = FindScript(entity, instanceId);
+        if (current != nullptr)
+            Dispatch(*current, ScriptEvent::Lifecycle(ScriptEventKind::Start));
+    }
+
+    bool ScriptRuntime::IsScriptAwake(const ManagedScript& script) { return AwakeScripts().contains(script.InstanceId); }
 
     void ScriptRuntime::DestroyScript(Entity entity, ManagedScript& script, bool dispatchDestroy)
     {
         const ScriptInstanceHandle handle = script.GetRuntimeHandle();
+        const bool awake = AwakeScripts().erase(script.InstanceId) != 0;
         if (!handle.IsValid())
             return;
         ManagedScripting* managed = GetManagedScripting();
         if (managed != nullptr && managed->IsStarted())
         {
-            if (dispatchDestroy)
+            if (dispatchDestroy && awake)
             {
                 ManagedOperationResult dispatched = managed->Dispatch(handle, ScriptEvent::Lifecycle(ScriptEventKind::Destroy));
                 if (!dispatched.Succeeded)
@@ -153,7 +214,15 @@ namespace Crowny
         ManagedScripting* managed = GetManagedScripting();
         if (managed == nullptr || !managed->IsStarted() || !script.GetRuntimeHandle().IsValid())
             return;
-        ManagedOperationResult result = managed->Dispatch(script.GetRuntimeHandle(), event);
+        ManagedOperationResult result = [&]() {
+            if (!UsesFixedDeltaTime(event.Kind))
+                return managed->Dispatch(script.GetRuntimeHandle(), event);
+
+            Time& time = Application::Get().GetTime();
+            const float callbackDelta = event.DeltaTime > 0.0f ? event.DeltaTime : time.GetFixedDeltaTime();
+            Time::CallbackScope callbackTime(time, callbackDelta);
+            return managed->Dispatch(script.GetRuntimeHandle(), event);
+        }();
         if (!result.Succeeded)
             LogDiagnostics(result, script.GetTypeIdentity(), event.OtherEntity);
     }
@@ -222,40 +291,75 @@ namespace Crowny
         {
             SceneManager::CallbackScope callbackScope =
               SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
-            const Vector<ScriptInvocation>& invocations = CollectScriptInvocations(scene);
+            // Unity order: every script is constructed and awakened before any script starts.
+            const Vector<ScriptInvocation> invocations = CollectScriptInvocations(scene);
+            Vector<ScriptInvocation> awakened;
+            awakened.reserve(invocations.size());
             for (const ScriptInvocation& invocation : invocations)
             {
                 Entity entity;
                 ManagedScript* script = FindScript(scene, invocation, entity);
-                if (script != nullptr)
-                    CreateScript(entity, *script, true);
+                if (script == nullptr || !CreateScript(entity, *script, false))
+                    continue;
+                // Construction may relocate the script vector.
+                script = FindScript(scene, invocation, entity);
+                if (script == nullptr || !AwakeScripts().insert(script->InstanceId).second)
+                    continue;
+                Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::Awake));
+                awakened.push_back(invocation);
             }
+            DispatchLifecycle(scene, awakened, ScriptEventKind::Start, 0.0f);
         }
     }
 
-    void ScriptRuntime::OnUpdate(Timestep timestep)
+    void ScriptRuntime::OnUpdate(Timestep timestep, bool includeLateUpdate)
     {
-        OnUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr, timestep);
+        OnUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr, timestep, includeLateUpdate);
     }
 
-    void ScriptRuntime::OnUpdate(const Ref<Scene>& scene, Timestep timestep)
+    void ScriptRuntime::OnUpdate(const Ref<Scene>& scene, Timestep timestep, bool includeLateUpdate)
     {
         if (scene == nullptr)
             return;
         {
             SceneManager::CallbackScope callbackScope =
               SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
-            const Vector<ScriptInvocation>& invocations = CollectScriptInvocations(scene);
-            for (const ScriptInvocation& invocation : invocations)
-            {
-                Entity entity;
-                ManagedScript* script = FindScript(scene, invocation, entity);
-                if (script != nullptr)
-                    Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::Update, timestep.GetSeconds()));
-            }
+            DispatchLifecycle(scene, CollectScriptInvocations(scene), ScriptEventKind::Update, timestep.GetSeconds());
+            // LateUpdate starts only after every script finished Update. The snapshot is rebuilt so scripts added
+            // during Update also receive their first LateUpdate this frame.
+            if (includeLateUpdate)
+                DispatchLifecycle(scene, CollectScriptInvocations(scene), ScriptEventKind::LateUpdate, timestep.GetSeconds());
         }
         if (ManagedScripting* managed = GetManagedScripting())
             LogDiagnostics(managed->Update());
+    }
+
+    void ScriptRuntime::OnLateUpdate(Timestep timestep)
+    {
+        OnLateUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr, timestep);
+    }
+
+    void ScriptRuntime::OnLateUpdate(const Ref<Scene>& scene, Timestep timestep)
+    {
+        if (scene == nullptr)
+            return;
+        SceneManager::CallbackScope callbackScope =
+          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+        DispatchLifecycle(scene, CollectScriptInvocations(scene), ScriptEventKind::LateUpdate, timestep.GetSeconds());
+    }
+
+    void ScriptRuntime::OnFixedUpdate(Timestep timestep)
+    {
+        OnFixedUpdate(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr, timestep);
+    }
+
+    void ScriptRuntime::OnFixedUpdate(const Ref<Scene>& scene, Timestep timestep)
+    {
+        if (scene == nullptr)
+            return;
+        SceneManager::CallbackScope callbackScope =
+          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+        DispatchLifecycle(scene, CollectScriptInvocations(scene), ScriptEventKind::FixedUpdate, timestep.GetSeconds());
     }
 
     void ScriptRuntime::OnShutdown() { OnShutdown(SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetActiveScene() : nullptr); }
@@ -266,7 +370,9 @@ namespace Crowny
             return;
         SceneManager::CallbackScope callbackScope =
           SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
-        const Vector<ScriptInvocation>& invocations = CollectScriptInvocations(scene);
+        // Play stop and runtime scene changes end every script's life here: OnDestroy fires for awakened scripts
+        // before the scene itself is released, matching Unity's scene-unload semantics.
+        const Vector<ScriptInvocation> invocations = CollectScriptInvocations(scene);
         for (const ScriptInvocation& invocation : invocations)
         {
             Entity entity;
@@ -325,5 +431,6 @@ namespace Crowny
     {
         if (ManagedScripting* managed = GetManagedScripting())
             managed->Shutdown();
+        AwakeScripts().clear();
     }
 } // namespace Crowny

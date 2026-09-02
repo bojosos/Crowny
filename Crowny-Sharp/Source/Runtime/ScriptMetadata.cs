@@ -554,9 +554,13 @@ namespace Crowny
     {
         private static readonly CallbackSignature[] signatures =
         {
+            // Kinds match NativeEventKind names. Unity-compatible method names come first; Crowny aliases follow.
+            new CallbackSignature("Awake", "Awake", null, null),
             new CallbackSignature("Start", "Start", null, null),
             new CallbackSignature("Update", "Update", null, null),
-            new CallbackSignature("Destroy", "Destroy", "OnDestroy", null),
+            new CallbackSignature("LateUpdate", "LateUpdate", null, null),
+            new CallbackSignature("FixedUpdate", "FixedUpdate", null, null),
+            new CallbackSignature("Destroy", "OnDestroy", "Destroy", null),
             new CallbackSignature("CollisionEnter2D", "OnCollisionEnter2D", null, typeof(Collision2D)),
             new CallbackSignature("CollisionStay2D", "OnCollisionStay2D", null, typeof(Collision2D)),
             new CallbackSignature("CollisionExit2D", "OnCollisionExit2D", null, typeof(Collision2D)),

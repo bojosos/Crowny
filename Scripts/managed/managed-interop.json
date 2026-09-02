@@ -1,5 +1,5 @@
 {
-  "abiVersion": 14,
+  "abiVersion": 15,
   "managedEntryPoint": "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi",
   "statusCodes": {
     "Ok": 0,
@@ -28,7 +28,10 @@
     "CollisionExit3D": 11,
     "TriggerEnter3D": 12,
     "TriggerStay3D": 13,
-    "TriggerExit3D": 14
+    "TriggerExit3D": 14,
+    "FixedUpdate": 15,
+    "LateUpdate": 16,
+    "Awake": 17
   },
   "hostFunctions": {
     "GetEntityName": { "parameters": [{ "name": "entity", "type": "uuid" }], "result": "string" },

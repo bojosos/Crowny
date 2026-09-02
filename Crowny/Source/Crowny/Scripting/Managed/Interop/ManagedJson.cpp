@@ -931,6 +931,9 @@ namespace Crowny
                 { "TriggerEnter3D", ScriptEventKind::TriggerEnter3D },
                 { "TriggerStay3D", ScriptEventKind::TriggerStay3D },
                 { "TriggerExit3D", ScriptEventKind::TriggerExit3D },
+                { "FixedUpdate", ScriptEventKind::FixedUpdate },
+                { "LateUpdate", ScriptEventKind::LateUpdate },
+                { "Awake", ScriptEventKind::Awake },
             };
             const auto event = events.find(name);
             if (event == events.end())

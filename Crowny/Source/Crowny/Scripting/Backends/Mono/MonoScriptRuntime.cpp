@@ -112,6 +112,15 @@ namespace Crowny
                     if (MonoMethod* method = current->GetMethod(name, 0))
                         thunk = reinterpret_cast<LifecycleThunk>(method->GetThunk());
             };
+            const auto bindLifecycleAlias = [&](LifecycleThunk& thunk, const char* name, const char* alias) {
+                if (thunk != nullptr)
+                    return;
+                MonoMethod* method = current->GetMethod(name, 0);
+                if (method == nullptr)
+                    method = current->GetMethod(alias, 0);
+                if (method != nullptr)
+                    thunk = reinterpret_cast<LifecycleThunk>(method->GetThunk());
+            };
             const auto bindEvent = [&](EventThunk& thunk, const char* name, const char* parameter) {
                 if (thunk == nullptr)
                     if (MonoMethod* method = current->GetMethod(name, parameter))
@@ -127,9 +136,12 @@ namespace Crowny
                     thunk = reinterpret_cast<EventThunk>(method->GetThunk());
             };
 
+            bindLifecycle(m_OnAwake, "Awake");
             bindLifecycle(m_OnStart, "Start");
             bindLifecycle(m_OnUpdate, "Update");
-            bindLifecycle(m_OnDestroy, "Destroy");
+            bindLifecycle(m_OnLateUpdate, "LateUpdate");
+            bindLifecycle(m_OnFixedUpdate, "FixedUpdate");
+            bindLifecycleAlias(m_OnDestroy, "OnDestroy", "Destroy");
             bindEvent(m_OnCollisionEnter2D, "OnCollisionEnter2D", "Collision2D");
             bindEvent(m_OnCollisionStay2D, "OnCollisionStay2D", "Collision2D");
             bindEvent(m_OnCollisionExit2D, "OnCollisionExit2D", "Collision2D");
@@ -158,6 +170,10 @@ namespace Crowny
     {
         switch (event.Kind)
         {
+        case ScriptEventKind::Awake:
+            if (m_OnAwake != nullptr)
+                MonoUtils::InvokeThunk(m_OnAwake, m_Instance);
+            break;
         case ScriptEventKind::Start:
             if (m_OnStart != nullptr)
                 MonoUtils::InvokeThunk(m_OnStart, m_Instance);
@@ -165,6 +181,14 @@ namespace Crowny
         case ScriptEventKind::Update:
             if (m_OnUpdate != nullptr)
                 MonoUtils::InvokeThunk(m_OnUpdate, m_Instance);
+            break;
+        case ScriptEventKind::LateUpdate:
+            if (m_OnLateUpdate != nullptr)
+                MonoUtils::InvokeThunk(m_OnLateUpdate, m_Instance);
+            break;
+        case ScriptEventKind::FixedUpdate:
+            if (m_OnFixedUpdate != nullptr)
+                MonoUtils::InvokeThunk(m_OnFixedUpdate, m_Instance);
             break;
         case ScriptEventKind::Destroy:
             if (m_OnDestroy != nullptr)

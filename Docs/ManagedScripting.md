@@ -54,6 +54,35 @@ JSON state payload. It is also the only scene format accepted by this build. Per
 and legacy text, physics, and managed-script readers have been removed. Regenerate project scenes when adopting this
 version; compatibility can return later as an explicit import tool without complicating the runtime scene codec.
 
+## Script lifecycle
+
+`ScriptRuntime` drives every `EntityBehaviour` with Unity-compatible callback names. Discovery is shared by both
+backends (`ScriptCallbacks` in `Crowny-Sharp/Source/Runtime/ScriptMetadata.cs`): a callback is a `void` method with the
+exact parameter list, declared on the script or any base class below `EntityBehaviour`.
+
+| Phase | Method | When |
+| --- | --- | --- |
+| Awake | `Awake()` | Right after the managed instance is constructed and its serialized state applied. On play start every script in the scene awakens before any script starts. |
+| Start | `Start()` | After all Awake calls on play start; immediately after Awake for scripts added while the scene runs. |
+| FixedUpdate | `FixedUpdate()` | Each fixed simulation tick, via `ScriptRuntime::OnFixedUpdate`. `Time.deltaTime` reports the fixed step. |
+| Update | `Update()` | Once per frame, via `ScriptRuntime::OnUpdate`. |
+| LateUpdate | `LateUpdate()` | Once per frame after every script finished `Update`. `ScriptRuntime::OnUpdate(step)` runs both phases; frame loops that update animation in between call `OnUpdate(step, false)` and then `OnLateUpdate(step)`. |
+| OnDestroy | `OnDestroy()` (alias `Destroy()`) | When the entity is destroyed, when the script component is removed, and when play stops or the runtime scene changes (`ScriptRuntime::OnShutdown`). Delivered only to scripts that received Awake. |
+
+Collision and trigger callbacks (`OnCollisionEnter2D`, `OnTriggerEnter`, ...) are dispatched from the physics step and
+also see the fixed delta time.
+
+Lifecycle rules:
+
+- Editor scenes construct managed instances for inspector state without awakening them unless the type is marked
+  `[RunInEditor]`. Instances that never awoke are released silently; they receive no `OnDestroy`.
+- Every per-frame pass walks a snapshot of `(entity, script)` ids and re-resolves each entry before dispatch, so a
+  callback may destroy entities or add and remove scripts without invalidating the loop. Scene switches requested from a
+  callback are deferred until the pass ends (`SceneManager::DeferSceneChanges`).
+- `Awake` may add scripts to its own entity; the runtime re-resolves the script after Awake before dispatching `Start`.
+- `OnEnable` and `OnDisable` are not available. Neither `ManagedScriptComponent` nor entities carry an enabled flag yet;
+  when one is introduced these callbacks should fire on the flag transition and on play start/stop for enabled scripts.
+
 ## Compatibility policy
 
 - Gameplay source is recompiled for the selected backend. Scene files must be regenerated as format 11. Script and member
