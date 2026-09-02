@@ -70,6 +70,29 @@ TEST_CASE("Component menu model invalidates results only when inputs change", "[
     CHECK(menu.Search("world").GetMatchCount() == 1u);
 }
 
+TEST_CASE("Component menu model distinguishes and searches fully qualified managed scripts", "[Editor][ComponentMenu][Scripting]")
+{
+    ComponentMenuModel menu;
+    menu.SetScripts(100u, {
+                            { "PlayerController", true, { "GameAssembly", "Gameplay", "PlayerController" } },
+                            { "PlayerController", true, { "PluginAssembly", "Tools", "PlayerController" } },
+                          });
+
+    const Vector<ComponentMenuModel::ScriptEntry>& scripts = menu.GetScripts();
+    REQUIRE(scripts.size() == 2u);
+    CHECK(scripts[0].Identity.Namespace == "Gameplay");
+    CHECK(scripts[0].Detail == "Gameplay.PlayerController (GameAssembly)");
+    CHECK(scripts[1].Identity.Namespace == "Tools");
+
+    const ComponentMenuModel::SearchResults& namespaceMatch = menu.Search("gameplay");
+    REQUIRE(namespaceMatch.ScriptIndices.size() == 1u);
+    CHECK(scripts[namespaceMatch.ScriptIndices.front()].Identity.Assembly == "GameAssembly");
+
+    const ComponentMenuModel::SearchResults& assemblyMatch = menu.Search("pluginassembly");
+    REQUIRE(assemblyMatch.ScriptIndices.size() == 1u);
+    CHECK(scripts[assemblyMatch.ScriptIndices.front()].Identity.Namespace == "Tools");
+}
+
 TEST_CASE("Component menu model allocates nothing for a stable visible query", "[Editor][ComponentMenu][Memory][Frame]")
 {
     ComponentMenuModel menu = MakeMenu();

@@ -25,6 +25,8 @@ namespace Crowny
             String Name;
             bool Visible = true;
             ScriptTypeIdentity Identity;
+            String SearchText;
+            String Detail;
         };
 
         struct SearchResults

@@ -14,7 +14,7 @@ namespace Crowny
 {
     class Entity;
     class EnttEntity;
-    class ComponentEditor;
+    class EntityInspector;
     class EnvironmentMap;
     class SceneSerializer;
     class PrefabSerializer;
@@ -174,7 +174,7 @@ namespace Crowny
         void OnManagedScriptComponentDestroy(entt::registry& registry, entt::entity entity);
 
     private:
-        friend class ComponentEditor;
+        friend class EntityInspector;
         friend class SceneRenderer;
         friend class SceneSerializer;
         friend class PrefabSerializer;

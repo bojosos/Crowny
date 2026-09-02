@@ -6,9 +6,11 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Input/Input.h"
+#include "Crowny/Renderer/PrimitiveMeshLibrary.h"
 #include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/SceneManager.h"
 
+#include "Editor/EntityFactory.h"
 #include "Editor/PrefabUtils.h"
 #include "Editor/ProjectLibrary.h"
 #include "Editor/UndoRedo.h"
@@ -21,6 +23,9 @@ namespace Crowny
     HierarchyPanel::HierarchyPanel(const String& name, SelectionChangedCallback callback) : ImGuiPanel(name), m_SelectionChanged(std::move(callback))
     {
     }
+
+    // Release the shared primitive meshes while the RenderAPI is still alive.
+    HierarchyPanel::~HierarchyPanel() = default;
 
     static void DrawSelectedRowAccent(bool selected)
     {
@@ -110,16 +115,7 @@ namespace Crowny
         if (ImGui::MenuItem("Create empty child", "Ctrl+N"))
             CreateEmptyEntity(e);
 
-        if (ImGui::BeginMenu("Create child"))
-        {
-            if (ImGui::MenuItem("Camera"))
-                CreateEntityWith<CameraComponent>(e, "Camera");
-
-            if (ImGui::MenuItem("Audio source"))
-                CreateEntityWith<AudioSourceComponent>(e, "Audio Source");
-
-            ImGui::EndMenu();
-        }
+        RenderCreateMenuItems(e);
 
         if (e != SceneManager::TryGet()->GetActiveScene()->GetRootEntity())
         {
@@ -376,6 +372,69 @@ namespace Crowny
         ImGui::PopID();
     }
 
+    void HierarchyPanel::RenderCreateMenuItems(Entity parent)
+    {
+        if (ImGui::BeginMenu("3D Object"))
+        {
+            constexpr PrimitiveMeshType primitives[] = { PrimitiveMeshType::Cube,     PrimitiveMeshType::Sphere, PrimitiveMeshType::Plane,
+                                                         PrimitiveMeshType::Cylinder, PrimitiveMeshType::Cone,   PrimitiveMeshType::Capsule };
+            for (PrimitiveMeshType type : primitives)
+            {
+                if (ImGui::MenuItem(EntityFactory::GetPrimitiveName(type)))
+                    CreatePrimitiveEntity(parent, type);
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Light"))
+        {
+            constexpr LightType lights[] = { LightType::Directional, LightType::Point, LightType::Spot };
+            for (LightType type : lights)
+            {
+                if (ImGui::MenuItem(EntityFactory::GetLightName(type)))
+                    CreateLightEntity(parent, type);
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Create child"))
+        {
+            if (ImGui::MenuItem("Camera"))
+                CreateEntityWith<CameraComponent>(parent, "Camera");
+
+            if (ImGui::MenuItem("Audio source"))
+                CreateEntityWith<AudioSourceComponent>(parent, "Audio Source");
+
+            ImGui::EndMenu();
+        }
+    }
+
+    void HierarchyPanel::CreateEntityFromFactory(Entity parent, EntityCreator creator)
+    {
+        m_DeferredActions.push_back([this, parent, creator = std::move(creator)]() mutable {
+            auto activeScene = SceneManager::TryGet()->GetActiveScene();
+            if (!activeScene || !parent || parent.GetScene() != activeScene.get())
+                return;
+            Entity newEntity = creator(activeScene, parent);
+            if (!newEntity)
+                return;
+            UndoRedo::Get().RegisterAction(CreateRef<EntityCreatedAction>(newEntity, activeScene));
+            SetSelectedEntity(newEntity);
+            m_NewOpenEntity = parent;
+        });
+    }
+
+    void HierarchyPanel::CreateLightEntity(Entity parent, LightType type)
+    {
+        CreateEntityFromFactory(parent, [type](const Ref<Scene>& scene, Entity target) { return EntityFactory::CreateLight(scene, target, type); });
+    }
+
+    void HierarchyPanel::CreatePrimitiveEntity(Entity parent, PrimitiveMeshType type)
+    {
+        CreateEntityFromFactory(parent,
+                                [type](const Ref<Scene>& scene, Entity target) { return EntityFactory::CreatePrimitive(scene, target, type); });
+    }
+
     void HierarchyPanel::CreateEmptyEntity(Entity parent)
     {
         m_DeferredActions.push_back([this, parent]() mutable {
@@ -586,6 +645,9 @@ namespace Crowny
 
     void HierarchyPanel::Update()
     {
+        // Built-in primitive meshes are registered under fixed UUIDs so scenes that reference them resolve
+        // after loading. This is a no-op once every primitive is cached.
+
         if (!m_DeferredActions.empty())
         {
             m_DeferredActionScratch.clear();

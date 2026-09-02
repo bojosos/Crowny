@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Ecs/Entity.h"
+#include "Editor/EntityFactory.h"
 #include "Editor/EntitySelection.h"
 #include "Editor/UndoRedo.h"
 #include "Panels/EditorPanelRegistration.h"
@@ -17,7 +18,7 @@ namespace Crowny
         using SelectionChangedCallback = std::function<void(Entity, const Vector<Entity>&)>;
 
         HierarchyPanel(const String& name, SelectionChangedCallback callback);
-        ~HierarchyPanel() = default;
+        ~HierarchyPanel();
 
         virtual void Render() override;
         void Update();
@@ -35,6 +36,9 @@ namespace Crowny
             });
         }
         void CreateEmptyEntity(Entity parent);
+        // Deferred creation through EntityFactory presets; parents to `parent`, registers undo and selects the result.
+        void CreateLightEntity(Entity parent, LightType type);
+        void CreatePrimitiveEntity(Entity parent, PrimitiveMeshType type);
         const UnorderedSet<UUID>& GetSerializableHierarchy();
         void SetHierarchy(const UnorderedSet<UUID>& hierarchy) { m_Hierarchy = hierarchy; }
 
@@ -57,6 +61,9 @@ namespace Crowny
         void Select(Entity e);
         void RenderEntityRow(Entity e, bool hasChildren);
         void RenderContextMenu(Entity e);
+        void RenderCreateMenuItems(Entity parent);
+        using EntityCreator = std::function<Entity(const Ref<Scene>&, Entity)>;
+        void CreateEntityFromFactory(Entity parent, EntityCreator creator);
         void Rename(Entity e);
         void RenderSearchResults(Entity root);
         bool MatchesSearchFilter(Entity e) const;

@@ -89,7 +89,6 @@ project "Crowny-Editor"
 	filter "system:windows"
 		systemversion "latest"
 		buildoptions { "/utf-8" }
-
 		defines
 		{
 			"CW",
@@ -99,6 +98,9 @@ project "Crowny-Editor"
 			"_CRT_SECURE_NO_WARNINGS",
 			"CW_PLATFORM_WIN32",
 		}
+
+	filter { "system:windows", "files:Source/Panels/InspectorPanel.cpp" }
+		buildoptions { "/bigobj" } -- exceeds the default COFF section limit
 
 	filter "system:linux"
 		systemversion "latest"

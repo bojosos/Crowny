@@ -1,6 +1,10 @@
 #include "cwepch.h"
 
-#include "Panels/ComponentEditor.h"
+// ManagedScriptComponent inspector: draws the reflected script state (fields, dictionaries,
+// buttons, conditional attributes, OnValueChanged callbacks), plus the new-script creation
+// and script catalog synchronisation used by the entity inspector's Add Component popup.
+
+#include "Panels/ScriptComponentInspector.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Application/EngineRuntime.h"
@@ -8,6 +12,10 @@
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Editor/Editor.h"
+#include "Editor/EditorAssets.h"
+#include "Editor/EditorUtils.h"
+#include "Editor/ProjectLibrary.h"
+#include "Editor/Script/CodeEditor.h"
 #include "Panels/ScriptInspectorModel.h"
 #include "Panels/ScriptInspectorPath.h"
 #include "Panels/ScriptInspectorProgressBar.h"
@@ -15,6 +23,7 @@
 #include "UI/Properties.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cfloat>
 #include <charconv>
 #include <cmath>
@@ -1257,5 +1266,77 @@ namespace Crowny
             ImGui::PopID();
             ++index;
         }
+    }
+
+
+    template <> SelectionComponentChange ComponentSelectionAddAction<ManagedScriptComponent>(std::span<const Entity>)
+    {
+        // Scripts are attached per type through the Add Component browser, never as a bare component.
+        return {};
+    }
+
+    template <> Ref<UndoAction> ComponentRemoveAction<ManagedScriptComponent>(Entity entity)
+    {
+        ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(entity);
+        entity.RemoveComponent<ManagedScriptComponent>();
+        return CreateRef<ChangeScriptComponentAction>(entity, std::move(snapshot), "Remove scripts");
+    }
+
+    bool ScriptComponentInspector::IsValidScriptClassName(const String& value)
+    {
+        if (value.empty())
+            return false;
+
+        const auto isValidFirst = [](unsigned char c) { return std::isalpha(c) != 0 || c == '_'; };
+        const auto isValidRest = [](unsigned char c) { return std::isalnum(c) != 0 || c == '_'; };
+        return isValidFirst(static_cast<unsigned char>(value.front())) &&
+               std::all_of(value.begin() + 1, value.end(), [&](char c) { return isValidRest(static_cast<unsigned char>(c)); });
+    }
+
+    void ScriptComponentInspector::SynchronizeScriptCatalog(ComponentMenuModel& menu)
+    {
+        Application* application = Application::TryGet();
+        const ManagedScripting* managed = application != nullptr ? application->GetRuntime().GetManagedScripting() : nullptr;
+        const ScriptCatalog* catalog = managed != nullptr && managed->IsStarted() ? &managed->GetScriptCatalog() : nullptr;
+        const uint64_t fingerprint = catalog != nullptr ? catalog->ManifestHash : 1;
+        if (menu.HasScriptCatalog(fingerprint))
+            return;
+
+        Vector<ComponentMenuModel::ScriptEntry> scripts;
+        if (catalog != nullptr)
+        {
+            scripts.reserve(catalog->Types.size());
+            for (const ScriptTypeSchema& type : catalog->Types)
+                scripts.push_back({ type.Identity.TypeName, true, type.Identity });
+        }
+        menu.SetScripts(fingerprint, std::move(scripts));
+    }
+
+    bool ScriptComponentInspector::CreateNewScript(const Vector<Entity>& entities, const String& className)
+    {
+        static String s_DefaultScriptContents;
+        if (s_DefaultScriptContents.empty())
+            s_DefaultScriptContents = EditorAssets::GetDefaultScriptTemplate();
+
+        const String scriptNamespace = Editor::Get().GetProjectPath().filename().string();
+        const Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (className + ".cs"), FileNamingScheme::UnderscoreIdx);
+        const String generatedClassName = path.stem().string();
+        String script = StringUtils::Replace(s_DefaultScriptContents, "#NAMESPACE#", scriptNamespace);
+        script = StringUtils::Replace(script, "#CLASSNAME#", generatedClassName);
+        if (!FileSystem::WriteTextFile(path, script))
+        {
+            CW_ENGINE_ERROR("Failed to create managed script '{}'.", path.string());
+            return false;
+        }
+        ProjectLibrary::Get().Refresh(path);
+
+        // The project graph synchronizer batches this with the script reload request.
+        CodeEditorManager::Get().NotifyProjectInputChanged(path);
+
+        // Keep the serialized attachment while the new type is absent from the
+        // runtime catalog. The next managed reload will create its instances.
+        UndoRedo::Get().RegisterAction(
+          AddManagedScriptToSelection(entities, ScriptTypeIdentity{ GAME_ASSEMBLY, scriptNamespace, generatedClassName }, false).Action);
+        return true;
     }
 } // namespace Crowny

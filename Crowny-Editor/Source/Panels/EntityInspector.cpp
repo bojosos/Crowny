@@ -1,30 +1,21 @@
 #include "cwepch.h"
 
-#include "Editor/EditorAssets.h"
-#include "Editor/EditorUtils.h"
 #include "Editor/PrefabUtils.h"
 #include "Editor/ProjectLibrary.h"
-#include "Editor/Script/CodeEditor.h"
-#include "Editor/Script/ScriptProjectGenerator.h"
-#include "Panels/ComponentEditor.h"
+#include "Panels/EntityInspector.h"
+#include "Panels/ScriptComponentInspector.h"
 
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
-#include "Crowny/Application/Application.h"
-#include "Crowny/Application/EngineRuntime.h"
-#include "Crowny/Scripting/Managed/ManagedScripting.h"
-
-#include <cctype>
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 namespace Crowny
 {
-    static String s_DefaultScriptContents;
-
     // ---------------------------------------------------------------------------
     // Check whether the entity already has a component with the given type ID.
-    // Mirrors ComponentEditor::EntityHasComponent but usable from free functions.
+    // Mirrors EntityInspector::EntityHasComponent but usable from free functions.
     // ---------------------------------------------------------------------------
     static bool HasComponentByID(const entt::registry& registry, const Entity& entity, entt::id_type tid)
     {
@@ -49,37 +40,12 @@ namespace Crowny
         factory->Reset();
     }
 
-    // ---------------------------------------------------------------------------
-    // Helper: add a component or script to an entity, eliminating the five
-    // duplicate AddScriptComponent call-sites that existed before.
-    // ---------------------------------------------------------------------------
-    static bool EntityHasScript(const Entity& entity, const ScriptTypeIdentity& identity);
+    static void RegisterSelectionChange(SelectionComponentChange change) { UndoRedo::Get().RegisterAction(change.Action); }
 
-    static void AddComponentToEntities(const Ref<Scene>& scene, const Vector<Entity>& entities, const entt::registry& registry,
-                                       ComponentEditor::ComponentTypeID tid, const ComponentEditor::ComponentInfo& ci, const String& scriptName = "")
+    static void AddComponentToEntities(const Vector<Entity>& entities, const EntityInspector::ComponentInfo& component)
     {
-        Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Add component" : "Add components");
-        for (Entity entity : entities)
-        {
-            if (!entity)
-                continue;
-            if (tid == entt::type_hash<ManagedScriptComponent>::value())
-            {
-                const ScriptTypeIdentity identity = scriptName.empty() ? ScriptTypeIdentity{} : ScriptTypeIdentity{ GAME_ASSEMBLY, "Sandbox", scriptName };
-                if (!identity.IsValid() || !EntityHasScript(entity, identity))
-                {
-                    ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(entity);
-                    scene->AddScriptComponent(entity, identity, identity.IsValid());
-                    actions->Add(CreateRef<ChangeScriptComponentAction>(entity, std::move(snapshot), "Add script"));
-                }
-            }
-            else if (!HasComponentByID(registry, entity, tid))
-            {
-                actions->Add(ci.create(entity));
-            }
-        }
-        if (!actions->Empty())
-            UndoRedo::Get().RegisterAction(actions);
+        if (component.addToSelection)
+            RegisterSelectionChange(component.addToSelection(entities));
     }
 
     // ---------------------------------------------------------------------------
@@ -87,45 +53,37 @@ namespace Crowny
     // ---------------------------------------------------------------------------
     static bool EntityHasScript(const Entity& entity, const ScriptTypeIdentity& identity)
     {
-        if (!entity.HasComponent<ManagedScriptComponent>())
-            return false;
-        const auto& scripts = entity.GetComponent<ManagedScriptComponent>().Scripts;
-        return std::find_if(scripts.begin(), scripts.end(), [&](const auto& script) { return script.GetTypeIdentity() == identity; }) != scripts.end();
+        Scene* scene = entity ? entity.GetScene() : nullptr;
+        return scene != nullptr && scene->HasScriptComponent(entity, identity);
     }
 
-    static bool IsValidScriptClassName(const String& value)
+    static String SelectionAddDetail(StringView defaultDetail, size_t presence, size_t selectionSize)
     {
-        if (value.empty())
-            return false;
+        if (presence == 0u || presence >= selectionSize)
+            return String(defaultDetail);
 
-        const auto isValidFirst = [](unsigned char c) { return std::isalpha(c) != 0 || c == '_'; };
-        const auto isValidRest = [](unsigned char c) { return std::isalnum(c) != 0 || c == '_'; };
-        return isValidFirst(static_cast<unsigned char>(value.front())) &&
-               std::all_of(value.begin() + 1, value.end(), [&](char c) { return isValidRest(static_cast<unsigned char>(c)); });
+        const size_t missing = selectionSize - presence;
+        return String(defaultDetail) + " | Add to " + std::to_string(missing) +
+               (missing == 1u ? " missing selected entity" : " missing selected entities");
     }
 
-    static void SynchronizeScriptCatalog(ComponentMenuModel& menu)
+    static void PushScriptTypeID(const ScriptTypeIdentity& identity)
     {
-        Application* application = Application::TryGet();
-        const ManagedScripting* managed = application != nullptr ? application->GetRuntime().GetManagedScripting() : nullptr;
-        const ScriptCatalog* catalog = managed != nullptr && managed->IsStarted() ? &managed->GetScriptCatalog() : nullptr;
-        const uint64_t fingerprint = catalog != nullptr ? catalog->ManifestHash : 1;
-        if (menu.HasScriptCatalog(fingerprint))
-            return;
-
-        Vector<ComponentMenuModel::ScriptEntry> scripts;
-        if (catalog != nullptr)
-        {
-            scripts.reserve(catalog->Types.size());
-            for (const ScriptTypeSchema& type : catalog->Types)
-                scripts.push_back({ type.Identity.TypeName, true, type.Identity });
-        }
-        menu.SetScripts(fingerprint, std::move(scripts));
+        ImGui::PushID(identity.Assembly.c_str());
+        ImGui::PushID(identity.Namespace.c_str());
+        ImGui::PushID(identity.TypeName.c_str());
     }
 
-    static const ComponentEditor::ComponentInfo* FindComponentInfo(
-      const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
-      ComponentEditor::ComponentTypeID typeId)
+    static void PopScriptTypeID()
+    {
+        ImGui::PopID();
+        ImGui::PopID();
+        ImGui::PopID();
+    }
+
+    static const EntityInspector::ComponentInfo* FindComponentInfo(
+      const Map<String, Map<EntityInspector::ComponentTypeID, EntityInspector::ComponentInfo>>& componentInfos,
+      EntityInspector::ComponentTypeID typeId)
     {
         for (const auto& group : componentInfos)
         {
@@ -380,6 +338,8 @@ namespace Crowny
         }
     }
 
+    // Unity-style compact header: one row holding the editable name (UUID and selection details in the tooltip),
+    // followed by the prefab summary when the entity is a prefab instance.
     static void RenderEntityHeader(Entity primary, const Vector<Entity>& entities, const Ref<ComponentUndoSnapshot<TagComponent>>& snapshots)
     {
         if (!primary || entities.empty())
@@ -388,47 +348,47 @@ namespace Crowny
             return;
         }
 
-        if (entities.size() == 1u)
-        {
-            ImGui::TextUnformatted(primary.GetName().c_str());
-            const UUID::TextBuffer uuid = primary.GetUuid().ToTextBuffer();
-            ImGui::TextDisabled("UUID %s", uuid.data());
-
-            if (primary.HasComponent<PrefabComponent>())
-                RenderPrefabInstanceHeader(primary);
-        }
-        else
-        {
-            ImGui::Text("%zu entities selected", entities.size());
-            ImGui::TextDisabled("Primary: %s", primary.GetName().c_str());
-        }
-
         UndoRedo& undoRedo = UndoRedo::Get();
         if (undoRedo.BeginComponentScope(snapshots))
             snapshots->Capture(entities);
 
         String name = primary.GetName();
+        const bool single = entities.size() == 1u;
         const bool mixed = std::any_of(entities.begin(), entities.end(), [&](Entity entity) { return entity.GetName() != name; });
         if (mixed)
         {
             name.clear();
             ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, true);
         }
-        UI::BeginPropertyGrid();
-        if (UI::Property("Name", name))
+        const String hint = single ? String("Name") : fmt::format("{} entities selected", entities.size());
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::InputTextWithHint("##EntityName", hint.c_str(), &name, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll) ||
+            (ImGui::IsItemDeactivatedAfterEdit() && !mixed && name != primary.GetName()))
         {
             for (Entity entity : entities)
                 entity.GetComponent<TagComponent>().Tag = name;
         }
-        UI::EndPropertyGrid();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && !ImGui::IsItemActive())
+        {
+            if (single)
+            {
+                const UUID::TextBuffer uuid = primary.GetUuid().ToTextBuffer();
+                ImGui::SetTooltip("UUID %s", uuid.data());
+            }
+            else
+                ImGui::SetTooltip("%zu entities selected. Primary: %s", entities.size(), primary.GetName().c_str());
+        }
         if (mixed)
             ImGui::PopItemFlag();
         snapshots->CompleteFrame();
         undoRedo.EndComponentScope();
+
+        if (single && primary.HasComponent<PrefabComponent>())
+            RenderPrefabInstanceHeader(primary);
     }
 
     static void RenderComponents(Entity primary, const Vector<Entity>& entities, const entt::registry& registry,
-                                 const Vector<Pair<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& orderedInfos)
+                                 const Vector<Pair<EntityInspector::ComponentTypeID, EntityInspector::ComponentInfo>>& orderedInfos)
     {
         const bool multiSelection = entities.size() > 1u;
         const bool isPrefabInstance = !multiSelection && primary.HasComponent<PrefabComponent>();
@@ -455,9 +415,9 @@ namespace Crowny
                 PrefabOverrideContext::s_ActivePrefabComponent = nullptr;
             }
 
-            if (!multiSelection && tid == entt::type_hash<ManagedScriptComponent>::value())
+            if (!multiSelection && ci.drawsOwnHeader)
             {
-                // ManagedScriptComponent draws its own collapsing headers (one per script).
+                // The widget draws its own collapsing headers (e.g. one per attached script).
                 ci.widget(primary, entities);
                 continue;
             }
@@ -528,31 +488,8 @@ namespace Crowny
         PrefabOverrideContext::s_ActiveComponentName.clear();
     }
 
-    static void CreateNewScript(const Ref<Scene>& scene, const Vector<Entity>& entities, const String& className)
-    {
-        if (s_DefaultScriptContents.empty())
-            s_DefaultScriptContents = EditorAssets::GetDefaultScriptTemplate();
-
-        String script = StringUtils::Replace(s_DefaultScriptContents, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
-        script = StringUtils::Replace(script, "#CLASSNAME#", className);
-        Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (className + ".cs"));
-        FileSystem::WriteTextFile(path, script);
-        ProjectLibrary::Get().Refresh(path);
-
-        // Regenerate VS solution so the new file appears in the IDE.
-        Path engineAssemblyPath = Application::TryGet()->GetApplicationDesc().EngineAssemblyPath;
-        if (engineAssemblyPath.is_relative())
-            engineAssemblyPath = Application::TryGet()->GetWorkingDirectory() / engineAssemblyPath;
-        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY, { CROWNY_ASSEMBLY, engineAssemblyPath });
-
-        // The script won't be usable until the assembly is rebuilt.
-        // The file watch will trigger auto-rebuild after the debounce.
-        for (Entity entity : entities)
-            scene->AddScriptComponent(entity, "Sandbox", className);
-    }
-
-    static void RenderSearchResults(const Ref<Scene>& scene, const Vector<Entity>& entities, const entt::registry& registry,
-                                    const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
+    static void RenderSearchResults(const Vector<Entity>& entities, const entt::registry& registry,
+                                    const Map<String, Map<EntityInspector::ComponentTypeID, EntityInspector::ComponentInfo>>& componentInfos,
                                     ComponentMenuModel& menu, const String& query)
     {
         const ComponentMenuModel::SearchResults& results = menu.Search(query);
@@ -575,18 +512,18 @@ namespace Crowny
                 for (size_t componentIndex : results.ComponentIndices)
                 {
                     const ComponentMenuModel::ComponentEntry& entry = components[componentIndex];
-                    const auto typeId = static_cast<ComponentEditor::ComponentTypeID>(entry.Id);
+                    const auto typeId = static_cast<EntityInspector::ComponentTypeID>(entry.Id);
                     ImGui::PushID(typeId);
                     const size_t presence =
                       std::count_if(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, typeId); });
                     const bool alreadyAdded = presence == entities.size();
-                    const StringView detail = presence == 0u ? StringView(entry.Detail) : StringView("Add to missing selected entities");
+                    const String detail = SelectionAddDetail(entry.Detail, presence, entities.size());
                     if (RenderComponentMenuItem(entry.Name, detail, alreadyAdded))
                     {
-                        const ComponentEditor::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
+                        const EntityInspector::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
                         if (info != nullptr)
                         {
-                            AddComponentToEntities(scene, entities, registry, typeId, *info);
+                            AddComponentToEntities(entities, *info);
                             ImGui::CloseCurrentPopup();
                         }
                     }
@@ -603,32 +540,23 @@ namespace Crowny
                 {
                     const ComponentMenuModel::ScriptEntry& scriptEntry = scripts[scriptIndex];
                     const String& scriptName = scriptEntry.Name;
-                    ImGui::PushID(scriptName.c_str());
-                    const bool alreadyAdded =
-                      std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, scriptEntry.Identity); });
-                    if (RenderComponentMenuItem(scriptName, "C# script", alreadyAdded))
+                    PushScriptTypeID(scriptEntry.Identity);
+                    const size_t presence =
+                      std::count_if(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, scriptEntry.Identity); });
+                    const bool alreadyAdded = presence == entities.size();
+                    const String detail = SelectionAddDetail(scriptEntry.Detail, presence, entities.size());
+                    if (RenderComponentMenuItem(scriptName, detail, alreadyAdded))
                     {
-                        ComponentEditor::ComponentInfo dummy;
-                        Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Add script" : "Add scripts");
-                        for (Entity entity : entities)
-                        {
-                            if (!entity || EntityHasScript(entity, scriptEntry.Identity))
-                                continue;
-                            ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(entity);
-                            scene->AddScriptComponent(entity, scriptEntry.Identity, true);
-                            actions->Add(CreateRef<ChangeScriptComponentAction>(entity, std::move(snapshot), "Add script"));
-                        }
-                        if (!actions->Empty())
-                            UndoRedo::Get().RegisterAction(actions);
+                        RegisterSelectionChange(AddManagedScriptToSelection(entities, scriptEntry.Identity));
                         ImGui::CloseCurrentPopup();
                     }
-                    ImGui::PopID();
+                    PopScriptTypeID();
                 }
                 ImGui::PopID();
             }
         }
 
-        if (IsValidScriptClassName(query) && !results.ScriptNameDeclared)
+        if (ScriptComponentInspector::IsValidScriptClassName(query) && !results.ScriptNameDeclared)
         {
             ImGui::Dummy(ImVec2(0.0f, 5.0f));
             ImGui::Separator();
@@ -638,14 +566,14 @@ namespace Crowny
             const bool createRequested = ImGui::Button(results.CreateScriptLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f));
             if (createRequested || (matchCount == 0 && Input::IsKeyPressed(Key::Enter)))
             {
-                CreateNewScript(scene, entities, query);
-                ImGui::CloseCurrentPopup();
+                if (ScriptComponentInspector::CreateNewScript(entities, query))
+                    ImGui::CloseCurrentPopup();
             }
         }
     }
 
-    static void RenderCategoryBrowser(const Ref<Scene>& scene, const Vector<Entity>& entities, const entt::registry& registry,
-                                      const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
+    static void RenderCategoryBrowser(const Vector<Entity>& entities, const entt::registry& registry,
+                                      const Map<String, Map<EntityInspector::ComponentTypeID, EntityInspector::ComponentInfo>>& componentInfos,
                                       ComponentMenuModel& menu)
     {
         const Vector<ComponentMenuModel::ComponentEntry>& components = menu.GetComponents();
@@ -661,16 +589,18 @@ namespace Crowny
                 RenderMenuSectionLabel(currentGroup);
             }
 
-            const auto typeId = static_cast<ComponentEditor::ComponentTypeID>(entry.Id);
+            const auto typeId = static_cast<EntityInspector::ComponentTypeID>(entry.Id);
             ImGui::PushID(typeId);
-            const bool alreadyAdded =
-              std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, typeId); });
-            if (RenderComponentMenuItem(entry.Name, "Built-in component", alreadyAdded))
+            const size_t presence =
+              std::count_if(entities.begin(), entities.end(), [&](Entity entity) { return HasComponentByID(registry, entity, typeId); });
+            const bool alreadyAdded = presence == entities.size();
+            const String detail = SelectionAddDetail("Built-in component", presence, entities.size());
+            if (RenderComponentMenuItem(entry.Name, detail, alreadyAdded))
             {
-                const ComponentEditor::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
+                const EntityInspector::ComponentInfo* info = FindComponentInfo(componentInfos, typeId);
                 if (info != nullptr)
                 {
-                    AddComponentToEntities(scene, entities, registry, typeId, *info);
+                    AddComponentToEntities(entities, *info);
                     ImGui::CloseCurrentPopup();
                 }
             }
@@ -690,33 +620,24 @@ namespace Crowny
                 if (!script.Visible)
                     continue;
                 const String& scriptName = script.Name;
-                ImGui::PushID(scriptName.c_str());
-                const bool alreadyAdded =
-                  std::all_of(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, script.Identity); });
-                if (RenderComponentMenuItem(scriptName, "C# script", alreadyAdded))
+                PushScriptTypeID(script.Identity);
+                const size_t presence =
+                  std::count_if(entities.begin(), entities.end(), [&](Entity entity) { return EntityHasScript(entity, script.Identity); });
+                const bool alreadyAdded = presence == entities.size();
+                const String detail = SelectionAddDetail(script.Detail, presence, entities.size());
+                if (RenderComponentMenuItem(scriptName, detail, alreadyAdded))
                 {
-                    ComponentEditor::ComponentInfo dummy;
-                    Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(entities.size() == 1u ? "Add script" : "Add scripts");
-                    for (Entity entity : entities)
-                    {
-                        if (!entity || EntityHasScript(entity, script.Identity))
-                            continue;
-                        ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(entity);
-                        scene->AddScriptComponent(entity, script.Identity, true);
-                        actions->Add(CreateRef<ChangeScriptComponentAction>(entity, std::move(snapshot), "Add script"));
-                    }
-                    if (!actions->Empty())
-                        UndoRedo::Get().RegisterAction(actions);
+                    RegisterSelectionChange(AddManagedScriptToSelection(entities, script.Identity));
                     ImGui::CloseCurrentPopup();
                 }
-                ImGui::PopID();
+                PopScriptTypeID();
             }
             ImGui::PopID();
         }
     }
 
-    static void RenderAddComponentPopup(const Ref<Scene>& scene, Entity primary, const Vector<Entity>& entities, const entt::registry& registry,
-                                        const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos,
+    static void RenderAddComponentPopup(Entity primary, const Vector<Entity>& entities, const entt::registry& registry,
+                                        const Map<String, Map<EntityInspector::ComponentTypeID, EntityInspector::ComponentInfo>>& componentInfos,
                                         ComponentMenuModel& menu, String& query, bool& grabSearchFocus)
     {
         ImGui::SetNextWindowSize(ImVec2(370.0f, 460.0f), ImGuiCond_Appearing);
@@ -735,7 +656,7 @@ namespace Crowny
             grabSearchFocus = true;
         }
 
-        SynchronizeScriptCatalog(menu);
+        ScriptComponentInspector::SynchronizeScriptCatalog(menu);
 
         ImGui::TextUnformatted("Add component");
         if (entities.size() == 1u)
@@ -748,16 +669,16 @@ namespace Crowny
 
         ImGui::BeginChild("##AddComponentResults", ImVec2(0.0f, 0.0f), false);
         if (!query.empty())
-            RenderSearchResults(scene, entities, registry, componentInfos, menu, query);
+            RenderSearchResults(entities, registry, componentInfos, menu, query);
         else
-            RenderCategoryBrowser(scene, entities, registry, componentInfos, menu);
+            RenderCategoryBrowser(entities, registry, componentInfos, menu);
         ImGui::EndChild();
 
         ImGui::EndPopup();
         ImGui::PopStyleVar(2);
     }
 
-    void ComponentEditor::ResetUndoTransactions(bool finishInteraction)
+    void EntityInspector::ResetUndoTransactions(bool finishInteraction)
     {
         ResetUndoFactory(m_TagSnapshots, finishInteraction);
         for (auto& entry : m_OrderedComponentInfos)
@@ -766,7 +687,7 @@ namespace Crowny
         m_UndoScene = nullptr;
     }
 
-    void ComponentEditor::Render(Entity primary, const Vector<Entity>& selectedEntities)
+    void EntityInspector::Render(Entity primary, const Vector<Entity>& selectedEntities)
     {
         Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
         if (!scene || !primary || primary.GetScene() != scene.get())
@@ -780,7 +701,8 @@ namespace Crowny
         m_SelectionScratch.reserve(selectedEntities.size() + 1u);
         for (Entity entity : selectedEntities)
         {
-            if (entity && entity.GetScene() == scene.get())
+            if (entity && entity.GetScene() == scene.get() &&
+                std::find(m_SelectionScratch.begin(), m_SelectionScratch.end(), entity) == m_SelectionScratch.end())
                 m_SelectionScratch.push_back(entity);
         }
         if (m_SelectionScratch.empty())
@@ -805,7 +727,6 @@ namespace Crowny
         const entt::registry& registry = scene->m_Registry;
 
         ImGui::PushID(primary);
-        ImGui::Separator();
         RenderEntityHeader(primary, m_SelectionScratch, m_TagSnapshots);
         ImGui::Separator();
 
@@ -814,7 +735,7 @@ namespace Crowny
         if (ImGui::Button("+  Add component", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f)))
             ImGui::OpenPopup("Add Component");
 
-        RenderAddComponentPopup(scene, primary, m_SelectionScratch, registry, m_ComponentInfos, m_ComponentMenu, m_ComponentSearch,
+        RenderAddComponentPopup(primary, m_SelectionScratch, registry, m_ComponentInfos, m_ComponentMenu, m_ComponentSearch,
                                 m_GrabComponentSearchFocus);
         ImGui::PopID();
     }
