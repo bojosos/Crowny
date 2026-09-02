@@ -117,6 +117,7 @@ namespace Crowny
         void SetPosition(const glm::vec3& position);
         void SetRotation(const glm::quat& rotation);
         void SetScale(const glm::vec3& scale);
+        void SetLocalTransform(const Transform& transform, bool updatePhysics = true);
 
         void SetWorldPosition(const glm::vec3& position);
         void SetWorldRotation(const glm::quat& rotation);

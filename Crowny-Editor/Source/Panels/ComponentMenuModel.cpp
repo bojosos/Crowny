@@ -62,6 +62,12 @@ namespace Crowny
         return m_Components;
     }
 
+    const Vector<ComponentMenuModel::CategoryEntry>& ComponentMenuModel::GetCategories()
+    {
+        SortComponents();
+        return m_Categories;
+    }
+
     const ComponentMenuModel::SearchResults& ComponentMenuModel::Search(StringView query)
     {
         SortComponents();
@@ -125,6 +131,16 @@ namespace Crowny
                 return left.Name < right.Name;
             return left.Id < right.Id;
         });
+
+        m_Categories.clear();
+        for (size_t componentIndex = 0; componentIndex < m_Components.size(); componentIndex++)
+        {
+            const ComponentEntry& component = m_Components[componentIndex];
+            if (m_Categories.empty() || m_Categories.back().Name != component.Group)
+                m_Categories.push_back({ component.Group, componentIndex, 1u });
+            else
+                ++m_Categories.back().ComponentCount;
+        }
         m_ComponentsSorted = true;
     }
 } // namespace Crowny

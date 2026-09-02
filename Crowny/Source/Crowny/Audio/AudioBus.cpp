@@ -14,10 +14,9 @@ namespace Crowny
         if (m_Parent != nullptr)
             m_Parent->m_Children.push_back(this);
 
-        if (AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
+        if (const EFX* efx = AudioManager::TryGetEFX())
         {
-            const EFX& efx = AudioManager::TryGet()->GetEFX();
-            efx.GenAuxiliaryEffectSlots(1, &m_AuxSlot);
+            efx->GenAuxiliaryEffectSlots(1, &m_AuxSlot);
             if (alGetError() != AL_NO_ERROR)
             {
                 CW_ENGINE_WARN("Failed to allocate aux effect slot for bus '{0}'.", name);
@@ -34,11 +33,11 @@ namespace Crowny
             auto& siblings = m_Parent->m_Children;
             siblings.erase(std::remove(siblings.begin(), siblings.end(), this), siblings.end());
         }
-        if (m_AuxSlot != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
+        if (const EFX* efx = AudioManager::TryGetEFX(); m_AuxSlot != 0 && efx != nullptr)
         {
             // Detach the effect from the slot so OpenAL releases its reference.
-            AudioManager::TryGet()->GetEFX().AuxiliaryEffectSloti(m_AuxSlot, AL_EFFECTSLOT_EFFECT, AL_EFFECT_NULL);
-            AudioManager::TryGet()->GetEFX().DeleteAuxiliaryEffectSlots(1, &m_AuxSlot);
+            efx->AuxiliaryEffectSloti(m_AuxSlot, AL_EFFECTSLOT_EFFECT, AL_EFFECT_NULL);
+            efx->DeleteAuxiliaryEffectSlots(1, &m_AuxSlot);
             m_AuxSlot = 0;
         }
     }
@@ -116,16 +115,16 @@ namespace Crowny
 
     void AudioBus::RebindAuxSlot()
     {
-        if (m_AuxSlot == 0 || AudioManager::TryGet() == nullptr || !AudioManager::TryGet()->IsEFXAvailable())
+        const EFX* efx = AudioManager::TryGetEFX();
+        if (m_AuxSlot == 0 || efx == nullptr)
             return;
-        const EFX& efx = AudioManager::TryGet()->GetEFX();
         ALuint effectId = AL_EFFECT_NULL;
         if (!m_Effects.empty() && m_Effects[0]->IsValid())
         {
             m_Effects[0]->Apply();
             effectId = m_Effects[0]->GetEffectId();
         }
-        efx.AuxiliaryEffectSloti(m_AuxSlot, AL_EFFECTSLOT_EFFECT, static_cast<ALint>(effectId));
+        efx->AuxiliaryEffectSloti(m_AuxSlot, AL_EFFECTSLOT_EFFECT, static_cast<ALint>(effectId));
     }
 
     float AudioBus::ComputeChainGain() const

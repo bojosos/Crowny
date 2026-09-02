@@ -2,8 +2,6 @@
 
 #include "Panels/ScriptInspectorPath.h"
 
-#include <catch2/catch.hpp>
-
 #include <fstream>
 
 using namespace Crowny;

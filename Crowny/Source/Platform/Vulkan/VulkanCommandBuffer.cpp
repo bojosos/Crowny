@@ -452,6 +452,14 @@ namespace Crowny
     {
         const Ref<BufferLayout> pipelineLayout = m_GraphicsPipeline->GetBufferLayout();
         const Ref<VulkanBufferLayout> currentLayout = VulkanBufferLayoutManager::Get().GetBufferLayout(m_VertexLayout, pipelineLayout);
+        if (m_ResolvedVertexLayout != currentLayout)
+        {
+            m_ResolvedVertexLayout = currentLayout;
+            m_VertexInputsRequiresBind = true;
+        }
+        if (currentLayout == nullptr)
+            return false;
+
         VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
         VulkanPipeline* pipeline = m_GraphicsPipeline->GetPipeline(renderPass, m_RenderTargetReadOnlyFlags, m_DrawMode, currentLayout);
         if (pipeline == nullptr)
@@ -478,6 +486,25 @@ namespace Crowny
         vkCmdBindPipeline(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetHandle());
         BindDynamicStates(true);
         m_GraphicsPipelineRequiresBind = false;
+        return true;
+    }
+
+    bool VulkanCmdBuffer::BindGraphicsPipelineAndVertexInputs()
+    {
+        if (m_GraphicsPipelineRequiresBind)
+        {
+            if (!BindGraphicsPipeline())
+                return false;
+        }
+        else
+            BindDynamicStates(false);
+
+        if (m_VertexInputsRequiresBind)
+        {
+            BindVertexInputs();
+            m_VertexInputsRequiresBind = false;
+        }
+
         return true;
     }
 
@@ -1264,6 +1291,19 @@ namespace Crowny
             }
         }
 
+        if (m_ResolvedVertexLayout != nullptr && m_ResolvedVertexLayout->GetFallbackColorBinding() != UINT32_MAX)
+        {
+            const Ref<VulkanVertexBuffer>& fallback = VulkanBufferLayoutManager::Get().GetFallbackColorBuffer();
+            if (fallback != nullptr)
+            {
+                const VkBuffer handle = fallback->GetHandle();
+                const VkDeviceSize offset = 0;
+                const uint32_t binding = m_ResolvedVertexLayout->GetFallbackColorBinding();
+                RegisterBuffer(fallback->GetBuffer(), BufferUseFlagBits::Vertex, VulkanAccessFlagBits::Read);
+                vkCmdBindVertexBuffers(m_CmdBuffer, binding, 1, &handle, &offset);
+            }
+        }
+
         if (m_IndexBuffer != nullptr)
         {
             VkBuffer vkBuffer = m_IndexBuffer->GetHandle();
@@ -1879,6 +1919,7 @@ namespace Crowny
 
         m_GraphicsPipeline = nullptr;
         m_ComputePipeline = nullptr;
+        m_ResolvedVertexLayout = nullptr;
         m_GraphicsPipelineRequiresBind = true;
         m_ComputePipelineRequiresBind = true;
         m_Framebuffer = nullptr;
@@ -2091,19 +2132,8 @@ namespace Crowny
         if (!IsInRenderPass())
             BeginRenderPass();
 
-        if (m_VertexInputsRequiresBind)
-        {
-            BindVertexInputs();
-            m_VertexInputsRequiresBind = false;
-        }
-
-        if (m_GraphicsPipelineRequiresBind)
-        {
-            if (!BindGraphicsPipeline())
-                return;
-        }
-        else
-            BindDynamicStates(false);
+        if (!BindGraphicsPipelineAndVertexInputs())
+            return;
 
         if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Graphics))
         {
@@ -2129,19 +2159,8 @@ namespace Crowny
         if (!IsInRenderPass())
             BeginRenderPass();
 
-        if (m_VertexInputsRequiresBind)
-        {
-            BindVertexInputs();
-            m_VertexInputsRequiresBind = false;
-        }
-
-        if (m_GraphicsPipelineRequiresBind)
-        {
-            if (!BindGraphicsPipeline())
-                return;
-        }
-        else
-            BindDynamicStates(false);
+        if (!BindGraphicsPipelineAndVertexInputs())
+            return;
 
         if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Graphics))
         {
@@ -2169,18 +2188,8 @@ namespace Crowny
         if (!IsInRenderPass())
             BeginRenderPass();
 
-        if (m_VertexInputsRequiresBind)
-        {
-            BindVertexInputs();
-            m_VertexInputsRequiresBind = false;
-        }
-        if (m_GraphicsPipelineRequiresBind)
-        {
-            if (!BindGraphicsPipeline())
-                return;
-        }
-        else
-            BindDynamicStates(false);
+        if (!BindGraphicsPipelineAndVertexInputs())
+            return;
 
         if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Graphics))
         {
@@ -2215,18 +2224,8 @@ namespace Crowny
         if (!IsInRenderPass())
             BeginRenderPass();
 
-        if (m_VertexInputsRequiresBind)
-        {
-            BindVertexInputs();
-            m_VertexInputsRequiresBind = false;
-        }
-        if (m_GraphicsPipelineRequiresBind)
-        {
-            if (!BindGraphicsPipeline())
-                return;
-        }
-        else
-            BindDynamicStates(false);
+        if (!BindGraphicsPipelineAndVertexInputs())
+            return;
 
         if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Graphics))
         {

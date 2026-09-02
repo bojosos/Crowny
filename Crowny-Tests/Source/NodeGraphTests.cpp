@@ -2,6 +2,7 @@
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/NodeGraph/BuiltinNodeTypes.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
 #include "Crowny/NodeGraph/NodeRegistry.h"
@@ -142,6 +143,49 @@ TEST_CASE("Geometry evaluation cache follows semantic changes", "[NodeGraph]")
     const Ref<MeshData> changed = graph->EvaluateGeometry();
     REQUIRE(changed);
     CHECK(changed.get() != first.get());
+}
+
+TEST_CASE("Parameterized node graph evaluation reuses scratch after warm-up", "[NodeGraph][Memory][Frame]")
+{
+    RegisterNodesOnce();
+    auto graph = CreateRef<NodeGraph>();
+    auto input = CreateRef<GraphInputNode>(UuidGenerator::Generate());
+    auto output = CreateRef<GeometryOutputNode>(UuidGenerator::Generate());
+    const Ref<MeshData> mesh = CreateRef<MeshData>();
+    const Ref<MeshData> alternateMesh = CreateRef<MeshData>();
+    const UUID inputId = graph->AddInput("Geometry", PinDataType::MeshData, mesh);
+    REQUIRE_FALSE(inputId.Empty());
+    input->SetInputID(inputId);
+    REQUIRE(graph->AddNode(input));
+    REQUIRE(graph->AddNode(output));
+    REQUIRE(graph->ConnectByPinID(input->FindOutputPin("Value")->GetID(), output->FindInputPin("Geometry")->GetID()));
+
+    UnorderedMap<UUID, PinValue> inputValues;
+    inputValues.emplace(inputId, mesh);
+    REQUIRE(graph->EvaluateGeometry(inputValues).get() == mesh.get());
+    inputValues[inputId] = alternateMesh;
+    REQUIRE(graph->EvaluateGeometry(inputValues).get() == alternateMesh.get());
+
+    for (const uint32_t evaluationCount : { 1u, 1000u, 10000u })
+    {
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        const MeshData* result = nullptr;
+        bool allResultsMatched = true;
+        for (uint32_t evaluation = 0; evaluation < evaluationCount; evaluation++)
+        {
+            const Ref<MeshData>& expected = (evaluation & 1u) == 0u ? mesh : alternateMesh;
+            inputValues[inputId] = expected;
+            result = graph->EvaluateGeometry(inputValues).get();
+            allResultsMatched = allResultsMatched && result == expected.get();
+        }
+        const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+
+        INFO("Evaluation count: " << evaluationCount);
+        CHECK(result != nullptr);
+        CHECK(allResultsMatched);
+        CHECK(delta.AllocationCount == 0u);
+        CHECK(delta.RequestedBytes == 0u);
+    }
 }
 
 TEST_CASE("Missing node types survive node graph round trips", "[NodeGraph]")

@@ -1,6 +1,5 @@
 #include "cwpch.h"
 
-#include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
@@ -8,6 +7,7 @@
 #include "Crowny/Scene/SceneManager.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace Crowny
 {
@@ -204,7 +204,6 @@ namespace Crowny
             return false;
         }
         m_ContactCallback = std::move(callback);
-        m_TimestepAccumulator = 0.0f;
         m_Simulating = m_Backend->Initialize(m_Settings, m_ContactCallback);
         return m_Simulating;
     }
@@ -215,29 +214,16 @@ namespace Crowny
             return;
         m_Backend->Shutdown();
         m_Simulating = false;
-        m_TimestepAccumulator = 0.0f;
     }
 
     void Physics3D::Step(Timestep timestep)
     {
         if (!m_Simulating)
             return;
-        float fixedTimestep = 1.0f / 60.0f;
-        float maxTimestep = 1.0f / 3.0f;
-        if (Application::IsStartedUp() && Application::TryGet() != nullptr)
-        {
-            fixedTimestep = Application::TryGet()->GetTimeSettings()->FixedTimestep;
-            maxTimestep = Application::TryGet()->GetTimeSettings()->MaxTimestep;
-        }
-        if (fixedTimestep <= 0.0f)
+        const float fixedTimestep = timestep.GetSeconds();
+        if (!std::isfinite(fixedTimestep) || fixedTimestep <= 0.0f)
             return;
-        maxTimestep = std::max(maxTimestep, fixedTimestep);
-        m_TimestepAccumulator += std::min(static_cast<float>(timestep), maxTimestep);
-        while (m_TimestepAccumulator >= fixedTimestep)
-        {
-            m_Backend->Step(fixedTimestep, std::max(m_Settings.Substeps, 1u));
-            m_TimestepAccumulator -= fixedTimestep;
-        }
+        m_Backend->Step(fixedTimestep, std::max(m_Settings.Substeps, 1u));
     }
 
     void Physics3D::SetSettings(const Physics3DSettings& settings)

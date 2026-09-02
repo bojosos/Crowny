@@ -672,3 +672,57 @@ TEST_CASE("Bulk hierarchy destroy rebuilds one parent vector linearly", "[Ecs][H
     }
     CHECK(orderAndIndicesCorrect);
 }
+
+TEST_CASE("Transform mutation scopes merge overlapping hierarchy ranges", "[Ecs][Hierarchy][Transform][Performance]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity parent = scene->CreateEntity("Parent");
+    Entity child = scene->CreateEntity("Child");
+    Entity grandChild = scene->CreateEntity("Grand child");
+    Entity sibling = scene->CreateEntity("Sibling");
+    REQUIRE(child.SetParent(parent));
+    REQUIRE(grandChild.SetParent(child));
+    REQUIRE(sibling.SetParent(parent));
+
+    grandChild.GetWorldMatrix();
+    sibling.GetWorldMatrix();
+    {
+        auto scope = scene->DeferTransformChanges();
+        parent.SetLocalTransform(Transform({ 2.0f, 0.0f, 0.0f }, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), { 1.0f, 1.0f, 1.0f }), false);
+        child.NotifyTransformChanged(true);
+    }
+
+    const TransformPropagationStats& stats = scene->GetLastTransformPropagationStats();
+    CHECK(stats.QueueRequestCount == 2u);
+    CHECK(stats.UniqueRootCount == 2u);
+    CHECK(stats.MergedRangeCount == 1u);
+    CHECK(stats.FlushPassCount == 1u);
+    CHECK(stats.VisitedEntityCount == 4u);
+    CHECK(stats.PhysicsEnabledEntityVisitCount == 2u);
+    CHECK_FALSE(parent.GetTransform().IsCachedWorldTransformValid());
+    CHECK_FALSE(child.GetTransform().IsCachedWorldTransformValid());
+    CHECK_FALSE(grandChild.GetTransform().IsCachedWorldTransformValid());
+    CHECK_FALSE(sibling.GetTransform().IsCachedWorldTransformValid());
+    CHECK(grandChild.GetWorldPosition() == glm::vec3(2.0f, 0.0f, 0.0f));
+}
+
+TEST_CASE("Deep hierarchy transform propagation and resolution are iterative", "[Ecs][Hierarchy][Transform][Performance]")
+{
+    constexpr uint32_t depth = 10000u;
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity root = scene->CreateEntity("Root");
+    Entity deepest = root;
+    bool allParented = true;
+    for (uint32_t index = 1u; index < depth; index++)
+    {
+        Entity child = scene->CreateEntity("Child");
+        allParented = child.SetParent(deepest) && allParented;
+        deepest = child;
+    }
+    REQUIRE(allParented);
+
+    root.SetPosition({ 3.0f, 4.0f, 5.0f });
+    const TransformPropagationStats& stats = scene->GetLastTransformPropagationStats();
+    CHECK(stats.VisitedEntityCount == depth);
+    CHECK(deepest.GetWorldPosition() == glm::vec3(3.0f, 4.0f, 5.0f));
+}

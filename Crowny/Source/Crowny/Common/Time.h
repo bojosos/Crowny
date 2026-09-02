@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 
 namespace Crowny
 {
@@ -33,6 +34,21 @@ namespace Crowny
 
     class Time
     {
+        class CallbackScope
+        {
+        public:
+            CallbackScope(Time& time, float deltaTime);
+            ~CallbackScope();
+
+            CallbackScope(const CallbackScope&) = delete;
+            CallbackScope& operator=(const CallbackScope&) = delete;
+
+        private:
+            Time& m_Time;
+            float m_PreviousDeltaTime = 0.0f;
+            uint32_t m_PreviousDepth = 0;
+        };
+
     public:
         class CallbackScope
         {
@@ -52,6 +68,21 @@ namespace Crowny
         void BeginFrame(Timestep unscaledDeltaTime);
         SimulationFrame AdvanceSimulation(const TimeSettings& settings);
         void ResetSimulation();
+
+        // Runs zero or more fixed ticks, one variable update, and one render-preparation callback in that order.
+        // GetDeltaTime reports FixedDelta while a fixed callback is executing.
+        template <typename FixedUpdate, typename Update, typename PrepareRender>
+        void ExecuteSimulationFrame(const SimulationFrame& frame, FixedUpdate&& fixedUpdate, Update&& update,
+                                    PrepareRender&& prepareRender)
+        {
+            for (uint32_t step = 0; step < frame.FixedStepCount; ++step)
+            {
+                CallbackScope callbackScope(*this, frame.FixedDelta.GetSeconds());
+                std::invoke(fixedUpdate, frame.FixedDelta);
+            }
+            std::invoke(update, frame.FrameDelta);
+            std::invoke(prepareRender, frame.InterpolationAlpha, Timestep(frame.FixedRemainder));
+        }
 
         float GetTime() const { return static_cast<float>(m_Time); }
         float GetDeltaTime() const { return m_CallbackDeltaDepth > 0 ? m_CallbackDeltaTime : m_DeltaTime; }

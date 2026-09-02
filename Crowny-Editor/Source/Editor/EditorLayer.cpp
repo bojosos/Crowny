@@ -395,7 +395,6 @@ namespace Crowny
         EditorAssets::Unload();
         if (Editor::Get().IsProjectLoaded())
         {
-            AddRecentEntry(Editor::Get().GetProjectPath());
             SaveProjectSettings();
             const Ref<Scene>& activeScene = SceneManager::TryGet()->GetActiveScene();
             if (activeScene && !activeScene->GetFilepath().empty())
@@ -597,8 +596,17 @@ namespace Crowny
         case SceneState::Simulate: {
             s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width, (float)m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
-            SceneManager::TryGet()->GetActiveScene()->OnSimulationUpdate(ts);
-            m_SceneRenderer->UpdateAnimations(ts);
+            Application* application = Application::TryGet();
+            Time& time = application->GetTime();
+            const SimulationFrame frame = time.AdvanceSimulation(*application->GetTimeSettings());
+            const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
+            scene->SynchronizePhysicsTransforms(1.0f, Timestep(0.0f));
+            time.ExecuteSimulationFrame(
+              frame, [&](Timestep fixedDelta) { scene->OnSimulationFixedUpdate(fixedDelta); },
+              [&](Timestep frameDelta) { m_SceneRenderer->UpdateAnimations(frameDelta); },
+              [&](float interpolationAlpha, Timestep extrapolationTime) {
+                  scene->SynchronizePhysicsTransforms(interpolationAlpha, extrapolationTime);
+              });
             m_SceneRenderer->UpdateProceduralMeshes();
             RenderSnapshot& snapshot = AcquireSnapshot();
             m_SceneRenderer->ExtractSnapshot(snapshot, s_EditorCamera, s_EditorCamera.GetViewMatrix(), m_ShowGrid);

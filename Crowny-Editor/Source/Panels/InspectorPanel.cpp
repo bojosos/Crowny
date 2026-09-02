@@ -282,7 +282,11 @@ namespace Crowny
         m_EntityInspector.RegisterComponent<ManagedScriptComponent>("C# Script");
     }
 
-    InspectorPanel::~InspectorPanel() { FlushPendingAssetSaves(); }
+    InspectorPanel::~InspectorPanel()
+    {
+        ResetPhysicsMaterialUndoTransaction(true);
+        FlushPendingAssetSaves();
+    }
 
     void InspectorPanel::HandleInspectorDragDrop(const Vector<Entity>& selectedEntities)
     {
@@ -364,6 +368,7 @@ namespace Crowny
 
     void InspectorPanel::Render()
     {
+        SaveReadyAssets();
         if (!BeginPanel())
         {
             EndPanel();
@@ -436,6 +441,8 @@ namespace Crowny
             ImGui::TextDisabled("Select an entity or asset to inspect it.");
             break;
         }
+
+        SaveReadyAssets();
 
         ImGui::EndChild();
         if (m_InspectorMode == InspectorMode::GameObject && m_InspectedEntity)
@@ -556,7 +563,6 @@ namespace Crowny
         }
 
         UI::EndPropertyGrid();
-        SaveReadyAssets();
     }
 
     namespace
@@ -868,11 +874,15 @@ namespace Crowny
         AssetHandle<Asset> asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
         if (!asset)
         {
+            ResetPhysicsMaterialUndoTransaction(false);
             ImGui::TextDisabled("The physics material could not be loaded.");
             return;
         }
 
         const Ref<Asset> inspectedAsset = asset.GetInternalPtr();
+        UndoRedo& undoRedo = UndoRedo::Get();
+        if (undoRedo.BeginComponentScope(m_PhysicsMaterialUndo))
+            m_PhysicsMaterialUndo->Capture(m_InspectedAssetPath, inspectedAsset, m_AssetSaveTracker);
         const auto applyEdit = [this, &inspectedAsset](bool changed, auto&& apply) {
             if (changed)
                 apply();
@@ -908,7 +918,7 @@ namespace Crowny
         else
             ImGui::TextDisabled("The selected asset is not a physics material.");
 
-        SaveReadyAssets();
+        undoRedo.EndComponentScope();
     }
 
     void InspectorPanel::ObserveAssetEdit(const Ref<Asset>& asset, bool changed)
@@ -922,17 +932,29 @@ namespace Crowny
         if (library == nullptr)
             return;
 
-        while (const std::optional<AssetSaveRequest> request = m_AssetSaveTracker.TakeReady())
+        while (const std::optional<AssetSaveRequest> request = m_AssetSaveTracker->TakeReady())
         {
             const bool saved = library->SaveEntry(request->Value, request->Filepath);
-            m_AssetSaveTracker.Resolve(request->Filepath, saved);
+            m_AssetSaveTracker->Resolve(request->Filepath, saved);
         }
     }
 
     void InspectorPanel::FlushPendingAssetSaves()
     {
-        m_AssetSaveTracker.Flush();
+        m_AssetSaveTracker->Flush();
         SaveReadyAssets();
+    }
+
+    void InspectorPanel::ResetPhysicsMaterialUndoTransaction(bool finishInteraction)
+    {
+        if (UndoRedo* undoRedo = UndoRedo::TryGet())
+        {
+            if (finishInteraction)
+                undoRedo->FinishComponentScope(m_PhysicsMaterialUndo);
+            else
+                undoRedo->CancelComponentScope(m_PhysicsMaterialUndo);
+        }
+        m_PhysicsMaterialUndo->Reset();
     }
 
     void InspectorPanel::RenderAudioClipImportInspector()
@@ -1494,6 +1516,8 @@ namespace Crowny
         const bool selectionChanged = m_InspectedAssetPath != filepath;
         if (selectionChanged)
         {
+            ResetPhysicsMaterialUndoTransaction(true);
+            m_ComponentEditor.ResetUndoTransactions(true);
             FlushPendingAssetSaves();
             m_MaterialSchemaCache.Reset();
         }
@@ -1503,6 +1527,9 @@ namespace Crowny
             if (m_InspectorMode != InspectorMode::Default)
             {
                 if (!selectionChanged)
+                {
+                    ResetPhysicsMaterialUndoTransaction(true);
+                    m_ComponentEditor.ResetUndoTransactions(true);
                     FlushPendingAssetSaves();
                 m_EntityInspector.ResetUndoTransactions(true);
                 m_MaterialSchemaCache.Reset();
@@ -1592,7 +1619,10 @@ namespace Crowny
         const bool sameScene = m_InspectedEntity && primary && m_InspectedEntity.GetScene() == primary.GetScene();
         const bool sameSelection = m_InspectedEntity == primary && m_InspectedEntities == entities;
         if (m_InspectorMode != InspectorMode::GameObject || !sameSelection)
+        {
+            ResetPhysicsMaterialUndoTransaction(true);
             FlushPendingAssetSaves();
+        }
         if (!sameSelection)
             m_EntityInspector.ResetUndoTransactions(sameScene);
         m_MaterialSchemaCache.Reset();
@@ -1606,6 +1636,7 @@ namespace Crowny
     {
         if (m_InspectorMode != mode)
         {
+            ResetPhysicsMaterialUndoTransaction(true);
             FlushPendingAssetSaves();
             m_EntityInspector.ResetUndoTransactions(true);
             m_MaterialSchemaCache.Reset();

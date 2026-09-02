@@ -71,7 +71,6 @@ namespace Crowny
 
         void RenderOverlay();
         bool SynchronizeActiveSceneAsset(const Ref<Scene>& scene);
-        void AddRecentEntry(const Path& path);
         void SetProjectSettings();
         void SaveProjectSettings();
         void ApplyEditorSettings();

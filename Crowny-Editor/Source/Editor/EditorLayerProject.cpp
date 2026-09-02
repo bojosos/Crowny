@@ -43,6 +43,7 @@
 #include "Editor/ColliderOverlay.h"
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
+#include "Editor/Settings/EditorSettingsPersistence.h"
 #include "Editor/EditorScenePersistence.h"
 #include "Editor/ProjectLibrary.h"
 #include "Serialization/ProjectSettingsSerializer.h"
@@ -383,8 +384,8 @@ namespace Crowny
         m_ConsolePanel->SetCollapseEnabled(editorSettings->CollapseConsole);
         m_ConsolePanel->SetScrollToBottomEnabled(editorSettings->ScrollToBottom);
 
-        if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
-            m_PendingProjectPath = editorSettings->LastOpenProject;
+        if (m_AutoLoadLastProject)
+            m_PendingProjectPath = SelectStartupProject(*editorSettings, [](const Path& path) { return fs::is_directory(path); });
     }
 
     void EditorLayer::FinishDeferredStartup()
@@ -1022,23 +1023,6 @@ namespace Crowny
     }
 
     void EditorLayer::AddRecentScene(const UUID& sceneId) { ProjectSettingsSerializer::AddRecentScene(*Editor::Get().GetProjectSettings(), sceneId); }
-
-    void EditorLayer::AddRecentEntry(const Path& path)
-    {
-        // TODO: Don't write code like this...
-        Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
-        uint32_t recentIdx = settings->RecentProjects.size() > 0 ? (uint32_t)(settings->RecentProjects.size() - 1) : 0;
-        for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
-        {
-            if (settings->RecentProjects[i].ProjectPath == Editor::Get().GetProjectPath())
-                recentIdx = i;
-        }
-        for (uint32_t i = recentIdx; i >= 1; i--)
-            settings->RecentProjects[i] = settings->RecentProjects[i - 1];
-
-        settings->RecentProjects[0].Timestamp = std::time(nullptr);
-        settings->RecentProjects[0].ProjectPath = path;
-    }
 
     void EditorLayer::ExecuteProjectAssetRefresh()
     {

@@ -26,15 +26,18 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
+. (Join-Path $repositoryRoot "Scripts\windows-build-common.ps1")
 $interopManifestPath = Join-Path $repositoryRoot "Scripts\managed\managed-interop.json"
 $abiVersion = [uint32](Get-Content -LiteralPath $interopManifestPath -Raw | ConvertFrom-Json).abiVersion
-$repositoryDotNetRoot = Join-Path $repositoryRoot ".deps\dotnet"
 $repositoryDotNetName = if ($env:OS -eq "Windows_NT") { "dotnet.exe" } else { "dotnet" }
+$repositoryDotNetRoot = Get-CrownyDependencyPath -RepositoryRoot $repositoryRoot `
+    -RelativePath "dotnet" -ReadyRelativePath "dotnet\$repositoryDotNetName"
 $repositoryDotNet = Join-Path $repositoryDotNetRoot $repositoryDotNetName
 $runtimeRootWasDefaulted = [string]::IsNullOrWhiteSpace($RuntimeRoot)
 if ([string]::IsNullOrWhiteSpace($DotNetExecutable)) {
     if (-not (Test-Path -LiteralPath $repositoryDotNet -PathType Leaf)) {
-        & (Join-Path $repositoryRoot "Scripts\setup-dotnet.ps1")
+        $dependencyRoot = Split-Path -Parent $repositoryDotNetRoot
+        & (Join-Path $repositoryRoot "Scripts\setup-dotnet.ps1") -DependencyRoot $dependencyRoot
     }
     $DotNetExecutable = $repositoryDotNet
 }

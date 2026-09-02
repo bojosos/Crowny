@@ -49,9 +49,34 @@ namespace Crowny
         explicit operator bool() const { return Succeeded; }
     };
 
+    struct TransformPropagationStats
+    {
+        uint32_t QueueRequestCount = 0u;
+        uint32_t UniqueRootCount = 0u;
+        uint32_t MergedRangeCount = 0u;
+        uint32_t FlushPassCount = 0u;
+        uint64_t VisitedEntityCount = 0u;
+        uint64_t PhysicsEnabledEntityVisitCount = 0u;
+    };
+
     class Scene : public Asset
     {
     public:
+        class TransformMutationScope
+        {
+        public:
+            TransformMutationScope(const TransformMutationScope&) = delete;
+            TransformMutationScope& operator=(const TransformMutationScope&) = delete;
+            TransformMutationScope(TransformMutationScope&& other) noexcept;
+            TransformMutationScope& operator=(TransformMutationScope&& other) noexcept;
+            ~TransformMutationScope();
+
+        private:
+            friend class Scene;
+            explicit TransformMutationScope(Scene* scene);
+            Scene* m_Scene = nullptr;
+        };
+
         AssetType GetAssetType() const override { return AssetType::Scene; }
         static AssetType GetStaticType() { return AssetType::Scene; }
 
@@ -81,6 +106,10 @@ namespace Crowny
         Entity TryGetEntityFromUuid(const UUID& uuid) const;
         Entity GetEntityFromUuid(const UUID& uuid) const;
 
+        [[nodiscard]] TransformMutationScope DeferTransformChanges();
+        void FlushTransformChanges();
+        const TransformPropagationStats& GetLastTransformPropagationStats() const { return m_LastTransformPropagationStats; }
+
         const String& GetName() const { return m_Name; }
         void SetName(const String& name) { m_Name = name; }
         const Path& GetFilepath() const { return m_Filepath; }
@@ -102,9 +131,10 @@ namespace Crowny
         void OnRuntimeStop();
 
         void OnFixedUpdate(Timestep ts);
+        void SynchronizePhysicsTransforms(float interpolationAlpha, Timestep extrapolationTime);
 
         void OnSimulationStart();
-        void OnSimulationUpdate(Timestep ts);
+        void OnSimulationFixedUpdate(Timestep ts);
         void OnSimulationEnd();
 
         void OnUpdateRuntime(Timestep ts);
@@ -132,6 +162,16 @@ namespace Crowny
         Entity DuplicateEntityInternal(Entity entity, bool includeChildren, Entity cloneParent);
         void RegisterEntityCallbacks();
         void RebuildCopiedRelationships(const Scene& source, const UnorderedMap<UUID, entt::entity>& entityMap);
+        void BeginTransformMutation();
+        void EndTransformMutation();
+        void QueueTransformChange(Entity entity, bool updatePhysics);
+        void MarkHierarchyTopologyDirty();
+        void ResetTransformHierarchyCache();
+        void RebuildTransformHierarchyCache();
+        void ResolveWorldTransform(Entity entity);
+        void ProcessTransformEntity(entt::entity handle, bool updatePhysics);
+        void ProcessTransformRange(uint32_t begin, uint32_t end, bool updatePhysics);
+        void ProcessTransformSubtree(entt::entity root, bool updatePhysics);
 
         void OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnRigidbody2DComponentUpdate(entt::registry& registry, entt::entity entity);
@@ -170,6 +210,8 @@ namespace Crowny
         void OnAudioSourceComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity);
 
+        void OnRelationshipComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnRelationshipComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnTransformComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnManagedScriptComponentDestroy(entt::registry& registry, entt::entity entity);
 
@@ -197,6 +239,66 @@ namespace Crowny
         Vector<entt::entity> m_PendingPhysics3DRebuilds;
         Vector<PhysicsContactEvent3D> m_PendingPhysics3DContacts;
         Vector<PhysicsContactEvent3D> m_DispatchPhysics3DContacts;
+
+        struct TransformHierarchyEntry
+        {
+            entt::entity Handle = entt::null;
+            uint32_t ParentIndex = std::numeric_limits<uint32_t>::max();
+            uint32_t SubtreeEnd = 0u;
+        };
+
+        struct TransformHierarchyBuildEntry
+        {
+            entt::entity Handle = entt::null;
+            uint32_t ParentIndex = std::numeric_limits<uint32_t>::max();
+            uint32_t OrderIndex = std::numeric_limits<uint32_t>::max();
+            bool Expanded = false;
+        };
+
+        struct TransformHierarchyIndexSlot
+        {
+            entt::entity Handle = entt::null;
+            uint64_t Generation = 0u;
+            uint32_t OrderIndex = std::numeric_limits<uint32_t>::max();
+        };
+
+        struct PendingTransformChange
+        {
+            entt::entity Root = entt::null;
+            bool UpdatePhysics = false;
+        };
+
+        struct PendingTransformSlot
+        {
+            entt::entity Handle = entt::null;
+            uint64_t Generation = 0u;
+            uint32_t ChangeIndex = 0u;
+        };
+
+        struct TransformRangeEvent
+        {
+            uint32_t OrderIndex = 0u;
+            int32_t ActiveDelta = 0;
+            int32_t PhysicsDelta = 0;
+        };
+
+        Vector<TransformHierarchyEntry> m_TransformHierarchyOrder;
+        Vector<TransformHierarchyIndexSlot> m_TransformHierarchyIndexSlots;
+        Vector<TransformHierarchyBuildEntry> m_TransformHierarchyBuildStack;
+        Vector<entt::entity> m_ImmediateTransformTraversalStack;
+        Vector<entt::entity> m_WorldTransformResolveStack;
+        Vector<PendingTransformChange> m_PendingTransformChanges;
+        Vector<PendingTransformSlot> m_PendingTransformSlots;
+        Vector<PendingTransformChange> m_ProcessingTransformChanges;
+        Vector<TransformRangeEvent> m_TransformRangeEvents;
+        TransformPropagationStats m_LastTransformPropagationStats;
+        uint32_t m_PendingTransformQueueRequestCount = 0u;
+        uint32_t m_TransformMutationDepth = 0u;
+        uint64_t m_TransformQueueGeneration = 1u;
+        uint64_t m_TransformHierarchyCacheGeneration = 1u;
+        uint64_t m_HierarchyTopologyGeneration = 1u;
+        bool m_HierarchyTopologyDirty = true;
+        bool m_FlushingTransformChanges = false;
         bool m_Physics3DActive = false;
         bool m_Physics2DActive = false;
         bool m_RuntimeActive = false;

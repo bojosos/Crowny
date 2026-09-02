@@ -112,6 +112,7 @@ namespace Crowny
         RebuildCopiedRelationships(other, copyEntityMap);
 
         RegisterEntityCallbacks();
+        MarkHierarchyTopologyDirty();
     }
 
     Scene& Scene::operator=(const Scene& other)
@@ -119,6 +120,7 @@ namespace Crowny
         if (this == &other)
             return *this;
 
+        ResetTransformHierarchyCache();
         m_Registry.clear();
         m_EntityMap.clear();
         delete m_RootEntity;
@@ -148,6 +150,7 @@ namespace Crowny
         if (other.m_RootEntity)
             m_RootEntity = new Entity(m_EntityMap.at(other.m_RootEntity->GetUuid()), this);
         RebuildCopiedRelationships(other, copyEntityMap);
+        MarkHierarchyTopologyDirty();
 
         return *this;
     }
@@ -217,6 +220,8 @@ namespace Crowny
         m_Registry.on_update<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentUpdate>(this);
         m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentDestroy>(this);
 
+        m_Registry.on_construct<RelationshipComponent>().connect<&Scene::OnRelationshipComponentConstruct>(this);
+        m_Registry.on_destroy<RelationshipComponent>().connect<&Scene::OnRelationshipComponentDestroy>(this);
         m_Registry.on_destroy<TransformComponent>().connect<&Scene::OnTransformComponentDestroy>(this);
         m_Registry.on_destroy<ManagedScriptComponent>().connect<&Scene::OnManagedScriptComponentDestroy>(this);
     }
@@ -264,6 +269,7 @@ namespace Crowny
                 destinationRelationship.Children.push_back(destinationChild);
             }
         }
+        MarkHierarchyTopologyDirty();
     }
 
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
@@ -813,6 +819,8 @@ namespace Crowny
 
     void Scene::HandlePhysics3DContact(const PhysicsContactEvent3D& event)
     {
+        if (!m_RuntimeActive)
+            return;
         const auto firstFound = m_Physics3DEntities.find(event.BodyA);
         const auto secondFound = m_Physics3DEntities.find(event.BodyB);
         if (firstFound == m_Physics3DEntities.end() || secondFound == m_Physics3DEntities.end())
@@ -1029,13 +1037,9 @@ namespace Crowny
         BeginPhysics3D();
     }
 
-    void Scene::OnSimulationUpdate(Timestep ts)
+    void Scene::OnSimulationFixedUpdate(Timestep ts)
     {
-        SceneManager::CallbackScope callbackScope =
-          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
-        if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
-            Physics2D::TryGet()->Step(ts, this);
-        StepPhysics3D(ts);
+        OnFixedUpdate(ts);
     }
 
     void Scene::OnSimulationEnd()
@@ -1113,6 +1117,12 @@ namespace Crowny
         if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
             Physics2D::TryGet()->Step(ts, this);
         StepPhysics3D(ts);
+    }
+
+    void Scene::SynchronizePhysicsTransforms(float interpolationAlpha, Timestep extrapolationTime)
+    {
+        if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
+            Physics2D::TryGet()->SynchronizeTransforms(this, interpolationAlpha, extrapolationTime);
     }
 
     Entity Scene::CreateEntity(const String& name)
@@ -1195,6 +1205,10 @@ namespace Crowny
         Entity e = { entity, this };
         ScriptRuntime::NotifyEntityDestroyed(e);
     }
+
+    void Scene::OnRelationshipComponentConstruct(entt::registry&, entt::entity) { MarkHierarchyTopologyDirty(); }
+
+    void Scene::OnRelationshipComponentDestroy(entt::registry&, entt::entity) { MarkHierarchyTopologyDirty(); }
 
     void Scene::OnManagedScriptComponentDestroy(entt::registry& registry, entt::entity entity)
     {

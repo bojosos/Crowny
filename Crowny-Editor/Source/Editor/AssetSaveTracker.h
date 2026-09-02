@@ -13,11 +13,20 @@ namespace Crowny
         Ref<Asset> Value;
     };
 
-    class AssetSaveTracker
+    class AssetSaveTracker : public RefCounted
     {
     public:
-        void Observe(const Path& path, const Ref<Asset>& asset, bool changed, bool interactionActive,
-                     bool interactionFinished)
+        void Queue(const Path& path, const Ref<Asset>& asset)
+        {
+            if (path.empty() || asset == nullptr)
+                return;
+
+            PendingSave& pending = m_Pending[path];
+            pending.Value = asset;
+            pending.Ready = true;
+        }
+
+        void Observe(const Path& path, const Ref<Asset>& asset, bool changed, bool interactionActive, bool interactionFinished)
         {
             if (path.empty())
                 return;

@@ -321,6 +321,77 @@ TEST_CASE("EFX entrypoint tables classify full partial and missing support witho
     }
 }
 
+TEST_CASE("EFX capability diagnostics report each outcome once", "[Audio][EFX]")
+{
+    EFX efx;
+    FakeEFXResolver resolver;
+
+    SECTION("complete table")
+    {
+        REQUIRE(efx.ResolveEntrypoints(ResolveFakeEFXEntrypoint, &resolver));
+        EFXCapabilityState capability = efx.GetCapabilityState();
+        EFXCapabilityDiagnostics diagnostics;
+
+        CHECK_FALSE(diagnostics.Observe(capability));
+
+        capability.Status = EFXLoadStatus::Available;
+        capability.Available = true;
+        capability.MaxAuxiliarySends = 4;
+        capability.SupportsEAXReverb = true;
+        const EFXDiagnostic first = diagnostics.Observe(capability);
+        CHECK(first.Level == EFXDiagnosticLevel::Info);
+        CHECK(first.Message == "OpenAL EFX available: 4 auxiliary send(s), EAX reverb enabled.");
+        CHECK_FALSE(diagnostics.Observe(capability));
+    }
+
+    SECTION("partial table")
+    {
+        resolver.MissingEntrypoint = "alGenEffects";
+        REQUIRE_FALSE(efx.ResolveEntrypoints(ResolveFakeEFXEntrypoint, &resolver));
+        const EFXCapabilityState capability = efx.GetCapabilityState();
+        EFXCapabilityDiagnostics diagnostics;
+
+        const EFXDiagnostic first = diagnostics.Observe(capability);
+        CHECK(first.Level == EFXDiagnosticLevel::Warning);
+        CHECK(first.Message ==
+              "OpenAL EFX unavailable: optional entrypoint alGenEffects is missing (20/21 loaded). Base playback remains active.");
+        CHECK_FALSE(diagnostics.Observe(capability));
+    }
+
+    SECTION("absent table")
+    {
+        REQUIRE_FALSE(efx.ResolveEntrypoints(nullptr));
+        const EFXCapabilityState capability = efx.GetCapabilityState();
+        EFXCapabilityDiagnostics diagnostics;
+
+        const EFXDiagnostic first = diagnostics.Observe(capability);
+        CHECK(first.Level == EFXDiagnosticLevel::Info);
+        CHECK(first.Message ==
+              "OpenAL EFX unavailable: optional entrypoint alGenEffects is missing (0/21 loaded). Base playback remains active.");
+        CHECK_FALSE(diagnostics.Observe(capability));
+    }
+}
+
+TEST_CASE("Base audio capability is independent from optional EFX support", "[Audio][EFX]")
+{
+    EFX efx;
+    REQUIRE_FALSE(efx.ResolveEntrypoints(nullptr));
+
+    const AudioCapabilityState capability = { true, efx.GetCapabilityState() };
+    CHECK(capability.BasePlaybackAvailable);
+    CHECK_FALSE(capability.Effects.Available);
+    CHECK(capability.Effects.Entrypoints == EFXEntrypointState::Empty);
+
+    const std::array<int16_t, 4> samples = { -32768, -1, 0, 32767 };
+    const AudioDataInfo info = { static_cast<uint32_t>(samples.size()), 48000, 1, 16 };
+    AudioStreamScratch scratch;
+    PreparedAudioPCM prepared;
+    REQUIRE(AudioUtils::PrepareOpenALPCM(reinterpret_cast<const uint8_t*>(samples.data()), info, {}, scratch, prepared) ==
+            AudioPCMPreparationStatus::Ready);
+    CHECK(prepared.Data == reinterpret_cast<const uint8_t*>(samples.data()));
+    CHECK(prepared.Size == static_cast<ALsizei>(samples.size() * sizeof(int16_t)));
+}
+
 TEST_CASE("Audio component snapshots apply settings without replacing identity", "[Audio][Ecs][Lifecycle]")
 {
     AudioSourceComponent source;

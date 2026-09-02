@@ -41,6 +41,12 @@ ALLOWED_INTERNAL_CALLS = {
     Path("Runtime/Mono/ManagedRuntimeAdapter.Mono.cs"): 1,
 }
 
+TEST_ONLY_INTERNAL_CALLS = {
+    # Registered only by the opt-in native benchmark test to compare direct
+    # Mono dispatch with the shared host table. No engine runtime registers it.
+    Path("Runtime/ManagedBindingBenchmark.cs"): 1,
+}
+
 ALLOWED_NATIVE_INTERNAL_CALLS = {
     Path("ScriptObject.cpp"): 1,
     Path("Backends/Mono/MonoBackend.cpp"): 2,
@@ -93,7 +99,7 @@ def main() -> int:
                     failures.append(f"CrownySharp calls an undeclared host function: {relative}:{call}")
 
         internal_calls = len(INTERNAL_CALL.findall(text))
-        allowed = ALLOWED_INTERNAL_CALLS.get(relative, 0)
+        allowed = ALLOWED_INTERNAL_CALLS.get(relative, TEST_ONLY_INTERNAL_CALLS.get(relative, 0))
         if internal_calls < allowed:
             failures.append(f"required runtime adapter call is missing: {relative}")
         elif internal_calls > allowed:

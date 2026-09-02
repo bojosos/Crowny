@@ -292,8 +292,12 @@ EndProject)";
         bool WriteGeneratedTextFile(const Path& path, const String& contents, bool& changed)
         {
             std::error_code error;
-            if (fs::is_regular_file(path, error) && FileSystem::ReadTextFile(path) == contents)
-                return true;
+            if (fs::is_regular_file(path, error))
+            {
+                const Ref<DataStream> input = FileSystem::OpenFile(path);
+                if (input != nullptr && input->GetAsString() == contents)
+                    return true;
+            }
 
             String writeError;
             if (!FileSystem::WriteTextFileAtomic(path, contents, &writeError))

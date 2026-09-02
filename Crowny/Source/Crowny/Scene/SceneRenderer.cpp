@@ -2088,6 +2088,7 @@ namespace Crowny
     void SceneRenderer::UpdateAnimations(Timestep timestep)
     {
         ZoneScopedN("UpdateAnimations");
+        auto transformScope = m_Scene->DeferTransformChanges();
         auto view = m_Scene->m_Registry.view<AnimationComponent, MeshRendererComponent>();
         for (const entt::entity handle : view)
         {
@@ -2151,8 +2152,9 @@ namespace Crowny
             {
                 Entity entity(handle, m_Scene.get());
                 const Transform& delta = animation.Player->GetRootMotionDelta();
-                entity.SetPosition(entity.GetLocalPosition() + delta.GetPosition());
-                entity.SetRotation(glm::normalize(entity.GetLocalRotation() * delta.GetRotation()));
+                const Transform& local = entity.GetLocalTransform();
+                entity.SetLocalTransform(Transform(local.GetPosition() + delta.GetPosition(),
+                                                   glm::normalize(local.GetRotation() * delta.GetRotation()), local.GetScale()));
             }
 
             // Animation time, events, and root motion must not depend on render-thread upload latency.

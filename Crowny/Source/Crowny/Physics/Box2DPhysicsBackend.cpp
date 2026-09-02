@@ -1,6 +1,5 @@
 #include "cwpch.h"
 
-#include "Crowny/Application/Application.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics2DBackend.h"
@@ -13,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
 #include <unordered_set>
@@ -160,8 +160,11 @@ namespace Crowny
                 m_DispatchEvents.clear();
                 m_DispatchEvents.swap(m_Events);
                 NormalizeEvents(m_DispatchEvents, m_Events);
-                for (const ContactEvent& event : m_Events)
-                    Dispatch(event);
+                if (m_Scene != nullptr && m_Scene->IsRuntimeActive())
+                {
+                    for (const ContactEvent& event : m_Events)
+                        Dispatch(event);
+                }
                 m_DispatchEvents.clear();
                 m_Events.clear();
             }
@@ -345,7 +348,6 @@ namespace Crowny
 
                 m_Scene = scene;
                 m_Settings = &settings;
-                m_TimestepAccumulator = 0.0f;
                 m_World = new b2World({ settings.Gravity.x, settings.Gravity.y });
                 m_ContactListener = new Box2DContactListener(scene);
                 m_World->SetContactListener(m_ContactListener);
@@ -380,7 +382,6 @@ namespace Crowny
                 m_ContactListener = nullptr;
                 m_Scene = nullptr;
                 m_Settings = nullptr;
-                m_TimestepAccumulator = 0.0f;
             }
 
             bool IsSimulating() const override { return m_World != nullptr; }
@@ -390,41 +391,45 @@ namespace Crowny
                 if (!m_World || !scene)
                     return;
 
-                const float fixedTimestep = Application::TryGet()->GetTimeSettings()->FixedTimestep;
-                if (fixedTimestep <= 0.0f)
+                const float fixedTimestep = timestep.GetSeconds();
+                if (!std::isfinite(fixedTimestep) || fixedTimestep <= 0.0f)
                     return;
-                const float maxTimestep = std::max(Application::TryGet()->GetTimeSettings()->MaxTimestep, fixedTimestep);
-                m_TimestepAccumulator += std::min(static_cast<float>(timestep), maxTimestep);
                 auto rigidbodyView = scene->GetAllEntitiesWith<Rigidbody2DComponent, TransformComponent, RelationshipComponent>();
 
-                while (m_TimestepAccumulator >= fixedTimestep)
-                {
-                    rigidbodyView.each([&](Rigidbody2DComponent& rigidbody, TransformComponent& transform, RelationshipComponent& relationship) {
-                        b2Body* body = GetBody(rigidbody);
-                        if (!body)
-                            return;
+                rigidbodyView.each([&](Rigidbody2DComponent& rigidbody, TransformComponent& transform, RelationshipComponent& relationship) {
+                    b2Body* body = GetBody(rigidbody);
+                    if (!body)
+                        return;
 
+                    const RigidbodyBodyType bodyType = rigidbody.GetBodyType();
+                    if (bodyType == RigidbodyBodyType::Dynamic)
+                    {
                         const b2Vec2 previousPosition = body->GetPosition();
                         rigidbody.RuntimePreviousPosition = { previousPosition.x, previousPosition.y };
                         rigidbody.RuntimePreviousRotation = body->GetAngle();
                         rigidbody.RuntimeHasPreviousState = true;
-                        if (rigidbody.GetBodyType() != RigidbodyBodyType::Dynamic)
-                        {
-                            const WorldTransformComponents world = GetWorldTransformComponents(transform, relationship.Parent);
-                            body->SetTransform({ world.Position.x, world.Position.y }, world.Rotation.z);
-                        }
-                    });
+                        return;
+                    }
 
-                    m_World->Step(fixedTimestep, static_cast<int32_t>(settings.VelocityIterations),
-                                  static_cast<int32_t>(settings.PositionIterations));
-                    EnforcePositionConstraints(scene);
-                    m_ContactListener->QueueTriggerStayEvents();
-                    m_ContactListener->Dispatch();
-                    m_TimestepAccumulator -= fixedTimestep;
-                }
+                    const WorldTransformComponents world = GetWorldTransformComponents(transform, relationship.Parent);
+                    const b2Vec2 targetPosition{ world.Position.x, world.Position.y };
+                    if (bodyType == RigidbodyBodyType::Static)
+                    {
+                        body->SetTransform(targetPosition, world.Rotation.z);
+                        return;
+                    }
 
-                const float alpha = std::clamp(m_TimestepAccumulator / fixedTimestep, 0.0f, 1.0f);
-                SynchronizeTransforms(scene, alpha);
+                    body->SetLinearVelocity((1.0f / fixedTimestep) * (targetPosition - body->GetPosition()));
+                    const float angularDistance = std::remainder(world.Rotation.z - body->GetAngle(), 2.0f * glm::pi<float>());
+                    body->SetAngularVelocity(angularDistance / fixedTimestep);
+                });
+
+                m_World->Step(fixedTimestep, static_cast<int32_t>(settings.VelocityIterations),
+                              static_cast<int32_t>(settings.PositionIterations));
+                EnforcePositionConstraints(scene);
+                m_ContactListener->QueueTriggerStayEvents();
+                m_ContactListener->Dispatch();
+                SynchronizeTransforms(scene, 1.0f, Timestep(0.0f));
             }
 
             void SetGravity(const glm::vec2& gravity) override
@@ -873,12 +878,14 @@ namespace Crowny
                 });
             }
 
-            void SynchronizeTransforms(Scene* scene, float alpha)
+            void SynchronizeTransforms(Scene* scene, float alpha, Timestep extrapolationTime) override
             {
+                alpha = std::clamp(alpha, 0.0f, 1.0f);
+                const float extrapolation = std::max(extrapolationTime.GetSeconds(), 0.0f);
                 scene->GetAllEntitiesWith<Rigidbody2DComponent>().each([&](entt::entity handle, Rigidbody2DComponent& rigidbody) {
                     Entity entity(handle, scene);
                     b2Body* body = GetBody(rigidbody);
-                    if (!body || rigidbody.GetBodyType() == RigidbodyBodyType::Static)
+                    if (!body || rigidbody.GetBodyType() != RigidbodyBodyType::Dynamic)
                         return;
 
                     const b2Vec2 currentPosition = body->GetPosition();
@@ -893,8 +900,8 @@ namespace Crowny
                     }
                     else if (rigidbody.GetInterpolationMode() == RigidbodyInterpolation::Extrapolate)
                     {
-                        outputPosition += m_TimestepAccumulator * body->GetLinearVelocity();
-                        outputRotation += m_TimestepAccumulator * body->GetAngularVelocity();
+                        outputPosition += extrapolation * body->GetLinearVelocity();
+                        outputRotation += extrapolation * body->GetAngularVelocity();
                     }
 
                     SetWorldPose(entity, outputPosition, outputRotation);
@@ -905,7 +912,6 @@ namespace Crowny
             Box2DContactListener* m_ContactListener = nullptr;
             Scene* m_Scene = nullptr;
             const Physics2DSettings* m_Settings = nullptr;
-            float m_TimestepAccumulator = 0.0f;
         };
     } // namespace
 

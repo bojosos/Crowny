@@ -2,8 +2,6 @@
 
 #include "Panels/ScriptInspectorProgressBar.h"
 
-#include <catch2/catch.hpp>
-
 using namespace Crowny;
 
 TEST_CASE("Progress bar resolves state-backed presentation values", "[Editor][Scripting][ProgressBar]")
@@ -31,7 +29,7 @@ TEST_CASE("Progress bar resolves state-backed presentation values", "[Editor][Sc
     CHECK(max == 250.0);
     CHECK(ScriptInspectorProgressBar::ResolveColor(settings.ColorGetter, root, glm::vec4(1.0f)) == color.VectorValue);
     CHECK(ScriptInspectorProgressBar::ResolveLabel(settings, root, ScriptValue::Float(75.0)) == "75 / 250");
-    CHECK(ScriptInspectorProgressBar::Fraction(75.0, min, max) == Approx(0.3f));
+    CHECK(ScriptInspectorProgressBar::Fraction(75.0, min, max) == Catch::Approx(0.3f));
 }
 
 TEST_CASE("Progress bar reads and edits supported numeric values", "[Editor][Scripting][ProgressBar]")
@@ -49,10 +47,10 @@ TEST_CASE("Progress bar reads and edits supported numeric values", "[Editor][Scr
     decimalValue.StringValue = "12.5";
     double number = 0.0;
     REQUIRE(ScriptInspectorProgressBar::TryReadNumber(decimalValue, number));
-    CHECK(number == Approx(12.5));
+    CHECK(number == Catch::Approx(12.5));
     CHECK(ScriptInspectorProgressBar::TryWriteNumber(decimalValue, 42.25));
     REQUIRE(ScriptInspectorProgressBar::TryReadNumber(decimalValue, number));
-    CHECK(number == Approx(42.25));
+    CHECK(number == Catch::Approx(42.25));
 
     CHECK(ScriptInspectorProgressBar::Fraction(-1.0, 0.0, 10.0) == 0.0f);
     CHECK(ScriptInspectorProgressBar::Fraction(20.0, 0.0, 10.0) == 1.0f);

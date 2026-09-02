@@ -12,9 +12,9 @@ namespace Crowny
 
     AudioFilter::~AudioFilter()
     {
-        if (m_FilterId != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
+        if (const EFX* efx = AudioManager::TryGetEFX(); m_FilterId != 0 && efx != nullptr)
         {
-            AudioManager::TryGet()->GetEFX().DeleteFilters(1, &m_FilterId);
+            efx->DeleteFilters(1, &m_FilterId);
             m_FilterId = 0;
         }
     }
@@ -33,16 +33,15 @@ namespace Crowny
             return;
         }
 
-        if (AudioManager::TryGet() == nullptr || !AudioManager::TryGet()->IsEFXAvailable())
+        const EFX* efx = AudioManager::TryGetEFX();
+        if (efx == nullptr)
             return;
-
-        const EFX& efx = AudioManager::TryGet()->GetEFX();
 
         const ALint targetType = (needsLP && needsHP) ? AL_FILTER_BANDPASS : (needsLP ? AL_FILTER_LOWPASS : AL_FILTER_HIGHPASS);
 
         if (m_FilterId == 0)
         {
-            efx.GenFilters(1, &m_FilterId);
+            efx->GenFilters(1, &m_FilterId);
             if (alGetError() != AL_NO_ERROR)
             {
                 CW_ENGINE_WARN("Failed to allocate AL filter for source.");
@@ -53,7 +52,7 @@ namespace Crowny
 
         if (m_FilterType != targetType)
         {
-            efx.Filteri(m_FilterId, AL_FILTER_TYPE, targetType);
+            efx->Filteri(m_FilterId, AL_FILTER_TYPE, targetType);
             m_FilterType = targetType;
         }
 
@@ -61,17 +60,17 @@ namespace Crowny
         switch (targetType)
         {
         case AL_FILTER_LOWPASS:
-            efx.Filterf(m_FilterId, AL_LOWPASS_GAIN, 1.0f);
-            efx.Filterf(m_FilterId, AL_LOWPASS_GAINHF, gainHF);
+            efx->Filterf(m_FilterId, AL_LOWPASS_GAIN, 1.0f);
+            efx->Filterf(m_FilterId, AL_LOWPASS_GAINHF, gainHF);
             break;
         case AL_FILTER_HIGHPASS:
-            efx.Filterf(m_FilterId, AL_HIGHPASS_GAIN, 1.0f);
-            efx.Filterf(m_FilterId, AL_HIGHPASS_GAINLF, gainLF);
+            efx->Filterf(m_FilterId, AL_HIGHPASS_GAIN, 1.0f);
+            efx->Filterf(m_FilterId, AL_HIGHPASS_GAINLF, gainLF);
             break;
         case AL_FILTER_BANDPASS:
-            efx.Filterf(m_FilterId, AL_BANDPASS_GAIN, 1.0f);
-            efx.Filterf(m_FilterId, AL_BANDPASS_GAINHF, gainHF);
-            efx.Filterf(m_FilterId, AL_BANDPASS_GAINLF, gainLF);
+            efx->Filterf(m_FilterId, AL_BANDPASS_GAIN, 1.0f);
+            efx->Filterf(m_FilterId, AL_BANDPASS_GAINHF, gainHF);
+            efx->Filterf(m_FilterId, AL_BANDPASS_GAINLF, gainLF);
             break;
         default:
             break;
@@ -83,10 +82,18 @@ namespace Crowny
 
     void AudioFilter::Detach(ALuint sourceId)
     {
-        alSourcei(sourceId, AL_DIRECT_FILTER, AL_FILTER_NULL);
-        if (m_FilterId != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
+        const EFX* efx = AudioManager::TryGetEFX();
+        if (efx == nullptr)
         {
-            AudioManager::TryGet()->GetEFX().DeleteFilters(1, &m_FilterId);
+            m_FilterId = 0;
+            m_FilterType = 0;
+            return;
+        }
+
+        alSourcei(sourceId, AL_DIRECT_FILTER, AL_FILTER_NULL);
+        if (m_FilterId != 0)
+        {
+            efx->DeleteFilters(1, &m_FilterId);
             m_FilterId = 0;
             m_FilterType = 0;
         }

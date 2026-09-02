@@ -42,6 +42,7 @@
 #include "Editor/ColliderOverlay.h"
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
+#include "Editor/ProjectHubLayout.h"
 #include "Editor/ProjectLibrary.h"
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
@@ -154,7 +155,6 @@ namespace Crowny
                         SaveProjectSettings();
                         m_AssetBrowser->Unload();
                         Editor::Get().LoadProject(outPaths[0]);
-                        Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
                         SetProjectSettings();
                         m_AssetBrowser->Initialize();
                     }
@@ -174,9 +174,8 @@ namespace Crowny
             return;
         }
 
-        // Below: no project is loaded -- render the fullscreen hub
-
-        // Fullscreen hub window covering the entire viewport
+        // Keep the hub on the main viewport so it never creates another native platform window.
+        // The fullscreen window is only a backdrop; the interactive project card stays compact.
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->Pos);
         ImGui::SetNextWindowSize(viewport->Size);
@@ -189,12 +188,28 @@ namespace Crowny
         ImGui::Begin("##ProjectHub", nullptr, hubFlags);
         ImGui::PopStyleVar();
 
-        const ImVec2 windowSize = ImGui::GetContentRegionAvail();
-        const float sidebarWidth = std::clamp(windowSize.x * 0.22f, 168.0f, 220.0f);
+        const ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+        const ProjectHubLayout hubLayout = CalculateProjectHubLayout(viewportSize.x, viewportSize.y);
+        if (hubLayout.Card.Width <= 0.0f || hubLayout.Card.Height <= 0.0f)
+        {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::SetCursorPos(ImVec2(hubLayout.Card.X, hubLayout.Card.Y));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::BeginChild("##ProjectHubCard", ImVec2(hubLayout.Card.Width, hubLayout.Card.Height), true,
+                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGui::PopStyleVar(3);
+
+        const ImVec2 cardSize = ImGui::GetContentRegionAvail();
+        const float sidebarWidth = std::min(hubLayout.Sidebar.Width, cardSize.x);
 
         // ---- Left sidebar ----
         {
-            ImGui::BeginChild("##HubSidebar", ImVec2(sidebarWidth, windowSize.y), true);
+            ImGui::BeginChild("##HubSidebar", ImVec2(sidebarWidth, cardSize.y), true);
 
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
 
@@ -246,21 +261,29 @@ namespace Crowny
 
         // ---- Right content area ----
         {
-            ImGui::BeginChild("##HubContent", ImVec2(0, windowSize.y), false);
+            ImGui::BeginChild("##HubContent", ImVec2(0, cardSize.y), false);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
             const float contentPadding = 16.0f;
             ImGui::SetCursorPos(ImVec2(contentPadding, contentPadding));
 
             if (m_HubPage == HubPage::RecentProjects)
             {
-                ImGui::TextUnformatted("Projects");
+                Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
+                ImGui::TextUnformatted("Recent projects");
+                ImGui::Spacing();
+
+                if (ImGui::Checkbox("Open most recent project on startup", &m_AutoLoadLastProject))
+                {
+                    settings->AutoLoadLastProject = m_AutoLoadLastProject;
+                    Editor::Get().SaveEditorSettings();
+                }
+                UI::SetTooltip("Opens the newest project in this list that still exists.");
                 ImGui::Spacing();
 
                 const auto openProject = [this](const Path& projectPath) {
                     if (!fs::is_directory(projectPath))
                         return;
                     Editor::Get().LoadProject(projectPath);
-                    Editor::Get().GetEditorSettings()->LastOpenProject = projectPath;
                     SetProjectSettings();
                     m_AssetBrowser->Initialize();
                 };
@@ -298,7 +321,6 @@ namespace Crowny
                 ImGui::Separator();
                 ImGui::Spacing();
 
-                Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
                 uint32_t recentCount = 0;
                 uint32_t matchingCount = 0;
                 bool selectedVisible = false;
@@ -407,6 +429,7 @@ namespace Crowny
                     settings->RecentProjects[settings->RecentProjects.size() - 1].ProjectPath.clear();
                     settings->RecentProjects[settings->RecentProjects.size() - 1].Timestamp = 0;
                     m_SelectedRecentIdx = -1;
+                    Editor::Get().SaveEditorSettings();
                 }
                 UI::SetTooltip("Removes this shortcut. Project files stay on disk.");
                 ImGui::SameLine();
@@ -507,7 +530,6 @@ namespace Crowny
                     Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
                     Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
                     Editor::Get().LoadProject(newProjectPath);
-                    Editor::Get().GetEditorSettings()->LastOpenProject = newProjectPath;
                     SetProjectSettings();
                     m_NewProjectPath.clear();
                     m_NewProjectName.clear();
@@ -522,6 +544,7 @@ namespace Crowny
             ImGui::EndChild();
         }
 
+        ImGui::EndChild();
         ImGui::End();
     }
 
@@ -727,6 +750,7 @@ namespace Crowny
             timeSettings->FixedTimestep = std::max(0.0001f, timeSettings->FixedTimestep);
         if (UI::Property("Maximum timestep", timeSettings->MaxTimestep))
             timeSettings->MaxTimestep = std::max(timeSettings->FixedTimestep, timeSettings->MaxTimestep);
+        UI::Property("Maximum fixed steps per frame", timeSettings->MaxFixedStepsPerFrame, 1u);
         UI::EndPropertyGrid();
         ImGui::PopID();
     }
@@ -1048,8 +1072,7 @@ namespace Crowny
         const float edgeOffset = 4.0f;
         const float windowHeight = 32.0f;
         const float numberOfButtons = 3.0f;
-        const float stateWidth = 72.0f;
-        const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f + stateWidth;
+        const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
         const float toolbarX = (m_ViewportPanel->GetViewportBounds().x + m_ViewportPanel->GetViewportBounds().z) / 2.0f;
         ImGui::SetNextWindowPos(ImVec2(toolbarX - (backgroundWidth / 2.0f), m_ViewportPanel->GetViewportBounds().y + edgeOffset));
@@ -1101,13 +1124,6 @@ namespace Crowny
                 TogglePause();
             UI::SetTooltip(m_SceneState == SceneState::PausePlay ? "Resume play mode" : "Pause play mode");
             ImGui::EndDisabled();
-
-            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
-            const char* stateLabel = m_SceneState == SceneState::Play        ? "Playing"
-                                     : m_SceneState == SceneState::PausePlay ? "Paused"
-                                     : m_SceneState == SceneState::Simulate  ? "Simulating"
-                                                                             : "Editing";
-            ImGui::TextDisabled("%s", stateLabel);
         }
         ImGui::Spring();
         ImGui::EndHorizontal();
@@ -1223,11 +1239,9 @@ namespace Crowny
 
         ImGui::SetNextWindowSize(ImVec2(620.0f, 680.0f), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSizeConstraints(ImVec2(420.0f, 320.0f), ImVec2(FLT_MAX, FLT_MAX));
-        if (!ImGui::Begin("Settings", &m_ShowSettings))
-        {
-            ImGui::End();
+        UI::ScopedWindow settingsWindow("Settings", &m_ShowSettings);
+        if (!settingsWindow.IsVisible())
             return;
-        }
         UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 7.0f));
 
         UIUtils::SearchWidget(m_SettingsSearch, "Search settings...");
@@ -1251,8 +1265,13 @@ namespace Crowny
 
         if (matchesSection({ "startup project recent auto load" }) && beginSection("Startup", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::Checkbox("Open the last project on startup", &m_AutoLoadLastProject);
-            ImGui::TextDisabled("Crowny opens the project saved in editor settings.");
+            if (ImGui::Checkbox("Open most recent project on startup", &m_AutoLoadLastProject))
+            {
+                Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
+                settings->AutoLoadLastProject = m_AutoLoadLastProject;
+                Editor::Get().SaveEditorSettings();
+            }
+            ImGui::TextDisabled("Crowny opens the newest recent project that still exists.");
         }
 
         if (matchesSection({ "code editor IDE Visual Studio" }) && beginSection("Code editor", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1426,7 +1445,6 @@ namespace Crowny
                               "developer debug diagnostics ImGui asset entity C#" }))
             ImGui::TextDisabled("No matching settings.");
 
-        ImGui::End();
     }
 
 } // namespace Crowny

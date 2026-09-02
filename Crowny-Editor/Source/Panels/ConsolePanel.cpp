@@ -2,6 +2,8 @@
 
 #include "Editor/Script/CodeEditor.h"
 #include "Panels/ConsolePanel.h"
+#include "Panels/ConsoleSeverityToggleVisual.h"
+#include "Panels/ConsoleSplitLayout.h"
 #include "UI/UIUtils.h"
 
 #include "Crowny/Common/PlatformUtils.h"
@@ -23,13 +25,6 @@ namespace Crowny
             return;
         }
         const float availableHeight = ImGui::GetContentRegionAvail().y;
-        const float splitterHeight = 6.0f;
-        const float minimumDetailsHeight = std::min(100.0f, availableHeight * 0.4f);
-        const float maximumMessageHeight = std::max(1.0f, availableHeight - minimumDetailsHeight - splitterHeight);
-        const float minimumMessageHeight = std::min(120.0f, maximumMessageHeight);
-        if (m_MessageHeight <= 0.0f)
-            m_MessageHeight = maximumMessageHeight;
-        m_MessageHeight = std::clamp(m_MessageHeight, minimumMessageHeight, maximumMessageHeight);
 
         ConsoleBuffer& console = ConsoleBuffer::Get();
         const bool hasNewMessages = console.HasNewMessages();
@@ -37,7 +32,11 @@ namespace Crowny
             m_RequestScrollToBottom = true;
         RefreshMessages();
 
-        ImGui::BeginChild("##consoleMessages", ImVec2(0, m_MessageHeight), true);
+        const ConsoleSplitLayout splitLayout = BuildConsoleSplitLayout(availableHeight, m_SelectedMessageId != 0, m_MessageHeight);
+        if (splitLayout.DetailsVisible)
+            m_MessageHeight = splitLayout.MessageHeight;
+
+        ImGui::BeginChild("##consoleMessages", ImVec2(0, splitLayout.MessageHeight), true);
         RenderHeader();
         ImGui::Separator();
         RenderMessages();
@@ -48,14 +47,20 @@ namespace Crowny
             CopySelectedMessage();
 
         ImGui::EndChild();
-        ImGui::InvisibleButton("##consoleSplitter", ImVec2(-1, splitterHeight));
-        if (ImGui::IsItemHovered())
-            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-        if (ImGui::IsItemActive())
-            m_MessageHeight = std::clamp(m_MessageHeight + ImGui::GetIO().MouseDelta.y, minimumMessageHeight, maximumMessageHeight);
-        ImGui::BeginChild("##consoleDetails", ImVec2(0, 0), true);
-        RenderFooter();
-        ImGui::EndChild();
+        if (splitLayout.DetailsVisible && m_SelectedMessageId != 0)
+        {
+            ImGui::InvisibleButton("##consoleSplitter", ImVec2(-1, splitLayout.SplitterHeight));
+            if (ImGui::IsItemHovered())
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+            if (ImGui::IsItemActive())
+            {
+                m_MessageHeight =
+                  std::clamp(m_MessageHeight + ImGui::GetIO().MouseDelta.y, splitLayout.MinimumMessageHeight, splitLayout.MaximumMessageHeight);
+            }
+            ImGui::BeginChild("##consoleDetails", ImVec2(0, 0), true);
+            RenderFooter();
+            ImGui::EndChild();
+        }
 
         EndPanel();
     }
@@ -102,13 +107,25 @@ namespace Crowny
             const char* label = summary.Levels[levelIndex].Label.data();
             const float width = ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2.0f;
             const glm::vec4 color = GetRenderColor(level);
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(color.r, color.g, color.b, color.a));
-            if (ImGui::Selectable(label, m_EnabledLevels[levelIndex], ImGuiSelectableFlags_None, ImVec2(width, 0.0f)))
+            const bool enabled = m_EnabledLevels[levelIndex];
+            const ConsoleSeverityToggleVisual visual = BuildConsoleSeverityToggleVisual(color, enabled);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(visual.Text.r, visual.Text.g, visual.Text.b, visual.Text.a));
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(visual.Fill.r, visual.Fill.g, visual.Fill.b, visual.Fill.a));
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered,
+                                  ImVec4(visual.HoveredFill.r, visual.HoveredFill.g, visual.HoveredFill.b, visual.HoveredFill.a));
+            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(visual.ActiveFill.r, visual.ActiveFill.g, visual.ActiveFill.b, visual.ActiveFill.a));
+            if (ImGui::Selectable(label, enabled, ImGuiSelectableFlags_None, ImVec2(width, 0.0f)))
             {
-                m_EnabledLevels[levelIndex] = !m_EnabledLevels[levelIndex];
+                m_EnabledLevels[levelIndex] = !enabled;
                 m_FilterDirty = true;
             }
-            ImGui::PopStyleColor();
+            if (enabled)
+            {
+                const ImVec4 border(visual.Border.r, visual.Border.g, visual.Border.b, visual.Border.a);
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(border),
+                                                    ImGui::GetStyle().FrameRounding);
+            }
+            ImGui::PopStyleColor(4);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Show or hide %s messages", ConsoleBuffer::Message::GetLevelName(level));
             if (i + 1 < ConsoleBuffer::Message::Levels.size())

@@ -148,9 +148,9 @@ namespace Crowny
         if (m_Bus)
             m_Bus->RegisterSource(this);
 
-        // Re-route the source's aux send to the new bus's aux slot. When EFX is unavailable, or the
-        // bus has no aux slot allocated, this clears the send (AL_EFFECTSLOT_NULL).
-        if (m_SourceID != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
+        // Re-route the source's aux send to the new bus's aux slot. Without EFX, the source stays on
+        // the direct path and only the bus gain is applied.
+        if (m_SourceID != 0 && AudioManager::TryGetEFX() != nullptr)
         {
             const ALuint slot = m_Bus ? m_Bus->GetAuxSlot() : 0;
             alSource3i(m_SourceID, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(slot), 0, AL_FILTER_NULL);
@@ -197,7 +197,7 @@ namespace Crowny
     void AudioSource::SetConeOuterGainHF(float gainHF)
     {
         m_ConeOuterGainHF = glm::clamp(gainHF, 0.0f, 1.0f);
-        if (m_SourceID != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
+        if (m_SourceID != 0 && AudioManager::TryGetEFX() != nullptr)
             alSourcef(m_SourceID, AL_CONE_OUTER_GAINHF, m_ConeOuterGainHF);
     }
 

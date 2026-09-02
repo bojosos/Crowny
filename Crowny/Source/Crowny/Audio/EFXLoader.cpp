@@ -202,6 +202,43 @@ namespace Crowny
         }
     }
 
+    EFXDiagnostic EFXCapabilityDiagnostics::Observe(const EFXCapabilityState& capability)
+    {
+        if (capability.Status == EFXLoadStatus::NotLoaded)
+            return {};
+
+        if (capability.Available)
+        {
+            if (m_AvailableReported)
+                return {};
+            m_AvailableReported = true;
+            return { EFXDiagnosticLevel::Info,
+                     fmt::format("OpenAL EFX available: {} auxiliary send(s), EAX reverb {}.", capability.MaxAuxiliarySends,
+                                 capability.SupportsEAXReverb ? "enabled" : "disabled") };
+        }
+
+        const bool partialEntrypoints = capability.Entrypoints == EFXEntrypointState::Partial;
+        const bool inconsistent = partialEntrypoints || capability.Status == EFXLoadStatus::EffectCreationFailed;
+        if (m_FallbackReported)
+            return {};
+        m_FallbackReported = true;
+
+        if (capability.Status == EFXLoadStatus::MissingEntrypoint)
+        {
+            const char* missing = capability.MissingEntrypoint != nullptr ? capability.MissingEntrypoint : "unknown";
+            return { inconsistent ? EFXDiagnosticLevel::Warning : EFXDiagnosticLevel::Info,
+                     fmt::format("OpenAL EFX unavailable: optional entrypoint {} is missing ({}/{} loaded). Base playback remains active.", missing,
+                                 capability.LoadedEntrypoints, capability.RequiredEntrypoints) };
+        }
+
+        const bool coreAudioUnavailable = capability.Status == EFXLoadStatus::NoDevice || capability.Status == EFXLoadStatus::NoCurrentContext;
+        if (coreAudioUnavailable)
+            return { EFXDiagnosticLevel::Warning, fmt::format("OpenAL EFX unavailable: {}.", EFX::GetStatusName(capability.Status)) };
+
+        const EFXDiagnosticLevel level = inconsistent ? EFXDiagnosticLevel::Warning : EFXDiagnosticLevel::Info;
+        return { level, fmt::format("OpenAL EFX unavailable: {}. Base playback remains active.", EFX::GetStatusName(capability.Status)) };
+    }
+
 } // namespace Crowny
 
 #undef CW_EFX_ENTRYPOINTS

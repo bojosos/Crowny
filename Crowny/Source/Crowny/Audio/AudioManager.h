@@ -18,6 +18,12 @@ namespace Crowny
         String Name;
     };
 
+    struct AudioCapabilityState
+    {
+        bool BasePlaybackAvailable = false;
+        EFXCapabilityState Effects;
+    };
+
     // Mirrors OpenAL's distance model enum but in a stable order we serialize. The clamped
     // variants cap volume at the min/max distance, which is almost always what games want.
     enum class AudioDistanceModel : uint8_t
@@ -55,12 +61,10 @@ namespace Crowny
         Ref<AudioSource> CreateSource();
         Ref<AudioClip> CreateClip();
 
-        // EFX accessors. When EFX is unavailable, IsEFXAvailable() returns false and the buses/effects
-        // become no-ops at the OpenAL layer, while bus gain still propagates to sources.
-        const EFX& GetEFX() const { return m_EFX; }
-        bool IsEFXAvailable() const { return m_EFX.Available; }
-        EFXLoadStatus GetEFXStatus() const { return m_EFX.Status; }
-        EFXCapabilityState GetEFXCapabilityState() const { return m_EFX.GetCapabilityState(); }
+        // The only runtime seam for optional EFX work. A partial entrypoint table is never exposed
+        // to callers, so effects collapse to no-ops while source playback and bus gain keep working.
+        static const EFX* TryGetEFX();
+        AudioCapabilityState GetCapabilityState() const { return { IsAvailable(), m_EFX.GetCapabilityState() }; }
 
         // Sets the currently active audio mixer. Sources without an explicit bus will route to the
         // master bus of this mixer. Passing a null handle reverts to direct-output (no bus routing).
@@ -114,8 +118,7 @@ namespace Crowny
         UnorderedMap<String, Ref<AudioSource>> m_ManualSources;
 
         EFX m_EFX;
-        bool m_EFXFallbackReported = false;
-        bool m_EFXAvailableReported = false;
+        EFXCapabilityDiagnostics m_EFXDiagnostics;
         AssetHandle<AudioMixer> m_ActiveMixer;
 
         AudioPCMCapabilities m_PCMCapabilities;

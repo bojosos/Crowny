@@ -4,12 +4,15 @@ param(
     [string]$Configuration = "Release",
     [ValidateSet("SSE4.1", "AVX2")]
     [string]$Simd = "AVX2",
+    [string]$DependencyRoot = "",
     [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$physicsRoot = Join-Path $repositoryRoot ".deps\physics"
+. (Join-Path $PSScriptRoot "windows-build-common.ps1")
+$dependencyRoot = (Get-CrownyBuildRoots -RepositoryRoot $repositoryRoot -DependencyRoot $DependencyRoot).DependencyRoot
+$physicsRoot = Join-Path $dependencyRoot "physics"
 $buildRoot = Join-Path $physicsRoot "build"
 $installRoot = Join-Path $physicsRoot "install\$Configuration"
 $simdLevel = $Simd.ToLowerInvariant()

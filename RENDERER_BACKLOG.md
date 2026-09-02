@@ -58,6 +58,19 @@ Status: CPU deformation is integrated across culling bounds, depth, shadows, vel
 
 > Do we have allocators for things like vertex buffers, index buffers, pipelines? Look at here I think it would make sense to have pools for those so we can easily get already pre-allocated buffers, tehy have for gpu buffers it seems samplers etc https://github.com/GameFoundry/B3DFramework/tree/master/Source/Engine/Core/GpuBackend
 
+### Integration ledger
+
+This ledger uses commit and stash object hashes because branch tips and `stash@{n}` positions move. Do not reapply a parked snapshot just because its original worktree still exists.
+
+- `e0337302` contains the transient GPU texture pool and render-graph reuse integration. The old `codex/render-texture-pool` tip is an ancestor of `the-new-age`; it does not contain missing texture-pool work.
+- `60a2bf50` contains Basis/KTX2 texture-array support, `a9fcc934` contains unchanged deformation-upload settling, `b5627693` contains custom opaque forward routing, and `afa1ac74` contains the independent depth/object-ID output matrix.
+- `fd7d5002` contains the focused Vulkan renderer validation repairs. `87e1c4d4` contains the toon presets, editor controls, managed API, serialization migration, and silhouette capture.
+- `0b86b3cd` contains owned Vulkan vertex layouts and the white vertex-color fallback. `6a8995e0` contains typed binding probes for compute and lightweight graphics materials.
+- Stashes `68ef704b`, `0ec5a829`, `bcbff3ef`, `c8d3b10c`, `4d41587a`, `642906d8`, and `0ae11a9e` are parked pre-rebase forms of the two preceding Vulkan fixes. Keep them only until the final stash cleanup confirms their patch identity.
+- Stashes `a99b22c7`, `ec2db65c`, and `7b3c02bf` are parked pre-rebase forms of `87e1c4d4`. Stash `d8eb6c7f` combines that same source patch with cooker outputs.
+- Stash `48746471` is the 74-file pre-rebase toon snapshot. Its source work is represented by `fd7d5002`, `87e1c4d4`, `0b86b3cd`, and `6a8995e0`; its `.asset` and `.cwpack` entries are generated cooker output. Preserve it until a final semantic cleanup audit, but do not integrate it wholesale.
+- Runtime-scene and unrelated managed baseline stashes remain user-owned. Renderer cleanup must not drop them.
+
 ## 1. Mip generation and rendering
 
 Status: core integration, isolated GPU mip-selection coverage, and deterministic compressed-array codec fixtures delivered
@@ -73,7 +86,7 @@ Status: core integration, isolated GPU mip-selection coverage, and deterministic
 
 ## 2. Material models and toon rendering
 
-Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-driven silhouette and public-tooling work remains
+Status: core model, screen-space outlines, ramps, matcaps, GPU-driven silhouettes, and public tooling delivered
 
 - [x] Research the supplied Godot shaders and configurable production-style toon approaches.
 - [x] Add explicit Standard, Unlit, and Toon GPU material models with one std430 record shared by Forward+ and Deferred+.
@@ -85,7 +98,7 @@ Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-dri
 - [x] Preserve the existing opt-in inverted-hull pass in the legacy toon shader and expose its outline controls.
 - [x] Cook and pack the legacy `Toon.asset` and `Unlit.asset` with the material-model-aware compiler. Their sources are now language-tagged so the built-in cooker no longer skips them.
 - [x] Keep successfully cooked or content-hash-valid built-in shader, icon, and font asset timestamps synchronized with their sources, including future-dated inputs, and allow explicit Dist cooker runs so strict packaging works after a fresh checkout.
-- [ ] Complete the toon silhouette and public-tooling path.
+- [x] Complete the toon silhouette and public-tooling path.
   - [x] Move inverted-hull silhouettes onto material-model bins and GPU-driven indirect submission, retaining CPU submission for rejected bins and baseline hardware.
   - [x] Add managed convenience APIs and editor presets for Classic, Soft, and Hatched looks, with binary/YAML migration from legacy hull thickness to the independent silhouette width.
   - [x] Add a dedicated toon-silhouette golden image through the full `SceneRenderer` path, with semantic outline checks and Vulkan/OpenGL comparison.
@@ -100,6 +113,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Connect the buffer pool to render-graph physical resource acquisition/release so transient buffers are reused automatically.
 - [x] Add a complete-descriptor immutable sampler cache and clear it during renderer shutdown.
 - [x] Test frame-delayed reuse and object identity after the safe retirement window.
+- [x] Make Vulkan vertex-layout cache entries own their declarations and bind one constant white color when a shader requires `Color` but the mesh omits it.
 - [x] Add fixed-capacity vertex/index geometry heaps with aligned best-fit suballocation, generational handles, frames-in-flight deferred frees, range coalescing, uploads, and allocation/high-water/fragmentation telemetry.
 - [x] Back immutable Vulkan meshes with persistent vertex/index heap pages grouped by structural vertex layout, index width, and topology. Use stable heap binding IDs, GPU-to-GPU buffer copies, meshlet-index uploads, delayed allocation reuse, per-mesh fallbacks for dynamic/skinned/morphed/OpenGL geometry, and capacity/live/high-water telemetry.
 - [x] Add GPU-only draw-run compaction for heap-resident opaque and masked main shading. Persistent CPU-known bins own deterministic command segments and count offsets; compute compacts visible meshlets into those segments and Vulkan submits them with indirect counts without visibility readback or per-object CPU draws.
@@ -135,6 +149,7 @@ Status: reusable buffer and texture pools, caches, a static geometry suballocato
 - [x] Match masked main-depth coverage to Forward+/Deferred+ by including interpolated vertex alpha, and guard the compiled masked shader in the built-in pack.
 - [x] Cook and pack the independent object-ID-only depth variants for static and animated geometry.
 - [x] Verify the complete depth-prepass output matrix and route it from per-view flags: depth-only, motion-vector-only, object-ID-only, and combined motion-vector/object-ID. Runtime views skip the optional ID target by default; editor submissions request it for picking.
+- [x] Keep optional material textures quiet on passes that do not reflect them while retaining one diagnostic when no pass accepts the texture.
 
 ## 4. Contrast-adaptive sharpening
 
@@ -161,9 +176,10 @@ Status: implemented and cross-backend validated
 - [x] Standard masked-depth validation: the focused Release renderer/shader batch passed 256 assertions in 12 cases; full no-build Release Catch2 passed 29,389 assertions in 572 cases with one optional CoreCLR case skipped; the 59-resource pack loaded on Vulkan and OpenGL, which each passed 5/5 captures with all 5 cross-backend comparisons matching.
 - [x] Strict transparent render-layer validation: focused Release render-world/GPU-scene/draw-generation coverage passed 164 assertions in 24 cases; full no-build Release Catch2 passed 29,399 assertions in 574 cases with one optional CoreCLR case skipped; the no-build Vulkan/OpenGL harness passed 5/5 captures per backend and all 5 cross-backend comparisons.
 - [x] Weighted blended OIT validation: focused Release coverage passed 598 assertions in 47 cases for GPU-draw grouping, graph resources/transitions, shader variations, and fallback selection. The 60-resource renderer harness passed 6/6 Vulkan and OpenGL captures, including weighted-OIT pixels through the packed production composite shader, with all 6 cross-backend comparisons matching.
-- [x] Toon-silhouette validation: the full no-build Release harness passed 7/7 Vulkan and OpenGL captures on Intel Iris Xe, including the material-model silhouette through `SceneRenderer`; all seven cross-backend comparisons passed.
+- [x] Toon-silhouette validation: the full no-build Release harness passed 7/7 Vulkan and OpenGL captures on Intel Iris Xe, including the material-model silhouette through `SceneRenderer`; all seven cross-backend comparisons passed. The focused Vulkan capture now removes the mesh `Color` stream and verifies the constant-white fallback against OpenGL with zero validation diagnostics.
 - [x] Contrast-adaptive sharpening validation: focused Release shader coverage passed 101 assertions in 2 cases, snapshot settings propagation passed 4 assertions, and the full suite passed 36,015 assertions in 675 cases with one optional CoreCLR case skipped. The 61-resource built-in pack loaded successfully; Vulkan and OpenGL each passed 8/8 captures on Intel Iris Xe, including the reviewed opt-in sharpening reference, and all eight backend comparisons matched. An explicit Vulkan cook-and-exit shutdown returned 0 with zero VMA leak lines.
 - [x] Add a deterministic overlapping-transparency renderer capture that checks additive accumulation, revealage clear-to-one, the packed production composite shader, analytic band colors, and forward-versus-reversed layer order on Vulkan and compute-capable OpenGL. The capture exposed and fixed an 8-byte reflected uniform-block versus 16-byte CPU-write mismatch that had forced every runtime OIT frame onto its premultiplied fallback.
+- [x] Optional multi-pass toon textures now bind only to passes that reflect them. The no-build `toon-silhouette` capture passed on Vulkan and OpenGL with one cross-backend comparison and zero missing-texture warnings.
 - [ ] Add a serialized-scene capture through the full `SceneRenderer` OIT path so Forward+ variations, blend/depth overrides, bindings, indirect-run filtering, and graph transitions are covered together rather than by focused component tests.
 - [ ] Add an OpenGL 4.1 compatibility-path scene capture that proves requested weighted OIT degrades to premultiplied transparency without compute or load/store textures.
 - [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.

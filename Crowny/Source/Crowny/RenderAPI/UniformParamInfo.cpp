@@ -194,6 +194,18 @@ namespace Crowny
         }
     }
 
+    bool UniformParamInfo::HasBinding(ParamType paramType, uint32_t set, uint32_t slot) const
+    {
+        if (set >= m_NumSets || slot >= m_SetInfos[set].NumSlots)
+            return false;
+
+        const SetInfo& setInfo = m_SetInfos[set];
+        if (paramType == ParamType::SamplerState && setInfo.SlotSamplers[slot] != (uint32_t)-1)
+            return true;
+
+        return setInfo.SlotIndices[slot] != (uint32_t)-1 && setInfo.SlotTypes[slot] == paramType;
+    }
+
     uint32_t UniformParamInfo::GetSequentialSlot(ParamType paramType, uint32_t set, uint32_t slot) const
     {
         if (set >= m_NumSets)

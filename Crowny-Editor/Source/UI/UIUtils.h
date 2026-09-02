@@ -40,6 +40,22 @@ namespace Crowny
             ~ScopedStyle() { ImGui::PopStyleVar(); }
         };
 
+        struct ScopedWindow
+        {
+            ScopedWindow(const char* name, bool* open = nullptr, ImGuiWindowFlags flags = ImGuiWindowFlags_None)
+              : m_Visible(ImGui::Begin(name, open, flags))
+            {
+            }
+            ScopedWindow(const ScopedWindow&) = delete;
+            ScopedWindow operator=(const ScopedWindow&) = delete;
+            ~ScopedWindow() { ImGui::End(); }
+
+            bool IsVisible() const { return m_Visible; }
+
+        private:
+            bool m_Visible;
+        };
+
         struct ScopedColor
         {
             ScopedColor(const ScopedColor&) = delete;
@@ -50,6 +66,14 @@ namespace Crowny
                 ImGui::PushStyleColor(colorVar, color);
             }
             ~ScopedColor() { ImGui::PopStyleColor(); }
+        };
+
+        struct ScopedID
+        {
+            explicit ScopedID(const StringView id) { ImGui::PushID(id.data(), id.data() + id.size()); }
+            ScopedID(const ScopedID&) = delete;
+            ScopedID operator=(const ScopedID&) = delete;
+            ~ScopedID() { ImGui::PopID(); }
         };
 
         struct ScopedDisable
@@ -248,6 +272,7 @@ namespace Crowny
             Underline();
             ImGui::PopStyleVar(2); // ItemSpacing, FramePadding
             ShiftCursorY(18.0f);
+            ImGui::Dummy(ImVec2(0.0f, 0.0f));
             PopID();
         }
 
@@ -988,6 +1013,7 @@ namespace Crowny
 
         template <typename AssetType> static bool AssetReference(const String& label, AssetHandle<AssetType>& assetHandle)
         {
+            UI::ScopedID propertyScope(label);
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
@@ -1061,6 +1087,7 @@ namespace Crowny
 
         static bool AssetReference(const String& label, AssetHandle<Asset>& assetHandle, AssetType assetType)
         {
+            UI::ScopedID propertyScope(label);
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });

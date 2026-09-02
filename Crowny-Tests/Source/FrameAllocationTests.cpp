@@ -2,6 +2,7 @@
 
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
+#include "Crowny/Ecs/Entity.h"
 #include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Renderer/RenderPipeline.h"
 #include "Crowny/Scene/SceneRenderer.h"
@@ -540,4 +541,42 @@ TEST_CASE("Scene light synchronization allocates nothing after warm-up", "[Memor
     CHECK(snapshot.LegacyLights.Size() == lightCount - removedLightCount);
     CHECK(reducedDelta.AllocationCount == 0);
     CHECK(reducedDelta.RequestedBytes == 0);
+}
+
+TEST_CASE("Hierarchy transform propagation allocates nothing after warm-up", "[Memory][Frame][Ecs][Hierarchy]")
+{
+    constexpr std::array<uint32_t, 3> entityCounts{ 1u, 1000u, 10000u };
+    constexpr uint32_t frameCount = 120u;
+
+    for (const uint32_t entityCount : entityCounts)
+    {
+        Ref<Scene> scene = CreateRef<Scene>(false);
+        Entity root = scene->CreateEntity("Root");
+        for (uint32_t index = 1u; index < entityCount; index++)
+        {
+            Entity child = scene->CreateEntity("Child");
+            REQUIRE(child.SetParent(root));
+        }
+
+        const auto propagate = [&](uint32_t frame) {
+            auto scope = scene->DeferTransformChanges();
+            root.SetLocalTransform(Transform({ static_cast<float>(frame), 0.0f, 0.0f }, glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                                               { 1.0f, 1.0f, 1.0f }),
+                                   false);
+        };
+        propagate(0u);
+        propagate(1u);
+        propagate(2u);
+
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        for (uint32_t frame = 0u; frame < frameCount; frame++)
+            propagate(frame + 3u);
+        const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+        const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+        INFO("Entity count: " << entityCount);
+        CHECK(scene->GetLastTransformPropagationStats().VisitedEntityCount == entityCount);
+        CHECK(delta.AllocationCount == 0u);
+        CHECK(delta.RequestedBytes == 0u);
+    }
 }

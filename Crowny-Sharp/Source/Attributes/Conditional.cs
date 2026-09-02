@@ -27,7 +27,7 @@ namespace Crowny
         /// <summary>Gets whether the condition compares against an explicit value.</summary>
         public bool HasValue { get; private set; }
 
-        internal bool AnimateVisibility { get; protected set; }
+        internal bool AnimateVisibility { get; set; }
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true, AllowMultiple = true)]

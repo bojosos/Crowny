@@ -67,6 +67,7 @@ namespace
         bool ItemWidthBalanced = false;
         bool IdBalanced = false;
         bool ColumnsFinalized = false;
+        bool BoundaryCommitted = false;
         float MultilineHeight = 0.0f;
         float ExpectedMultilineHeight = 0.0f;
     };
@@ -104,6 +105,7 @@ namespace
         observations.ItemWidthBalanced &= window->DC.ItemWidthStack.Size == initialItemWidthDepth;
         observations.IdBalanced = window->IDStack.Size == initialIdDepth;
         observations.ColumnsFinalized = window->DC.CurrentColumns == nullptr;
+        observations.BoundaryCommitted = window->DC.CursorMaxPos.y >= window->DC.CursorPos.y;
         ImGui::Dummy(ImVec2(0.0f, 0.0f));
 
         ImGui::End();
@@ -146,7 +148,60 @@ namespace
         ImGui::End();
         ImGui::EndFrame();
     }
+
+    struct WindowStackObservations
+    {
+        bool Visible = false;
+        bool NestedStylePushed = false;
+        bool StyleBalanced = false;
+        bool WindowBalanced = false;
+    };
+
+    WindowStackObservations DrawScopedWindowWithNestedStyle(bool collapsed)
+    {
+        ImGui::NewFrame();
+        if (collapsed)
+            ImGui::SetNextWindowCollapsed(true, ImGuiCond_Always);
+
+        ImGuiContext& context = *GImGui;
+        const int initialStyleDepth = context.StyleVarStack.Size;
+        const int initialWindowDepth = context.CurrentWindowStack.Size;
+
+        WindowStackObservations observations;
+        {
+            UI::ScopedWindow window("Settings stack test");
+            observations.Visible = window.IsVisible();
+            if (observations.Visible)
+            {
+                UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 7.0f));
+                observations.NestedStylePushed = context.StyleVarStack.Size == initialStyleDepth + 1;
+                ImGui::TextUnformatted("Settings");
+            }
+        }
+
+        observations.StyleBalanced = context.StyleVarStack.Size == initialStyleDepth;
+        observations.WindowBalanced = context.CurrentWindowStack.Size == initialWindowDepth;
+        ImGui::EndFrame();
+        return observations;
+    }
 } // namespace
+
+TEST_CASE("Scoped windows end after nested style guards unwind", "[Editor][UI][ImGui][Settings]")
+{
+    ImGuiContextScope imgui;
+
+    const WindowStackObservations visible = DrawScopedWindowWithNestedStyle(false);
+    CHECK(visible.Visible);
+    CHECK(visible.NestedStylePushed);
+    CHECK(visible.StyleBalanced);
+    CHECK(visible.WindowBalanced);
+
+    const WindowStackObservations collapsed = DrawScopedWindowWithNestedStyle(true);
+    CHECK_FALSE(collapsed.Visible);
+    CHECK_FALSE(collapsed.NestedStylePushed);
+    CHECK(collapsed.StyleBalanced);
+    CHECK(collapsed.WindowBalanced);
+}
 
 TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[Editor][Properties][ImGui]")
 {
@@ -161,8 +216,34 @@ TEST_CASE("Multiline properties balance ImGui row and property-grid stacks", "[E
         CHECK(observations.ItemWidthBalanced);
         CHECK(observations.IdBalanced);
         CHECK(observations.ColumnsFinalized);
-        CHECK(observations.MultilineHeight == Approx(observations.ExpectedMultilineHeight));
+        CHECK(observations.BoundaryCommitted);
+        CHECK(observations.MultilineHeight == Catch::Approx(observations.ExpectedMultilineHeight));
     }
+}
+
+TEST_CASE("Labeled ImGui scopes isolate asset reference child IDs", "[Editor][Properties][ImGui][AssetReference]")
+{
+    ImGuiContextScope imgui;
+
+    ImGui::NewFrame();
+    ImGui::Begin("Asset reference ID test");
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    const int initialIdDepth = window->IDStack.Size;
+    const auto captureIds = [](const char* propertyLabel) {
+        UI::ScopedID propertyScope(propertyLabel);
+        const UI::PopupLabelId popupId = UI::PopupLabelId::Create("AssetSearch", 0u);
+        return Pair<ImGuiID, ImGuiID>(ImGui::GetID(popupId.CStr()), ImGui::GetID("Null##1"));
+    };
+
+    const Pair<ImGuiID, ImGuiID> meshIds = captureIds("Mesh");
+    const Pair<ImGuiID, ImGuiID> materialIds = captureIds("Material");
+
+    CHECK(meshIds.first != materialIds.first);
+    CHECK(meshIds.second != materialIds.second);
+    CHECK(window->IDStack.Size == initialIdDepth);
+
+    ImGui::End();
+    ImGui::EndFrame();
 }
 
 TEST_CASE("Property dropdowns allocate nothing after ImGui warm-up", "[Editor][Properties][ImGui][Memory][Frame]")

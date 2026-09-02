@@ -57,7 +57,7 @@ try {
         try {
             if ($ProcessIsolated) {
                 Write-Host "Running the hidden process-isolated test lane..."
-                $isolatedTests = @(& $testExecutable --list-tests "[.ProcessIsolated]" --verbosity quiet)
+                $isolatedTests = @(& $testExecutable --list-tests "[.ProcessIsolated]~[Benchmark]" --verbosity quiet)
                 if ($LASTEXITCODE -ne 0) {
                     throw "Failed to enumerate the hidden process-isolated test lane."
                 }

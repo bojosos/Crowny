@@ -95,10 +95,7 @@ namespace Crowny
 
         void ApplyPlannedTransform(PlannedTransform& planned)
         {
-            TransformComponent& transform = planned.Target.GetTransform();
-            transform.SetPosition(planned.Position);
-            transform.SetRotation(planned.Rotation);
-            transform.SetScale(planned.Scale);
+            planned.Target.GetTransform().SetLocalTransform(Transform(planned.Position, planned.Rotation, planned.Scale));
         }
 
         void CommitParentChildren(Entity parent, Vector<Entity>& rebuilt, HierarchyMutationStats& stats)
@@ -264,6 +261,8 @@ namespace Crowny
         }
         CollectParent(touchedParents, touchedParentHandles, newParent);
 
+        auto transformScope = DeferTransformChanges();
+
         for (Entity parent : touchedParents)
         {
             const Vector<Entity>& current = parent.GetChildren();
@@ -287,6 +286,7 @@ namespace Crowny
         }
         for (PlannedTransform& planned : transforms)
             ApplyPlannedTransform(planned);
+        MarkHierarchyTopologyDirty();
         for (PlannedTransform& planned : transforms)
         {
             planned.Target.NotifyTransformChanged();
@@ -342,6 +342,8 @@ namespace Crowny
                 }
             }
 
+            auto transformScope = DeferTransformChanges();
+
             Vector<Entity> touchedParents;
             UnorderedSet<entt::entity> touchedParentHandles;
             touchedParentHandles.reserve(roots.size());
@@ -393,6 +395,7 @@ namespace Crowny
                 m_Registry.destroy(root.GetHandle());
                 result.Stats.DestroyedEntityCount++;
             }
+            MarkHierarchyTopologyDirty();
             for (PlannedTransform& planned : transforms)
             {
                 planned.Target.NotifyTransformChanged();
@@ -432,6 +435,7 @@ namespace Crowny
             m_Registry.destroy(entity.GetHandle());
             result.Stats.DestroyedEntityCount++;
         }
+        MarkHierarchyTopologyDirty();
         result.Succeeded = true;
         return result;
     }

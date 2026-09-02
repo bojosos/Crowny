@@ -2,6 +2,7 @@
 
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Log.h"
+#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedHostBindings.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoClass.h"
@@ -68,7 +69,7 @@ namespace
         return value > 0 ? value : defaultIterations;
     }
 
-    int64_t InvokeMeasurement(MonoMethod& method, int iterations)
+    int64_t InvokeMeasurement(Crowny::MonoMethod& method, int iterations)
     {
         void* parameters[] = { &iterations };
         MonoObject* boxedResult = method.Invoke(nullptr, parameters);
@@ -84,7 +85,7 @@ TEST_CASE("Managed host table dispatch benchmark", "[Mono][Scripting][Benchmark]
 
     AttachThread();
 
-    MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+    Crowny::MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
     if (assembly == nullptr)
     {
         const Path assemblyPath = Test::ResolveManagedAssembly("CrownySharp.dll", "Crowny-Sharp/CrownySharp.dll");
@@ -100,15 +101,15 @@ TEST_CASE("Managed host table dispatch benchmark", "[Mono][Scripting][Benchmark]
     hostApi.time_get_delta_time = &HostValue;
     g_HostApi = &hostApi;
 
-    MonoClass* runtimeContext = assembly->GetClass(CROWNY_NS, "ManagedRuntimeContext");
-    MonoClass* benchmark = assembly->GetClass(CROWNY_NS, "ManagedBindingBenchmark");
+    Crowny::MonoClass* runtimeContext = assembly->GetClass(CROWNY_NS, "ManagedRuntimeContext");
+    Crowny::MonoClass* benchmark = assembly->GetClass(CROWNY_NS, "ManagedBindingBenchmark");
     REQUIRE(runtimeContext != nullptr);
     REQUIRE(benchmark != nullptr);
     runtimeContext->AddInternalCall("Internal_GetNativeHostApi", reinterpret_cast<const void*>(&GetNativeHostApi));
     benchmark->AddInternalCall("Internal_GetValue", reinterpret_cast<const void*>(&DirectValue));
 
-    MonoMethod* direct = benchmark->GetMethod("MeasureDirectInternalCall", 1);
-    MonoMethod* host = benchmark->GetMethod("MeasureHostTableCall", 1);
+    Crowny::MonoMethod* direct = benchmark->GetMethod("MeasureDirectInternalCall", 1);
+    Crowny::MonoMethod* host = benchmark->GetMethod("MeasureHostTableCall", 1);
     REQUIRE(direct != nullptr);
     REQUIRE(host != nullptr);
 
