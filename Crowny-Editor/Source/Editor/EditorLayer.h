@@ -186,11 +186,13 @@ namespace Crowny
 
         struct Notification
         {
+            uint32_t Id = 0;
             String Message;
             NotificationKind Kind = NotificationKind::Info;
-            double ExpiresAt = 0.0;
+            float SecondsLeft = 0.0f; // Counts down while the card is not hovered; the card fades out at the end.
         };
         Vector<Notification> m_Notifications;
+        uint32_t m_NextNotificationId = 1;
 
         Mutex m_FileWatchMutex;
         Vector<Path> m_FileWatchQueue;
@@ -215,5 +217,12 @@ namespace Crowny
 
     public:
         static EditorCamera& GetEditorCamera() { return s_EditorCamera; }
+
+        // Viewport render-overlay state shared between Settings > Viewport, the viewport settings popup
+        // and the viewport's top-right overlay toolbar.
+        bool IsWireframeMode() const { return m_WireframeMode; }
+        void SetWireframeMode(bool wireframe) { m_WireframeMode = wireframe; }
+        bool IsShowingRenderingStatistics() const { return m_ShowRenderingStatistics; }
+        void SetShowRenderingStatistics(bool show) { m_ShowRenderingStatistics = show; }
     };
 } // namespace Crowny

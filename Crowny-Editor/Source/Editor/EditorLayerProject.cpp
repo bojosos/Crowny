@@ -28,7 +28,7 @@
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AudioMixerPanel.h"
-#include "Panels/ComponentEditor.h"
+#include "Panels/EntityInspector.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/EditorPanelRegistry.h"
 #include "Panels/HierarchyPanel.h"
@@ -222,6 +222,90 @@ namespace Crowny
                     return false;
             return true;
         }
+
+        constexpr const char* SCENE_EXTENSION = ".cwscene";
+
+        bool HasSceneExtension(const Path& path)
+        {
+            String extension = path.extension().string();
+            StringUtils::ToLower(extension);
+            return extension == SCENE_EXTENSION;
+        }
+
+        // Appends the scene extension only when the path does not already carry it, so "Level.cwscene" never turns
+        // into "Level.cwscene.cwscene" and a dotted name such as "Level 1.5" keeps its stem.
+        Path EnsureSceneExtension(const Path& path)
+        {
+            if (HasSceneExtension(path))
+                return path;
+            Path result = path;
+            result += SCENE_EXTENSION;
+            return result;
+        }
+
+        // Strips every trailing ".cwscene" (a file that ended up with a doubled extension collapses to its base name).
+        Path StripSceneExtensions(const Path& path)
+        {
+            Path result = path;
+            while (HasSceneExtension(result))
+                result.replace_extension();
+            return result;
+        }
+
+        String ScenePathKey(const Path& path)
+        {
+            String key = StripSceneExtensions(path.lexically_normal()).generic_string();
+            StringUtils::ToLower(key);
+            return key;
+        }
+
+        struct BuildSceneOption
+        {
+            UUID Id;
+            Path SourcePath;
+            String DisplayName;
+        };
+
+        // One entry per scene file: asset registry rows that resolve to the same file (ignoring doubled ".cwscene"
+        // extensions and case) are merged, preferring the id that is already selected as the main scene.
+        Vector<BuildSceneOption> CollectBuildSceneOptions(const Vector<UUID>& sceneIds, const UUID& preferredId, const Path& assetFolder)
+        {
+            Vector<BuildSceneOption> options;
+            UnorderedMap<String, size_t> optionByKey;
+            for (const UUID& sceneId : sceneIds)
+            {
+                const Path sourcePath = ProjectLibrary::Get().UuidToPath(sceneId);
+                if (sourcePath.empty())
+                    continue;
+                const String key = ScenePathKey(sourcePath);
+                const auto existing = optionByKey.find(key);
+                if (existing != optionByKey.end())
+                {
+                    if (sceneId == preferredId)
+                    {
+                        options[existing->second].Id = sceneId;
+                        options[existing->second].SourcePath = sourcePath;
+                    }
+                    continue;
+                }
+
+                Path displayPath = StripSceneExtensions(sourcePath.lexically_normal());
+                if (!assetFolder.empty())
+                {
+                    const Path relative = displayPath.lexically_relative(assetFolder.lexically_normal());
+                    if (!relative.empty() && relative.native().rfind(Path("..").native(), 0) != 0)
+                        displayPath = relative;
+                }
+                String displayName = displayPath.generic_string();
+                if (displayName.empty())
+                    displayName = ProjectLibrary::Get().GetAssetName(sceneId);
+                optionByKey.emplace(key, options.size());
+                options.push_back({ sceneId, sourcePath, std::move(displayName) });
+            }
+            std::sort(options.begin(), options.end(),
+                      [](const BuildSceneOption& lhs, const BuildSceneOption& rhs) { return lhs.DisplayName < rhs.DisplayName; });
+            return options;
+        }
     } // namespace
 
     void EditorLayer::SetProjectSettings()
@@ -236,6 +320,11 @@ namespace Crowny
         m_TempSceneId = UUID::EMPTY;
         if (!projSettings->LastOpenSceneId.Empty())
             OpenScene(projSettings->LastOpenSceneId);
+        // Switching projects must never keep the previous project's scene active. When the new project has no
+        // (valid) last-open scene, queue an empty scene so the deferred swap in OnUpdate replaces and unloads the
+        // old one, clears undo history and resets the hierarchy selection through the scene lifecycle listener.
+        if (m_Temp == nullptr)
+            CreateNewScene();
         m_ViewportPanel->SetGizmoMode(projSettings->GizmoMode);
         m_ViewportPanel->SetGizmoLocalMode(projSettings->GizmoLocalMode);
 
@@ -372,7 +461,12 @@ namespace Crowny
         BuildManager& buildManager = BuildManager::Get();
         Ref<PlatformInfo> platformInfo = buildManager.GetActivePlatformInfo();
         const Vector<PlatformType>& platforms = buildManager.GetAvailablePlatforms();
-        Vector<UUID> sceneIds = ProjectLibrary::Get().GetAllAssets(AssetType::Scene);
+        const Vector<BuildSceneOption> sceneOptions = CollectBuildSceneOptions(
+          ProjectLibrary::Get().GetAllAssets(AssetType::Scene), platformInfo ? platformInfo->MainScene : UUID::EMPTY,
+          ProjectLibrary::Get().GetAssetFolder());
+        const auto findSceneOption = [&sceneOptions](const UUID& sceneId) {
+            return std::find_if(sceneOptions.begin(), sceneOptions.end(), [&sceneId](const BuildSceneOption& option) { return option.Id == sceneId; });
+        };
         Vector<Ref<FileEntry>> includedAssets = ProjectLibrary::Get().GetAssetsForBuild();
 
         ImGui::TextUnformatted("Build setup");
@@ -441,25 +535,32 @@ namespace Crowny
             String selectedSceneName;
             if (platformInfo && !platformInfo->MainScene.Empty())
             {
-                selectedSceneName = ProjectLibrary::Get().GetAssetName(platformInfo->MainScene);
+                const auto selectedOption = findSceneOption(platformInfo->MainScene);
+                selectedSceneName =
+                  selectedOption != sceneOptions.end() ? selectedOption->DisplayName : ProjectLibrary::Get().GetAssetName(platformInfo->MainScene);
                 if (!selectedSceneName.empty())
                     scenePreview = selectedSceneName.c_str();
             }
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (ImGui::BeginCombo("##BuildMainScene", scenePreview))
             {
-                if (sceneIds.empty())
+                if (sceneOptions.empty())
                     ImGui::TextDisabled("No scene assets found.");
-                for (const UUID& sceneId : sceneIds)
+                for (const BuildSceneOption& option : sceneOptions)
                 {
-                    const String sceneName = ProjectLibrary::Get().GetAssetName(sceneId);
-                    const bool selected = platformInfo && sceneId == platformInfo->MainScene;
-                    if (ImGui::Selectable(sceneName.c_str(), selected) && platformInfo)
+                    const bool selected = platformInfo && option.Id == platformInfo->MainScene;
+                    ImGui::PushID(option.DisplayName.c_str());
+                    if (ImGui::Selectable(option.DisplayName.c_str(), selected) && platformInfo && !selected)
                     {
-                        platformInfo->MainScene = sceneId;
-                        ProjectLibrary::Get().SetIncludeInBuild(ProjectLibrary::Get().UuidToPath(sceneId), true);
+                        platformInfo->MainScene = option.Id;
+                        // Only touches the scene's .meta file when the scene is not part of the build yet; re-selecting
+                        // an already included scene does not write anything.
+                        ProjectLibrary::Get().SetIncludeInBuild(option.SourcePath, true);
                         includedAssets = ProjectLibrary::Get().GetAssetsForBuild();
                     }
+                    ImGui::PopID();
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("%s", option.SourcePath.string().c_str());
                     if (selected)
                         ImGui::SetItemDefaultFocus();
                 }
@@ -494,8 +595,7 @@ namespace Crowny
         }
 
         EditorBuildValidation validation = buildManager.ValidateActiveBuild((uint32_t)includedAssets.size());
-        if (platformInfo && !platformInfo->MainScene.Empty() &&
-            std::find(sceneIds.begin(), sceneIds.end(), platformInfo->MainScene) == sceneIds.end())
+        if (platformInfo && !platformInfo->MainScene.Empty() && findSceneOption(platformInfo->MainScene) == sceneOptions.end())
             validation.Errors.push_back("The selected main scene no longer exists.");
         if (!validation.Errors.empty() || !validation.Warnings.empty())
         {
@@ -788,7 +888,7 @@ namespace Crowny
         Vector<Path> outPaths;
         if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Scene", ProjectLibrary::Get().GetAssetFolder(),
                                        { Editor::GetSceneDialogFilter() }))
-            OpenScene(outPaths[0].replace_extension(".cwscene"));
+            OpenScene(EnsureSceneExtension(outPaths[0]));
     }
 
     void EditorLayer::OpenScene(const Path& filepath)
@@ -848,7 +948,7 @@ namespace Crowny
         if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene", ProjectLibrary::Get().GetAssetFolder(),
                                        { Editor::GetSceneDialogFilter() }))
         {
-            const Path path = outPaths[0].replace_extension(".cwscene").lexically_normal();
+            const Path path = EnsureSceneExtension(outPaths[0]).lexically_normal();
             if (!AssetFileSystemScanner::IsPathWithin(ProjectLibrary::Get().GetAssetFolder(), path))
             {
                 AddNotification("Scenes must be saved inside the project Assets folder.", NotificationKind::Error);

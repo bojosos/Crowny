@@ -26,7 +26,7 @@
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AudioMixerPanel.h"
-#include "Panels/ComponentEditor.h"
+#include "Panels/EntityInspector.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/EditorPanelRegistry.h"
 #include "Panels/HierarchyPanel.h"
@@ -69,15 +69,14 @@ namespace Crowny
 {
     void EditorLayer::OnImGuiRender()
     {
-        SetupImGuiRender();
-
         // When no project is loaded, show the project hub and skip the editor UI
         if (!Editor::Get().IsProjectLoaded())
         {
             UI_ProjectManager();
-            ImGui::End();
             return;
         }
+
+        SetupImGuiRender();
 
         m_MenuBar->Render();
         if (m_ShowDemoWindow)
@@ -86,7 +85,6 @@ namespace Crowny
         // UI_ProjectManager handles menu-triggered open/new even when a project is loaded
         UI_ProjectManager();
         UI_Header();
-        UI_ViewportSettings();
         UI_Settings();
         UI_BuildGame();
         UI_CommandPalette();
@@ -101,6 +99,7 @@ namespace Crowny
         m_ViewportPanel->SetEditorRenderTarget(m_RenderTarget);
         m_ViewportPanel->SetShowStatistics(m_ShowRenderingStatistics);
         m_Panels->Render();
+        UI_ViewportSettings();
 
         ImGui::End(); // End dockspace
 
@@ -179,10 +178,12 @@ namespace Crowny
 
         // Fullscreen hub window covering the entire viewport
         ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowPos(viewport->Pos);
         ImGui::SetNextWindowSize(viewport->Size);
+        ImGui::SetNextWindowViewport(viewport->ID);
         ImGuiWindowFlags hubFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                                    ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoDocking;
+                                    ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoDocking |
+                                    ImGuiWindowFlags_NoSavedSettings;
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("##ProjectHub", nullptr, hubFlags);
@@ -270,28 +271,25 @@ namespace Crowny
                         openProject(outPaths.front());
                 };
 
+                // Lay the toolbar out with explicit widths instead of a table: a freshly created table needs a frame or
+                // two of auto-fit before its stretch column settles, which made the search field pop in at a wrong size.
                 const float toolbarWidth = ImGui::GetContentRegionAvail().x - contentPadding;
-                if (toolbarWidth >= 390.0f &&
-                    ImGui::BeginTable("##projectToolbar", 2,
-                                      ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX))
+                const float openButtonWidth = 120.0f;
+                const float toolbarSpacing = ImGui::GetStyle().ItemSpacing.x;
+                if (toolbarWidth >= 390.0f)
                 {
-                    ImGui::TableSetupColumn("Search", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableSetupColumn("Open", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::SetNextItemWidth(-1.0f);
+                    ImGui::SetNextItemWidth(toolbarWidth - openButtonWidth - toolbarSpacing);
                     UIUtils::SearchWidget(m_RecentSearchFilter, "Search projects...");
-                    ImGui::TableSetColumnIndex(1);
-                    if (ImGui::Button("Open project...", ImVec2(-1.0f, 0.0f)))
+                    ImGui::SameLine(0.0f, toolbarSpacing);
+                    if (ImGui::Button("Open project...", ImVec2(openButtonWidth, 0.0f)))
                         browseForProject();
                     UI::SetTooltip("Choose a project folder");
-                    ImGui::EndTable();
                 }
-                else if (toolbarWidth < 390.0f)
+                else
                 {
-                    ImGui::SetNextItemWidth(-1.0f);
+                    ImGui::SetNextItemWidth(toolbarWidth);
                     UIUtils::SearchWidget(m_RecentSearchFilter, "Search projects...");
-                    if (ImGui::Button("Open project...", ImVec2(-1.0f, 0.0f)))
+                    if (ImGui::Button("Open project...", ImVec2(toolbarWidth, 0.0f)))
                         browseForProject();
                     UI::SetTooltip("Choose a project folder");
                 }
@@ -351,6 +349,7 @@ namespace Crowny
                     }
 
                     const ImVec2 itemMin = ImGui::GetItemRectMin();
+                    const ImVec2 cursorAfterItem = ImGui::GetCursorPos();
                     ImGui::SetCursorScreenPos(ImVec2(itemMin.x + 10.0f, itemMin.y + 5.0f));
                     ImGui::TextUnformatted(projectName.c_str());
                     ImGui::SetCursorScreenPos(ImVec2(itemMin.x + 10.0f, itemMin.y + 5.0f + ImGui::GetTextLineHeightWithSpacing()));
@@ -359,6 +358,8 @@ namespace Crowny
                     else
                         ImGui::TextColored(ImVec4(0.95f, 0.48f, 0.38f, 1.0f), "Folder missing  |  %s", project.ProjectPath.string().c_str());
                     UI::SetTooltip(project.ProjectPath.string());
+                    // The overlay text moved the cursor; restore it so the next entry starts below this one.
+                    ImGui::SetCursorPos(cursorAfterItem);
 
                     ImGui::PopID();
                 }
@@ -718,6 +719,7 @@ namespace Crowny
     void EditorLayer::UI_TimeSettings()
     {
         const Ref<TimeSettings>& timeSettings = Application::TryGet()->GetTimeSettings();
+        ImGui::PushID("TimeSettings"); // Keep this grid's generated ids apart from the other grids in the Settings window.
         UI::BeginPropertyGrid();
         if (UI::Property("Time scale", timeSettings->TimeScale))
             timeSettings->TimeScale = std::max(0.0f, timeSettings->TimeScale);
@@ -726,6 +728,7 @@ namespace Crowny
         if (UI::Property("Maximum timestep", timeSettings->MaxTimestep))
             timeSettings->MaxTimestep = std::max(timeSettings->FixedTimestep, timeSettings->MaxTimestep);
         UI::EndPropertyGrid();
+        ImGui::PopID();
     }
 
     static void DrawScriptType(const ScriptTypeSchema& type)
@@ -756,52 +759,82 @@ namespace Crowny
 
     void EditorLayer::AddNotification(const String& message, NotificationKind kind)
     {
-        const double now = ImGui::GetTime();
+        // Errors stay a little longer than informational cards; a card may also be closed with its X button.
+        const float lifetime = kind == NotificationKind::Error ? 8.0f : 5.0f;
         for (Notification& notification : m_Notifications)
         {
             if (notification.Message == message)
             {
                 notification.Kind = kind;
-                notification.ExpiresAt = now + 3.5;
+                notification.SecondsLeft = lifetime;
                 return;
             }
         }
 
         if (m_Notifications.size() >= 4)
             m_Notifications.erase(m_Notifications.begin());
-        m_Notifications.push_back({ message, kind, now + 3.5 });
+        m_Notifications.push_back({ m_NextNotificationId++, message, kind, lifetime });
     }
 
     void EditorLayer::UI_Notifications()
     {
-        const double now = ImGui::GetTime();
-        m_Notifications.erase(std::remove_if(m_Notifications.begin(), m_Notifications.end(),
-                                             [now](const Notification& notification) { return notification.ExpiresAt <= now; }),
-                              m_Notifications.end());
+        if (m_Notifications.empty())
+            return;
+
+        constexpr float fadeDuration = 0.4f;
+        constexpr float maxCardWidth = 380.0f;
+        const float deltaTime = std::max(0.0f, ImGui::GetIO().DeltaTime);
+        const ImGuiStyle& style = ImGui::GetStyle();
 
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         float y = viewport->WorkPos.y + 42.0f;
-        for (uint32_t i = 0; i < m_Notifications.size(); i++)
+        for (size_t i = 0; i < m_Notifications.size();)
         {
-            const Notification& notification = m_Notifications[i];
+            Notification& notification = m_Notifications[i];
             const ImVec4 accent = notification.Kind == NotificationKind::Success ? ImVec4(0.30f, 0.78f, 0.44f, 1.0f)
                                   : notification.Kind == NotificationKind::Error ? ImVec4(0.92f, 0.30f, 0.28f, 1.0f)
                                                                                  : ImGui::ColorConvertU32ToFloat4(UI::Colors::Accent);
+            const float alpha = std::clamp(notification.SecondsLeft / fadeDuration, 0.0f, 1.0f);
 
             ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 14.0f, y), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
-            ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, 0.0f), ImVec2(380.0f, FLT_MAX));
-            ImGui::SetNextWindowBgAlpha(0.96f);
+            ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, 0.0f), ImVec2(maxCardWidth, FLT_MAX));
+            ImGui::SetNextWindowBgAlpha(0.96f * alpha);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
             ImGui::PushStyleColor(ImGuiCol_Border, accent);
-            const String windowName = fmt::format("##Notification{0}", i);
+            const String windowName = fmt::format("##Notification{0}", notification.Id);
             ImGui::Begin(windowName.c_str(), nullptr,
-                         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
+                         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove |
                            ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoSavedSettings);
-            ImGui::TextWrapped("%s", notification.Message.c_str());
+
+            // Reserve the close button's column so the wrapped message never runs underneath it.
+            const float closeSize = ImGui::GetFrameHeight();
+            const float wrapWidth = maxCardWidth - style.WindowPadding.x * 2.0f - closeSize - style.ItemSpacing.x;
+            ImGui::BeginGroup();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + wrapWidth);
+            ImGui::TextUnformatted(notification.Message.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::EndGroup();
+            ImGui::SameLine();
+            const bool dismissed = ImGui::CloseButton(ImGui::GetID("##close"), ImGui::GetCursorScreenPos());
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Dismiss");
+
+            // Hovering pauses the countdown (and cancels an in-progress fade) so the user can finish reading.
+            if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+                notification.SecondsLeft = std::max(notification.SecondsLeft, fadeDuration);
+            else
+                notification.SecondsLeft -= deltaTime;
+
             y += ImGui::GetWindowSize().y + 8.0f;
             ImGui::End();
             ImGui::PopStyleColor();
-            ImGui::PopStyleVar();
+            ImGui::PopStyleVar(2);
+
+            if (dismissed || notification.SecondsLeft <= 0.0f)
+                m_Notifications.erase(m_Notifications.begin() + static_cast<ptrdiff_t>(i));
+            else
+                i++;
         }
     }
 
@@ -1106,6 +1139,7 @@ namespace Crowny
         ImGui::Begin("##viewport_settings_popup", nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
                        ImGuiWindowFlags_NoNav);
+        m_ViewportPanel->SetViewportSettingsHovered(ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows));
 
         ImGui::Spacing();
 
@@ -1121,6 +1155,27 @@ namespace Crowny
             m_WireframeMode = true;
 
         ImGui::Checkbox("Show Statistics", &m_ShowRenderingStatistics);
+
+        ImGui::Spacing();
+
+        // ── Transform Snapping ──────────────────────────────────────────
+        ImGui::TextDisabled("Transform Snapping");
+        ImGui::Separator();
+
+        bool snapEnabled = m_ViewportPanel->GetSnapEnabled();
+        if (ImGui::Checkbox("Enabled", &snapEnabled))
+            m_ViewportPanel->SetSnapEnabled(snapEnabled);
+        UI::SetTooltip("Keep snapping enabled. Hold Ctrl for temporary snapping.");
+
+        Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
+        ImGui::PushItemWidth(settingsWidth * 0.55f);
+        if (ImGui::DragFloat3("Move", glm::value_ptr(editorSettings->GridMoveSnap), 0.01f, 0.001f, 1000.0f, "%.3f m"))
+            editorSettings->GridMoveSnap = glm::max(editorSettings->GridMoveSnap, glm::vec3(0.001f));
+        if (ImGui::DragFloat("Rotate", &editorSettings->GridRotateSnap, 0.5f, 0.1f, 180.0f, "%.1f deg"))
+            editorSettings->GridRotateSnap = std::max(editorSettings->GridRotateSnap, 0.1f);
+        if (ImGui::DragFloat("Scale", &editorSettings->GridScaleSnap, 0.01f, 0.001f, 10.0f, "%.3f"))
+            editorSettings->GridScaleSnap = std::max(editorSettings->GridScaleSnap, 0.001f);
+        ImGui::PopItemWidth();
 
         ImGui::Spacing();
 
@@ -1160,10 +1215,6 @@ namespace Crowny
 
         UI::PopID();
     }
-
-    extern float metalness;
-    extern float roughness;
-    extern glm::vec4 albedo;
 
     void EditorLayer::UI_Settings()
     {
@@ -1215,6 +1266,9 @@ namespace Crowny
                 std::function<const String&(const CodeEditorInstallation&)> selector = [](const CodeEditorInstallation& install) -> const String& {
                     return install.Name;
                 };
+                // UI::BeginPropertyGrid() pushes a depth-based id and restarts the "##N" widget counter, so two sibling
+                // property grids in one window (this one and the Time section) would hand out identical ids. Scope it.
+                ImGui::PushID("CodeEditorSettings");
                 UI::BeginPropertyGrid();
                 if (UI::PropertyDropdown("Editor", editors, m_VisualStudioVersionId, selector))
                 {
@@ -1224,6 +1278,7 @@ namespace Crowny
                         CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
                 }
                 UI::EndPropertyGrid();
+                ImGui::PopID();
             }
         }
 
@@ -1252,7 +1307,7 @@ namespace Crowny
                 {
                     dependencies.erase(dependencies.begin() + static_cast<ptrdiff_t>(removeIndex));
                     Editor::Get().SaveProjectSettings();
-                    CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
+                    CodeEditorManager::Get().NotifyProjectSettingsChanged();
                 }
 
                 if (ImGui::Button("Add assembly..."))
@@ -1270,7 +1325,7 @@ namespace Crowny
                         if (std::find(dependencies.begin(), dependencies.end(), assembly) == dependencies.end())
                             dependencies.push_back(assembly);
                         Editor::Get().SaveProjectSettings();
-                        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY);
+                        CodeEditorManager::Get().NotifyProjectSettingsChanged();
                     }
                 }
                 ImGui::SameLine();
@@ -1363,22 +1418,12 @@ namespace Crowny
 #endif
         }
 
-        if (matchesSection({ "renderer test albedo metalness roughness" }) && beginSection("Renderer test values", ImGuiTreeNodeFlags_None))
-        {
-            ImGui::TextDisabled("Temporary values used by the forward renderer.");
-            UI::BeginPropertyGrid();
-            UI::PropertyColor("Albedo", albedo);
-            UI::Property("Metalness", metalness);
-            UI::Property("Roughness", roughness);
-            UI::EndPropertyGrid();
-        }
-
         if (!m_SettingsSearch.empty() &&
             !matchesSection({ "startup project recent auto load", "code editor IDE Visual Studio", "managed C# assembly dependency mono coreclr runtime",
                               "viewport grid wireframe collider rendering",
                               "time scale fixed timestep maximum", "physics 2D gravity solver layers collision matrix",
                               "input actions bindings keyboard mouse gamepad controls rebinding", "workspace layout reset panels command palette",
-                              "developer debug diagnostics ImGui asset entity C#", "renderer test albedo metalness roughness" }))
+                              "developer debug diagnostics ImGui asset entity C#" }))
             ImGui::TextDisabled("No matching settings.");
 
         ImGui::End();

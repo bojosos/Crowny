@@ -92,6 +92,9 @@ namespace Crowny
 
         RebuildFilteredIndices();
         const ConsoleViewModel::Summary& summary = m_ViewModel.GetSummary();
+        // Selectables extend half an ItemSpacing to the left of the cursor, which left the level
+        // toggles flush against the panel edge. Inset them like the framed widgets in the row above.
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().ItemSpacing.x * 0.5f);
         for (size_t i = 0; i < ConsoleBuffer::Message::Levels.size(); i++)
         {
             const ConsoleBuffer::Message::Level level = ConsoleBuffer::Message::Levels[i];

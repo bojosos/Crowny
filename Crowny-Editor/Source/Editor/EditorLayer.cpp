@@ -26,7 +26,7 @@
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AudioMixerPanel.h"
-#include "Panels/ComponentEditor.h"
+#include "Panels/EntityInspector.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/EditorPanelRegistry.h"
 #include "Panels/HierarchyPanel.h"
@@ -134,13 +134,16 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
+        static const String imguiIniFilename = (Application::TryGet()->GetWorkingDirectory() / "imgui.ini").string();
+        ImGui::GetIO().IniFilename = imguiIniFilename.c_str();
+
         RegisterBuiltinNodeTypes();
 
         EditorAssets::Load();
 
-        Editor::StartUp([this](const Path& path, FileWatch::Change changeType) {
-            if (changeType != FileWatch::FileModified && changeType != FileWatch::FileAdded && changeType != FileWatch::FileNewRenamed)
-                return;
+        Editor::StartUp([this](const Path& path, FileWatch::Change) {
+            if (CodeEditorManager::IsStartedUp())
+                CodeEditorManager::Get().NotifyProjectInputChanged(path);
             {
                 Lock lock(m_FileWatchMutex);
                 m_FileWatchQueue.push_back(path);
@@ -176,6 +179,11 @@ namespace Crowny
           ViewportPanel::Registration, [this]() { return m_HierarchyPanel->GetSelectedEntity(); },
           [this]() -> const Vector<Entity>& { return m_HierarchyPanel->GetSelectedEntities(); });
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
+        m_ViewportPanel->SetViewportSettingsCallbacks([this]() { m_ShowViewportSettings = !m_ShowViewportSettings; },
+                                                      [this]() { return m_ShowViewportSettings; });
+        m_ViewportPanel->SetRenderOverlayBinding(ViewportRenderOverlayBinding{
+          [this]() { return IsWireframeMode(); }, [this](bool wireframe) { SetWireframeMode(wireframe); },
+          [this]() { return IsShowingRenderingStatistics(); }, [this](bool show) { SetShowRenderingStatistics(show); } });
         m_ConsolePanel = &m_Panels->Add(ConsolePanel::Registration);
         m_AssetBrowser = &m_Panels->Add(AssetBrowserPanel::Registration, [this](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
         m_AudioMixerPanel = &m_Panels->Add(AudioMixerPanel::Registration);
@@ -432,25 +440,25 @@ namespace Crowny
     {
         SceneManager* sceneManager = SceneManager::TryGet();
         if (sceneManager == nullptr || m_ViewportPanel == nullptr || !m_RenderTarget)
-            return {};
+            return Entity::Invalid;
 
         const Ref<Scene> scene = sceneManager->GetActiveScene();
         if (!scene)
-            return {};
+            return Entity::Invalid;
 
         const Ref<Texture> objectIdTexture = m_RenderTarget->GetColorTexture(1);
         if (!objectIdTexture || objectIdTexture->GetFormat() != TextureFormat::R32I)
-            return {};
+            return Entity::Invalid;
 
         const ViewportTextureExtent textureExtent{ objectIdTexture->GetWidth(), objectIdTexture->GetHeight() };
         const std::optional<ViewportPickPixel> pixel =
           ResolveViewportPickPixel(screenPosition, m_ViewportPanel->GetViewportBounds(), textureExtent);
         if (!pixel)
-            return {};
+            return Entity::Invalid;
 
         int32_t objectId = 0;
         if (!objectIdTexture->ReadPixel(pixel->X, pixel->Y, &objectId, sizeof(objectId)) || objectId <= 0)
-            return {};
+            return Entity::Invalid;
 
         const entt::entity handle = static_cast<entt::entity>(static_cast<uint32_t>(objectId - 1));
         const Entity entity(handle, scene.get());
@@ -565,12 +573,21 @@ namespace Crowny
         case SceneState::Play: {
             Application* application = Application::TryGet();
             Time& time = application->GetTime();
-            time.AdvanceSimulation(*application->GetTimeSettings());
+            const SimulationFrame simulationFrame = time.AdvanceSimulation(*application->GetTimeSettings());
             const Timestep simulationStep(time.GetDeltaTime());
 
-            SceneManager::TryGet()->GetActiveScene()->OnUpdateRuntime(simulationStep);
-            ScriptRuntime::OnUpdate(simulationStep);
+            const Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
+            // Unity order: FixedUpdate scripts, then the internal physics step, repeated per fixed step.
+            for (uint32_t fixedStep = 0; fixedStep < simulationFrame.FixedStepCount; fixedStep++)
+            {
+                ScriptRuntime::OnFixedUpdate(activeScene, simulationFrame.FixedDelta);
+                activeScene->OnFixedUpdate(simulationFrame.FixedDelta);
+            }
+            activeScene->OnUpdateRuntime(simulationStep);
+            // Unity order: Update -> animation -> LateUpdate.
+            ScriptRuntime::OnUpdate(simulationStep, false);
             m_SceneRenderer->UpdateAnimations(simulationStep);
+            ScriptRuntime::OnLateUpdate(simulationStep);
             m_SceneRenderer->UpdateProceduralMeshes();
             RenderSnapshot& snapshot = AcquireSnapshot();
             m_SceneRenderer->ExtractSnapshot(snapshot);
@@ -616,6 +633,9 @@ namespace Crowny
         // Process completed async imports (GPU init on main thread)
         if (ProjectLibrary::IsStartedUp() && ProjectLibrary::Get().IsImporting())
             ProjectLibrary::Get().ProcessCompletedImports();
+
+        if (CodeEditorManager::IsStartedUp())
+            CodeEditorManager::Get().Update();
 
         if (m_Temp) // Delay scene reload
         {
@@ -794,6 +814,7 @@ namespace Crowny
             if (activeScene)
                 title += " - " + activeScene->GetName();
         }
+        title += "###CrownyEditorDockspaceHost";
         ImGui::Begin(title.c_str(), &dockspaceOpen, window_flags);
         ImGui::PopStyleVar();
 
@@ -805,7 +826,8 @@ namespace Crowny
         if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
         {
             ImGuiID dockspace_id = ImGui::GetID("Crowny Editor");
-            if (m_ResetLayoutRequested)
+            const bool layoutMissing = ImGui::DockBuilderGetNode(dockspace_id) == nullptr;
+            if (m_ResetLayoutRequested || layoutMissing)
             {
                 ImGuiViewport* viewport = ImGui::GetMainViewport();
                 ImGui::DockBuilderRemoveNode(dockspace_id);
@@ -817,13 +839,25 @@ namespace Crowny
                 ImGuiID leftId = 0;
                 ImGuiID rightId = 0;
                 ImGuiID bottomId = 0;
-                ImGui::DockBuilderSplitNode(centerId, ImGuiDir_Left, 0.20f, &leftId, &centerId);
-                ImGui::DockBuilderSplitNode(centerId, ImGuiDir_Right, 0.24f, &rightId, &centerId);
-                ImGui::DockBuilderSplitNode(centerId, ImGuiDir_Down, 0.28f, &bottomId, &centerId);
+                ImGuiID leftBottomId = 0;
+                ImGuiID leftTopId = 0;
+                ImGuiID rightBottomId = 0;
+                ImGuiID rightTopId = 0;
+                ImGui::DockBuilderSplitNode(centerId, ImGuiDir_Left, 0.10f, &leftId, &centerId);
+                ImGui::DockBuilderSplitNode(centerId, ImGuiDir_Right, 0.25f, &rightId, &centerId);
+                ImGui::DockBuilderSplitNode(centerId, ImGuiDir_Down, 0.33f, &bottomId, &centerId);
+                ImGui::DockBuilderSplitNode(leftId, ImGuiDir_Down, 0.31f, &leftBottomId, &leftTopId);
+                ImGui::DockBuilderSplitNode(rightId, ImGuiDir_Down, 0.31f, &rightBottomId, &rightTopId);
 
                 ImGui::DockBuilderDockWindow("Viewport", centerId);
-                ImGui::DockBuilderDockWindow("Hierarchy", leftId);
-                ImGui::DockBuilderDockWindow("Inspector", rightId);
+                ImGui::DockBuilderDockWindow("Hierarchy", leftTopId);
+                ImGui::DockBuilderDockWindow("Tree view", leftBottomId);
+                ImGui::DockBuilderDockWindow("Inspector", rightTopId);
+                ImGui::DockBuilderDockWindow("Physics 2D", rightTopId);
+                ImGui::DockBuilderDockWindow("Physics2D Stats", rightTopId);
+                ImGui::DockBuilderDockWindow("Settings", rightBottomId);
+                ImGui::DockBuilderDockWindow("Time Settings", rightBottomId);
+                ImGui::DockBuilderDockWindow("C# debug", rightBottomId);
                 ImGui::DockBuilderDockWindow("Asset Browser", bottomId);
                 ImGui::DockBuilderDockWindow("Console", bottomId);
                 ImGui::DockBuilderDockWindow("Audio Mixer", bottomId);
@@ -953,6 +987,11 @@ namespace Crowny
         EventDispatcher dispatcher(e);
         dispatcher.Dispatch<KeyPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnKeyPressed));
         dispatcher.Dispatch<MouseButtonPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnMouseButtonPressed));
+        dispatcher.Dispatch<WindowFileDropEvent>(
+          [this](WindowFileDropEvent& fileDrop) { return m_ViewportPanel != nullptr && m_ViewportPanel->OnWindowFileDrop(fileDrop); });
+        // Drops the viewport did not consume land in the folder the asset browser is showing.
+        if (!e.Handled && m_AssetBrowser != nullptr)
+            m_AssetBrowser->OnEvent(e);
     }
 
 } // namespace Crowny
