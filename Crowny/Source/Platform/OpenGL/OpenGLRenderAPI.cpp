@@ -37,13 +37,9 @@ namespace Crowny
             return std::find(formats.begin(), formats.end(), static_cast<GLint>(format)) != formats.end();
         }
 
-        void GLAPIENTRY OpenGLMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
-                                              const void* userParam)
+        void GLAPIENTRY OpenGLMessageCallback(CW_MAYBE_UNUSED GLenum source, CW_MAYBE_UNUSED GLenum type, GLuint id, GLenum severity,
+                                              CW_MAYBE_UNUSED GLsizei length, const GLchar* message, CW_MAYBE_UNUSED const void* userParam)
         {
-            (void)source;
-            (void)type;
-            (void)length;
-            (void)userParam;
             if (severity == GL_DEBUG_SEVERITY_NOTIFICATION)
                 return;
             if (severity == GL_DEBUG_SEVERITY_HIGH)
@@ -210,9 +206,8 @@ namespace Crowny
         ApplyPipelineState();
     }
 
-    void OpenGLRenderAPI::SetRayTracingPipeline(const Ref<RayTracingPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
+    void OpenGLRenderAPI::SetRayTracingPipeline(CW_MAYBE_UNUSED const Ref<RayTracingPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
     {
-        (void)pipeline;
         RequireImmediate(commandBuffer);
         CW_ENGINE_ERROR("The OpenGL backend does not support ray tracing pipelines");
     }
@@ -225,9 +220,8 @@ namespace Crowny
         glUseProgram(pipeline ? static_cast<OpenGLComputePipeline*>(pipeline.get())->GetProgram() : 0);
     }
 
-    void OpenGLRenderAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer, uint32_t syncMask)
+    void OpenGLRenderAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer, CW_MAYBE_UNUSED uint32_t syncMask)
     {
-        (void)syncMask;
         RequireImmediate(commandBuffer);
     }
 
@@ -380,10 +374,9 @@ namespace Crowny
         RecordDraw(m_DrawMode, vertexCount, instanceCount);
     }
 
-    void OpenGLRenderAPI::DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount,
+    void OpenGLRenderAPI::DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, CW_MAYBE_UNUSED uint32_t vertexCount,
                                       uint32_t instanceCount, const Ref<CommandBuffer>& commandBuffer)
     {
-        (void)vertexCount;
         RequireImmediate(commandBuffer);
         CW_ENGINE_ASSERT(m_IndexBuffer != nullptr, "OpenGL indexed draw requires an index buffer");
         glBindVertexArray(m_VertexArray);
@@ -481,10 +474,8 @@ namespace Crowny
         DrawIndexedIndirect(argumentBuffer, argumentOffset, std::min(drawCount, maxDrawCount), stride, commandBuffer);
     }
 
-    void OpenGLRenderAPI::TraceRays(uint32_t width, uint32_t height, const Ref<CommandBuffer>& commandBuffer)
+    void OpenGLRenderAPI::TraceRays(CW_MAYBE_UNUSED uint32_t width, CW_MAYBE_UNUSED uint32_t height, const Ref<CommandBuffer>& commandBuffer)
     {
-        (void)width;
-        (void)height;
         RequireImmediate(commandBuffer);
         CW_ENGINE_ERROR("The OpenGL backend does not support ray tracing");
     }
@@ -524,10 +515,9 @@ namespace Crowny
         DispatchCompute(arguments.GroupCountX, arguments.GroupCountY, arguments.GroupCountZ, commandBuffer);
     }
 
-    void OpenGLRenderAPI::SetRenderTarget(const Ref<RenderTarget>& target, uint32_t readOnlyFlags, RenderSurfaceMask loadMask,
+    void OpenGLRenderAPI::SetRenderTarget(const Ref<RenderTarget>& target, uint32_t readOnlyFlags, CW_MAYBE_UNUSED RenderSurfaceMask loadMask,
                                           const Ref<CommandBuffer>& commandBuffer)
     {
-        (void)loadMask;
         RequireImmediate(commandBuffer);
         m_RenderTarget = target;
         m_ReadOnlyFlags = readOnlyFlags;

@@ -279,9 +279,8 @@ namespace Crowny
         output.SetBuffer(data != nullptr ? data + layout.offset : nullptr);
     }
 
-    uint8_t* VulkanImage::Map(uint32_t offset, uint32_t size) const
+    uint8_t* VulkanImage::Map(uint32_t offset, CW_MAYBE_UNUSED uint32_t size) const
     {
-        (void)size;
         VulkanDevice& device = m_Owner->GetDevice();
 
         uint8_t* data = static_cast<uint8_t*>(device.MapMemory(m_Allocation));

@@ -28,11 +28,10 @@ namespace
             description.WorkingDirectory = fs::current_path();
             Application::StartUp(description);
         }
-        static const bool registered = [] {
+        CW_MAYBE_UNUSED static const bool registered = [] {
             RegisterBuiltinNodeTypes();
             return true;
         }();
-        (void)registered;
     }
 
     Ref<NodeGraph> MakeBoxGraph(Ref<BoxNode>& box, Ref<GeometryOutputNode>& output, UUID connectionId)

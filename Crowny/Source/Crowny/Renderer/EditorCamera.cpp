@@ -30,9 +30,8 @@ namespace Crowny
         UpdateView();
     }
 
-    void EditorCamera::OnUpdate(Timestep ts)
+    void EditorCamera::OnUpdate(CW_MAYBE_UNUSED Timestep ts)
     {
-        (void)ts;
         const bool altPressed = Input::IsKeyPressed(Key::LeftAlt) || Input::IsKeyPressed(Key::RightAlt);
         const glm::vec2 mouse = Input::GetMousePosition();
         if (altPressed)

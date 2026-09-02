@@ -774,11 +774,9 @@ namespace Crowny
             return true;
         }
 
-        static float QueryCallback(b3ShapeId nativeShape, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId, int triangleIndex,
-                                   int childIndex, void* userContext)
+        static float QueryCallback(b3ShapeId nativeShape, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+                                   CW_MAYBE_UNUSED int triangleIndex, CW_MAYBE_UNUSED int childIndex, void* userContext)
         {
-            (void)triangleIndex;
-            (void)childIndex;
             auto& context = *static_cast<QueryContext*>(userContext);
             const PhysicsShape3DHandle shape = context.Backend->FindShape(nativeShape);
             if (!shape || !context.Backend->AcceptShape(shape, context.Filter))

@@ -29,9 +29,8 @@ namespace Crowny
             glDeleteBuffers(1, &m_RendererID);
     }
 
-    void* OpenGLGpuBuffer::Map(uint32_t offset, uint32_t length, GpuLockOptions options, uint32_t queueIdx)
+    void* OpenGLGpuBuffer::Map(uint32_t offset, uint32_t length, GpuLockOptions options, CW_MAYBE_UNUSED uint32_t queueIdx)
     {
-        (void)queueIdx;
         CW_ENGINE_ASSERT(offset <= m_Size && length <= m_Size - offset, "OpenGL GPU buffer map range is out of bounds");
         glBindBuffer(m_Target, m_RendererID);
         void* data = glMapBufferRange(m_Target, offset, length, OpenGLUtils::LockOptionsToMapFlags(options));

@@ -590,13 +590,10 @@ namespace Crowny
             PhysicsQueryFilter3D Filter;
         };
 
-        static bool ContactAdded(btManifoldPoint& point, const btCollisionObjectWrapper* firstWrapper, int firstPart, int firstIndex,
-                                 const btCollisionObjectWrapper* secondWrapper, int secondPart, int secondIndex)
+        static bool ContactAdded(btManifoldPoint& point, const btCollisionObjectWrapper* firstWrapper, CW_MAYBE_UNUSED int firstPart,
+                                 CW_MAYBE_UNUSED int firstIndex, const btCollisionObjectWrapper* secondWrapper, CW_MAYBE_UNUSED int secondPart,
+                                 CW_MAYBE_UNUSED int secondIndex)
         {
-            (void)firstPart;
-            (void)firstIndex;
-            (void)secondPart;
-            (void)secondIndex;
             if (!s_ActiveBackend)
                 return false;
             const PhysicsMaterialData* first = s_ActiveBackend->FindMaterial(firstWrapper);

@@ -36,9 +36,8 @@ namespace Crowny
         return vkGetBufferDeviceAddress(m_Owner->GetDevice().GetLogicalDevice(), &bufferDeviceAddressInfo);
     }
 
-    uint8_t* VulkanBuffer::Map(VkDeviceSize offset, VkDeviceSize length) const
+    uint8_t* VulkanBuffer::Map(VkDeviceSize offset, CW_MAYBE_UNUSED VkDeviceSize length) const
     {
-        (void)length;
         VulkanDevice& device = m_Owner->GetDevice();
         uint8_t* data = static_cast<uint8_t*>(device.MapMemory(m_Allocation));
         return data != nullptr ? data + offset : nullptr;

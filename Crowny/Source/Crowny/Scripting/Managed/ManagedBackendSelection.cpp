@@ -40,10 +40,9 @@ namespace Crowny
         return selection;
     }
 
-    ManagedBackendAvailability GetManagedBackendAvailability(ManagedBackendPreset preset, BuildPlatform platform,
+    ManagedBackendAvailability GetManagedBackendAvailability(ManagedBackendPreset preset, CW_MAYBE_UNUSED BuildPlatform platform,
                                                               BuildConfiguration configuration, bool editor)
     {
-        (void)platform;
         if (editor)
         {
             if (preset == ManagedBackendPreset::Mono || preset == ManagedBackendPreset::CoreCLR)

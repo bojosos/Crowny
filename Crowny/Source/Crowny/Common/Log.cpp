@@ -30,9 +30,8 @@ namespace Crowny
         {
             spdlog::register_logger(s_EngineLogger);
         }
-        catch (const spdlog::spdlog_ex& ex)
+        catch (CW_MAYBE_UNUSED const spdlog::spdlog_ex& ex)
         {
-            (void)ex;
         }
         s_EngineLogger->set_level(spdlog::level::trace);
         s_EngineLogger->flush_on(spdlog::level::trace);
@@ -42,9 +41,8 @@ namespace Crowny
         {
             spdlog::register_logger(s_ClientLogger);
         }
-        catch (const spdlog::spdlog_ex& ex)
+        catch (CW_MAYBE_UNUSED const spdlog::spdlog_ex& ex)
         {
-            (void)ex;
         }
         s_ClientLogger->set_level(spdlog::level::trace);
         s_ClientLogger->flush_on(spdlog::level::trace);

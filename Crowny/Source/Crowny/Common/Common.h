@@ -41,6 +41,11 @@ namespace cereal { class access; }
 
 #define CW_STRINGIFY(token) #token
 
+// Marks a variable, parameter or return value as intentionally unused (cross-platform).
+// Prefer the attribute on declarations; use the statement form for values you cannot annotate.
+#define CW_MAYBE_UNUSED [[maybe_unused]]
+#define CW_UNUSED(...) static_cast<void>(__VA_ARGS__)
+
 class BinaryDataStreamInputArchive;
 class BinaryDataStreamOutputArchive;
 

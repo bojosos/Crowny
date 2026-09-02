@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include "Crowny/Common/Common.h"
 #include "Crowny/Utils/ExpressionEvaluator.h"
 
 using namespace Crowny;
@@ -78,9 +79,8 @@ TEST_CASE("ExpressionEvaluator::ErrorHandling", "[ExpressionEvaluator]")
     SECTION("Empty string input")
     {
         // Empty string should not crash, result is implementation-defined (likely 0)
-        float result = ExpressionEvaluator::Evaluate("");
+        CW_MAYBE_UNUSED const float result = ExpressionEvaluator::Evaluate("");
         CHECK_FALSE((std::isnan(result) && std::isinf(result))); // Just verify it doesn't crash
-        (void)result;
     }
 }
 

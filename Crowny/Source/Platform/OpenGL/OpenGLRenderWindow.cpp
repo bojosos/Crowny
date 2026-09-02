@@ -55,9 +55,8 @@ namespace Crowny
         SyncWindowProperties();
     }
 
-    void OpenGLRenderWindow::SwapBuffers(uint32_t syncMask)
+    void OpenGLRenderWindow::SwapBuffers(CW_MAYBE_UNUSED uint32_t syncMask)
     {
-        (void)syncMask;
         if (m_ShowOnSwap)
             SetHidden(false);
         m_Context->SwapBuffers();

@@ -186,9 +186,8 @@ namespace Crowny
         CW_ENGINE_ASSERT(m_Target != GL_TEXTURE_2D_MULTISAMPLE, "Multisampled OpenGL textures cannot be read or written directly");
     }
 
-    PixelData OpenGLTexture::Lock(GpuLockOptions options, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
+    PixelData OpenGLTexture::Lock(GpuLockOptions options, uint32_t mipLevel, uint32_t face, CW_MAYBE_UNUSED uint32_t queueIdx)
     {
-        (void)queueIdx;
         CW_ENGINE_ASSERT(!m_IsMapped, "OpenGL texture is already locked");
         ValidateSurface(mipLevel, face);
         uint32_t width = 0, height = 0, depth = 0;
@@ -219,9 +218,8 @@ namespace Crowny
         m_IsMapped = false;
     }
 
-    void OpenGLTexture::ReadData(PixelData& dest, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
+    void OpenGLTexture::ReadData(PixelData& dest, uint32_t mipLevel, uint32_t face, CW_MAYBE_UNUSED uint32_t queueIdx)
     {
-        (void)queueIdx;
         ValidateSurface(mipLevel, face);
         CW_ENGINE_ASSERT(dest.GetFormat() == m_Desc.Format, "OpenGL texture read format does not match");
         CW_ENGINE_ASSERT(dest.IsValid(), "OpenGL texture read destination is invalid");
@@ -247,9 +245,8 @@ namespace Crowny
     }
 
     bool OpenGLTexture::ReadPixel(uint32_t x, uint32_t y, void* dest, size_t destSize, uint32_t mipLevel, uint32_t face,
-                                  uint32_t queueIdx)
+                                  CW_MAYBE_UNUSED uint32_t queueIdx)
     {
-        (void)queueIdx;
         if (dest == nullptr || m_Format.Compressed || m_Target == GL_TEXTURE_2D_MULTISAMPLE || mipLevel > m_Desc.MipLevels ||
             face >= m_Desc.Faces)
             return false;
@@ -305,9 +302,8 @@ namespace Crowny
         return true;
     }
 
-    void OpenGLTexture::WriteData(const PixelData& src, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
+    void OpenGLTexture::WriteData(const PixelData& src, uint32_t mipLevel, uint32_t face, CW_MAYBE_UNUSED uint32_t queueIdx)
     {
-        (void)queueIdx;
         ValidateSurface(mipLevel, face);
         CW_ENGINE_ASSERT(src.GetFormat() == m_Desc.Format, "OpenGL texture write format does not match");
         CW_ENGINE_ASSERT(src.IsValid(), "OpenGL texture write source is invalid");

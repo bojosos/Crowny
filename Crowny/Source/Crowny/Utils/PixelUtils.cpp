@@ -535,9 +535,8 @@ namespace Crowny
             }
 
             uint32_t tightRowPitch = 0;
-            uint32_t tightSlicePitch = 0;
+            CW_MAYBE_UNUSED uint32_t tightSlicePitch = 0;
             GetPitch(src.GetWidth(), src.GetHeight(), src.GetDepth(), src.GetFormat(), tightRowPitch, tightSlicePitch);
-            (void)tightSlicePitch;
             const uint32_t rowCount = src.GetPhysicalRowCount();
             for (uint32_t z = 0; z < src.GetDepth(); z++)
             {

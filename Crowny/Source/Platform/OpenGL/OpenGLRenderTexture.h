@@ -12,7 +12,7 @@ namespace Crowny
 
         void Resize(uint32_t width, uint32_t height) override;
         const RenderTextureDesc& GetProperties() const override { return m_Desc; }
-        void SwapBuffers(uint32_t syncMask = 0xFFFFFFFF) override { (void)syncMask; }
+        void SwapBuffers(CW_MAYBE_UNUSED uint32_t syncMask = 0xFFFFFFFF) override {}
 
         uint32_t GetFramebuffer() const { return m_Framebuffer; }
 
