@@ -7,6 +7,8 @@
 
 namespace Crowny
 {
+    const Entity Entity::Invalid{};
+
     namespace
     {
         void RefreshSiblingIndices(Vector<Entity>& siblings, uint32_t firstIndex = 0)

@@ -108,7 +108,7 @@ namespace Crowny
         Entity ResolveEntity(const UUID& uuid)
         {
             if (uuid == UUID::EMPTY || SceneManager::TryGet() == nullptr)
-                return {};
+                return Entity::Invalid;
             const Ref<Scene>& scene = SceneManager::TryGet()->GetActiveScene();
             return scene != nullptr ? scene->TryGetEntityFromUuid(uuid) : Entity{};
         }

@@ -10,7 +10,7 @@ namespace Crowny
 {
     struct ComponentBase;
     class Entity;
-    class ComponentEditor;
+    class EntityInspector;
     class ScriptableEntity;
     class TransformComponent;
 
@@ -111,6 +111,9 @@ namespace Crowny
         Entity(entt::entity entity, Scene* scene);
         Entity(const Entity& other) = default;
 
+        /** An entity that refers to nothing; IsValid() is false. Prefer `return Entity::Invalid;` over `return {};`. */
+        static const Entity Invalid;
+
         void SetPosition(const glm::vec3& position);
         void SetRotation(const glm::quat& rotation);
         void SetScale(const glm::vec3& scale);
@@ -157,7 +160,7 @@ namespace Crowny
         bool operator!=(const EnttEntity& other) const { return !(*this == other); }
 
     private:
-        friend class ComponentEditor;
+        friend class EntityInspector;
         friend class ScriptableEntity;
         friend struct std::hash<Entity>;
     };

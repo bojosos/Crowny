@@ -50,7 +50,7 @@ namespace Crowny
     Entity PrefabUtils::GetInstanceRoot(Entity entity)
     {
         if (!entity || !entity.HasComponent<PrefabComponent>())
-            return {};
+            return Entity::Invalid;
 
         const UUID prefabAssetUuid = entity.GetComponent<PrefabComponent>().PrefabAssetUuid;
         const AssetHandle<Prefab> prefabHandle = LoadPrefab(prefabAssetUuid);
@@ -214,15 +214,15 @@ namespace Crowny
     Entity PrefabUtils::InstantiatePrefab(const AssetHandle<Prefab>& prefabHandle, Entity parent)
     {
         if (!prefabHandle.IsLoaded())
-            return {};
+            return Entity::Invalid;
 
         Prefab* prefab = prefabHandle.Get();
         if (!prefab || !prefab->GetInternalScene())
-            return {};
+            return Entity::Invalid;
 
         Entity prefabRoot = prefab->GetRootEntity();
         if (!prefabRoot)
-            return {};
+            return Entity::Invalid;
 
         Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
         const UUID prefabAssetUuid = prefabHandle.GetUUID();
