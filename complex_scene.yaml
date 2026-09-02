@@ -1,9 +1,9 @@
 # Crowny Scene
-Version: 6
+Version: 12
 Scene: ComplexScene
 ImGuiLayout: ""
 Entities:
-  - Entity: 9e87125f-881c-45c9-9b0c-04f586c87a0b
+  - Entity: 8595fa13-12db-46fd-a1b9-cd9d1e4bb040
     TagComponent:
       Tag: GrandChild
     TransformComponent:
@@ -25,10 +25,14 @@ Entities:
       MaxLines: 4
       OutlineColor: [0, 0, 0, 0]
       Thickness: 0.800000012
+      ShadowColor: [0, 0, 0, 0]
+      ShadowOffset: [1, -1]
+      ShadowSoftness: 0
       CharacterSpacing: 0.0500000007
       WordSpacing: 0.100000001
       LineSpacing: 0.200000003
       ParagraphSpacing: 0.349999994
+      TabWidth: 4
       UseCustomDecorationColor: true
       DecorationColor: [0.200000003, 0.400000006, 0.600000024, 0.800000012]
       DecorationThickness: 0.0299999993
@@ -44,7 +48,7 @@ Entities:
     RelationshipComponent:
       Children:
         []
-  - Entity: d437ea22-b788-4c63-8b4d-325474cc41df
+  - Entity: 4441e2ba-6bb4-40b8-94f4-6fccd836c6a9
     TagComponent:
       Tag: Child2
     TransformComponent:
@@ -53,7 +57,7 @@ Entities:
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
-        - 9e87125f-881c-45c9-9b0c-04f586c87a0b
+        - 8595fa13-12db-46fd-a1b9-cd9d1e4bb040
     Rigidbody3DComponent:
       BodyType: 1
       Mass: 3.5
@@ -77,17 +81,20 @@ Entities:
       Offset: [0.5, 0, -0.5]
       Rotation: [0, 0, 0, 1]
       IsTrigger: false
-      Density: 2
-      Friction: 0.25
-      Restitution: 0.600000024
-      RestitutionThreshold: 0.5
-      FrictionCombine: 2
-      RestitutionCombine: 4
+      MaterialOverride:
+        Version: 1
+        Fields: 63
+        Density: 2
+        Friction: 0.25
+        Restitution: 0.600000024
+        RestitutionThreshold: 0.5
+        FrictionCombine: 2
+        RestitutionCombine: 4
       Layer: 0
       Mask: 4294967295
       Group: 0
       Size: [2, 3, 4]
-  - Entity: d8e26036-d87d-4e64-80c2-0bab97fbac34
+  - Entity: 57d330b6-93d4-4766-a2d3-e8b43a4486c0
     TagComponent:
       Tag: Child1
     TransformComponent:
@@ -125,7 +132,7 @@ Entities:
     RelationshipComponent:
       Children:
         []
-  - Entity: 4c7b0382-1c6f-4088-afac-ce3cddced316
+  - Entity: 018f2e5b-91dc-4879-a271-5f45bcb2ea4d
     TagComponent:
       Tag: Parent
     TransformComponent:
@@ -134,8 +141,8 @@ Entities:
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
-        - d8e26036-d87d-4e64-80c2-0bab97fbac34
-        - d437ea22-b788-4c63-8b4d-325474cc41df
+        - 57d330b6-93d4-4766-a2d3-e8b43a4486c0
+        - 4441e2ba-6bb4-40b8-94f4-6fccd836c6a9
     LightComponent:
       Type: 2
       Color: [0.400000006, 0.600000024, 0.800000012]
