@@ -57,6 +57,13 @@ namespace Crowny
         return error ? 0 : size;
     }
 
+    fs::file_time_type FileSystem::GetLastWriteTime(const Path& path)
+    {
+        std::error_code error;
+        const fs::file_time_type writeTime = fs::last_write_time(path, error);
+        return error ? fs::file_time_type{} : writeTime;
+    }
+
     std::tuple<uint8_t*, uint64_t> FileSystem::ReadFile(const Path& path)
     {
         if (const Ref<DataStream> packed = OpenPackedFile(path))

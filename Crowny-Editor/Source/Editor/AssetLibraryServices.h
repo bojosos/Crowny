@@ -128,6 +128,11 @@ namespace Crowny
         bool Remove(const Path& path) const;
     };
 
+    // Imports a file dropped onto the editor from outside the asset folder: copies it (plus glTF buffer/image and
+    // OBJ material sidecars) into the library and returns the in-project path, or an empty path on failure. Files
+    // already inside the asset folder are used in place.
+    Path ImportExternalDropFile(const Path& source, const Path& assetFolder);
+
     class BuildManifestSelection
     {
     public:

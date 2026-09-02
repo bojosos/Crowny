@@ -74,6 +74,7 @@ ALLOWLIST = (
     Allow("Crowny/Source/Crowny/Serialization/PrefabSerializer.cpp", frozenset({"raw-read"}), "prefab serialization boundary"),
     Allow("Crowny/Source/Crowny/Serialization/NodeGraphSerializer.cpp", frozenset({"raw-read"}), "node-graph serialization boundary"),
     Allow("Crowny/Source/Crowny/Serialization/MaterialSerializer.cpp", frozenset({"raw-read"}), "material serialization boundary"),
+    Allow("Crowny/Source/Crowny/Serialization/MaterialPresetSerializer.cpp", frozenset({"raw-read"}), "material preset serialization boundary"),
     Allow("Crowny/Source/Crowny/Serialization/FileEncoder.h", frozenset({"raw-read"}), "file conversion utility boundary"),
     Allow("Crowny/Source/Crowny/ImGui/ImGuiLayer.cpp", frozenset({"raw-read", "raw-builtin-source"}), "font-atlas input is opened through the built-in pack"),
     Allow("Crowny/Source/Crowny/Scripting/Mono/MonoAssembly.cpp", frozenset({"raw-read"}), "managed assembly loader boundary"),
@@ -177,6 +178,7 @@ def self_test() -> None:
     assert is_allowed("Crowny-Editor/Source/Editor/ImportScheduler.cpp", "direct-import", "Importer::Get().ImportDeferred(path)")
     assert is_allowed("Crowny-Editor/Source/Editor/Script/ScriptProjectGenerator.cpp", "raw-read", "FileSystem::ReadTextFile(path)")
     assert is_allowed("Crowny-Editor/Source/Editor/Script/VSCodeEditor.cpp", "raw-read", "FileSystem::ReadTextFile(path)")
+    assert is_allowed("Crowny/Source/Crowny/Serialization/MaterialPresetSerializer.cpp", "raw-read", "FileSystem::ReadTextFile(filepath)")
 
 
 def main() -> int:

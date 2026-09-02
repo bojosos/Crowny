@@ -1,5 +1,6 @@
 #include "cwepch.h"
 
+#include "Editor/AssetLibraryServices.h"
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorLayer.h"
@@ -7,7 +8,6 @@
 #include "Editor/ViewportTransformInteraction.h"
 
 #include "Crowny/Application/Application.h"
-#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
@@ -94,86 +94,6 @@ namespace Crowny
                 snprintf(output, outputSize, "%.1fK", static_cast<double>(value) / 1'000.0);
             else
                 snprintf(output, outputSize, "%llu", static_cast<unsigned long long>(value));
-        }
-
-        bool SameFileContents(const Path& left, const Path& right)
-        {
-            std::error_code error;
-            const uintmax_t leftSize = fs::file_size(left, error);
-            if (error)
-                return false;
-            const uintmax_t rightSize = fs::file_size(right, error);
-            return !error && leftSize == rightSize;
-        }
-
-        // Picks a destination inside the asset folder for an external file. Re-uses an existing copy with the same
-        // size (dropping the same model twice just adds another instance) and otherwise appends " (n)".
-        Path ResolveDropDestination(const Path& source, const Path& assetFolder)
-        {
-            Path destination = assetFolder / source.filename();
-            if (!fs::exists(destination) || SameFileContents(source, destination))
-                return destination;
-
-            const String stem = source.stem().string();
-            const String extension = source.extension().string();
-            for (uint32_t index = 1; index < 1000; index++)
-            {
-                destination = assetFolder / (stem + " (" + std::to_string(index) + ")" + extension);
-                if (!fs::exists(destination) || SameFileContents(source, destination))
-                    return destination;
-            }
-            return {};
-        }
-
-        bool CopyDropFile(const Path& source, const Path& destination)
-        {
-            if (fs::exists(destination) && SameFileContents(source, destination))
-                return true;
-            std::error_code error;
-            fs::create_directories(destination.parent_path(), error);
-            error.clear();
-            fs::copy_file(source, destination, fs::copy_options::overwrite_existing, error);
-            if (error)
-            {
-                CW_ENGINE_ERROR("Failed to import dropped file '{}' into '{}': {}", source, destination, error.message());
-                return false;
-            }
-            return true;
-        }
-
-        // Copies the external file (plus glTF buffers/images and OBJ material libraries it references) into the
-        // project's asset folder. Files already inside the asset folder are used in place. Returns the in-project path.
-        Path ImportExternalDropFile(const Path& source, const Path& assetFolder)
-        {
-            std::error_code error;
-            if (!fs::is_regular_file(source, error) || error)
-                return {};
-
-            const Path normalizedSource = source.lexically_normal();
-            if (AssetFileSystemScanner::IsPathWithin(assetFolder, normalizedSource))
-                return normalizedSource;
-
-            const Path destination = ResolveDropDestination(normalizedSource, assetFolder);
-            if (destination.empty() || !CopyDropFile(normalizedSource, destination))
-                return {};
-
-            if (ClassifyViewportDropFile(normalizedSource) == ViewportDropFileKind::Mesh)
-            {
-                const String contents = FileSystem::ReadTextFile(normalizedSource);
-                for (const Path& reference : CollectMeshSidecarReferences(normalizedSource, contents))
-                {
-                    const Path sidecarSource = (normalizedSource.parent_path() / reference).lexically_normal();
-                    const Path sidecarDestination = (destination.parent_path() / reference).lexically_normal();
-                    if (!AssetFileSystemScanner::IsPathWithin(assetFolder, sidecarDestination) || !fs::is_regular_file(sidecarSource, error) || error)
-                    {
-                        error.clear();
-                        CW_ENGINE_WARN("Dropped mesh '{}' references '{}', which could not be copied alongside it.", normalizedSource, reference);
-                        continue;
-                    }
-                    CopyDropFile(sidecarSource, sidecarDestination);
-                }
-            }
-            return destination;
         }
 
     } // namespace

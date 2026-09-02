@@ -9,6 +9,7 @@
 #include "Editor/Script/VisualStudioCodeEditor.h"
 
 #include "Crowny/Application/Application.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 
 #include <algorithm>
@@ -150,10 +151,11 @@ namespace Crowny
                 if (!exists)
                     continue;
 
-                const uintmax_t size = fs::file_size(path, error);
-                AppendFingerprintValue(fingerprint, error ? String() : std::to_string(size));
-                const fs::file_time_type writeTime = fs::last_write_time(path, error);
-                AppendFingerprintValue(fingerprint, error ? String() : std::to_string(writeTime.time_since_epoch().count()));
+                const uint64_t size = FileSystem::GetFileSize(path);
+                AppendFingerprintValue(fingerprint, size != 0 ? std::to_string(size) : String());
+                const fs::file_time_type writeTime = FileSystem::GetLastWriteTime(path);
+                AppendFingerprintValue(
+                  fingerprint, writeTime != fs::file_time_type{} ? std::to_string(writeTime.time_since_epoch().count()) : String());
             }
             return fingerprint;
         }
