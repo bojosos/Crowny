@@ -312,7 +312,7 @@ namespace Crowny
             return WriteJsonObject(path, document);
         }
 
-        void ConfigureVSCodeWorkspace(const CodeSolutionData& data, const Path& solutionPath)
+        bool ConfigureVSCodeWorkspace(const CodeSolutionData& data, const Path& solutionPath)
         {
             const Path directory = solutionPath / ".vscode";
             std::error_code error;
@@ -320,20 +320,20 @@ namespace Crowny
             if (error)
             {
                 CW_ENGINE_WARN("Could not create VS Code settings directory {}: {}", directory.string(), error.message());
-                return;
+                return false;
             }
 
             if (fs::is_regular_file(directory / ".crowny-vscode-patch-disable", error))
-                return;
+                return true;
 
-            ConfigureVSCodeExtensions(directory);
-            ConfigureVSCodeSettings(directory, data.Name);
+            const bool extensionsConfigured = ConfigureVSCodeExtensions(directory);
+            const bool settingsConfigured = ConfigureVSCodeSettings(directory, data.Name);
 
             const bool hasCoreClrProject = std::any_of(data.Projects.begin(), data.Projects.end(), [](const CodeProjectData& project) {
                 return project.Runtime == CSharpProjectRuntime::CoreCLR;
             });
-            if (hasCoreClrProject)
-                ConfigureCoreClrLaunch(directory);
+            const bool launchConfigured = !hasCoreClrProject || ConfigureCoreClrLaunch(directory);
+            return extensionsConfigured && settingsConfigured && launchConfigured;
         }
 
         Path FindWorkspace(const Path& solutionPath)
@@ -445,13 +445,14 @@ namespace Crowny
         StartVSCode(m_ExecutablePath, FindWorkspace(solutionPath), filePath, line);
     }
 
-    bool VSCodeEditor::Sync(const CodeSolutionData& data, const Path& solutionPath) const
+    CodeEditorSyncResult VSCodeEditor::Sync(const CodeSolutionData& data, const Path& solutionPath) const
     {
         bool changed = false;
         if (!CSProject::WriteSolution(CSProjectVersion::VS2026, data, solutionPath, &changed))
-            return false;
-        ConfigureVSCodeWorkspace(data, solutionPath);
-        return changed;
+            return {};
+        if (!ConfigureVSCodeWorkspace(data, solutionPath))
+            return {};
+        return { true, changed };
     }
 
     void VSCodeEditor::SetEditorExecutablePath(const Path& path) { m_ExecutablePath = path; }

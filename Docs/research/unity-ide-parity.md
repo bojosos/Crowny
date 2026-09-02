@@ -18,7 +18,9 @@ This change adds a cross-platform VS Code adapter. It discovers Code and Code In
 
 Project output is now content-stable: unchanged projects, solutions, and VS Code configuration files are left untouched. Solution regeneration retains the template-produced Crowny solution while preserving externally owned project blocks, solution folders, nesting, and project-configuration entries.
 
-The remaining major work is graph-triggered synchronization and a real debugger contract. The generated CoreCLR attach profile is intentionally a standard process picker, not a claim of Unity debugger-protocol compatibility; Mono receives no misleading debug profile.
+The code-editor manager now has a debounced `SyncIfNeeded` path. Asset changes to C# source, managed DLLs, project files, rulesets, response files, `.editorconfig`, and future assembly-definition files are batched; script creation and managed-dependency setting changes use the same path. The manager snapshots referenced binary/project timestamps too, so declared DLLs outside the asset folder still trigger a graph re-evaluation. It fingerprints the resolved graph before calling an adapter, while adapters report success separately from output changes so a failed write is not cached as current.
+
+The remaining major work is enriching the graph from the compiler and defining a real debugger contract. The generated CoreCLR attach profile is intentionally a standard process picker, not a claim of Unity debugger-protocol compatibility; Mono receives no misleading debug profile.
 
 ## Crowny baseline
 
@@ -28,13 +30,13 @@ Crowny's dependency handling is stronger than Unity's IntelliSense-oriented DLL 
 
 The current editor manager creates Visual Studio and MonoDevelop adapters on Windows, and a VS Code adapter on Windows, macOS, and Linux. Visual Studio discovery uses `vswhere` plus legacy registry lookup, opening uses DTE/COM, and solution reload follows generation. [Manager registration](../../Crowny-Editor/Source/Editor/Script/CodeEditor.cpp), [Visual Studio adapter](../../Crowny-Editor/Source/Editor/Script/VisualStudioCodeEditor.cpp), [VS Code adapter](../../Crowny-Editor/Source/Editor/Script/VSCodeEditor.cpp)
 
-Crowny synchronizes at project startup, from a manual settings action, and after script creation. It has no asset-graph-aware `SyncIfNeeded` path or project-generation callbacks. It now suppresses unchanged output and preserves user-owned projects or folders when re-emitting a solution. [Sync call sites](../../Crowny-Editor/Source/Editor/EditorLayerProject.cpp), [current sync implementation](../../Crowny-Editor/Source/Editor/Script/CodeEditor.cpp)
+Crowny synchronizes at project startup, from a manual settings action, and through a debounced asset/project-input path. The current graph has one game project, with runtime-valid binary dependency closure; it suppresses unchanged output and preserves user-owned projects or folders when re-emitting a solution. [Sync call sites](../../Crowny-Editor/Source/Editor/EditorLayerProject.cpp), [current sync implementation](../../Crowny-Editor/Source/Editor/Script/CodeEditor.cpp)
 
 ## Prioritized gaps
 
-### P0: make project synchronization driven by the compilation graph
+### P0: complete compiler-derived project graph inputs
 
-Give the code-editor manager a debounced `SyncIfNeeded` entry point. Feed it script additions, removals, moves, DLL changes, project-setting dependency changes, and future assembly-definition changes. Recompute the compiler input graph, write only changed files, then ask the active IDE to reload only when the solution changed.
+The debounce and graph-change path is implemented. Next, make the build description expose analyzers, rulesets, additional files, project references, per-project language version, and package/assembly definition inputs directly. The IDE model must consume that description rather than scan substitute framework references.
 
 Crowny should derive every `<Reference>`, `<ProjectReference>`, define, language version, analyzer, ruleset, and additional file from the same build description used for the selected runtime. Do not substitute the IDE's framework references for Crowny's runtime contract.
 
@@ -52,7 +54,6 @@ Report missing .NET SDKs, the chosen solution format, unresolved analyzers, unsu
 
 ## Recommended implementation order
 
-1. Debounced graph-based sync with compiler-input tracking.
-2. Multi-project graph plus compiler-derived analyzers and additional files.
-3. Explicit `.slnx` opt-in once the SDK floor and supported tooling are pinned.
-4. Debug-adapter contract and then IDE launch profiles.
+1. Multi-project graph plus compiler-derived analyzers, rulesets, and additional files.
+2. Explicit `.slnx` opt-in once the SDK floor and supported tooling are pinned.
+3. Debug-adapter contract and then IDE launch profiles.

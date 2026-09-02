@@ -537,7 +537,7 @@ namespace Crowny
             CW_ENGINE_WARN("Visual Studio could not open {}.", filePath.string());
     }
 
-    bool VisualStudioCodeEditor::Sync(const CodeSolutionData& data, const Path& solutionPath) const
+    CodeEditorSyncResult VisualStudioCodeEditor::Sync(const CodeSolutionData& data, const Path& solutionPath) const
     {
         CSProjectVersion csProjectVersion = CSProjectVersion::VS2022;
         switch (m_Version)
@@ -580,8 +580,8 @@ namespace Crowny
 
         bool changed = false;
         if (!CSProject::WriteSolution(csProjectVersion, data, solutionPath, &changed))
-            return false;
-        return changed;
+            return {};
+        return { true, changed };
     }
 
     void VisualStudioCodeEditor::ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const

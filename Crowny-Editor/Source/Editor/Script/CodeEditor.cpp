@@ -51,6 +51,113 @@ namespace Crowny
             return true;
         }
 
+        bool ResolveEngineAssemblyReference(const ApplicationDesc& description, ScriptProjectReference& outReference)
+        {
+            if (description.Script.Backend != ManagedBackendPreset::CoreCLR && description.EngineAssemblyPath.empty())
+            {
+                CW_ENGINE_WARN("Cannot generate the script solution because EngineAssemblyPath is empty.");
+                return false;
+            }
+
+            Path engineAssembly = description.EngineAssemblyPath;
+            if (engineAssembly.is_relative())
+                engineAssembly = description.WorkingDirectory / engineAssembly;
+            outReference = { CROWNY_ASSEMBLY, engineAssembly.lexically_normal() };
+            return true;
+        }
+
+        void AppendFingerprintValue(String& fingerprint, const String& value)
+        {
+            fingerprint += std::to_string(value.size());
+            fingerprint += ':';
+            fingerprint += value;
+        }
+
+        void AppendFingerprintPath(String& fingerprint, const Path& path)
+        {
+            AppendFingerprintValue(fingerprint, path.lexically_normal().generic_string());
+        }
+
+        String MakeProjectGraphFingerprint(const CodeSolutionData& solution)
+        {
+            String fingerprint;
+            AppendFingerprintValue(fingerprint, solution.Name);
+            for (const CodeProjectData& project : solution.Projects)
+            {
+                AppendFingerprintValue(fingerprint, project.Name);
+                AppendFingerprintPath(fingerprint, project.ProjectDirectory);
+                AppendFingerprintValue(fingerprint, project.Runtime == CSharpProjectRuntime::CoreCLR ? "CoreCLR" : "Mono");
+                AppendFingerprintValue(fingerprint, project.TargetFramework);
+                AppendFingerprintValue(fingerprint, project.Defines);
+
+                const auto appendPaths = [&fingerprint](const Vector<Path>& paths) {
+                    Vector<Path> sortedPaths = paths;
+                    std::sort(sortedPaths.begin(), sortedPaths.end(),
+                              [](const Path& lhs, const Path& rhs) { return lhs.generic_string() < rhs.generic_string(); });
+                    for (const Path& path : sortedPaths)
+                        AppendFingerprintPath(fingerprint, path);
+                };
+                appendPaths(project.ScriptFiles);
+                appendPaths(project.NonScriptFiles);
+
+                const auto appendReferences = [&fingerprint](const Vector<ScriptProjectReference>& references) {
+                    Vector<ScriptProjectReference> sortedReferences = references;
+                    std::sort(sortedReferences.begin(), sortedReferences.end(), [](const ScriptProjectReference& lhs,
+                                                                                     const ScriptProjectReference& rhs) {
+                        return lhs.Name != rhs.Name ? lhs.Name < rhs.Name : lhs.Filepath.generic_string() < rhs.Filepath.generic_string();
+                    });
+                    for (const ScriptProjectReference& reference : sortedReferences)
+                    {
+                        AppendFingerprintValue(fingerprint, reference.Name);
+                        AppendFingerprintPath(fingerprint, reference.Filepath);
+                    }
+                };
+                appendReferences(project.AssemblyReferences);
+                appendReferences(project.ProjectReferences);
+            }
+            return fingerprint;
+        }
+
+        Vector<Path> CollectProjectInputs(const CodeSolutionData& solution)
+        {
+            Vector<Path> paths;
+            for (const CodeProjectData& project : solution.Projects)
+            {
+                for (const ScriptProjectReference& reference : project.AssemblyReferences)
+                    if (!reference.Filepath.empty())
+                        paths.push_back(reference.Filepath.lexically_normal());
+                for (const ScriptProjectReference& reference : project.ProjectReferences)
+                    if (!reference.Filepath.empty())
+                        paths.push_back(reference.Filepath.lexically_normal());
+            }
+            std::sort(paths.begin(), paths.end(),
+                      [](const Path& lhs, const Path& rhs) { return lhs.generic_string() < rhs.generic_string(); });
+            paths.erase(std::unique(paths.begin(), paths.end(),
+                                    [](const Path& lhs, const Path& rhs) { return lhs.lexically_normal() == rhs.lexically_normal(); }),
+                        paths.end());
+            return paths;
+        }
+
+        String MakeProjectInputFingerprint(const Vector<Path>& paths)
+        {
+            String fingerprint;
+            for (const Path& path : paths)
+            {
+                AppendFingerprintPath(fingerprint, path);
+                std::error_code error;
+                const bool exists = fs::is_regular_file(path, error);
+                AppendFingerprintValue(fingerprint, exists ? "present" : "missing");
+                if (!exists)
+                    continue;
+
+                const uintmax_t size = fs::file_size(path, error);
+                AppendFingerprintValue(fingerprint, error ? String() : std::to_string(size));
+                const fs::file_time_type writeTime = fs::last_write_time(path, error);
+                AppendFingerprintValue(fingerprint, error ? String() : std::to_string(writeTime.time_since_epoch().count()));
+            }
+            return fingerprint;
+        }
+
         void LogProjectDependencyDiagnostics(const Vector<ManagedBuildDiagnostic>& diagnostics)
         {
             for (const ManagedBuildDiagnostic& diagnostic : diagnostics)
@@ -130,6 +237,10 @@ namespace Crowny
             delete m_ActiveEditor;
             m_ActiveEditor = nullptr;
         }
+        m_ActiveEditorPath.clear();
+        m_LastProjectGraphFingerprint.clear();
+        m_TrackedProjectInputs.clear();
+        m_LastTrackedProjectInputFingerprint.clear();
         for (const CodeEditorInstallation& install : m_Editors)
         {
             if (install.ExecutablePath == path)
@@ -145,35 +256,92 @@ namespace Crowny
         }
     }
 
-    void CodeEditorManager::SyncSolution(const String& projectName) const
+    void CodeEditorManager::SyncSolution(const String& projectName)
     {
         const ApplicationDesc& description = Application::Get().GetApplicationDesc();
-        if (description.Script.Backend != ManagedBackendPreset::CoreCLR && description.EngineAssemblyPath.empty())
-        {
-            CW_ENGINE_WARN("Cannot generate the script solution because EngineAssemblyPath is empty.");
+        ScriptProjectReference engineAssemblyReference;
+        if (!ResolveEngineAssemblyReference(description, engineAssemblyReference))
             return;
-        }
-
-        Path engineAssembly = description.EngineAssemblyPath;
-        if (engineAssembly.is_relative())
-            engineAssembly = description.WorkingDirectory / engineAssembly;
-        SyncSolution(projectName, { CROWNY_ASSEMBLY, engineAssembly.lexically_normal() });
+        SyncSolution(projectName, engineAssemblyReference);
     }
 
-    void CodeEditorManager::SyncSolution(const String& projectName, const ScriptProjectReference& engineAssemblyRef) const
+    void CodeEditorManager::SyncSolution(const String& projectName, const ScriptProjectReference& engineAssemblyRef)
     {
         if (m_ActiveEditor == nullptr)
             return;
 
         CodeSolutionData solutionData;
-        solutionData.Name = Editor::Get().GetProjectName();
+        if (!BuildSolutionData(projectName, engineAssemblyRef, solutionData))
+            return;
+        SyncSolutionData(solutionData, true);
+    }
+
+    void CodeEditorManager::NotifyProjectInputChanged(const Path& path)
+    {
+        // The asset index decides whether a changed file participates in the graph.
+        // This also covers new source kinds and assembly-definition formats without
+        // teaching the file watcher a parallel extension list.
+        if (!path.empty())
+            RequestSolutionSync(GAME_ASSEMBLY);
+    }
+
+    void CodeEditorManager::NotifyProjectSettingsChanged() { RequestSolutionSync(GAME_ASSEMBLY); }
+
+    void CodeEditorManager::Update()
+    {
+        if (!m_TrackedProjectInputs.empty())
+        {
+            const String inputFingerprint = MakeProjectInputFingerprint(m_TrackedProjectInputs);
+            if (inputFingerprint != m_LastTrackedProjectInputFingerprint)
+            {
+                m_LastTrackedProjectInputFingerprint = inputFingerprint;
+                RequestSolutionSync(GAME_ASSEMBLY);
+            }
+        }
+        SyncIfNeeded();
+    }
+
+    void CodeEditorManager::SyncIfNeeded()
+    {
+        if (!m_ProjectSyncDebouncer.TryBegin())
+            return;
+
+        const String projectName = m_PendingProjectName.empty() ? String(GAME_ASSEMBLY) : m_PendingProjectName;
+        m_PendingProjectName.clear();
+
+        if (m_ActiveEditor != nullptr && Editor::Get().IsProjectLoaded())
+        {
+            ScriptProjectReference engineAssemblyReference;
+            CodeSolutionData solutionData;
+            const ApplicationDesc& description = Application::Get().GetApplicationDesc();
+            if (ResolveEngineAssemblyReference(description, engineAssemblyReference) &&
+                BuildSolutionData(projectName, engineAssemblyReference, solutionData))
+                SyncSolutionData(solutionData, false);
+        }
+
+        m_ProjectSyncDebouncer.Complete();
+    }
+
+    void CodeEditorManager::RequestSolutionSync(const String& projectName)
+    {
+        if (!Editor::Get().IsProjectLoaded())
+            return;
+        m_PendingProjectName = projectName;
+        m_ProjectSyncDebouncer.Notify();
+    }
+
+    bool CodeEditorManager::BuildSolutionData(const String& projectName, const ScriptProjectReference& engineAssemblyRef,
+                                              CodeSolutionData& outData) const
+    {
+        outData = {};
+        outData.Name = Editor::Get().GetProjectName();
 
         const Vector<AssetType> assetTypes = { AssetType::ScriptCode, AssetType::PlainText, AssetType::Shader };
         const Vector<Ref<LibraryEntry>> codeEntries = ProjectLibrary::Get().Search("*", assetTypes);
         const ApplicationDesc& description = Application::Get().GetApplicationDesc();
         const bool usesCoreClr = description.Script.Backend == ManagedBackendPreset::CoreCLR;
 
-        CodeProjectData& codeProjectData = solutionData.Projects.emplace_back();
+        CodeProjectData& codeProjectData = outData.Projects.emplace_back();
         codeProjectData.Name = projectName;
         codeProjectData.ProjectDirectory = Editor::Get().GetProjectPath();
         codeProjectData.Runtime = usesCoreClr ? CSharpProjectRuntime::CoreCLR : CSharpProjectRuntime::Mono;
@@ -184,7 +352,7 @@ namespace Crowny
         {
             ScriptProjectReference coreClrApiReference;
             if (!ResolveCoreClrApiReference(description, coreClrApiReference))
-                return;
+                return false;
             codeProjectData.AssemblyReferences.push_back(std::move(coreClrApiReference));
             dependencyRequest.ExcludedAssemblies = { codeProjectData.AssemblyReferences.front().Filepath };
             dependencyRequest.ReservedAssemblyNames = { "CrownySharp" };
@@ -222,7 +390,7 @@ namespace Crowny
         }
 
         if (!AppendProjectDependencyReferences(codeProjectData, std::move(dependencyRequest)))
-            return;
+            return false;
 
         for (const Ref<LibraryEntry>& entry : codeEntries)
         {
@@ -244,8 +412,33 @@ namespace Crowny
                 codeProjectData.NonScriptFiles.push_back(fileEntry->Filepath);
         }
 
-        if (m_ActiveEditor->Sync(solutionData, Editor::Get().GetProjectPath()))
-            m_ActiveEditor->ReloadSolution(solutionData, Editor::Get().GetProjectPath());
+        return true;
+    }
+
+    bool CodeEditorManager::SyncSolutionData(const CodeSolutionData& data, bool force)
+    {
+        if (m_ActiveEditor == nullptr)
+            return false;
+
+        const String fingerprint = MakeProjectGraphFingerprint(data);
+        if (!force && fingerprint == m_LastProjectGraphFingerprint)
+            return true;
+
+        const CodeEditorSyncResult result = m_ActiveEditor->Sync(data, Editor::Get().GetProjectPath());
+        if (!result.Succeeded)
+            return false;
+
+        m_LastProjectGraphFingerprint = fingerprint;
+        CaptureProjectInputs(data);
+        if (result.Changed)
+            m_ActiveEditor->ReloadSolution(data, Editor::Get().GetProjectPath());
+        return true;
+    }
+
+    void CodeEditorManager::CaptureProjectInputs(const CodeSolutionData& data)
+    {
+        m_TrackedProjectInputs = CollectProjectInputs(data);
+        m_LastTrackedProjectInputFingerprint = MakeProjectInputFingerprint(m_TrackedProjectInputs);
     }
 
     void CodeEditorManager::SetEditorExecutablePath(const Path& path)

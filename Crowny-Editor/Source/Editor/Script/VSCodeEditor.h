@@ -10,7 +10,7 @@ namespace Crowny
         explicit VSCodeEditor(Path executablePath);
 
         void OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const override;
-        bool Sync(const CodeSolutionData& data, const Path& solutionPath) const override;
+        CodeEditorSyncResult Sync(const CodeSolutionData& data, const Path& solutionPath) const override;
         void SetEditorExecutablePath(const Path& path) override;
         void ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const override;
 
