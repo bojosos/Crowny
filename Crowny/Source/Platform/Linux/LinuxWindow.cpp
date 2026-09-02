@@ -144,7 +144,7 @@ namespace Crowny
         InstallCallbacks();
         glfwSetInputMode(m_Window, GLFW_LOCK_KEY_MODS, GLFW_TRUE);
 
-        if (m_Mode != WindowMode::Fullscreen)
+        if (m_Mode != WindowMode::Fullscreen && !(m_Mode == WindowMode::Windowed && m_Desc.StartMaximized))
         {
             int monitorX = 0;
             int monitorY = 0;
@@ -297,11 +297,20 @@ namespace Crowny
 
         glfwSetDropCallback(m_Window, [](GLFWwindow* nativeWindow, int count, const char** paths) {
             auto& window = *static_cast<LinuxWindow*>(glfwGetWindowUserPointer(nativeWindow));
-            Vector<String> droppedPaths;
+            Vector<Path> droppedPaths;
             droppedPaths.reserve(static_cast<size_t>(std::max(0, count)));
             for (int i = 0; i < count; ++i)
-                droppedPaths.emplace_back(paths[i]);
-            WindowFileDropEvent event(std::move(droppedPaths));
+            {
+                if (paths[i] == nullptr)
+                    continue;
+                // GLFW hands us UTF-8; decode explicitly so non-ASCII paths survive on Windows.
+                const std::u8string_view utf8(reinterpret_cast<const char8_t*>(paths[i]));
+                droppedPaths.emplace_back(utf8);
+            }
+            double x = 0.0;
+            double y = 0.0;
+            glfwGetCursorPos(nativeWindow, &x, &y);
+            WindowFileDropEvent event(std::move(droppedPaths), glm::vec2(static_cast<float>(x), static_cast<float>(y)));
             window.Dispatch(event);
         });
 

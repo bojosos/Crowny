@@ -2,6 +2,8 @@
 
 #include "Crowny/Events/Event.h"
 
+#include <glm/glm.hpp>
+
 namespace Crowny
 {
     class WindowResizeEvent : public Event
@@ -105,18 +107,32 @@ namespace Crowny
         bool m_Cancelled = false;
     };
 
+    /// Files dropped onto the native window from the OS shell (e.g. Windows Explorer).
+    /// The mouse position is in window-space pixels (client area origin), sampled at drop time.
     class WindowFileDropEvent : public Event
     {
     public:
-        explicit WindowFileDropEvent(Vector<String> paths) : m_Paths(std::move(paths)) {}
+        explicit WindowFileDropEvent(Vector<Path> paths, const glm::vec2& mousePosition = glm::vec2(0.0f))
+          : m_Paths(std::move(paths)), m_MousePosition(mousePosition)
+        {
+        }
 
-        const Vector<String>& GetPaths() const { return m_Paths; }
+        const Vector<Path>& GetPaths() const { return m_Paths; }
+        glm::vec2 GetMousePosition() const { return m_MousePosition; }
+
+        String ToString() const override
+        {
+            StringStream ss;
+            ss << "WindowFileDropEvent: " << m_Paths.size() << " file(s) at " << m_MousePosition.x << ", " << m_MousePosition.y;
+            return ss.str();
+        }
 
         EVENT_CLASS_TYPE(WindowFileDrop)
         EVENT_CLASS_CATEGORY(EventCategoryApplication)
 
     private:
-        Vector<String> m_Paths;
+        Vector<Path> m_Paths;
+        glm::vec2 m_MousePosition;
     };
 
     class WindowContentScaleEvent : public Event

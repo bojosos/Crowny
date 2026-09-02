@@ -125,9 +125,15 @@ TEST_CASE("Window events retain platform state", "[Events][Window]")
     close.Cancel();
     CHECK(close.IsCancelled());
 
-    WindowFileDropEvent drop({ "one.txt", "two.png" });
+    WindowFileDropEvent drop({ Path("one.txt"), Path("two.png") }, glm::vec2(120.0f, 48.0f));
     REQUIRE(drop.GetPaths().size() == 2);
-    CHECK(drop.GetPaths()[1] == "two.png");
+    CHECK(drop.GetPaths()[1] == Path("two.png"));
+    CHECK(drop.GetMousePosition() == glm::vec2(120.0f, 48.0f));
+    CHECK(drop.GetEventType() == EventType::WindowFileDrop);
+    CHECK(drop.IsInCategory(EventCategoryApplication));
+
+    WindowFileDropEvent legacyDrop({ Path("one.txt") });
+    CHECK(legacyDrop.GetMousePosition() == glm::vec2(0.0f));
 
     WindowContentScaleEvent scale(1.5f, 2.0f);
     CHECK(scale.GetXScale() == 1.5f);
