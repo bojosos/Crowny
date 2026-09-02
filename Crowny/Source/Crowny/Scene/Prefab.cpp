@@ -71,7 +71,7 @@ namespace Crowny
     Entity Prefab::GetRootEntity() const
     {
         if (!m_PrefabScene || m_RootEntityUuid.Empty())
-            return {};
+            return Entity::Invalid;
         return m_PrefabScene->GetEntityFromUuid(m_RootEntityUuid);
     }
 

@@ -424,7 +424,7 @@ namespace Crowny
     Entity EntitySnapshot::Restore() const
     {
         if (!m_Scene || m_RootUuid == UUID::EMPTY || m_Yaml.empty())
-            return {};
+            return Entity::Invalid;
         if (Entity existing = ResolveRoot())
             return existing;
 
