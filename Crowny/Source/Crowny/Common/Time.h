@@ -34,21 +34,6 @@ namespace Crowny
 
     class Time
     {
-        class CallbackScope
-        {
-        public:
-            CallbackScope(Time& time, float deltaTime);
-            ~CallbackScope();
-
-            CallbackScope(const CallbackScope&) = delete;
-            CallbackScope& operator=(const CallbackScope&) = delete;
-
-        private:
-            Time& m_Time;
-            float m_PreviousDeltaTime = 0.0f;
-            uint32_t m_PreviousDepth = 0;
-        };
-
     public:
         class CallbackScope
         {
