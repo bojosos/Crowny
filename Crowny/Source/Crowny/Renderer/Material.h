@@ -21,6 +21,7 @@
 namespace Crowny
 {
     class Material;
+    class MaterialPreset;
 
     enum class ToonMaterialPreset : uint8_t
     {
@@ -100,8 +101,16 @@ namespace Crowny
         static Ref<Material> CreateToon(const AssetHandle<Shader>& shader);
         static Ref<Material> CreateUnlit(const AssetHandle<Shader>& shader);
 
-        /** Applies a built-in toon look while preserving the material's texture assignments. */
+        /**
+         * Applies a preset while preserving the material's texture assignments.
+         * Fails without touching the material when any preset parameter is
+         * missing from the shader or has a different type.
+         */
+        bool ApplyPreset(const MaterialPreset& preset);
+        /** ABI shim: applies the built-in "Toon/<preset>" data preset (see MaterialPresetLibrary). */
         bool ApplyToonPreset(ToonMaterialPreset preset);
+        /** Re-applies the default texture and value setup for the material's classified model after a shader change. */
+        void ApplyModelDefaults();
 
         AssetHandle<Shader> GetShader() const { return m_Shader; }
         virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }
@@ -252,6 +261,9 @@ namespace Crowny
         Material() = default; // For serialization only
         void CreateAndAppendUniforms(uint32_t passIndex);
         void ApplyDefaults();
+        void ApplyStandardDefaults();
+        void ApplyToonDefaults();
+        void ApplyUnlitDefaults();
         static uint64_t NextLayoutVersion();
         template <typename Name, typename Value>
         void SetDataParam(const Name& name, ShaderDataType expectedType, const Value& value, StringView valueType);

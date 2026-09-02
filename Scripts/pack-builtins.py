@@ -22,6 +22,7 @@ RESOURCE_GLOBS = (
     "Resources/Icons/*.asset",
     "Resources/Textures/*.asset",
     "Resources/Default/*",
+    "Resources/Presets/*/*.cwpreset",
 )
 COOKED_SOURCES = (
     "Resources/Icons/Play.png", "Resources/Icons/Pause.png", "Resources/Icons/Stop.png",

@@ -31,7 +31,8 @@ namespace Crowny
         EnvironmentMap,
         Prefab,
         AudioMixer,
-        AnimationClip
+        AnimationClip,
+        MaterialPreset
     };
 
     static constexpr uint32_t ASSET_FILE_MAGIC = 0x43574E59; // "CWNY"
@@ -73,6 +74,7 @@ namespace Crowny
     static constexpr uint32_t NODEGRAPH_FORMAT_VERSION = 1;
     static constexpr uint32_t ENVIRONMENT_FORMAT_VERSION = 2;
     static constexpr uint32_t PREFAB_FORMAT_VERSION = 1;
+    static constexpr uint32_t MATERIAL_PRESET_FORMAT_VERSION = 1;
 
     class Asset : public RefCounted
     {

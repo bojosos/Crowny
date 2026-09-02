@@ -8,6 +8,7 @@
 #include "Crowny/Import/AudioClipImporter.h"
 #include "Crowny/Import/FontImporter.h"
 #include "Crowny/Import/MaterialImporter.h"
+#include "Crowny/Import/MaterialPresetImporter.h"
 #include "Crowny/Import/MeshImporter.h"
 #include "Crowny/Import/NodeGraphImporter.h"
 #include "Crowny/Import/PrefabImporter.h"
@@ -111,6 +112,7 @@ namespace Crowny
         Importer::Get().RegisterImporter(new TextureImporter(),
                                          { "png", "jpeg", "psd", "gif", "tga", "bmp", "hdr", "pic", "ppm", "pgm", "jpg", "ktx2" });
         Importer::Get().RegisterImporter(new MaterialImporter(), { "cwmat", "mat" });
+        Importer::Get().RegisterImporter(new MaterialPresetImporter(), { "cwpreset" });
         Importer::Get().RegisterImporter(new MeshImporter());
         Importer::Get().RegisterImporter(new SceneImporter(), { "cwscene" });
         Importer::Get().RegisterImporter(new PrefabImporter(), { "cwprefab" });

@@ -54,10 +54,9 @@ namespace Crowny
         return path.is_absolute() ? path : (m_LooseRoot / path).lexically_normal();
     }
 
-    bool BuiltInResourcePack::HasLooseFile(const Path& path) const
+    bool BuiltInResourcePack::HasLooseFile(CW_MAYBE_UNUSED const Path& path) const
     {
 #ifdef CW_DIST
-        (void)path;
         return false;
 #else
         std::error_code error;
@@ -127,10 +126,9 @@ namespace Crowny
         return true;
     }
 
-    bool BuiltInResourcePack::PreferSourceFile(const Path& path) const
+    bool BuiltInResourcePack::PreferSourceFile(CW_MAYBE_UNUSED const Path& path) const
     {
 #ifdef CW_DIST
-        (void)path;
         return false;
 #else
         const Path loosePath = GetLoosePath(path);

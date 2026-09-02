@@ -1,0 +1,39 @@
+# Crowny Material Preset
+# Built-in toon look: wide smooth bands, tinted shadows, warm rim light.
+Version: 1
+Name: Soft
+Target: Toon
+Parameters:
+  - {Name: tint, Type: Color, Value: [1, 1, 1, 1]}
+  - {Name: toonSpecularColor, Type: Color, Value: [1, 1, 1, 1]}
+  - {Name: toonRampStrength, Type: Float, Value: 0}
+  - {Name: toonRampOffset, Type: Float, Value: 0}
+  - {Name: toonMatcapStrength, Type: Float, Value: 0}
+  - {Name: toonMatcapRotation, Type: Float, Value: 0}
+  - {Name: outlineColor, Type: Color, Value: [0.025, 0.025, 0.04, 1]}
+  - {Name: thickness, Type: Float, Value: 0.75}
+  - {Name: toonSilhouetteWidth, Type: Float, Value: 0.65}
+  - {Name: bands, Type: Float, Value: 4}
+  - {Name: specularSize, Type: Float, Value: 0.65}
+  - {Name: specularSmoothness, Type: Float, Value: 0.6}
+  - {Name: shadowBrightness, Type: Float, Value: 0.35}
+  - {Name: toonShadowColor, Type: Color, Value: [0.35, 0.38, 0.48, 1]}
+  - {Name: toonBandSmoothness, Type: Float, Value: 0.18}
+  - {Name: toonSpecularThreshold, Type: Float, Value: 0.72}
+  - {Name: toonSpecularSmoothness, Type: Float, Value: 0.18}
+  - {Name: toonSpecularStrength, Type: Float, Value: 0.3}
+  - {Name: toonRimColor, Type: Color, Value: [1, 0.95, 0.85, 1]}
+  - {Name: rimPower, Type: Float, Value: 2}
+  - {Name: rimThreshold, Type: Float, Value: 0.45}
+  - {Name: toonRimSmoothness, Type: Float, Value: 0.18}
+  - {Name: toonRimStrength, Type: Float, Value: 0.35}
+  - {Name: toonRimShadowMask, Type: Float, Value: 0.5}
+  - {Name: toonIndirectStrength, Type: Float, Value: 0.8}
+  - {Name: toonPatternScale, Type: Float, Value: 16}
+  - {Name: toonPatternStrength, Type: Float, Value: 0}
+  - {Name: toonPatternSmoothness, Type: Float, Value: 0.1}
+  - {Name: toonPatternDistanceFade, Type: Float, Value: 75}
+  - {Name: toonPatternMapping, Type: Int, Value: 0}
+  - {Name: toonOutlineDepthThreshold, Type: Float, Value: 0.003}
+  - {Name: toonOutlineNormalThreshold, Type: Float, Value: 0.3}
+  - {Name: toonOutlineDistanceFade, Type: Float, Value: 120}

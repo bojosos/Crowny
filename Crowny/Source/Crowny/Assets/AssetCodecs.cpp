@@ -24,6 +24,7 @@
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/MSDFdata.h"
 #include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/MaterialPreset.h"
 #include "Crowny/Renderer/Mesh.h"
 
 #include "Crowny/Renderer/EnvironmentMap.h"
@@ -983,6 +984,42 @@ namespace Crowny
         archive(material.m_HasAlphaModeOverride, material.m_AlphaMode);
     }
 
+    void Save(BinaryDataStreamOutputArchive& archive, const MaterialPreset& preset)
+    {
+        WriteAssetHeader(archive, AssetType::MaterialPreset, MATERIAL_PRESET_FORMAT_VERSION, preset.m_SourceTimestamp, preset.m_SourceContentHash);
+        archive(cereal::base_class<Asset>(&preset));
+        archive(preset.m_Target);
+        const uint32_t count = static_cast<uint32_t>(preset.m_Parameters.size());
+        archive(count);
+        for (const MaterialPresetParameter& parameter : preset.m_Parameters)
+        {
+            archive(parameter.Name, static_cast<uint8_t>(parameter.Type), parameter.Vector.x, parameter.Vector.y, parameter.Vector.z,
+                    parameter.Vector.w, parameter.Integer);
+        }
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, MaterialPreset& preset)
+    {
+        const AssetFileHeader header = ReadAssetHeader(archive);
+        ValidateAssetHeader(header, AssetType::MaterialPreset, MATERIAL_PRESET_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&preset));
+        archive(preset.m_Target);
+        uint32_t count = 0;
+        archive(count);
+        preset.m_Parameters.clear();
+        preset.m_Parameters.reserve(count);
+        for (uint32_t index = 0; index < count; index++)
+        {
+            MaterialPresetParameter parameter;
+            uint8_t type = 0;
+            archive(parameter.Name, type, parameter.Vector.x, parameter.Vector.y, parameter.Vector.z, parameter.Vector.w, parameter.Integer);
+            if (type > static_cast<uint8_t>(MaterialPresetValueType::Bool))
+                throw cereal::Exception("Material preset parameter type is not supported.");
+            parameter.Type = static_cast<MaterialPresetValueType>(type);
+            preset.m_Parameters.push_back(std::move(parameter));
+        }
+    }
+
     void Load(BinaryDataStreamInputArchive& archive, Material& material)
     {
         const AssetFileHeader header = ReadAssetHeader(archive);
@@ -1390,4 +1427,6 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::AudioMixer, "AudioMixer")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioMixer)
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::AnimationClip, "AnimationClip")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AnimationClip)
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::MaterialPreset, "MaterialPreset")
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::MaterialPreset)
 CEREAL_REGISTER_DYNAMIC_INIT(AssetCodecs)

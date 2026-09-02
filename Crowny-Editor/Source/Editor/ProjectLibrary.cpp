@@ -4,6 +4,7 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Serialization/MaterialPresetSerializer.h"
 #include "Crowny/Serialization/MaterialSerializer.h"
 #include "Crowny/Serialization/NodeGraphSerializer.h"
 
@@ -869,6 +870,11 @@ namespace Crowny
         {
             auto material = StaticRefCast<Material>(asset);
             MaterialSerializer serializer(material);
+            return serializer.Serialize(absPath);
+        }
+        if (asset->GetAssetType() == AssetType::MaterialPreset)
+        {
+            MaterialPresetSerializer serializer(StaticRefCast<MaterialPreset>(asset));
             return serializer.Serialize(absPath);
         }
 

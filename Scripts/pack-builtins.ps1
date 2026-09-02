@@ -70,7 +70,8 @@ $patterns = @(
     "Resources\Fonts\Roboto\Roboto-Bold.ttf",
     "Resources\Icons\*.asset",
     "Resources\Textures\*.asset",
-    "Resources\Default\*"
+    "Resources\Default\*",
+    "Resources\Presets\*\*.cwpreset"
 )
 
 $files = @($patterns | ForEach-Object {

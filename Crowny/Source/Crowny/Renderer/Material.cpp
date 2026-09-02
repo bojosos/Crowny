@@ -3,6 +3,8 @@
 #include "Crowny/RenderAPI/UniformParams.h"
 #include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/MaterialPreset.h"
+#include "Crowny/Renderer/MaterialPresetLibrary.h"
 
 namespace Crowny
 {
@@ -28,173 +30,114 @@ namespace Crowny
     Ref<Material> Material::CreatePBR(const AssetHandle<Shader>& shader)
     {
         Ref<Material> material = Create(shader);
-        material->SetTexture("albedoMap", Texture::WHITE);
-        material->SetTexture("metallicMap", Texture::WHITE);
-        material->SetTexture("roughnessMap", Texture::WHITE);
-        material->SetTexture("normalMap", Texture::NORMAL);
-        material->SetTexture("aoMap", Texture::WHITE);
-        material->SetColor("albedo", glm::vec4(1.0f));
-        material->SetFloat("roughness", 0.5f);
-        material->SetFloat("metalness", 0.0f);
-        material->SetFloat("useIBL", 0.0f);
+        material->ApplyStandardDefaults();
         return material;
     }
 
     Ref<Material> Material::CreateToon(const AssetHandle<Shader>& shader)
     {
         Ref<Material> material = Create(shader);
-        material->SetTexture("albedoMap", Texture::WHITE);
-        material->SetTexture("toonPatternTexture", Texture::WHITE);
-        material->SetTexture("toonRampTexture", Texture::WHITE);
-        material->SetTexture("toonMatcapTexture", Texture::WHITE);
-        material->ApplyToonPreset(ToonMaterialPreset::Classic);
-        material->SetVector3("camPos", glm::vec3(0.0f));
+        material->ApplyToonDefaults();
         return material;
-    }
-
-    bool Material::ApplyToonPreset(ToonMaterialPreset preset)
-    {
-        if (preset < ToonMaterialPreset::Classic || preset > ToonMaterialPreset::Hatched ||
-            MaterialRenderClassifier::Classify(*this).Model != MaterialModel::Toon)
-            return false;
-
-        const auto hasBinding = [this](StringView name, ShaderDataType type) {
-            const auto binding = m_Bindings.find(name);
-            return binding != m_Bindings.end() && binding->second.DataType == type;
-        };
-        static constexpr std::array<StringView, 27> floatBindings = {
-            "thickness",                  "toonSilhouetteWidth",        "bands",
-            "specularSize",               "specularSmoothness",         "shadowBrightness",
-            "toonBandSmoothness",         "toonSpecularThreshold",      "toonSpecularSmoothness",
-            "toonSpecularStrength",       "rimPower",                   "rimThreshold",
-            "toonRimSmoothness",          "toonRimStrength",            "toonRimShadowMask",
-            "toonIndirectStrength",       "toonPatternScale",           "toonPatternStrength",
-            "toonPatternSmoothness",      "toonPatternDistanceFade",    "toonRampStrength",
-            "toonRampOffset",             "toonMatcapStrength",         "toonMatcapRotation",
-            "toonOutlineDepthThreshold",  "toonOutlineNormalThreshold", "toonOutlineDistanceFade",
-        };
-        static constexpr std::array<StringView, 5> colorBindings = {
-            "outlineColor", "tint", "toonShadowColor", "toonSpecularColor", "toonRimColor",
-        };
-        if (std::any_of(floatBindings.begin(), floatBindings.end(), [&hasBinding](StringView name) {
-                return !hasBinding(name, ShaderDataType::Float);
-            }) ||
-            std::any_of(colorBindings.begin(), colorBindings.end(), [&hasBinding](StringView name) {
-                return !hasBinding(name, ShaderDataType::Float4);
-            }) ||
-            !hasBinding("toonPatternMapping", ShaderDataType::Int))
-            return false;
-
-        // Reset optional texture-driven styles while preserving the assigned textures.
-        SetColor("tint", glm::vec4(1.0f));
-        SetColor("toonSpecularColor", glm::vec4(1.0f));
-        SetColor("toonRimColor", glm::vec4(1.0f));
-        SetFloat("toonRampStrength", 0.0f);
-        SetFloat("toonRampOffset", 0.0f);
-        SetFloat("toonMatcapStrength", 0.0f);
-        SetFloat("toonMatcapRotation", 0.0f);
-
-        switch (preset)
-        {
-        case ToonMaterialPreset::Classic:
-            SetColor("outlineColor", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-            SetFloat("thickness", 1.0f);
-            SetFloat("toonSilhouetteWidth", 1.0f);
-            SetFloat("bands", 3.0f);
-            SetFloat("specularSize", 0.5f);
-            SetFloat("specularSmoothness", 1.0f);
-            SetFloat("shadowBrightness", 0.2f);
-            SetColor("toonShadowColor", glm::vec4(0.2f, 0.22f, 0.3f, 1.0f));
-            SetFloat("toonBandSmoothness", 0.08f);
-            SetFloat("toonSpecularThreshold", 0.8f);
-            SetFloat("toonSpecularSmoothness", 0.05f);
-            SetFloat("toonSpecularStrength", 0.5f);
-            SetFloat("rimPower", 3.0f);
-            SetFloat("rimThreshold", 0.5f);
-            SetFloat("toonRimSmoothness", 0.08f);
-            SetFloat("toonRimStrength", 0.5f);
-            SetFloat("toonRimShadowMask", 0.75f);
-            SetFloat("toonIndirectStrength", 0.5f);
-            SetFloat("toonPatternScale", 16.0f);
-            SetFloat("toonPatternStrength", 0.0f);
-            SetFloat("toonPatternSmoothness", 0.1f);
-            SetFloat("toonPatternDistanceFade", 50.0f);
-            SetInt("toonPatternMapping", 0);
-            SetFloat("toonOutlineDepthThreshold", 0.002f);
-            SetFloat("toonOutlineNormalThreshold", 0.2f);
-            SetFloat("toonOutlineDistanceFade", 100.0f);
-            break;
-        case ToonMaterialPreset::Soft:
-            SetColor("outlineColor", glm::vec4(0.025f, 0.025f, 0.04f, 1.0f));
-            SetFloat("thickness", 0.75f);
-            SetFloat("toonSilhouetteWidth", 0.65f);
-            SetFloat("bands", 4.0f);
-            SetFloat("specularSize", 0.65f);
-            SetFloat("specularSmoothness", 0.6f);
-            SetFloat("shadowBrightness", 0.35f);
-            SetColor("toonShadowColor", glm::vec4(0.35f, 0.38f, 0.48f, 1.0f));
-            SetFloat("toonBandSmoothness", 0.18f);
-            SetFloat("toonSpecularThreshold", 0.72f);
-            SetFloat("toonSpecularSmoothness", 0.18f);
-            SetFloat("toonSpecularStrength", 0.3f);
-            SetColor("toonRimColor", glm::vec4(1.0f, 0.95f, 0.85f, 1.0f));
-            SetFloat("rimPower", 2.0f);
-            SetFloat("rimThreshold", 0.45f);
-            SetFloat("toonRimSmoothness", 0.18f);
-            SetFloat("toonRimStrength", 0.35f);
-            SetFloat("toonRimShadowMask", 0.5f);
-            SetFloat("toonIndirectStrength", 0.8f);
-            SetFloat("toonPatternScale", 16.0f);
-            SetFloat("toonPatternStrength", 0.0f);
-            SetFloat("toonPatternSmoothness", 0.1f);
-            SetFloat("toonPatternDistanceFade", 75.0f);
-            SetInt("toonPatternMapping", 0);
-            SetFloat("toonOutlineDepthThreshold", 0.003f);
-            SetFloat("toonOutlineNormalThreshold", 0.3f);
-            SetFloat("toonOutlineDistanceFade", 120.0f);
-            break;
-        case ToonMaterialPreset::Hatched:
-            SetColor("outlineColor", glm::vec4(0.015f, 0.015f, 0.02f, 1.0f));
-            SetFloat("thickness", 1.25f);
-            SetFloat("toonSilhouetteWidth", 1.25f);
-            SetFloat("bands", 3.0f);
-            SetFloat("specularSize", 0.82f);
-            SetFloat("specularSmoothness", 1.25f);
-            SetFloat("shadowBrightness", 0.12f);
-            SetColor("toonShadowColor", glm::vec4(0.12f, 0.13f, 0.18f, 1.0f));
-            SetFloat("toonBandSmoothness", 0.03f);
-            SetFloat("toonSpecularThreshold", 0.82f);
-            SetFloat("toonSpecularSmoothness", 0.03f);
-            SetFloat("toonSpecularStrength", 0.15f);
-            SetColor("toonRimColor", glm::vec4(0.8f, 0.85f, 1.0f, 1.0f));
-            SetFloat("rimPower", 4.0f);
-            SetFloat("rimThreshold", 0.6f);
-            SetFloat("toonRimSmoothness", 0.05f);
-            SetFloat("toonRimStrength", 0.25f);
-            SetFloat("toonRimShadowMask", 0.9f);
-            SetFloat("toonIndirectStrength", 0.35f);
-            SetFloat("toonPatternScale", 24.0f);
-            SetFloat("toonPatternStrength", 0.7f);
-            SetFloat("toonPatternSmoothness", 0.04f);
-            SetFloat("toonPatternDistanceFade", 80.0f);
-            SetInt("toonPatternMapping", 3);
-            SetFloat("toonOutlineDepthThreshold", 0.0015f);
-            SetFloat("toonOutlineNormalThreshold", 0.15f);
-            SetFloat("toonOutlineDistanceFade", 160.0f);
-            break;
-        default:
-            return false;
-        }
-
-        return true;
     }
 
     Ref<Material> Material::CreateUnlit(const AssetHandle<Shader>& shader)
     {
         Ref<Material> material = Create(shader);
-        material->SetTexture("albedoMap", Texture::WHITE);
-        material->SetColor("tint", glm::vec4(1.0f));
+        material->ApplyUnlitDefaults();
         return material;
+    }
+
+    void Material::ApplyStandardDefaults()
+    {
+        SetTexture("albedoMap", Texture::WHITE);
+        SetTexture("metallicMap", Texture::WHITE);
+        SetTexture("roughnessMap", Texture::WHITE);
+        SetTexture("normalMap", Texture::NORMAL);
+        SetTexture("aoMap", Texture::WHITE);
+        SetColor("albedo", glm::vec4(1.0f));
+        SetFloat("roughness", 0.5f);
+        SetFloat("metalness", 0.0f);
+        SetFloat("useIBL", 0.0f);
+    }
+
+    void Material::ApplyToonDefaults()
+    {
+        SetTexture("albedoMap", Texture::WHITE);
+        SetTexture("toonPatternTexture", Texture::WHITE);
+        SetTexture("toonRampTexture", Texture::WHITE);
+        SetTexture("toonMatcapTexture", Texture::WHITE);
+        ApplyToonPreset(ToonMaterialPreset::Classic);
+        SetVector3("camPos", glm::vec3(0.0f));
+    }
+
+    void Material::ApplyUnlitDefaults()
+    {
+        SetTexture("albedoMap", Texture::WHITE);
+        SetColor("tint", glm::vec4(1.0f));
+    }
+
+    void Material::ApplyModelDefaults()
+    {
+        if (!m_Shader)
+            return;
+        const MaterialRenderClassification classification = MaterialRenderClassifier::Classify(*this);
+        if (classification.IsUnsupported())
+            return;
+        switch (classification.Model)
+        {
+        case MaterialModel::Standard:
+            ApplyStandardDefaults();
+            break;
+        case MaterialModel::Toon:
+            ApplyToonDefaults();
+            break;
+        case MaterialModel::Unlit:
+            ApplyUnlitDefaults();
+            break;
+        }
+    }
+
+    bool Material::ApplyPreset(const MaterialPreset& preset)
+    {
+        if (!m_Shader || !preset.Validate(m_Bindings))
+            return false;
+
+        for (const MaterialPresetParameter& parameter : preset.GetParameters())
+        {
+            switch (parameter.Type)
+            {
+            case MaterialPresetValueType::Float:
+                SetFloat(parameter.Name, parameter.Vector.x);
+                break;
+            case MaterialPresetValueType::Float2:
+                SetFloat2(parameter.Name, glm::vec2(parameter.Vector));
+                break;
+            case MaterialPresetValueType::Float3:
+                SetVector3(parameter.Name, glm::vec3(parameter.Vector));
+                break;
+            case MaterialPresetValueType::Color:
+                SetColor(parameter.Name, parameter.Vector);
+                break;
+            case MaterialPresetValueType::Int:
+                SetInt(parameter.Name, parameter.Integer);
+                break;
+            case MaterialPresetValueType::Bool:
+                SetBool(parameter.Name, parameter.Integer != 0);
+                break;
+            }
+        }
+        return true;
+    }
+
+    bool Material::ApplyToonPreset(ToonMaterialPreset preset)
+    {
+        if (preset < ToonMaterialPreset::Classic || preset > ToonMaterialPreset::Hatched)
+            return false;
+        const Ref<MaterialPreset> data = MaterialPresetLibrary::LoadBuiltIn(MaterialPresetLibrary::BuiltInToonPresetName(preset));
+        if (data == nullptr || MaterialRenderClassifier::Classify(*this).Model != MaterialModel::Toon)
+            return false;
+        return ApplyPreset(*data);
     }
 
     void Material::SetShader(const AssetHandle<Shader>& shader)
