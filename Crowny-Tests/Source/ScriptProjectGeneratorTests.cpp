@@ -198,7 +198,9 @@ TEST_CASE("VS Code synchronization configures a CoreCLR workspace", "[Editor][Sc
     solution.Projects.push_back(MakeProject(CSharpProjectRuntime::CoreCLR));
 
     VSCodeEditor editor(Path{});
-    CHECK(editor.Sync(solution, outputDirectory));
+    const CodeEditorSyncResult firstSync = editor.Sync(solution, outputDirectory);
+    REQUIRE(firstSync.Succeeded);
+    CHECK(firstSync.Changed);
 
     const Path vscodeDirectory = outputDirectory / ".vscode";
     const String settings = FileSystem::ReadTextFile(vscodeDirectory / "settings.json");
@@ -209,7 +211,9 @@ TEST_CASE("VS Code synchronization configures a CoreCLR workspace", "[Editor][Sc
     CHECK(extensions.find("ms-dotnettools.csharp") != String::npos);
     CHECK(launch.find("Attach to Crowny (.NET)") != String::npos);
 
-    CHECK_FALSE(editor.Sync(solution, outputDirectory));
+    const CodeEditorSyncResult secondSync = editor.Sync(solution, outputDirectory);
+    REQUIRE(secondSync.Succeeded);
+    CHECK_FALSE(secondSync.Changed);
 
     fs::remove_all(outputDirectory, error);
     CHECK(!error);
@@ -234,7 +238,9 @@ TEST_CASE("VS Code synchronization preserves user workspace settings", "[Editor]
     solution.Projects.push_back(MakeProject(CSharpProjectRuntime::CoreCLR));
 
     VSCodeEditor editor(Path{});
-    CHECK(editor.Sync(solution, outputDirectory));
+    const CodeEditorSyncResult sync = editor.Sync(solution, outputDirectory);
+    REQUIRE(sync.Succeeded);
+    CHECK(sync.Changed);
 
     const Path vscodeDirectory = outputDirectory / ".vscode";
     const String settings = FileSystem::ReadTextFile(vscodeDirectory / "settings.json");
