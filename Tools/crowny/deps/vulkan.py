@@ -74,7 +74,7 @@ def _extract_installer(repository_root, installer, root):
     container_root.mkdir(parents=True, exist_ok=True)
     stream_root.mkdir(parents=True, exist_ok=True)
     try:
-        fetch.extract_7z(installer, container_root, switches=["-tPE", "[0]"])
+        fetch.extract_7z(installer, container_root, switches=["-tPE"], masks=["[0]"])
         payload = container_root / "[0]"
         fetch.extract_7z(payload, stream_root, switches=["-t#"])
         root.mkdir(parents=True, exist_ok=True)

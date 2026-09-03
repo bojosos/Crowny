@@ -93,10 +93,11 @@ def find_7z():
     raise RuntimeError("7-Zip is required to extract this payload.")
 
 
-def extract_7z(archive, output_dir, switches=()):
+def extract_7z(archive, output_dir, switches=(), masks=()):
     args = [find_7z(), "x", "-y", f"-o{output_dir}"]
     args.extend(switches)
     args.append(str(archive))
+    args.extend(masks)
     cmd.run_checked(args)
 
 
