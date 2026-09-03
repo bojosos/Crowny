@@ -1,4 +1,4 @@
-import os
+﻿import os
 import shutil
 import sys
 import time
@@ -25,6 +25,8 @@ def find_premake(root=None):
     root = root or env.repo_root()
     bundled = root / "3rdparty" / "premake" / "bin" / premake_executable_name()
     if bundled.is_file():
+        if sys.platform != "win32" and not os.access(bundled, os.X_OK):
+            bundled.chmod(bundled.stat().st_mode | 0o111)
         return bundled
     on_path = shutil.which("premake5")
     if on_path:
@@ -32,7 +34,6 @@ def find_premake(root=None):
     raise RuntimeError(
         "Premake was not found in 3rdparty/premake/bin or PATH. Run `crowny setup` first."
     )
-
 
 def premake_action():
     return "vs2022" if sys.platform == "win32" else "gmake2"
