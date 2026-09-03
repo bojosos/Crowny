@@ -114,6 +114,8 @@ def build_parser():
 
     dotnet_parser = deps_sub.add_parser("dotnet")
     dotnet_parser.add_argument("--architecture", default="x64", choices=["x64", "arm64"])
+    dotnet_parser.add_argument("--version", default="")
+    dotnet_parser.add_argument("--install-dir", default="")
 
     return parser
 
@@ -221,7 +223,7 @@ def main(argv=None):
                     force=args.force,
                 )
             elif args.dependency == "dotnet":
-                dotnet.ensure(root, architecture=args.architecture)
+                dotnet.ensure(root, version=args.version, architecture=args.architecture, install_directory=args.install_dir)
             return 0
 
         parser.error(f"Unknown command: {args.command}")

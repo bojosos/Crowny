@@ -6,6 +6,8 @@
 
 ## Build and development commands
 
+All build orchestration lives in the Python tool `Tools/crowny` (stdlib-only, Python 3.9+). Invoke it with `Scripts\crowny.bat <command>` on Windows, `./Scripts/crowny <command>` elsewhere, or `python Tools/crowny <command>` directly. The legacy `Scripts\*.ps1` entrypoints are thin compatibility shims that translate to the same tool.
+
 Initialize the exact dependency revisions first:
 
 ```powershell
@@ -13,14 +15,17 @@ git submodule sync --recursive
 git submodule update --init --recursive
 ```
 
-- `Scripts\setup-windows.ps1 -Build -Test` bootstraps local SDKs, generates VS2022 projects, builds Release, and runs Catch2.
-- `Scripts\test-windows-build-common.ps1` validates worktree cache discovery and build-lock coordination without invoking a compiler.
-- `Scripts\setup-windows.ps1 -Build -Test -Configuration Debug -Sanitizer Address` builds ASan-instrumented tests and enables the Windows CRT leak checker.
-- `Scripts\build-windows.ps1 -Target Engine|Editor|Tests|RenderTests|All` is the Windows daily-build entrypoint; `Scripts\test-windows.ps1` builds and runs Catch2. Agents must use these commands instead of raw MSBuild. Auto scheduling gives the first build 8 of 12 compiler workers, leaves four for another output family, serializes overlapping output writes, and permits concurrent test readers. Pass `-Jobs` to request a fixed share; `-Jobs 12` waits for exclusive compiler capacity.
-- `Scripts\genprojects.bat` regenerates `Crowny.sln` with node-editor support.
-- `Scripts\run-render-tests.ps1` builds the render harness, checks Vulkan and OpenGL against shared references, and compares both outputs.
-- `./Scripts/genprojects.sh && make Crowny-Editor Crowny-Tests -j2 config=release_linux64 CXX=clang++` generates and builds on Linux.
+- `Scripts\crowny.bat setup --build --test` bootstraps local SDKs, generates VS2022 projects, builds Release, and runs Catch2. Add `--configuration Debug --sanitizer Address` for ASan-instrumented tests with the Windows CRT leak checker.
+- `Scripts\crowny.bat doctor` reports discovered tools, MSBuild, and dependency roots.
+- `Scripts\crowny.bat deps vulkan|openal|physics|spirv-cross|dotnet` bootstraps a single dependency.
+- `Scripts\crowny.bat build Engine|Editor|Tests|RenderTests|All` is the Windows daily-build entrypoint; `Scripts\crowny.bat test` builds and runs Catch2. Agents must use these commands instead of raw MSBuild. Auto scheduling gives the first build 8 of 12 compiler workers, leaves four for another output family, serializes overlapping output writes, and permits concurrent test readers. Pass `--jobs` to request a fixed share; `--jobs 12` waits for exclusive compiler capacity. `--inner-loop` skips building project references for fast single-file iteration after a full build. `--profile` records binlogs and build metrics under `artifacts/build-metrics/`.
+- `Scripts\crowny.bat managed` builds the managed C# assemblies; `Scripts\crowny.bat gen --force` regenerates `Crowny.sln` with node-editor support.
+- `Scripts\crowny.bat render-tests` builds the render harness, checks Vulkan and OpenGL against shared references, and compares both outputs.
+- `./Scripts/crowny gen --force && make Crowny-Editor Crowny-Tests -j2 config=release_linux64 CXX=clang++` generates and builds on Linux.
 - `./bin/Release-linux-x86_64/Crowny-Tests/Crowny-Tests` runs the Linux test binary. The Windows executable uses the same path pattern with `Release-windows-x86_64`.
+- Python tooling tests: `python -m unittest discover -s Tools/crowny/tests`.
+
+`Scripts\windows-build-common.ps1`, `Scripts\measure-build-windows.ps1`, and `Scripts\probe-sccache-windows.ps1` remain PowerShell for build benchmarking.
 
 Linked worktrees reuse the main checkout's dependency cache while keeping generated projects and outputs local. Set `CROWNY_DEPS_ROOT` to override the shared SDK cache and `CROWNY_BUILD_COORDINATION_ROOT` to override the family-wide lock/lease directory. Component-specific overrides remain available through `VULKAN_SDK`, `CROWNY_MONO_ROOT`, `CROWNY_OPENAL_ROOT`, `CROWNY_PHYSICS_ROOT`, and `CROWNY_SPIRV_CROSS_ROOT`. Do not commit `bin/`, `bin-int/`, generated solutions, or downloaded SDKs.
 
