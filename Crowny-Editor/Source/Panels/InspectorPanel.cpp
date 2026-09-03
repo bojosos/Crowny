@@ -1,4 +1,4 @@
-#include "cwepch.h"
+﻿#include "cwepch.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Application/EngineRuntime.h"
@@ -923,7 +923,7 @@ namespace Crowny
 
     void InspectorPanel::ObserveAssetEdit(const Ref<Asset>& asset, bool changed)
     {
-        m_AssetSaveTracker.Observe(m_InspectedAssetPath, asset, changed, ImGui::IsItemActive(), ImGui::IsItemDeactivatedAfterEdit());
+        m_AssetSaveTracker->Observe(m_InspectedAssetPath, asset, changed, ImGui::IsItemActive(), ImGui::IsItemDeactivatedAfterEdit());
     }
 
     void InspectorPanel::SaveReadyAssets()
@@ -1517,7 +1517,6 @@ namespace Crowny
         if (selectionChanged)
         {
             ResetPhysicsMaterialUndoTransaction(true);
-            m_ComponentEditor.ResetUndoTransactions(true);
             FlushPendingAssetSaves();
             m_MaterialSchemaCache.Reset();
         }
@@ -1529,8 +1528,8 @@ namespace Crowny
                 if (!selectionChanged)
                 {
                     ResetPhysicsMaterialUndoTransaction(true);
-                    m_ComponentEditor.ResetUndoTransactions(true);
                     FlushPendingAssetSaves();
+                }
                 m_EntityInspector.ResetUndoTransactions(true);
                 m_MaterialSchemaCache.Reset();
             }

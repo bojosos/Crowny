@@ -118,7 +118,8 @@ namespace Crowny
             bool StatusIsError = false;
             double StatusExpiry = 0.0;
         } m_MaterialPicker;
-        AssetSaveTracker m_AssetSaveTracker;
+        Ref<AssetSaveTracker> m_AssetSaveTracker = CreateRef<AssetSaveTracker>();
+    Ref<PhysicsMaterialInspectorTransaction> m_PhysicsMaterialUndo = CreateRef<PhysicsMaterialInspectorTransaction>();
 
         std::function<void(AssetHandle<NodeGraphAsset>)> m_OpenNodeEditorCallback;
     };
