@@ -23,6 +23,16 @@ namespace Crowny
         public const float Rad2Deg = 180.0f / 3.14159265359f;
 
         /// <summary>
+        /// A constant representing positive infinity.
+        /// </summary>
+        public const float Infinity = float.PositiveInfinity;
+
+        /// <summary>
+        /// A constant representing negative infinity.
+        /// </summary>
+        public const float NegativeInfinity = float.NegativeInfinity;
+
+        /// <summary>
         /// Returns the minimum value.
         /// </summary>
         /// <param name="a">First value.</param>
@@ -206,6 +216,17 @@ namespace Crowny
         }
 
         /// <summary>
+        /// Returns the arc-tangent of y/x. The sign of the arguments determines the quadrant of the result.
+        /// </summary>
+        /// <param name="y">The y coordinate.</param>
+        /// <param name="x">The x coordinate.</param>
+        /// <returns>The angle in radians in the range [-pi, pi].</returns>
+        public static float Atan2(float y, float x)
+        {
+            return (float)Math.Atan2(y, x);
+        }
+
+        /// <summary>
         /// Returns the next(larger than the number) closest power of two.
         /// </summary>
         /// <param name="value">The number.</param>
@@ -274,6 +295,36 @@ namespace Crowny
         public static float Floor(float f)
         {
             return (float)Math.Floor(f);
+        }
+
+        /// <summary>
+        /// Rounds f down to the largest integer smaller than f.
+        /// </summary>
+        /// <param name="f">The number to round down.</param>
+        /// <returns>The resulting floored number.</returns>
+        public static int FloorToInt(float f)
+        {
+            return (int)Math.Floor(f);
+        }
+
+        /// <summary>
+        /// Rounds f up to the smallest integer larger than f.
+        /// </summary>
+        /// <param name="f">The number to round up.</param>
+        /// <returns>The resulting ceiled number.</returns>
+        public static int CeilToInt(float f)
+        {
+            return (int)Math.Ceiling(f);
+        }
+
+        /// <summary>
+        /// Rounds f to the closest integer. Values exactly halfway between two integers are rounded to the even one.
+        /// </summary>
+        /// <param name="f">The number to round.</param>
+        /// <returns>The resulting rounded number.</returns>
+        public static int RoundToInt(float f)
+        {
+            return (int)Math.Round(f);
         }
 
         /// <summary>
@@ -394,6 +445,140 @@ namespace Crowny
         {
             t = Repeat(t, length * 2f);
             return length - Abs(t - length);
+        }
+
+        /// <summary>
+        /// Computes the shortest difference between two angles in degrees.
+        /// </summary>
+        /// <param name="current">The current angle.</param>
+        /// <param name="target">The target angle.</param>
+        /// <returns>The difference in the range [-180, 180].</returns>
+        public static float DeltaAngle(float current, float target)
+        {
+            float delta = Repeat(target - current, 360.0f);
+            if (delta > 180.0f)
+                delta -= 360.0f;
+            return delta;
+        }
+
+        /// <summary>
+        /// Gradually changes a value towards a goal using a critically damped spring.
+        /// </summary>
+        /// <param name="current">The current value.</param>
+        /// <param name="target">The value to move towards.</param>
+        /// <param name="currentVelocity">The velocity of the spring, passed by reference and modified.</param>
+        /// <param name="smoothTime">Approximate time to reach the target. Smaller values reach the target faster.</param>
+        /// <returns>The smoothed value.</returns>
+        public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime)
+        {
+            return SmoothDamp(current, target, ref currentVelocity, smoothTime, Infinity, Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Gradually changes a value towards a goal using a critically damped spring.
+        /// </summary>
+        /// <param name="current">The current value.</param>
+        /// <param name="target">The value to move towards.</param>
+        /// <param name="currentVelocity">The velocity of the spring, passed by reference and modified.</param>
+        /// <param name="smoothTime">Approximate time to reach the target. Smaller values reach the target faster.</param>
+        /// <param name="maxSpeed">The maximum speed the value may move at.</param>
+        /// <returns>The smoothed value.</returns>
+        public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime, float maxSpeed)
+        {
+            return SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Gradually changes a value towards a goal using a critically damped spring.
+        /// </summary>
+        /// <param name="current">The current value.</param>
+        /// <param name="target">The value to move towards.</param>
+        /// <param name="currentVelocity">The velocity of the spring, passed by reference and modified.</param>
+        /// <param name="smoothTime">Approximate time to reach the target. Smaller values reach the target faster.</param>
+        /// <param name="maxSpeed">The maximum speed the value may move at.</param>
+        /// <param name="deltaTime">The time elapsed since the last call.</param>
+        /// <returns>The smoothed value.</returns>
+        public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime,
+                                       float maxSpeed, float deltaTime)
+        {
+            smoothTime = Max(0.0001f, smoothTime);
+            float omega = 2.0f / smoothTime;
+
+            float x = omega * deltaTime;
+            float exp = 1.0f / (1.0f + x + 0.48f * x * x + 0.235f * x * x * x);
+            float change = current - target;
+            float originalTo = target;
+
+            float maxChange = maxSpeed * smoothTime;
+            change = Clamp(change, -maxChange, maxChange);
+            target = current - change;
+
+            float temp = (currentVelocity + omega * change) * deltaTime;
+            currentVelocity = (currentVelocity - omega * temp) * exp;
+            float output = target + (change + temp) * exp;
+
+            if (originalTo - current > 0.0f == output > originalTo)
+            {
+                output = originalTo;
+                currentVelocity = (output - originalTo) / deltaTime;
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// Gradually changes an angle in degrees towards a goal, taking the shortest path.
+        /// </summary>
+        /// <param name="current">The current angle.</param>
+        /// <param name="target">The angle to move towards.</param>
+        /// <param name="currentVelocity">The velocity of the spring, passed by reference and modified.</param>
+        /// <param name="smoothTime">Approximate time to reach the target. Smaller values reach the target faster.</param>
+        /// <returns>The smoothed angle.</returns>
+        public static float SmoothDampAngle(float current, float target, ref float currentVelocity, float smoothTime)
+        {
+            return SmoothDampAngle(current, target, ref currentVelocity, smoothTime, Infinity, Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Gradually changes an angle in degrees towards a goal, taking the shortest path.
+        /// </summary>
+        /// <param name="current">The current angle.</param>
+        /// <param name="target">The angle to move towards.</param>
+        /// <param name="currentVelocity">The velocity of the spring, passed by reference and modified.</param>
+        /// <param name="smoothTime">Approximate time to reach the target. Smaller values reach the target faster.</param>
+        /// <param name="maxSpeed">The maximum angular speed the value may move at.</param>
+        /// <returns>The smoothed angle.</returns>
+        public static float SmoothDampAngle(float current, float target, ref float currentVelocity, float smoothTime, float maxSpeed)
+        {
+            return SmoothDampAngle(current, target, ref currentVelocity, smoothTime, maxSpeed, Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Gradually changes an angle in degrees towards a goal, taking the shortest path.
+        /// </summary>
+        /// <param name="current">The current angle.</param>
+        /// <param name="target">The angle to move towards.</param>
+        /// <param name="currentVelocity">The velocity of the spring, passed by reference and modified.</param>
+        /// <param name="smoothTime">Approximate time to reach the target. Smaller values reach the target faster.</param>
+        /// <param name="maxSpeed">The maximum angular speed the value may move at.</param>
+        /// <param name="deltaTime">The time elapsed since the last call.</param>
+        /// <returns>The smoothed angle.</returns>
+        public static float SmoothDampAngle(float current, float target, ref float currentVelocity, float smoothTime,
+                                            float maxSpeed, float deltaTime)
+        {
+            target = current + DeltaAngle(current, target);
+            return SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
+        }
+
+        /// <summary>
+        /// Samples 2D Perlin noise.
+        /// </summary>
+        /// <param name="x">The X coordinate to sample at.</param>
+        /// <param name="y">The Y coordinate to sample at.</param>
+        /// <returns>A pseudo-random value in the range [0, 1].</returns>
+        public static float PerlinNoise(float x, float y)
+        {
+            return Noise.PerlinNoise(x, y);
         }
     }
 }
