@@ -67,6 +67,10 @@ namespace Crowny
     float Input::m_FrameScrollX = 0.0f;
     float Input::m_FrameScrollY = 0.0f;
     glm::vec2 Input::s_MouseDelta{ 0.0f };
+    bool Input::s_GameViewRegionActive = false;
+    glm::vec2 Input::s_GameViewRegionMin{ 0.0f };
+    glm::vec2 Input::s_GameViewRegionSize{ 0.0f };
+    glm::vec2 Input::s_GameViewTargetSize{ 0.0f };
 
     bool Input::GetKey(const KeyCode key) { return IsValidKey(key) && s_Keys[key].IsHeld(); }
 
@@ -154,6 +158,34 @@ namespace Crowny
         if (Application::TryGet() != nullptr && !Application::TryGet()->GetApplicationDesc().Headless)
             return Application::TryGet()->GetWindow().GetCursor();
         return Cursor::POINTER;
+    }
+
+    void Input::SetGameViewRegion(bool active, const glm::vec2& regionMin, const glm::vec2& regionSize,
+                                  const glm::vec2& targetSize)
+    {
+        s_GameViewRegionActive = active;
+        s_GameViewRegionMin = regionMin;
+        s_GameViewRegionSize = regionSize;
+        s_GameViewTargetSize = targetSize;
+    }
+
+    glm::vec2 Input::GetGameMousePosition()
+    {
+        const glm::vec2 raw = GetMousePosition();
+        if (s_GameViewRegionActive && s_GameViewRegionSize.x > 0.0f && s_GameViewRegionSize.y > 0.0f &&
+            s_GameViewTargetSize.x > 0.0f && s_GameViewTargetSize.y > 0.0f)
+        {
+            const glm::vec2 uv = (raw - s_GameViewRegionMin) / s_GameViewRegionSize;
+            return { uv.x * s_GameViewTargetSize.x, (1.0f - uv.y) * s_GameViewTargetSize.y };
+        }
+
+        // Unity parity at runtime: framebuffer pixels with a bottom-left origin.
+        Application* application = Application::TryGet();
+        if (application == nullptr || application->GetApplicationDesc().Headless)
+            return raw;
+        const Window& window = application->GetWindow();
+        const glm::vec2 contentScale = window.GetContentScale();
+        return { raw.x * contentScale.x, static_cast<float>(window.GetFramebufferHeight()) - raw.y * contentScale.y };
     }
 
     float Input::GetMouseScrollX() { return m_FrameScrollX; }

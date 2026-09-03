@@ -21,6 +21,7 @@
 #include "Crowny/Ecs/Components.h"
 
 #include "Crowny/ImGui/ImGuiVulkanTexture.h"
+#include "Crowny/Scene/SceneManager.h"
 #include <ImGuizmo.h>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -468,6 +469,14 @@ namespace Crowny
     {
         m_MouseOverHud = false;
         ProcessPendingDropSpawns();
+
+        // While the game runs, scripts observe mouse positions in game-view space (Input.mousePosition).
+        const SceneExecutionState executionState =
+          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->GetExecutionState() : SceneExecutionState::Edit;
+        const bool gameViewActive = executionState == SceneExecutionState::Play || executionState == SceneExecutionState::PlayPaused;
+        if (!gameViewActive)
+            Input::SetGameViewRegion(false, glm::vec2(0.0f), glm::vec2(0.0f), glm::vec2(0.0f));
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         if (!BeginPanel())
         {
@@ -528,6 +537,13 @@ namespace Crowny
         const ImVec2 imageMin = ImGui::GetItemRectMin();
         const ImVec2 imageMax = ImGui::GetItemRectMax();
         m_ViewportBounds = { imageMin.x, imageMin.y, imageMax.x, imageMax.y };
+        if (gameViewActive && m_RenderTarget)
+        {
+            const auto& properties = m_RenderTarget->GetProperties();
+            Input::SetGameViewRegion(true, glm::vec2(imageMin.x, imageMin.y),
+                                     glm::vec2(imageMax.x - imageMin.x, imageMax.y - imageMin.y),
+                                     glm::vec2(static_cast<float>(properties.Width), static_cast<float>(properties.Height)));
+        }
 
         if (texture && ImGui::BeginDragDropTarget())
         {

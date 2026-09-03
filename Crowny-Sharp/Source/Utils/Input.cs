@@ -46,7 +46,9 @@ namespace Crowny
         public static float GetMouseScrollY() => ManagedRuntimeContext.InputGetMouseScrollY();
 
         /// <summary>
-        /// The current mouse position.
+        /// The current mouse position in game-screen pixel coordinates, with the origin at the bottom-left
+        /// of the render target (<see cref="Screen.width"/>, <see cref="Screen.height"/>). While the game
+        /// runs in the editor, positions are mapped into the game view.
         /// </summary>
         public static Vector2 mousePosition => ManagedRuntimeContext.InputGetMousePosition();
 

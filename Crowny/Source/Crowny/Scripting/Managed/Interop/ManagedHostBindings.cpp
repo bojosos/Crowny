@@ -27,6 +27,8 @@
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MeshFactory.h"
 #include "Crowny/Renderer/TextLayout.h"
+#include "Crowny/Scene/EntityInstantiation.h"
+#include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Utils/Compression.h"
 
@@ -430,6 +432,60 @@ namespace Crowny
             });
         }
 
+        cw_managed_status CW_MANAGED_CALL EntityInstantiatePrefab(void* context, cw_managed_uuid prefabId, cw_managed_uuid parentId,
+                                                                  cw_managed_uuid* entityId)
+        {
+            return Execute(context, [&]() {
+                if (entityId == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                SceneManager* manager = SceneManager::TryGet();
+                const Ref<Scene> scene = manager != nullptr ? manager->GetActiveScene() : nullptr;
+                if (scene == nullptr)
+                    return CW_MANAGED_STATUS_NOT_INITIALIZED;
+                const AssetHandle<Prefab> prefab = ResolveAsset<Prefab>(prefabId);
+                if (!prefab.IsLoaded())
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                EntityInstantiateOptions options;
+                const UUID parentUuid = FromAbiUuid(parentId);
+                if (!parentUuid.Empty())
+                {
+                    options.Parent = scene->TryGetEntityFromUuid(parentUuid);
+                    if (!options.Parent)
+                        return CW_MANAGED_STATUS_STALE_HANDLE;
+                }
+                const Entity instance = EntityInstantiator::InstantiatePrefab(*scene, prefab, options);
+                *entityId = instance ? ToAbiUuid(instance.GetUuid()) : cw_managed_uuid{};
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL EntityInstantiateEntity(void* context, cw_managed_uuid sourceId, cw_managed_uuid parentId,
+                                                                  cw_managed_uuid* entityId)
+        {
+            return Execute(context, [&]() {
+                if (entityId == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                SceneManager* manager = SceneManager::TryGet();
+                const Ref<Scene> scene = manager != nullptr ? manager->GetActiveScene() : nullptr;
+                if (scene == nullptr)
+                    return CW_MANAGED_STATUS_NOT_INITIALIZED;
+                const Entity source = scene->TryGetEntityFromUuid(FromAbiUuid(sourceId));
+                if (!source)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                EntityInstantiateOptions options;
+                const UUID parentUuid = FromAbiUuid(parentId);
+                if (!parentUuid.Empty())
+                {
+                    options.Parent = scene->TryGetEntityFromUuid(parentUuid);
+                    if (!options.Parent)
+                        return CW_MANAGED_STATUS_STALE_HANDLE;
+                }
+                const Entity instance = EntityInstantiator::InstantiateEntity(*scene, source, options);
+                *entityId = instance ? ToAbiUuid(instance.GetUuid()) : cw_managed_uuid{};
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
 #define CW_TRANSFORM_GET_VEC3(functionName, expression)                                                                                              \
     cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, cw_managed_vec3* result)                                 \
     {                                                                                                                                                \
@@ -619,7 +675,7 @@ namespace Crowny
             return Execute(context, [&]() -> cw_managed_status {
                 if (result == nullptr)
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
-                const glm::vec2 value = Input::GetMousePosition();
+                const glm::vec2 value = Input::GetGameMousePosition();
                 *result = { value.x, value.y };
                 return CW_MANAGED_STATUS_OK;
             });

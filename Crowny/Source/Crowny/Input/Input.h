@@ -59,6 +59,12 @@ namespace Crowny
         static bool IsMouseGrabbed();
         static void SetMousePosition(const glm::vec2& position);
 
+        // Unity-style game-screen mouse position: pixels of the render target with a bottom-left origin.
+        // In the editor's play mode the window region showing the game view is remapped onto it.
+        static void SetGameViewRegion(bool active, const glm::vec2& regionMin, const glm::vec2& regionSize,
+                                      const glm::vec2& targetSize);
+        static glm::vec2 GetGameMousePosition();
+
         static void SetCursorType(Cursor type);
         static Cursor GetCursorType();
 
@@ -108,6 +114,10 @@ namespace Crowny
         static float m_FrameScrollX, m_FrameScrollY;
         static glm::vec2 s_MouseDelta;
         static bool s_Grabbed;
+        static bool s_GameViewRegionActive;
+        static glm::vec2 s_GameViewRegionMin;
+        static glm::vec2 s_GameViewRegionSize;
+        static glm::vec2 s_GameViewTargetSize;
     };
 
     namespace Detail
