@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 18u
+#define CW_MANAGED_ABI_VERSION 19u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -193,6 +193,8 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_destroy_entity_fn)(void* c
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_has_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view typeName, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_add_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view typeName);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_remove_component_fn)(void* context, cw_managed_uuid entity, cw_managed_string_view typeName);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_instantiate_prefab_fn)(void* context, cw_managed_uuid prefab, cw_managed_uuid parent, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_entity_instantiate_entity_fn)(void* context, cw_managed_uuid source, cw_managed_uuid parent, cw_managed_uuid* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_get_position_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_set_position_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec3* value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_transform_get_local_position_fn)(void* context, cw_managed_uuid entity, cw_managed_vec3* result);
@@ -727,6 +729,8 @@ typedef struct cw_managed_host_api
     cw_managed_entity_has_component_fn entity_has_component;
     cw_managed_entity_add_component_fn entity_add_component;
     cw_managed_entity_remove_component_fn entity_remove_component;
+    cw_managed_entity_instantiate_prefab_fn entity_instantiate_prefab;
+    cw_managed_entity_instantiate_entity_fn entity_instantiate_entity;
     cw_managed_transform_get_position_fn transform_get_position;
     cw_managed_transform_set_position_fn transform_set_position;
     cw_managed_transform_get_local_position_fn transform_get_local_position;
@@ -1257,6 +1261,8 @@ typedef struct cw_managed_host_api
     X(EntityHasComponent, entity_has_component) \
     X(EntityAddComponent, entity_add_component) \
     X(EntityRemoveComponent, entity_remove_component) \
+    X(EntityInstantiatePrefab, entity_instantiate_prefab) \
+    X(EntityInstantiateEntity, entity_instantiate_entity) \
     X(TransformGetPosition, transform_get_position) \
     X(TransformSetPosition, transform_set_position) \
     X(TransformGetLocalPosition, transform_get_local_position) \

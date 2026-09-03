@@ -6,6 +6,7 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Scene/EntityInstantiation.h"
 #include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/PrefabSync.h"
 #include "Crowny/Scene/Scene.h"
@@ -17,27 +18,6 @@
 
 namespace Crowny
 {
-
-    // Copy all existing components from src to dst (same pattern as Scene.cpp)
-    template <typename... Component> static void CopyCompIfExists(Entity dst, Entity src)
-    {
-        (
-          [&]() {
-              if constexpr (std::is_same_v<Component, RelationshipComponent>)
-                  return;
-
-              if (src.HasComponent<Component>())
-                  dst.AddOrReplaceComponent<Component>(src.GetComponent<Component>());
-          }(),
-          ...);
-    }
-
-    template <typename... Component> static void CopyCompIfExists(ComponentGroup<Component...>, Entity dst, Entity src)
-    {
-        CopyCompIfExists<Component...>(dst, src);
-    }
-
-    static void CopyAllExisting(Entity dst, Entity src) { CopyCompIfExists(AllComponents{}, dst, src); }
 
     static AssetHandle<Prefab> LoadPrefab(const UUID& prefabAssetUuid)
     {
@@ -225,35 +205,9 @@ namespace Crowny
             return Entity::Invalid;
 
         Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
-        const UUID prefabAssetUuid = prefabHandle.GetUUID();
-
-        Entity instanceRoot = InstantiateEntityRecursive(*prefab->GetInternalScene(), prefabRoot, *activeScene, &parent, prefabAssetUuid);
-        return instanceRoot;
-    }
-
-    Entity PrefabUtils::InstantiateEntityRecursive(Scene& prefabScene, Entity prefabEntity, Scene& targetScene, Entity* targetParent,
-                                                   const UUID& prefabAssetUuid)
-    {
-        // Create new entity with a NEW UUID in the target scene
-        Entity newEntity = targetScene.CreateEntity(prefabEntity.GetName());
-
-        // Copy all components from the prefab entity
-        CopyAllExisting(newEntity, prefabEntity);
-
-        // Add PrefabComponent linking back to the prefab
-        if (newEntity.HasComponent<PrefabComponent>())
-            newEntity.RemoveComponent<PrefabComponent>();
-        newEntity.AddComponent<PrefabComponent>(prefabAssetUuid, prefabEntity.GetUuid());
-
-        // Set parent
-        if (targetParent && targetParent->IsValid())
-            newEntity.SetParent(*targetParent);
-
-        // Recursively instantiate children
-        for (const auto& child : prefabEntity.GetChildren())
-            InstantiateEntityRecursive(prefabScene, child, targetScene, &newEntity, prefabAssetUuid);
-
-        return newEntity;
+        EntityInstantiateOptions options;
+        options.Parent = parent;
+        return EntityInstantiator::InstantiatePrefab(*activeScene, prefabHandle, options);
     }
 
     static void SyncEntityRecursive(Entity instanceEntity, Scene& prefabScene, const UUID& prefabAssetUuid, const UUID& prefabRootEntityUuid,

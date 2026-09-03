@@ -39,8 +39,6 @@ namespace Crowny
 
     private:
         static void AttachPrefabComponents(Entity entity, const UUID& prefabAssetUuid);
-        static Entity InstantiateEntityRecursive(Scene& prefabScene, Entity prefabEntity, Scene& targetScene, Entity* targetParent,
-                                                 const UUID& prefabAssetUuid);
     };
 
 } // namespace Crowny

@@ -31,6 +31,10 @@ namespace Crowny
         static bool CreateScript(Entity entity, ManagedScript& script, bool dispatchStart);
         // Awake + Start for a constructed script that has not been awakened yet. No-op otherwise.
         static void StartScript(Entity entity, ManagedScript& script);
+        // Constructs and awakens managed scripts copied onto a runtime-instantiated entity subtree.
+        // Every instance is constructed and awakened before any Start dispatches, matching scene-start order.
+        // No-op outside active runtime scenes.
+        static void OnEntityTreeCreated(const Entity& root);
         // True once Awake was dispatched. OnDestroy is only delivered to awakened scripts.
         static bool IsScriptAwake(const ManagedScript& script);
         // Dispatches OnDestroy (awakened scripts only, unless dispatchDestroy is false) and releases the instance.

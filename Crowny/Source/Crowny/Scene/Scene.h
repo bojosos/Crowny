@@ -212,6 +212,9 @@ namespace Crowny
         void OnAudioSourceComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity);
 
+        void OnAudioListenerComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnAudioListenerComponentDestroy(entt::registry& registry, entt::entity entity);
+
         void OnRelationshipComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnRelationshipComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnTransformComponentDestroy(entt::registry& registry, entt::entity entity);

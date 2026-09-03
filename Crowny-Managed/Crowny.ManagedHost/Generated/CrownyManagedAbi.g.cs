@@ -199,6 +199,8 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, byte*, NativeStatus> EntityHasComponent;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStatus> EntityAddComponent;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, NativeStatus> EntityRemoveComponent;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeUuid*, NativeStatus> EntityInstantiatePrefab;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeUuid*, NativeStatus> EntityInstantiateEntity;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetPosition;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformSetPosition;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec3*, NativeStatus> TransformGetLocalPosition;
@@ -728,6 +730,8 @@ namespace Crowny.ManagedHost.Interop
                    EntityHasComponent != null &&
                    EntityAddComponent != null &&
                    EntityRemoveComponent != null &&
+                   EntityInstantiatePrefab != null &&
+                   EntityInstantiateEntity != null &&
                    TransformGetPosition != null &&
                    TransformSetPosition != null &&
                    TransformGetLocalPosition != null &&
@@ -1277,7 +1281,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 18;
+        public const uint Version = 19;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

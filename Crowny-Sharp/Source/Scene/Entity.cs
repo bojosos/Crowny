@@ -64,5 +64,69 @@ namespace Crowny
         {
             ManagedRuntimeContext.DestroyEntity(uuid);
         }
+
+        /// <summary>Instantiates a prefab into the active scene at its saved transform.</summary>
+        public static Entity Instantiate(Prefab prefab)
+        {
+            return Instantiate(prefab, (Entity)null);
+        }
+
+        /// <summary>Instantiates a prefab into the active scene, parented to parent while keeping the prefab's world transform.</summary>
+        public static Entity Instantiate(Prefab prefab, Entity parent)
+        {
+            if (prefab == null)
+                throw new System.ArgumentNullException("prefab");
+            UUID entityUuid = ManagedRuntimeContext.EntityInstantiatePrefab(prefab.uuid, parent?.m_ManagedUuid ?? UUID.Empty);
+            return entityUuid == UUID.Empty ? null : new Entity { m_ManagedUuid = entityUuid };
+        }
+
+        /// <summary>Instantiates a prefab into the active scene at the given world position.</summary>
+        public static Entity Instantiate(Prefab prefab, Vector3 position)
+        {
+            return Instantiate(prefab, position, Quaternion.identity, null);
+        }
+
+        /// <summary>Instantiates a prefab into the active scene at the given world position and rotation.</summary>
+        public static Entity Instantiate(Prefab prefab, Vector3 position, Quaternion rotation)
+        {
+            return Instantiate(prefab, position, rotation, null);
+        }
+
+        /// <summary>Instantiates a prefab into the active scene at the given world pose, parented to parent.</summary>
+        public static Entity Instantiate(Prefab prefab, Vector3 position, Quaternion rotation, Entity parent)
+        {
+            Entity instance = Instantiate(prefab, parent);
+            if (instance == null)
+                return null;
+            instance.transform.position = position;
+            instance.transform.rotation = rotation;
+            return instance;
+        }
+
+        /// <summary>Instantiates a copy of an entity and its entire hierarchy with fresh identities.</summary>
+        public static Entity Instantiate(Entity source)
+        {
+            return Instantiate(source, (Entity)null);
+        }
+
+        /// <summary>Instantiates a copy of an entity and its entire hierarchy, parented to parent.</summary>
+        public static Entity Instantiate(Entity source, Entity parent)
+        {
+            if (source == null)
+                throw new System.ArgumentNullException("source");
+            UUID entityUuid = ManagedRuntimeContext.EntityInstantiateEntity(source.uuid, parent?.m_ManagedUuid ?? UUID.Empty);
+            return entityUuid == UUID.Empty ? null : new Entity { m_ManagedUuid = entityUuid };
+        }
+
+        /// <summary>Instantiates a copy of an entity and its entire hierarchy at the given world pose.</summary>
+        public static Entity Instantiate(Entity source, Vector3 position, Quaternion rotation)
+        {
+            Entity instance = Instantiate(source, (Entity)null);
+            if (instance == null)
+                return null;
+            instance.transform.position = position;
+            instance.transform.rotation = rotation;
+            return instance;
+        }
     }
 }

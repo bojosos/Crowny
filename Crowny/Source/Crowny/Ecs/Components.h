@@ -511,6 +511,8 @@ namespace Crowny
         }
 
         void Initialize();
+        /** True once an OpenAL listener was created for this component. */
+        bool IsInitialized() const { return m_Internal != nullptr; }
         void OnTransformChanged(const Transform& transform);
 
     private:

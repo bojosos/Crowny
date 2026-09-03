@@ -20,6 +20,13 @@ namespace Crowny
             String Detail;
         };
 
+        struct CategoryEntry
+        {
+            String Name;
+            size_t FirstComponentIndex = 0;
+            uint32_t ComponentCount = 0;
+        };
+
         struct ScriptEntry
         {
             String Name;

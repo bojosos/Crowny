@@ -220,6 +220,9 @@ namespace Crowny
         m_Registry.on_update<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentUpdate>(this);
         m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentDestroy>(this);
 
+        m_Registry.on_construct<AudioListenerComponent>().connect<&Scene::OnAudioListenerComponentConstruct>(this);
+        m_Registry.on_destroy<AudioListenerComponent>().connect<&Scene::OnAudioListenerComponentDestroy>(this);
+
         m_Registry.on_construct<RelationshipComponent>().connect<&Scene::OnRelationshipComponentConstruct>(this);
         m_Registry.on_destroy<RelationshipComponent>().connect<&Scene::OnRelationshipComponentDestroy>(this);
         m_Registry.on_destroy<TransformComponent>().connect<&Scene::OnTransformComponentDestroy>(this);
@@ -282,6 +285,8 @@ namespace Crowny
         Entity newEntity = DuplicateEntityInternal(entity, includeChildren, sourceParent);
         if (newEntity && sourceParent)
             newEntity.SetSiblingIndex(sourceSiblingIndex + 1);
+        if (newEntity && m_RuntimeActive)
+            ScriptRuntime::OnEntityTreeCreated(newEntity);
         return newEntity;
     }
 
@@ -896,6 +901,40 @@ namespace Crowny
         AudioSourceComponent& source = e.GetComponent<AudioSourceComponent>();
         if (source.GetState() == AudioSourceState::Playing)
             source.Stop();
+    }
+
+    void Scene::OnAudioListenerComponentConstruct(entt::registry& registry, entt::entity entity)
+    {
+        if (!AudioManager::IsStartedUp() || !m_RuntimeActive)
+            return;
+
+        // Mirrors the OnRuntimeStart policy: the first listener wins. A listener added mid-gameplay
+        // (e.g. through Instantiate) only takes over when the scene has no active one.
+        auto listenerView = m_Registry.view<AudioListenerComponent>();
+        for ([[maybe_unused]] entt::entity existing : listenerView)
+        {
+            if (existing != entity && m_Registry.get<AudioListenerComponent>(existing).IsInitialized())
+                return;
+        }
+        m_Registry.get<AudioListenerComponent>(entity).Initialize();
+    }
+
+    void Scene::OnAudioListenerComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        if (!AudioManager::IsStartedUp() || !m_RuntimeActive)
+            return;
+        if (!m_Registry.get<AudioListenerComponent>(entity).IsInitialized())
+            return;
+
+        // The active listener is going away; promote another one so positional audio keeps working.
+        auto listenerView = m_Registry.view<AudioListenerComponent>();
+        for ([[maybe_unused]] entt::entity existing : listenerView)
+        {
+            if (existing == entity)
+                continue;
+            m_Registry.get<AudioListenerComponent>(existing).Initialize();
+            return;
+        }
     }
 
     bool Scene::HasScriptComponent(Entity entity, const ScriptTypeIdentity& identity) const

@@ -43,7 +43,7 @@ TEST_CASE("Console severity toggles distinguish enabled and disabled filters", "
 
 TEST_CASE("Console severity toggle visuals preserve each severity hue", "[Editor][Console][UI]")
 {
-    constexpr std::array<glm::vec4, 4> severities{
+    const std::array<glm::vec4, 4> severities{
         glm::vec4{ 0.68f, 0.78f, 0.88f, 1.00f },
         glm::vec4{ 0.95f, 0.68f, 0.20f, 0.80f },
         glm::vec4{ 0.95f, 0.35f, 0.30f, 0.60f },

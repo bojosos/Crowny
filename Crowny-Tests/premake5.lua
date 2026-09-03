@@ -24,6 +24,7 @@ project "Crowny-Tests"
 		"%{wks.location}/Crowny-Editor/Source/Editor/ImportScheduler.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/BoxCollider2DBoundsTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/EntityFactory.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Editor/PhysicsMaterialInspectorTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/ScriptInspectorTransaction.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/Script/ManagedProjectDependencies.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/Script/ScriptProjectGenerator.cpp",

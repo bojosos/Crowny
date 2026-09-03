@@ -131,6 +131,16 @@ namespace Crowny
             }
         }
 
+        void CollectSubtreeScripts(const Entity& entity, Vector<ScriptInvocation>& invocations)
+        {
+            if (!entity || !entity.HasComponent<ManagedScriptComponent>())
+                return;
+            for (const ManagedScript& script : entity.GetComponent<ManagedScriptComponent>().Scripts)
+                invocations.push_back({ entity.GetUuid(), script.InstanceId });
+            for (const Entity& child : entity.GetChildren())
+                CollectSubtreeScripts(child, invocations);
+        }
+
     } // namespace
 
     void ScriptRuntime::Init() {}
@@ -185,6 +195,49 @@ namespace Crowny
     }
 
     bool ScriptRuntime::IsScriptAwake(const ManagedScript& script) { return AwakeScripts().contains(script.InstanceId); }
+
+    void ScriptRuntime::OnEntityTreeCreated(const Entity& root)
+    {
+        if (!root)
+            return;
+        Scene* scene = root.GetScene();
+        if (scene == nullptr || !scene->IsRuntimeActive())
+            return;
+
+        SceneManager::CallbackScope callbackScope =
+          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+
+        // Snapshot the scripts copied with the instantiated subtree. Entries are re-resolved through the
+        // entity UUID and script instance id, so Awake that mutates the hierarchy cannot derail the pass.
+        Vector<ScriptInvocation> invocations;
+        CollectSubtreeScripts(root, invocations);
+
+        // Unity order across the instantiated subtree: construct everything and awaken everything
+        // before the first Start dispatches.
+        Vector<ScriptInvocation> awakened;
+        awakened.reserve(invocations.size());
+        for (const ScriptInvocation& invocation : invocations)
+        {
+            Entity entity = scene->TryGetEntityFromUuid(invocation.EntityId);
+            ManagedScript* script = FindScript(entity, invocation.ScriptId);
+            if (script == nullptr || !CreateScript(entity, *script, false))
+                continue;
+            // Construction may relocate the script vector.
+            entity = scene->TryGetEntityFromUuid(invocation.EntityId);
+            script = FindScript(entity, invocation.ScriptId);
+            if (script == nullptr || !AwakeScripts().insert(script->InstanceId).second)
+                continue;
+            Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::Awake));
+            awakened.push_back(invocation);
+        }
+
+        for (const ScriptInvocation& invocation : awakened)
+        {
+            Entity entity = scene->TryGetEntityFromUuid(invocation.EntityId);
+            if (ManagedScript* script = FindScript(entity, invocation.ScriptId))
+                Dispatch(*script, ScriptEvent::Lifecycle(ScriptEventKind::Start));
+        }
+    }
 
     void ScriptRuntime::DestroyScript(Entity entity, ManagedScript& script, bool dispatchDestroy)
     {

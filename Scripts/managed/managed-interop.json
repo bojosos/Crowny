@@ -1,5 +1,5 @@
 {
-  "abiVersion": 18,
+  "abiVersion": 19,
   "managedEntryPoint": "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi",
   "statusCodes": {
     "Ok": 0,
@@ -43,6 +43,8 @@
     "EntityHasComponent": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "typeName", "type": "string" }], "result": "bool" },
     "EntityAddComponent": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "typeName", "type": "string" }] },
     "EntityRemoveComponent": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "typeName", "type": "string" }] },
+    "EntityInstantiatePrefab": { "parameters": [{ "name": "prefab", "type": "uuid" }, { "name": "parent", "type": "uuid" }], "result": "uuid" },
+    "EntityInstantiateEntity": { "parameters": [{ "name": "source", "type": "uuid" }, { "name": "parent", "type": "uuid" }], "result": "uuid" },
     "TransformGetPosition": { "parameters": [{ "name": "entity", "type": "uuid" }], "result": "vec3" },
     "TransformSetPosition": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "value", "type": "vec3" }] },
     "TransformGetLocalPosition": { "parameters": [{ "name": "entity", "type": "uuid" }], "result": "vec3" },
