@@ -90,6 +90,8 @@ namespace Crowny
         Entity DuplicateEntity(Entity entity, bool includeChildren = true);
 
         void OnViewportResize(uint32_t width, uint32_t height);
+        uint32_t GetViewportWidth() const { return m_ViewportWidth; }
+        uint32_t GetViewportHeight() const { return m_ViewportHeight; }
 
         Entity CreateEntity(const String& name = "");
         Entity CreateEntityWithUuid(const UUID& uuid, const String& name);

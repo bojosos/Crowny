@@ -143,6 +143,19 @@ namespace Crowny
         return s_Grabbed;
     }
 
+    void Input::SetCursorType(Cursor type)
+    {
+        if (Application::TryGet() != nullptr && !Application::TryGet()->GetApplicationDesc().Headless)
+            Application::TryGet()->GetWindow().SetCursor(type);
+    }
+
+    Cursor Input::GetCursorType()
+    {
+        if (Application::TryGet() != nullptr && !Application::TryGet()->GetApplicationDesc().Headless)
+            return Application::TryGet()->GetWindow().GetCursor();
+        return Cursor::POINTER;
+    }
+
     float Input::GetMouseScrollX() { return m_FrameScrollX; }
 
     float Input::GetMouseScrollY() { return m_FrameScrollY; }

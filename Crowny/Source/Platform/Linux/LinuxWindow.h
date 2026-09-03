@@ -39,6 +39,8 @@ namespace Crowny
         const String& GetTitle() const override { return m_Data.Title; }
         void SetTitle(const String& title) override;
         void SetCursor(Cursor cursor) override;
+
+        Cursor GetCursor() const override { return m_CursorType; }
         void SetCursorGrabbed(bool grabbed) override;
 
         void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; }

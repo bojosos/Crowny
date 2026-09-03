@@ -211,6 +211,19 @@ namespace Crowny
 
     bool Input::IsMouseGrabbed() { return s_Grabbed; }
 
+    void Input::SetCursorType(Cursor type)
+    {
+        if (Application::TryGet() != nullptr && !Application::TryGet()->GetApplicationDesc().Headless)
+            Application::TryGet()->GetWindow().SetCursor(type);
+    }
+
+    Cursor Input::GetCursorType()
+    {
+        if (Application::TryGet() != nullptr && !Application::TryGet()->GetApplicationDesc().Headless)
+            return Application::TryGet()->GetWindow().GetCursor();
+        return Cursor::POINTER;
+    }
+
     void Input::OnUpdate()
     {
         for (KeyCode key : s_Keys)

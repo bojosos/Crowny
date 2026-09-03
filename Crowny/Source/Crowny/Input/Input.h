@@ -59,6 +59,9 @@ namespace Crowny
         static bool IsMouseGrabbed();
         static void SetMousePosition(const glm::vec2& position);
 
+        static void SetCursorType(Cursor type);
+        static Cursor GetCursorType();
+
         static float GetMouseScrollX();
         static float GetMouseScrollY();
 

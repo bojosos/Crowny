@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 15u
+#define CW_MANAGED_ABI_VERSION 18u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -222,6 +222,10 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_scroll_x_f
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_scroll_y_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_position_fn)(void* context, cw_managed_vec2* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_mouse_delta_fn)(void* context, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_set_mouse_grabbed_fn)(void* context, uint8_t grabbed);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_is_mouse_grabbed_fn)(void* context, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_set_cursor_type_fn)(void* context, uint32_t type);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_cursor_type_fn)(void* context, uint32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_is_gamepad_connected_fn)(void* context, uint32_t gamepad, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_input_get_gamepad_button_down_fn)(void* context, uint32_t gamepad, uint32_t code, uint8_t* result);
@@ -241,6 +245,7 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_fixed_delta_time_
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_smooth_delta_time_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_realtime_since_startup_fn)(void* context, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_time_get_frame_count_fn)(void* context, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_screen_get_size_fn)(void* context, cw_managed_vec2* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody2d_get_mass_fn)(void* context, cw_managed_uuid entity, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody2d_set_mass_fn)(void* context, cw_managed_uuid entity, float value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody2d_get_body_type_fn)(void* context, cw_managed_uuid entity, int32_t* result);
@@ -407,6 +412,8 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_msaa_fn)(void* 
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_msaa_fn)(void* context, cw_managed_uuid entity, uint8_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_occlusion_culling_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_occlusion_culling_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_primary_fn)(void* context, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_projection_matrix_fn)(void* context, cw_managed_uuid entity, cw_managed_mat4* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_texture_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_texture_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
@@ -749,6 +756,10 @@ typedef struct cw_managed_host_api
     cw_managed_input_get_mouse_scroll_y_fn input_get_mouse_scroll_y;
     cw_managed_input_get_mouse_position_fn input_get_mouse_position;
     cw_managed_input_get_mouse_delta_fn input_get_mouse_delta;
+    cw_managed_input_set_mouse_grabbed_fn input_set_mouse_grabbed;
+    cw_managed_input_is_mouse_grabbed_fn input_is_mouse_grabbed;
+    cw_managed_input_set_cursor_type_fn input_set_cursor_type;
+    cw_managed_input_get_cursor_type_fn input_get_cursor_type;
     cw_managed_input_is_gamepad_connected_fn input_is_gamepad_connected;
     cw_managed_input_get_gamepad_button_fn input_get_gamepad_button;
     cw_managed_input_get_gamepad_button_down_fn input_get_gamepad_button_down;
@@ -768,6 +779,7 @@ typedef struct cw_managed_host_api
     cw_managed_time_get_smooth_delta_time_fn time_get_smooth_delta_time;
     cw_managed_time_get_realtime_since_startup_fn time_get_realtime_since_startup;
     cw_managed_time_get_frame_count_fn time_get_frame_count;
+    cw_managed_screen_get_size_fn screen_get_size;
     cw_managed_rigidbody2d_get_mass_fn rigidbody2d_get_mass;
     cw_managed_rigidbody2d_set_mass_fn rigidbody2d_set_mass;
     cw_managed_rigidbody2d_get_body_type_fn rigidbody2d_get_body_type;
@@ -934,6 +946,8 @@ typedef struct cw_managed_host_api
     cw_managed_camera_set_msaa_fn camera_set_msaa;
     cw_managed_camera_get_occlusion_culling_fn camera_get_occlusion_culling;
     cw_managed_camera_set_occlusion_culling_fn camera_set_occlusion_culling;
+    cw_managed_camera_get_primary_fn camera_get_primary;
+    cw_managed_camera_get_projection_matrix_fn camera_get_projection_matrix;
     cw_managed_sprite_renderer_get_texture_fn sprite_renderer_get_texture;
     cw_managed_sprite_renderer_set_texture_fn sprite_renderer_set_texture;
     cw_managed_sprite_renderer_get_color_fn sprite_renderer_get_color;
@@ -1272,6 +1286,10 @@ typedef struct cw_managed_host_api
     X(InputGetMouseScrollY, input_get_mouse_scroll_y) \
     X(InputGetMousePosition, input_get_mouse_position) \
     X(InputGetMouseDelta, input_get_mouse_delta) \
+    X(InputSetMouseGrabbed, input_set_mouse_grabbed) \
+    X(InputIsMouseGrabbed, input_is_mouse_grabbed) \
+    X(InputSetCursorType, input_set_cursor_type) \
+    X(InputGetCursorType, input_get_cursor_type) \
     X(InputIsGamepadConnected, input_is_gamepad_connected) \
     X(InputGetGamepadButton, input_get_gamepad_button) \
     X(InputGetGamepadButtonDown, input_get_gamepad_button_down) \
@@ -1291,6 +1309,7 @@ typedef struct cw_managed_host_api
     X(TimeGetSmoothDeltaTime, time_get_smooth_delta_time) \
     X(TimeGetRealtimeSinceStartup, time_get_realtime_since_startup) \
     X(TimeGetFrameCount, time_get_frame_count) \
+    X(ScreenGetSize, screen_get_size) \
     X(Rigidbody2DGetMass, rigidbody2d_get_mass) \
     X(Rigidbody2DSetMass, rigidbody2d_set_mass) \
     X(Rigidbody2DGetBodyType, rigidbody2d_get_body_type) \
@@ -1457,6 +1476,8 @@ typedef struct cw_managed_host_api
     X(CameraSetMsaa, camera_set_msaa) \
     X(CameraGetOcclusionCulling, camera_get_occlusion_culling) \
     X(CameraSetOcclusionCulling, camera_set_occlusion_culling) \
+    X(CameraGetPrimary, camera_get_primary) \
+    X(CameraGetProjectionMatrix, camera_get_projection_matrix) \
     X(SpriteRendererGetTexture, sprite_renderer_get_texture) \
     X(SpriteRendererSetTexture, sprite_renderer_set_texture) \
     X(SpriteRendererGetColor, sprite_renderer_get_color) \

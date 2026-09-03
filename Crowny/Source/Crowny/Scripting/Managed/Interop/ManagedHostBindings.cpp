@@ -587,6 +587,33 @@ namespace Crowny
             });
         }
 
+        cw_managed_status CW_MANAGED_CALL ScreenGetSize(void* context, cw_managed_vec2* result)
+        {
+            return Execute(context, [&]() -> cw_managed_status {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                float width = 0.0f;
+                float height = 0.0f;
+                SceneManager* manager = SceneManager::TryGet();
+                const Ref<Scene> scene = manager != nullptr ? manager->GetActiveScene() : nullptr;
+                if (scene != nullptr)
+                {
+                    width = static_cast<float>(scene->GetViewportWidth());
+                    height = static_cast<float>(scene->GetViewportHeight());
+                }
+                // Runtime scenes without an explicit viewport render into the window framebuffer.
+                if ((width <= 0.0f || height <= 0.0f) && Application::TryGet() != nullptr &&
+                    !Application::TryGet()->GetApplicationDesc().Headless)
+                {
+                    const Window& window = Application::TryGet()->GetWindow();
+                    width = static_cast<float>(window.GetFramebufferWidth());
+                    height = static_cast<float>(window.GetFramebufferHeight());
+                }
+                *result = { width, height };
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
         cw_managed_status CW_MANAGED_CALL InputGetMousePosition(void* context, cw_managed_vec2* result)
         {
             return Execute(context, [&]() -> cw_managed_status {
@@ -605,6 +632,42 @@ namespace Crowny
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 const glm::vec2 value = Input::GetMouseDelta();
                 *result = { value.x, value.y };
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL InputSetMouseGrabbed(void* context, uint8_t grabbed)
+        {
+            return Execute(context, [&]() {
+                Input::SetMouseGrabbed(grabbed != 0);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL InputIsMouseGrabbed(void* context, uint8_t* result)
+        {
+            return Execute(context, [&]() -> cw_managed_status {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = Input::IsMouseGrabbed() ? 1 : 0;
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL InputSetCursorType(void* context, uint32_t type)
+        {
+            return Execute(context, [&]() {
+                Input::SetCursorType(static_cast<Cursor>(type));
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL InputGetCursorType(void* context, uint32_t* result)
+        {
+            return Execute(context, [&]() -> cw_managed_status {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = static_cast<uint32_t>(Input::GetCursorType());
                 return CW_MANAGED_STATUS_OK;
             });
         }
@@ -2458,6 +2521,35 @@ namespace Crowny
         CW_CAMERA_SET(CameraSetOcclusionCulling, uint8_t, component->Camera.SetOcclusionCulling(value != 0))
 #undef CW_CAMERA_SET
 #undef CW_CAMERA_GET
+
+        cw_managed_status CW_MANAGED_CALL CameraGetPrimary(void* context, cw_managed_uuid* entityId)
+        {
+            return Execute(context, [&]() {
+                if (entityId == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                SceneManager* manager = SceneManager::TryGet();
+                const Ref<Scene> scene = manager != nullptr ? manager->GetActiveScene() : nullptr;
+                if (scene == nullptr)
+                    return CW_MANAGED_STATUS_NOT_INITIALIZED;
+                const Entity entity = scene->GetPrimaryCameraEntity();
+                *entityId = entity ? ToAbiUuid(entity.GetUuid()) : cw_managed_uuid{};
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL CameraGetProjectionMatrix(void* context, cw_managed_uuid entityId, cw_managed_mat4* result)
+        {
+            return Execute(context, [&]() {
+                CameraComponent* component = ResolveComponent<CameraComponent>(entityId);
+                if (component == nullptr)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                const glm::mat4 value = component->Camera.GetProjection();
+                std::memcpy(result->values, glm::value_ptr(value), sizeof(value));
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
 
         cw_managed_status CW_MANAGED_CALL CameraGetNearClipPlane(void* context, cw_managed_uuid entityId, float* result)
         {

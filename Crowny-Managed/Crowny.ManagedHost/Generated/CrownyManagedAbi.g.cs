@@ -228,6 +228,10 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> InputGetMouseScrollY;
         public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> InputGetMousePosition;
         public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> InputGetMouseDelta;
+        public delegate* unmanaged[Cdecl]<void*, byte, NativeStatus> InputSetMouseGrabbed;
+        public delegate* unmanaged[Cdecl]<void*, byte*, NativeStatus> InputIsMouseGrabbed;
+        public delegate* unmanaged[Cdecl]<void*, uint, NativeStatus> InputSetCursorType;
+        public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> InputGetCursorType;
         public delegate* unmanaged[Cdecl]<void*, uint, byte*, NativeStatus> InputIsGamepadConnected;
         public delegate* unmanaged[Cdecl]<void*, uint, uint, byte*, NativeStatus> InputGetGamepadButton;
         public delegate* unmanaged[Cdecl]<void*, uint, uint, byte*, NativeStatus> InputGetGamepadButtonDown;
@@ -247,6 +251,7 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetSmoothDeltaTime;
         public delegate* unmanaged[Cdecl]<void*, float*, NativeStatus> TimeGetRealtimeSinceStartup;
         public delegate* unmanaged[Cdecl]<void*, uint*, NativeStatus> TimeGetFrameCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeVec2*, NativeStatus> ScreenGetSize;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody2DGetMass;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> Rigidbody2DSetMass;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody2DGetBodyType;
@@ -413,6 +418,8 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> CameraSetMsaa;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> CameraGetOcclusionCulling;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> CameraSetOcclusionCulling;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> CameraGetPrimary;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeMatrix4*, NativeStatus> CameraGetProjectionMatrix;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> SpriteRendererGetTexture;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SpriteRendererSetTexture;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteRendererGetColor;
@@ -750,6 +757,10 @@ namespace Crowny.ManagedHost.Interop
                    InputGetMouseScrollY != null &&
                    InputGetMousePosition != null &&
                    InputGetMouseDelta != null &&
+                   InputSetMouseGrabbed != null &&
+                   InputIsMouseGrabbed != null &&
+                   InputSetCursorType != null &&
+                   InputGetCursorType != null &&
                    InputIsGamepadConnected != null &&
                    InputGetGamepadButton != null &&
                    InputGetGamepadButtonDown != null &&
@@ -769,6 +780,7 @@ namespace Crowny.ManagedHost.Interop
                    TimeGetSmoothDeltaTime != null &&
                    TimeGetRealtimeSinceStartup != null &&
                    TimeGetFrameCount != null &&
+                   ScreenGetSize != null &&
                    Rigidbody2DGetMass != null &&
                    Rigidbody2DSetMass != null &&
                    Rigidbody2DGetBodyType != null &&
@@ -935,6 +947,8 @@ namespace Crowny.ManagedHost.Interop
                    CameraSetMsaa != null &&
                    CameraGetOcclusionCulling != null &&
                    CameraSetOcclusionCulling != null &&
+                   CameraGetPrimary != null &&
+                   CameraGetProjectionMatrix != null &&
                    SpriteRendererGetTexture != null &&
                    SpriteRendererSetTexture != null &&
                    SpriteRendererGetColor != null &&
@@ -1263,7 +1277,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 15;
+        public const uint Version = 18;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

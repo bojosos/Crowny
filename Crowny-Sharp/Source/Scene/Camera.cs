@@ -9,6 +9,45 @@ namespace Crowny
     public class Camera : Component
     {
         /// <summary>
+        /// The first camera component of the active scene — the camera the renderer uses. Null when the scene has no camera.
+        /// </summary>
+        public static Camera Main
+        {
+            get
+            {
+                UUID uuid = ManagedRuntimeContext.CameraGetPrimary();
+                return uuid == UUID.Empty ? null : new Camera { m_ManagedEntityId = uuid };
+            }
+        }
+
+        /// <summary>
+        /// Computes the world-space ray that passes through the given screen point. The point is in
+        /// pixels of the render target (<see cref="Screen.width"/>, <see cref="Screen.height"/>), with
+        /// the origin at the bottom-left corner.
+        /// </summary>
+        /// <param name="screenPoint">The screen point. The z component is ignored.</param>
+        /// <returns>The ray starting on the camera's near plane.</returns>
+        public Ray ScreenPointToRay(Vector3 screenPoint)
+        {
+            return ScreenPointToRay(new Vector2(screenPoint.x, screenPoint.y));
+        }
+
+        /// <summary>
+        /// Computes the world-space ray that passes through the given screen point. The point is in
+        /// pixels of the render target (<see cref="Screen.width"/>, <see cref="Screen.height"/>), with
+        /// the origin at the bottom-left corner.
+        /// </summary>
+        /// <param name="screenPoint">The screen point in pixels.</param>
+        /// <returns>The ray starting on the camera's near plane.</returns>
+        public Ray ScreenPointToRay(Vector2 screenPoint)
+        {
+            Vector2 size = ManagedRuntimeContext.ScreenGetSize();
+            Matrix4 projection = ManagedRuntimeContext.CameraGetProjectionMatrix(EntityId);
+            Matrix4 view = transform.worldToLocalMatrix;
+            return ScreenRayMath.ComputeRay(projection, view, size.x, size.y, screenPoint.x, screenPoint.y);
+        }
+
+        /// <summary>
         /// The vertical field of view of the camera, in degrees.
         /// </summary>
         /// <value>Camera field of view.</value>

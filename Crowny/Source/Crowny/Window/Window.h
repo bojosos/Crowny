@@ -77,6 +77,7 @@ namespace Crowny
         virtual const String& GetTitle() const = 0;
 
         virtual void SetCursor(Cursor cursor) = 0;
+        virtual Cursor GetCursor() const = 0;
         virtual void SetCursorGrabbed(bool grabbed) = 0;
 
         virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
