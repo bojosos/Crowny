@@ -13,12 +13,14 @@ param(
     [ValidateSet("None", "Sccache")]
     [string]$CompilerCache = "None",
     [ValidateSet("SSE4.1", "AVX2")]
-    [string]$Simd = "AVX2"
+    [string]$Simd = "AVX2",
+    [switch]$InnerLoop
 )
 
 $ErrorActionPreference = "Stop"
 $arguments = @("build", "--target", $Target, "--configuration", $Configuration, "--sanitizer", $Sanitizer, "--jobs", "$Jobs", "--compiler-cache", $CompilerCache, "--simd", $Simd.ToLowerInvariant())
 if ($Clean) { $arguments += "--clean" }
 if ($Profile) { $arguments += "--profile" }
+if ($InnerLoop) { $arguments += "--inner-loop" }
 & (Join-Path $PSScriptRoot "crowny.bat") @arguments
 exit $LASTEXITCODE

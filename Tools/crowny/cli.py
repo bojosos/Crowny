@@ -58,6 +58,11 @@ def build_parser():
     build_parser.add_argument("--clean", action="store_true")
     build_parser.add_argument("--profile", action="store_true")
     build_parser.add_argument("--compiler-cache", default="None", choices=["None", "Sccache"])
+    build_parser.add_argument(
+        "--inner-loop",
+        action="store_true",
+        help="Skip building project references; requires a prior full build.",
+    )
 
     test_parser = subparsers.add_parser("test", help="Build and run Catch2 tests.")
     test_parser.add_argument("--configuration", default="Release", type=_configuration)
@@ -154,6 +159,7 @@ def main(argv=None):
                 profile=args.profile,
                 compiler_cache=args.compiler_cache,
                 simd=args.simd,
+                inner_loop=args.inner_loop,
             )
             return 0
 

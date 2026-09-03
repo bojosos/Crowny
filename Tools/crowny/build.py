@@ -79,6 +79,7 @@ def build(
     profile=False,
     compiler_cache="None",
     simd="avx2",
+    inner_loop=False,
 ):
     root = root or env.repo_root()
     validate_target(target)
@@ -162,6 +163,7 @@ def build(
                     sccache=using_sccache,
                     scripts_dir=root / "Scripts",
                     collect_profile=profile,
+                    build_project_references=not inner_loop,
                 )
                 metrics["phases"]["nativeBuildSeconds"] = round(time.time() - started, 3)
                 metrics["peakCompilerWorkingSetBytes"] = result["peak_compiler_working_set_bytes"]

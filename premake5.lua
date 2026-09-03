@@ -126,6 +126,11 @@ filter "toolset:msc*"
 	buildoptions { "/FS" }
 filter {}
 
+-- Fast, parallel PDB writes for /MP builds; requires /Zi (Debug symbols on).
+filter { "toolset:msc*", "configurations:Debug or DebugASan" }
+	buildoptions { "/Zf" }
+filter {}
+
 function getEngineOutputConfiguration(buildConfiguration)
 	if buildConfiguration == "DebugASan" then return "Debug-address" end
 	if buildConfiguration == "ReleaseASan" then return "Release-address" end

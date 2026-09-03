@@ -98,6 +98,7 @@ def build(
     sccache=False,
     scripts_dir=None,
     collect_profile=False,
+    build_project_references=True,
 ):
     target_actions = [f"{t}:Rebuild" if clean else t for t in targets]
     arguments = [
@@ -113,6 +114,8 @@ def build(
         f"/p:Platform={platform}",
         f"/t:{';'.join(target_actions)}",
     ]
+    if not build_project_references and not clean:
+        arguments.append("/p:BuildProjectReferences=false")
     if binlog_path:
         arguments += [f"/bl:{binlog_path}", "/clp:PerformanceSummary"]
     if sccache:
