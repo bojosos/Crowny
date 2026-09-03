@@ -1,4 +1,4 @@
-# Physics backends
+﻿# Physics backends
 
 Crowny exposes 2D and 3D physics through engine-owned facades. Game and editor code should include `Physics2D.h` or `Physics3D.h`; do not retain Box2D, Box3D, Jolt, or Bullet native pointers outside their adapter.
 
@@ -7,14 +7,14 @@ Crowny exposes 2D and 3D physics through engine-owned facades. Game and editor c
 The physics setup scripts fetch exact upstream commits, build static libraries, and install them under the ignored `.deps/physics/install/<Configuration>/` directory:
 
 ```powershell
-Scripts\setup-physics.ps1 -Configuration Release -Simd AVX2
+Scripts\crowny.bat deps physics --configuration Release --simd avx2
 ```
 
 ```sh
-./Scripts/setup-physics.sh Release avx2
+./Scripts/crowny deps physics --configuration Release --simd avx2
 ```
 
-`Scripts/setup-windows.ps1 -Build` runs the Windows bootstrap automatically and uses AVX2 by default. A configuration stamp includes the SIMD level and skips unchanged builds. Use `-Force` on Windows only when the installed artifacts must be rebuilt.
+`Scripts/crowny.bat setup` runs the Windows bootstrap automatically and uses AVX2 by default. A configuration stamp includes the SIMD level and skips unchanged builds. Pass `--force` only when the installed artifacts must be rebuilt.
 
 | Backend | Version | Commit |
 | --- | --- | --- |
@@ -24,7 +24,7 @@ Scripts\setup-physics.ps1 -Configuration Release -Simd AVX2
 
 The Box3D build receives a local CMake-only `/MD` adjustment so its runtime library matches Crowny. Upstream source is otherwise unchanged. Jolt's instruction-set definitions must match Crowny's, so the setup script and Premake generation must use the same SIMD level.
 
-Linux CI runs `setup-physics.sh Release avx2` before Premake generation. macOS developers use the same script; the generated Web platform excludes all native 3D adapters and links none of these SDKs.
+Linux CI runs `crowny deps physics --configuration Release --simd avx2` before Premake generation. macOS developers use the same script; the generated Web platform excludes all native 3D adapters and links none of these SDKs.
 
 ## Selection and capabilities
 

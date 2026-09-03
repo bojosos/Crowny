@@ -6,7 +6,7 @@
 
 ## Build and development commands
 
-All build orchestration lives in the Python tool `Tools/crowny` (stdlib-only, Python 3.9+). Invoke it with `Scripts\crowny.bat <command>` on Windows, `./Scripts/crowny <command>` elsewhere, or `python Tools/crowny <command>` directly. The legacy `Scripts\*.ps1` entrypoints are thin compatibility shims that translate to the same tool.
+All build orchestration lives in the Python tool `Tools/crowny` (stdlib-only, Python 3.9+). Invoke it with `Scripts\crowny.bat <command>` on Windows, `./Scripts/crowny <command>` elsewhere, or `python Tools/crowny <command>` directly.
 
 Initialize the exact dependency revisions first:
 
@@ -21,11 +21,12 @@ git submodule update --init --recursive
 - `Scripts\crowny.bat build Engine|Editor|Tests|RenderTests|All` is the Windows daily-build entrypoint; `Scripts\crowny.bat test` builds and runs Catch2. Agents must use these commands instead of raw MSBuild. Auto scheduling gives the first build 8 of 12 compiler workers, leaves four for another output family, serializes overlapping output writes, and permits concurrent test readers. Pass `--jobs` to request a fixed share; `--jobs 12` waits for exclusive compiler capacity. `--inner-loop` skips building project references for fast single-file iteration after a full build. `--profile` records binlogs and build metrics under `artifacts/build-metrics/`.
 - `Scripts\crowny.bat managed` builds the managed C# assemblies; `Scripts\crowny.bat gen --force` regenerates `Crowny.sln` with node-editor support.
 - `Scripts\crowny.bat render-tests` builds the render harness, checks Vulkan and OpenGL against shared references, and compares both outputs.
+- `Scripts\crowny.bat measure` runs Clean/NoOp/TouchedSource timing scenarios; `Scripts\crowny.bat sccache-probe` validates sccache through MSBuild before enabling `--compiler-cache Sccache`.
 - `./Scripts/crowny gen --force && make Crowny-Editor Crowny-Tests -j2 config=release_linux64 CXX=clang++` generates and builds on Linux.
 - `./bin/Release-linux-x86_64/Crowny-Tests/Crowny-Tests` runs the Linux test binary. The Windows executable uses the same path pattern with `Release-windows-x86_64`.
 - Python tooling tests: `python -m unittest discover -s Tools/crowny/tests`.
 
-`Scripts\windows-build-common.ps1`, `Scripts\measure-build-windows.ps1`, and `Scripts\probe-sccache-windows.ps1` remain PowerShell for build benchmarking.
+`Scripts\sccache-cl.cmd` remains a batch shim because MSBuild's `CLToolExe` requires a `.cmd` wrapper.
 
 Linked worktrees reuse the main checkout's dependency cache while keeping generated projects and outputs local. Set `CROWNY_DEPS_ROOT` to override the shared SDK cache and `CROWNY_BUILD_COORDINATION_ROOT` to override the family-wide lock/lease directory. Component-specific overrides remain available through `VULKAN_SDK`, `CROWNY_MONO_ROOT`, `CROWNY_OPENAL_ROOT`, `CROWNY_PHYSICS_ROOT`, and `CROWNY_SPIRV_CROSS_ROOT`. Do not commit `bin/`, `bin-int/`, generated solutions, or downloaded SDKs.
 

@@ -1,4 +1,4 @@
-# Managed scripting
+﻿# Managed scripting
 
 Crowny exposes one backend-neutral `ManagedScriptComponent`, `ManagedScript`, and `ScriptState` model. Mono and CoreCLR
 own their runtime instances, callbacks, loading, and reload mechanics behind `ManagedScripting`; neither runtime object
@@ -16,7 +16,7 @@ Bootstrap the SDK pinned by `global.json` into the ignored `.deps/dotnet` direct
 a time. The publish script also runs this bootstrap automatically when the local SDK is missing:
 
 ```powershell
-Scripts\setup-dotnet.ps1
+Scripts\crowny.bat deps dotnet
 
 Scripts\managed\publish-coreclr.ps1 `
     -RuntimeIdentifier win-x64 `
@@ -25,7 +25,7 @@ Scripts\managed\publish-coreclr.ps1 `
     -OutputDirectory C:\packages\CrownyGame\managed
 ```
 
-`Scripts\setup-windows.ps1 -CoreCLR` performs the same bootstrap during normal Windows setup. Pass `RuntimeRoot`,
+`Scripts\crowny.bat setup --coreclr` performs the same bootstrap during normal Windows setup. Pass `RuntimeRoot`,
 `RuntimeVersion`, or `DotNetExecutable` to `publish-coreclr.ps1` only when packaging a separately serviced runtime.
 
 The output directory must be empty. `managed-program.json` records the ABI version, private runtime root, and the six

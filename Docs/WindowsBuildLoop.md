@@ -1,22 +1,22 @@
-# Windows edit-build-test loop
+﻿# Windows edit-build-test loop
 
-Run `Scripts\setup-windows.ps1` once to install and build prerequisites. Normal builds should use the focused commands below; they do not run Winget, update submodules, rebuild dependencies, or build unrelated executables.
+Run `Scripts\crowny.bat setup` once to install and build prerequisites. Normal builds should use the focused commands below; they do not run Winget, update submodules, rebuild dependencies, or build unrelated executables.
 
 ```powershell
 # Engine only, using the automatic compiler share
-Scripts\build-windows.ps1 -Target Engine
+Scripts\crowny.bat build Engine
 
 # Engine and tests in one targeted MSBuild invocation, then the ordinary suite
-Scripts\test-windows.ps1
+Scripts\crowny.bat test
 
 # Routine sanitizer lane
-Scripts\test-windows.ps1 -Sanitizer Address
+Scripts\crowny.bat test --sanitizer Address
 
 # Hidden managed-process lane followed by the ordinary suite
-Scripts\test-windows.ps1 -Sanitizer Address -ProcessIsolated
+Scripts\crowny.bat test --sanitizer Address --process-isolated
 
 # Explicit full-editor sanitizer build
-Scripts\build-windows.ps1 -Target Editor -Sanitizer Address
+Scripts\crowny.bat build Editor --sanitizer Address
 ```
 
 `-Jobs` controls MSVC translation-unit parallelism. The scripts deliberately keep MSBuild project parallelism at one, preventing the compiler count from multiplying across projects. Auto mode uses eight workers for the first build on this 12-thread machine and leaves four available for a concurrent build. Pass `-Jobs 12` when one build should wait for and use the complete compiler budget.
@@ -28,10 +28,10 @@ The generated Visual Studio solution contains `Debug`, `Release`, `Dist`, `Debug
 Use the measurement command for repeatable clean, no-op, and one-file incremental probes:
 
 ```powershell
-Scripts\measure-build-windows.ps1 -Target Tests -Scenario Clean,NoOp,TouchedSource
-Scripts\measure-build-windows.ps1 -Target Engine -Configuration Release -Sanitizer Address -BuildInsights
+Scripts\crowny.bat measure --target Tests --scenario Clean --scenario NoOp --scenario TouchedSource
+Scripts\crowny.bat measure --target Engine --configuration Release --sanitizer Address
 ```
 
 Results, MSBuild binary logs, compiler-memory samples, and optional Build Insights traces are written below `artifacts\build-metrics`.
 
-sccache remains opt-in. Install it, run `Scripts\probe-sccache-windows.ps1`, then pass `-CompilerCache Sccache` to the build command. Do not make it the default unless a representative second clean rebuild reaches at least 70% cache hits and improves wall time by at least 30%.
+sccache remains opt-in. Install it, run `Scripts\crowny.bat sccache-probe`, then pass `--compiler-cache Sccache` to the build command. Do not make it the default unless a representative second clean rebuild reaches at least 70% cache hits and improves wall time by at least 30%.

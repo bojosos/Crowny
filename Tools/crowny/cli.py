@@ -2,6 +2,7 @@ import argparse
 import sys
 
 from . import __version__, bootstrap, cmd, env, log, premake
+from .measure import SCENARIOS as _MEASURE_SCENARIOS
 
 
 def _configuration(value):
@@ -88,6 +89,21 @@ def build_parser():
     render_parser.add_argument("--artifact-root", default="artifacts/render-tests")
     render_parser.add_argument("--update-references", action="store_true")
     render_parser.add_argument("--no-build", action="store_true")
+
+    subparsers.add_parser(
+        "sccache-probe", help="Validate sccache through MSBuild and record the feasibility stamp."
+    )
+
+    measure_parser = subparsers.add_parser("measure", help="Run build measurement scenarios.")
+    measure_parser.add_argument(
+        "--scenario", action="append", default=None, choices=list(_MEASURE_SCENARIOS)
+    )
+    measure_parser.add_argument("--target", default="Tests", choices=["Engine", "Editor", "Tests", "RenderTests", "All"])
+    measure_parser.add_argument("--configuration", default="Release", type=_configuration)
+    measure_parser.add_argument("--sanitizer", default="None", type=_sanitizer)
+    measure_parser.add_argument("--jobs", default=0, type=int)
+    measure_parser.add_argument("--simd", default="avx2", type=_simd)
+    measure_parser.add_argument("--compiler-cache", default="None", choices=["None", "Sccache"])
 
     deps_parser = subparsers.add_parser("deps", help="Bootstrap a single dependency.")
     deps_sub = deps_parser.add_subparsers(dest="dependency", required=True)
@@ -202,6 +218,27 @@ def main(argv=None):
                 artifact_root=args.artifact_root,
                 update_references=args.update_references,
                 no_build=args.no_build,
+            )
+            return 0
+
+        if args.command == "sccache-probe":
+            from . import sccache
+
+            sccache.probe(root)
+            return 0
+
+        if args.command == "measure":
+            from . import measure
+
+            measure.measure(
+                root=root,
+                scenarios=args.scenario or list(measure.SCENARIOS),
+                target=args.target,
+                configuration=args.configuration,
+                sanitizer=args.sanitizer,
+                jobs=args.jobs,
+                simd=args.simd,
+                compiler_cache=args.compiler_cache,
             )
             return 0
 

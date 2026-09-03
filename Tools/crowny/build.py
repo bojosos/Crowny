@@ -41,7 +41,7 @@ def _sccache_ready(root):
     probe = root / ".deps" / "stamps" / "sccache-msbuild.json"
     if not sccache or not probe.is_file():
         raise RuntimeError(
-            "sccache is not enabled. Install it and run Scripts/probe-sccache-windows.ps1 first."
+            "sccache is not enabled. Install it and run `crowny sccache-probe` first."
         )
     try:
         with open(probe, "r", encoding="utf-8-sig") as handle:

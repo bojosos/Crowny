@@ -58,11 +58,11 @@ jobs:
           Invoke-WebRequest -Uri https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/v3.4.0/include/vk_mem_alloc.h -OutFile .deps\VulkanSDK\Include\vma\vk_mem_alloc.h
           $env:CROWNY_OPENAL_ROOT = Join-Path $PWD ".deps\openal"
           "CROWNY_OPENAL_ROOT=$env:CROWNY_OPENAL_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          & Scripts/setup-openal.ps1 -Configuration $env:ASAN_CONFIGURATION -Simd AVX2
-          & Scripts/setup-physics.ps1 -Configuration $env:ASAN_CONFIGURATION -Simd AVX2
-          & Scripts/setup-spirv-cross.ps1 -Configuration $env:ASAN_CONFIGURATION -VulkanVersion $env:VULKAN_SDK_VERSION -Simd AVX2
+          & Scripts\crowny.bat deps openal --configuration $env:ASAN_CONFIGURATION --simd avx2
+          & Scripts\crowny.bat deps physics --configuration $env:ASAN_CONFIGURATION --simd avx2
+          & Scripts\crowny.bat deps spirv-cross --configuration $env:ASAN_CONFIGURATION --vulkan-version $env:VULKAN_SDK_VERSION --simd avx2
 
       - name: Build and run ASan tests
         shell: powershell
         run: |
-          & Scripts/test-windows.ps1 -Configuration $env:ASAN_CONFIGURATION -Sanitizer Address -Jobs 4 -ProcessIsolated
+          & Scripts\crowny.bat test --configuration $env:ASAN_CONFIGURATION --sanitizer Address --jobs 4 --process-isolated

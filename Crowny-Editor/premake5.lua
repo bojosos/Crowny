@@ -61,7 +61,7 @@ project "Crowny-Editor"
 
 	filter "system:windows"
 		prebuildcommands {
-			'powershell -NoProfile -ExecutionPolicy Bypass -File "%{prj.location}/../Scripts/pack-builtins.ps1" -RepositoryRoot "%{prj.location}/.." -Configuration "%{cfg.buildcfg}"'
+			'python "%{prj.location}/../Scripts/pack-builtins.py" --repo-root "%{prj.location}/.." --configuration "%{cfg.buildcfg}"'
 		}
 
 	filter "system:linux"

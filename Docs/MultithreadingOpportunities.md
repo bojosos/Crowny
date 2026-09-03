@@ -1,4 +1,4 @@
-# Multithreading opportunities in Crowny
+﻿# Multithreading opportunities in Crowny
 
 ## Executive recommendation
 
@@ -280,4 +280,4 @@ Format conversion, source conversion, normal-map renormalization, and output pac
 - Run ThreadSanitizer on Linux for task-owned CPU data and the existing Windows ASan/CRT configuration for lifetime errors.
 - Add forced cancellation and shutdown tests for scenes, projects, asset loads, audio sources, and graph evaluations.
 - Keep serial fallbacks and size thresholds. A job should be large enough to repay queueing and merge costs.
-- Renderer changes must also run `Scripts/run-render-tests.ps1`; new headers require `python Scripts/check_headers.py`.
+- Renderer changes must also run `Scripts/crowny.bat render-tests`; new headers require `python Scripts/check_headers.py`.

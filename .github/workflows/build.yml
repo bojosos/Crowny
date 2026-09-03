@@ -43,10 +43,8 @@ jobs:
 
       - name: Generate projects
         run: |
-          chmod +x Scripts/setup-physics.sh
-          ./Scripts/setup-physics.sh Release avx2
-          chmod +x 3rdparty/premake/bin/premake5
-          ./3rdparty/premake/bin/premake5 gmake2 --simd=avx2 --with-nodes
+          ./Scripts/crowny deps physics --configuration Release --simd avx2
+          ./Scripts/crowny gen --simd avx2
 
       - name: Build Crowny
         run: make Crowny -j$(nproc) config=release_linux64 CXX=clang++
@@ -115,7 +113,7 @@ jobs:
       - name: Install Vulkan SDK
         shell: powershell
         run: |
-          & Scripts/setup-vulkan.ps1 -VulkanVersion $env:VULKAN_SDK_VERSION
+          & Scripts\crowny.bat deps vulkan --version $env:VULKAN_SDK_VERSION
           "VULKAN_SDK=$env:VULKAN_SDK" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "$env:VULKAN_SDK\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
@@ -124,10 +122,10 @@ jobs:
         run: |
           $env:CROWNY_OPENAL_ROOT = Join-Path $PWD ".deps\openal"
           "CROWNY_OPENAL_ROOT=$env:CROWNY_OPENAL_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          & Scripts/setup-openal.ps1 -Configuration Release -Simd AVX2
-          & Scripts/setup-physics.ps1 -Configuration Release -Simd AVX2
-          & Scripts/setup-spirv-cross.ps1 -Configuration Release -VulkanVersion $env:VULKAN_SDK_VERSION -Simd AVX2
-          & 3rdparty/premake/bin/premake5.exe vs2022 --with-nodes --simd=avx2
+          & Scripts\crowny.bat deps openal --configuration Release --simd avx2
+          & Scripts\crowny.bat deps physics --configuration Release --simd avx2
+          & Scripts\crowny.bat deps spirv-cross --configuration Release --vulkan-version $env:VULKAN_SDK_VERSION --simd avx2
+          & Scripts\crowny.bat gen --simd avx2
 
       - name: Build
         run: |

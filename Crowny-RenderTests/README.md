@@ -1,11 +1,11 @@
-# Renderer Regression Tests
+﻿# Renderer Regression Tests
 
-`Crowny-RenderTests` renders fixed 64×64 offscreen cases through the normal Crowny render API. Vulkan and OpenGL run in separate processes, compare against the same canonical BMP references, and are then compared directly. This catches backend-specific output changes without relying on renderer reinitialization in one process.
+`Crowny-RenderTests` renders fixed 64Ã—64 offscreen cases through the normal Crowny render API. Vulkan and OpenGL run in separate processes, compare against the same canonical BMP references, and are then compared directly. This catches backend-specific output changes without relying on renderer reinitialization in one process.
 
 Run the complete Release suite from the repository root:
 
 ```powershell
-Scripts\run-render-tests.ps1
+Scripts\crowny.bat render-tests
 ```
 
 Use `-Backend Vulkan`, `-Backend OpenGL`, or `-Filter fullscreen` while developing. Add `-NoBuild` when the executable is already current. Results are written to `artifacts/render-tests/<backend>/`; a failure retains the actual image, expected image, amplified diff, and `summary.json`.
@@ -15,7 +15,7 @@ Use `-Backend Vulkan`, `-Backend OpenGL`, or `-Filter fullscreen` while developi
 References live in `Crowny-RenderTests/References/` and are shared by every backend. After deliberately changing renderer output, inspect the actual captures and approve them with:
 
 ```powershell
-Scripts\run-render-tests.ps1 -UpdateReferences -NoBuild
+Scripts\crowny.bat render-tests --update-references --no-build
 ```
 
 The script uses Vulkan to produce canonical references, then verifies Vulkan, OpenGL, and their direct comparison. Never update references merely to make a failing change pass.

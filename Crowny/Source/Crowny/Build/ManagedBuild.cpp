@@ -1487,7 +1487,7 @@ namespace Crowny
             return result;
         }
         AddDiagnostic(result.Diagnostics, "MB100",
-                      "No usable Mono/Roslyn toolchain was found. Set CROWNY_MONO_ROOT or run Scripts/setup-windows.ps1.", root);
+                      "No usable Mono/Roslyn toolchain was found. Set CROWNY_MONO_ROOT or run Scripts\\crowny.bat setup.", root);
         return result;
     }
 
@@ -1784,7 +1784,7 @@ namespace Crowny
         }
 
         AddDiagnostic(result.Diagnostics, "MB600",
-                      "No usable .NET SDK was found. Run Scripts/setup-dotnet.ps1 or set CROWNY_DOTNET_ROOT.", root);
+                      "No usable .NET SDK was found. Run Scripts\\crowny.bat deps dotnet or set CROWNY_DOTNET_ROOT.", root);
         return result;
     }
 
