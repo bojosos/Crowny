@@ -62,7 +62,7 @@ def _download_once(url, destination, partial, resume):
     offset = partial.stat().st_size if resume and partial.exists() else 0
     if offset and not partial.exists():
         offset = 0
-    request = urllib.request.Request(url)
+    request = urllib.request.Request(url, headers={"User-Agent": "curl/8.0.1"})
     if offset:
         request.add_header("Range", f"bytes={offset}-")
     log.info(f"Downloading {url}...")
