@@ -1052,7 +1052,14 @@ namespace
         program.Generation = 1;
         program.Artifacts.push_back({ ManagedProgramArtifactKind::EngineAssembly, CROWNY_ASSEMBLY, engineAssemblyPath });
         program.Artifacts.push_back({ ManagedProgramArtifactKind::GameAssembly, GAME_ASSEMBLY, gameAssemblyPath });
-        const ManagedOperationResult loadResult = managedScripting->LoadProgram(program);
+        ManagedOperationResult loadResult = managedScripting->LoadProgram(program);
+        if (!loadResult.Succeeded && loadResult.HasDiagnosticCode("managed.mono.program_already_loaded"))
+        {
+            // Test cases share one process when the whole isolated lane runs at
+            // once, and the program from an earlier test case stays loaded. The
+            // assemblies are identical, so the loaded program is simply reused.
+            loadResult = ManagedOperationResult::Success();
+        }
         if (!loadResult.Succeeded)
         {
             for (const ManagedDiagnostic& diagnostic : loadResult.Diagnostics)
