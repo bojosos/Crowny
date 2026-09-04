@@ -143,10 +143,29 @@ jobs:
           while IFS= read -r isolated_test; do
             [ -z "$isolated_test" ] && continue
             echo "Running isolated test: $isolated_test"
+            set +e
             timeout --signal=TERM --kill-after=15s 90s "$test_binary" \
               "$isolated_test" \
-              --reporter console --durations yes || exit 1
+              --reporter console --durations yes > isolated-output.txt 2>&1
+            status=$?
+            set -e
+            # Opt-in benchmarks SKIP with a nonzero exit code; that is not a failure.
+            if grep -q "FAILED" isolated-output.txt || { [ "$status" -ne 0 ] && ! grep -q "SKIPPED:" isolated-output.txt; }; then
+              echo "Isolated test FAILED (exit $status): $isolated_test"
+              cat isolated-output.txt
+              exit 1
+            fi
+            cat isolated-output.txt
           done < isolated-tests.txt
-          rm isolated-tests.txt
+          rm isolated-tests.txt isolated-output.txt
           echo "Running the full native suite"
-          "$test_binary"
+          set +e
+          "$test_binary" --reporter console --durations yes > full-output.txt 2>&1
+          status=$?
+          set -e
+          if grep -q "FAILED" full-output.txt || { [ "$status" -ne 0 ] && ! grep -q "SKIPPED:" full-output.txt; }; then
+            echo "Full native suite FAILED (exit $status)"
+            cat full-output.txt
+            exit 1
+          fi
+          grep -E "test cases:|assertions:" full-output.txt || cat full-output.txt
