@@ -138,9 +138,15 @@ jobs:
         run: |
           export PATH=$PATH:$PWD/.deps/openal/bin
           test_binary=./bin/Release-windows-x86_64/Crowny-Tests/Crowny-Tests.exe
-          echo "Running the process-isolated managed reload test with a 90-second deadline"
-          timeout --signal=TERM --kill-after=15s 90s "$test_binary" \
-            "[.ProcessIsolated]" \
-            --reporter console --durations yes
+          echo "Running the process-isolated lane, one engine instance per test"
+          "$test_binary" --list-tests "[.ProcessIsolated]" --verbosity quiet > isolated-tests.txt
+          while IFS= read -r isolated_test; do
+            [ -z "$isolated_test" ] && continue
+            echo "Running isolated test: $isolated_test"
+            timeout --signal=TERM --kill-after=15s 90s "$test_binary" \
+              "$isolated_test" \
+              --reporter console --durations yes || exit 1
+          done < isolated-tests.txt
+          rm isolated-tests.txt
           echo "Running the full native suite"
           "$test_binary"

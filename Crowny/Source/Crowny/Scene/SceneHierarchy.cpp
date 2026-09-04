@@ -3,6 +3,7 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 
 namespace Crowny
 {
@@ -391,6 +392,15 @@ namespace Crowny
 
             for (Entity root : roots)
             {
+                // Deliver managed OnDestroy while the entity is still alive; the
+                // component destroy hook below becomes a no-op afterwards.
+                if (root.HasComponent<ManagedScriptComponent>())
+                    for (auto& script : root.GetComponent<ManagedScriptComponent>().Scripts)
+                        ScriptRuntime::DestroyScript(root, script);
+            }
+
+            for (Entity root : roots)
+            {
                 m_EntityMap.erase(root.GetUuid());
                 m_Registry.destroy(root.GetHandle());
                 result.Stats.DestroyedEntityCount++;
@@ -428,6 +438,15 @@ namespace Crowny
 
         for (Entity entity : postOrder)
             entity.GetComponent<RelationshipComponent>().Children.clear();
+
+        for (Entity entity : postOrder)
+        {
+            // Deliver managed OnDestroy while the entity is still alive; the
+            // component destroy hook below becomes a no-op afterwards.
+            if (entity.HasComponent<ManagedScriptComponent>())
+                for (auto& script : entity.GetComponent<ManagedScriptComponent>().Scripts)
+                    ScriptRuntime::DestroyScript(entity, script);
+        }
 
         for (Entity entity : postOrder)
         {
