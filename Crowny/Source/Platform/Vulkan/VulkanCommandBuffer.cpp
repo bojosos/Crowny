@@ -654,9 +654,9 @@ namespace Crowny
                         switch (useFlags)
                         {
                         case (BufferUseFlagBits::Generic):
-                            if (accessFlags == VulkanAccessFlagBits::Read)
+                            if (accessFlags.IsSet(VulkanAccessFlagBits::Read))
                                 m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_READ_BIT;
-                            if (accessFlags == VulkanAccessFlagBits::Write)
+                            if (accessFlags.IsSet(VulkanAccessFlagBits::Write))
                                 m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_WRITE_BIT;
                             break;
                         case (BufferUseFlagBits::Index):
@@ -1170,12 +1170,10 @@ namespace Crowny
         m_MemoryBarrierSrcAccess = 0;
         m_MemoryBarrierDstAccess = 0;
 
-        for (auto& buffer : m_Buffers)
-        {
-            BufferInfo& bufferInfo = buffer.second;
-            bufferInfo.WriteHazardUse.AccessFlags = VulkanAccessFlagBits::None;
-            bufferInfo.WriteHazardUse.Stages = 0;
-        }
+        // BindUniforms registers the upcoming draw/dispatch before this barrier.
+        // Its accesses must remain tracked: clearing them here loses the write
+        // that is about to execute and drops dependencies on alternate dispatches.
+        // Keep a conservative union until the command buffer is retired.
     }
 
     void VulkanCmdBuffer::ExecuteLayoutTransitions()
@@ -1647,6 +1645,9 @@ namespace Crowny
         m_SubresourceInfoStorage.clear();
         m_ShaderBoundSubresourceInfos.clear();
         m_NeedsRawMemoryBarrier = false;
+        m_TimerQueries.clear();
+        m_PipelineQueries.clear();
+        m_OcclusionQueries.clear();
         m_NeedsWarMemoryBarrier = false;
         m_MemoryBarrierSrcAccess = 0;
         m_MemoryBarrierDstAccess = 0;
@@ -2481,10 +2482,12 @@ namespace Crowny
             query->Reset(m_CmdBuffer);
     }
 
+    void VulkanCmdBuffer::RegisterQuery(VulkanTimerQuery* query) { m_TimerQueries.try_emplace(query, Ref<VulkanTimerQuery>(query)); }
+
     void VulkanCmdBuffer::GetInProgressQueries(Vector<VulkanTimerQuery*>& timers, Vector<VulkanPipelineQuery*>& pipelines,
                                                Vector<VulkanOcclusionQuery*>& occlusions) const
     {
-        for (VulkanTimerQuery* entry : m_TimerQueries)
+        for (const auto& [entry, retained] : m_TimerQueries)
             if (entry->IsInProgress())
                 timers.push_back(entry);
         for (VulkanPipelineQuery* entry : m_PipelineQueries)

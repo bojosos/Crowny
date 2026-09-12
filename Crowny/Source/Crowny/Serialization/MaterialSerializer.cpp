@@ -48,6 +48,25 @@ namespace Crowny
 
     MaterialSerializer::MaterialSerializer(const Ref<Material>& material) : m_Material(material) {}
 
+    Vector<UUID> MaterialSerializer::GatherTextureDependencies(const YAML::Node& source)
+    {
+        Vector<UUID> dependencies;
+        const auto textures = source["Textures"];
+        if (!textures)
+            return dependencies;
+        if (!textures.IsSequence())
+            throw std::runtime_error("Material Textures must be a sequence when gathering dependencies.");
+        for (const auto& texture : textures)
+        {
+            const UUID id = texture["UUID"].as<UUID>(UUID::EMPTY);
+            if (!id.Empty())
+                dependencies.push_back(id);
+        }
+        std::sort(dependencies.begin(), dependencies.end());
+        dependencies.erase(std::unique(dependencies.begin(), dependencies.end()), dependencies.end());
+        return dependencies;
+    }
+
     // --- Helpers to serialize param values by type ---
 
     static void SerializeDataParam(YAML::Emitter& out, const String& name, ShaderDataType type, const Material& mat)

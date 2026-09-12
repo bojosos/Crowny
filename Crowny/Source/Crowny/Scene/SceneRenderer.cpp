@@ -15,6 +15,7 @@
 #include "Crowny/Renderer/ComputeMaterial.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/GpuDecalWorld.h"
 #include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/GpuScene.h"
 #include "Crowny/Renderer/GpuWorld2D.h"
@@ -184,9 +185,10 @@ namespace Crowny
         {
         public:
             const DecalRenderStats& GetDecalStatistics() const { return m_Decals.GetStats(); }
+            void ReleaseDecalView(uint64_t view) { m_Decals.ReleaseView(view); }
             void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
-                            const GpuDrawBinLayout* drawBinLayout, const RenderSnapshot& snapshot, const Ref<EnvironmentMap>& environment,
-                            const RenderPipelineSettings& settings, bool enablePostProcessing)
+                            const GpuDrawBinLayout* drawBinLayout, const RenderSnapshot& snapshot, GpuDecalWorld* decals,
+                            const Ref<EnvironmentMap>& environment, const RenderPipelineSettings& settings, bool enablePostProcessing)
             {
                 m_View = view;
                 m_Blackboard = &blackboard;
@@ -202,7 +204,7 @@ namespace Crowny
                 m_GpuMeshletCullingReady = false;
                 m_GpuDrawCompactionReady = false;
                 m_WeightedOitReady = false;
-                m_Decals.Prepare(snapshot, &scene);
+                m_Decals.Prepare(snapshot, &scene, decals);
                 m_CoatingDepthReady = false;
             }
 
@@ -1753,6 +1755,12 @@ namespace Crowny
                 GpuWorld2D World;
             };
             UnorderedMap<uint64_t, World2DEntry> Worlds2D;
+            struct DecalWorldEntry
+            {
+                std::weak_ptr<const uint8_t> Lifetime;
+                GpuDecalWorld World;
+            };
+            UnorderedMap<uint64_t, DecalWorldEntry> DecalWorlds;
             struct HistoryConfiguration
             {
                 RenderingPath Path = RenderingPath::Auto;
@@ -1794,6 +1802,15 @@ namespace Crowny
             if (!s_RenderThreadResources)
                 s_RenderThreadResources = CreateScope<SceneRendererThreadResources>();
             return *s_RenderThreadResources;
+        }
+        GpuDecalWorld* FindDecalWorld(const RenderSnapshot& snapshot)
+        {
+            if (!snapshot.DecalWorldLifetime || !s_RenderThreadResources)
+                return nullptr;
+            const auto world = s_RenderThreadResources->DecalWorlds.find(snapshot.HistoryOwnerId);
+            if (world == s_RenderThreadResources->DecalWorlds.end() || world->second.Lifetime.lock() != snapshot.DecalWorldLifetime)
+                return nullptr;
+            return &world->second.World;
         }
     } // namespace
 
@@ -2411,7 +2428,7 @@ namespace Crowny
         SyncRenderWorld(snapshot);
 
         // 3D mesh objects
-        DecalRenderer::Extract(*m_Scene, snapshot);
+        DecalRenderer::Extract(*m_Scene, snapshot, &m_DecalExtraction);
         {
             auto objs = m_Scene->m_Registry.view<MeshRendererComponent, TransformComponent, RelationshipComponent>();
             snapshot.MeshObjects.Reserve(objs.size_hint());
@@ -2534,10 +2551,7 @@ namespace Crowny
                 tracked = m_TrackedSprites2D.erase(tracked);
             }
         }
-        m_RenderWorld2D.DrainChanges(m_RenderWorld2DChangeScratch);
-        snapshot.RenderWorld2DChanges.Reserve(m_RenderWorld2DChangeScratch.size());
-        for (const RenderChange2D& change : m_RenderWorld2DChangeScratch)
-            snapshot.RenderWorld2DChanges.Acquire() = change;
+        m_RenderWorld2D.DrainChanges(snapshot.RenderWorld2DChanges);
     }
 
     uint32_t SceneRenderer::GetResourceIndex(const AssetHandleData* identity, UnorderedMap<const AssetHandleData*, uint32_t>& resources,
@@ -2945,6 +2959,7 @@ namespace Crowny
 
     void SceneRenderer::ResetTrackedRenderWorld()
     {
+        m_DecalExtraction.Clear();
         m_TextLayoutCache.Clear();
         for (const auto& [_, sprite] : m_TrackedSprites2D)
             m_RenderWorld2D.Destroy(sprite.Handle);
@@ -2964,7 +2979,7 @@ namespace Crowny
         if (!snapshot.Target)
             return; // No render target — nothing to draw into this frame.
 
-        ForwardRenderer::PrepareDecals(snapshot);
+        ForwardRenderer::PrepareDecals(snapshot, FindDecalWorld(snapshot));
         RenderAPI& rapi = (*RenderAPI::TryGet());
         rapi.SetRenderTarget(snapshot.Target);
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
@@ -3070,6 +3085,15 @@ namespace Crowny
 
         s_RenderThreadResources->GraphResources.ReleaseHistory(historyNamespace);
         s_RenderThreadResources->HistoryConfigurations.erase(historyNamespace);
+        s_RenderThreadResources->GpuDrivenExecutor.ReleaseDecalView(historyNamespace);
+        ForwardRenderer::ReleaseDecalView(historyNamespace);
+        for (auto world = s_RenderThreadResources->DecalWorlds.begin(); world != s_RenderThreadResources->DecalWorlds.end();)
+        {
+            if (world->second.Lifetime.expired())
+                world = s_RenderThreadResources->DecalWorlds.erase(world);
+            else
+                ++world;
+        }
     }
 
     void SceneRenderer::Render2DOnlySnapshot(const RenderSnapshot& snapshot)
@@ -3136,10 +3160,25 @@ namespace Crowny
         ZoneScopedN("RenderGraphFrame");
         for (uint64_t historyNamespace : snapshot.ReleasedHistoryNamespaces)
             ReleaseRenderThreadHistory(historyNamespace);
-        if (!snapshot.Target && !s_RenderThreadResources && snapshot.RenderWorld2DChanges.Empty())
+        if (!snapshot.Target && !s_RenderThreadResources && snapshot.RenderWorld2DChanges.Empty() && snapshot.DecalChanges.Empty())
             return;
 
         SceneRendererThreadResources& threadResources = GetSceneRendererThreadResources();
+        for (auto world = threadResources.DecalWorlds.begin(); world != threadResources.DecalWorlds.end();)
+        {
+            if (world->second.Lifetime.expired())
+                world = threadResources.DecalWorlds.erase(world);
+            else
+                ++world;
+        }
+        if (snapshot.DecalWorldLifetime)
+        {
+            auto& world = threadResources.DecalWorlds[snapshot.HistoryOwnerId];
+            if (const auto previous = world.Lifetime.lock(); previous && previous != snapshot.DecalWorldLifetime)
+                world.World = {};
+            world.Lifetime = snapshot.DecalWorldLifetime;
+            world.World.Apply({ snapshot.DecalChanges.begin(), snapshot.DecalChanges.Size() });
+        }
         for (auto world = threadResources.Worlds2D.begin(); world != threadResources.Worlds2D.end();)
         {
             if (world->second.Lifetime.expired())
@@ -3501,7 +3540,8 @@ namespace Crowny
         }
         pipeline.BuildFrameGraph(renderGraph, view, graphDesc, blackboard);
         gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList, gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr,
-                                     snapshot, snapshot.Environment, pipeline.GetSettings(), graphDesc.EnablePostProcessing);
+                                     snapshot, FindDecalWorld(snapshot), snapshot.Environment, pipeline.GetSettings(),
+                                     graphDesc.EnablePostProcessing);
 
         const RenderGraphCompileResult& compiledGraph = renderGraph.Compile();
         const bool resourceFrameBegun = graphResources.BeginFrame(compiledGraph, snapshot.FrameNumber, snapshot.HistoryNamespace, view.CameraCut);

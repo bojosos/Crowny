@@ -1,8 +1,10 @@
 #include "RenderTestRunner.h"
 
+#include "DecalShowcase.h"
 #include "RenderTestImage.h"
 #include "Sprite2DRenderTests.h"
 
+#include "Crowny/Animation/Skeleton.h"
 #include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Assets/AssetManifest.h"
@@ -22,9 +24,11 @@
 #include "Crowny/RenderAPI/UniformParams.h"
 #include "Crowny/Renderer/BasisTextureCodec.h"
 #include "Crowny/Renderer/ComputeMaterial.h"
+#include "Crowny/Renderer/DecalGpuGrid.h"
 #include "Crowny/Renderer/EditorCamera.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/GpuDecalWorld.h"
 #include "Crowny/Renderer/GpuScene.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MeshFactory.h"
@@ -64,6 +68,8 @@ namespace Crowny::RenderTests
     {
         constexpr uint32_t TEST_WIDTH = 64u;
         constexpr uint32_t TEST_HEIGHT = 64u;
+        Scope<DecalShowcaseWriter> s_DecalShowcase;
+        String s_CurrentTestName;
 
         struct TestCase
         {
@@ -194,7 +200,13 @@ namespace Crowny::RenderTests
             return true;
         }
 
-        bool Capture(const Ref<Texture>& texture, Image& image, String& error)
+        enum class CaptureOrigin
+        {
+            Backend,
+            SceneViewport
+        };
+
+        bool Capture(const Ref<Texture>& texture, Image& image, String& error, CaptureOrigin origin = CaptureOrigin::Backend)
         {
             if (!texture)
             {
@@ -206,7 +218,9 @@ namespace Crowny::RenderTests
                 return false;
 
             Image captured(texture->GetWidth(), texture->GetHeight());
-            const bool flipVertically = RenderAPI::GetAPI() == RenderAPI::API::OpenGL;
+            // Scene viewports display their texture with UV (0, 1) at the top on
+            // both backends. Match that presentation when capturing scene renders.
+            const bool flipVertically = origin == CaptureOrigin::SceneViewport || RenderAPI::GetAPI() == RenderAPI::API::OpenGL;
             for (uint32_t y = 0; y < captured.Height; ++y)
             {
                 const uint32_t sourceY = flipVertically ? captured.Height - 1u - y : y;
@@ -1980,14 +1994,175 @@ void main() {
             CylinderPartial,
             CylinderFull,
             Coating,
+            Toon,
+            ToonCoating,
             Correction,
             Wetness,
             NormalDetail,
+            Unlit,
+            CameraInside,
+            Overlap,
             Benchmark
         };
 
+        bool CheckPersistentDecalTables(String& error)
+        {
+            if (RenderAPI::GetAPI() != RenderAPI::API::Vulkan)
+                return true;
+            GpuDecalWorld world;
+            RenderableDecal first;
+            first.Handle = { 0, 1 };
+            first.MaterialId = UUID(0, 0, 0, 101);
+            auto second = first;
+            second.Handle = { 4, 1 };
+            const Array<RenderableDecalChange, 2> created{ RenderableDecalChange{ first.Handle, DecalChangeType::Create, first },
+                                                           RenderableDecalChange{ second.Handle, DecalChangeType::Create, second } };
+            world.Apply(created);
+            DecalRenderStats statistics;
+            if (!world.Prepare(nullptr, statistics) || world.GetMaterialCount() != 1)
+            {
+                error = "Persistent decals did not share their material record";
+                return false;
+            }
+            const auto oldFirst = world.GetDecalBuffer()->QueueReadback(0, sizeof(GpuDecalSlot));
+            const auto oldMaterial = world.GetMaterialBuffer()->QueueReadback(0, sizeof(GpuDecalMaterialSlot));
+            first.Data.Tint.a = 0.25f;
+            const RenderableDecalChange updated{ first.Handle, DecalChangeType::Update, first };
+            world.Apply({ &updated, 1 });
+            statistics = {};
+            if (!world.Prepare(nullptr, statistics) || statistics.UploadedBytes != sizeof(GpuDecalSlot))
+            {
+                error = "Editing one persistent decal did not upload exactly its changed record";
+                return false;
+            }
+            const auto changedFirst = world.GetDecalBuffer()->QueueReadback(0, sizeof(GpuDecalSlot));
+            const auto unchangedSecond = world.GetDecalBuffer()->QueueReadback(4 * sizeof(GpuDecalSlot), sizeof(GpuDecalSlot));
+            statistics = {};
+            if (!world.Prepare(nullptr, statistics) || statistics.UploadedBytes != 0)
+            {
+                error = "An unchanged persistent decal world uploaded records again";
+                return false;
+            }
+            const Array<RenderableDecalChange, 2> removed{ RenderableDecalChange{ first.Handle, DecalChangeType::Destroy, {} },
+                                                           RenderableDecalChange{ second.Handle, DecalChangeType::Destroy, {} } };
+            world.Apply(removed);
+            first.Handle.Generation = 2;
+            first.MaterialId = UUID(0, 0, 0, 102);
+            first.Material.Color = { 0.1f, 0.2f, 0.9f, 1 };
+            const RenderableDecalChange reused{ first.Handle, DecalChangeType::Create, first };
+            world.Apply({ &reused, 1 });
+            if (!world.Prepare(nullptr, statistics))
+                return false;
+            const auto newFirst = world.GetDecalBuffer()->QueueReadback(0, sizeof(GpuDecalSlot));
+            const auto newMaterial = world.GetMaterialBuffer()->QueueReadback(0, sizeof(GpuDecalMaterialSlot));
+            auto color = CreateColorTexture(1, 1, "PersistentDecalCompletion");
+            auto target = CreateTarget({ color }, 1, 1);
+            RenderAPI::Get().SetRenderTarget(target);
+            RenderAPI::Get().ClearRenderTarget(FBT_COLOR, glm::vec4(0));
+            RenderAPI::Get().SubmitCommandBuffer(nullptr);
+            Image completion;
+            if (!Capture(color, completion, error))
+                return false;
+            GpuDecalSlot original, changed, untouched, replacement;
+            GpuDecalMaterialSlot originalMaterial, replacementMaterial;
+            if (!oldFirst || !changedFirst || !unchangedSecond || !newFirst || !oldMaterial || !newMaterial ||
+                !oldFirst->TryRead(&original, sizeof(original)) || !changedFirst->TryRead(&changed, sizeof(changed)) ||
+                !unchangedSecond->TryRead(&untouched, sizeof(untouched)) || !newFirst->TryRead(&replacement, sizeof(replacement)) ||
+                !oldMaterial->TryRead(&originalMaterial, sizeof(originalMaterial)) ||
+                !newMaterial->TryRead(&replacementMaterial, sizeof(replacementMaterial)))
+            {
+                error = "Persistent decal table readbacks did not complete";
+                return false;
+            }
+            if (original.Data.Tint.a != 1 || changed.Data.Tint.a != 0.25f || untouched.Data.Tint.a != 1 || original.Generations.x != 1 ||
+                replacement.Generations.x != 2 || replacement.Generations.y != 2 || originalMaterial.Generation.x != 1 ||
+                replacementMaterial.Generation.x != 2 || originalMaterial.Data.Color != glm::vec4(1) ||
+                replacementMaterial.Data.Color != first.Material.Color)
+            {
+                error = "Persistent decal/material slot reuse changed records retained by an earlier draw";
+                return false;
+            }
+            return true;
+        }
+
+        bool CheckDecalGridReadback(String& error)
+        {
+            if (RenderAPI::GetAPI() != RenderAPI::API::Vulkan)
+                return true;
+            DecalGpuGrid gpu;
+            DecalClusterGrid reference;
+            ClusteredLightGridDesc desc;
+            desc.ViewportWidth = desc.ViewportHeight = 64;
+            const auto projection = glm::perspective(glm::radians(60.0f), 1.0f, desc.NearPlane, desc.FarPlane);
+            const Vector<glm::vec4> overflowing(65, glm::vec4(0, 0, -2, 0.5f));
+            const Vector<glm::vec4> sparse(2, overflowing.front());
+            // Both views reuse the GPU tables before submission. Their copied
+            // diagnostics must retain the original view and frame identities.
+            if (!gpu.Build(desc, glm::mat4(1), projection, overflowing, 11, 3) || !gpu.Build(desc, glm::mat4(1), projection, sparse, 22, 7))
+            {
+                error = "Could not build the two-camera decal grid regression";
+                return false;
+            }
+            reference.Build(desc, glm::mat4(1), projection, sparse);
+            if (!gpu.MatchesReference(reference.Cells, reference.Indices))
+            {
+                error = "Sparse GPU decal list differs from its CPU reference";
+                return false;
+            }
+            DecalGridStatistics first, second;
+            reference.Build(desc, glm::mat4(1), projection, overflowing);
+            const bool haveFirst = gpu.GetStatistics(11, first), haveSecond = gpu.GetStatistics(22, second);
+            if (!haveFirst || !haveSecond || first.FrameNumber != 3 || second.FrameNumber != 7 || first.Overflow != reference.Overflow ||
+                first.MaxCandidates != 65 || first.OccupiedCells != reference.Overflow || second.Overflow != 0 || second.MaxCandidates != 2 ||
+                second.OccupiedCells != first.OccupiedCells)
+            {
+                error = fmt::format("Deferred GPU decal statistics: first ready={} frame={} overflow={} max={} occupied={}; "
+                                    "second ready={} frame={} overflow={} max={} occupied={}; expected overflow={}",
+                                    haveFirst, first.FrameNumber, first.Overflow, first.MaxCandidates, first.OccupiedCells, haveSecond,
+                                    second.FrameNumber, second.Overflow, second.MaxCandidates, second.OccupiedCells, reference.Overflow);
+                return false;
+            }
+            if (!std::isfinite(first.GpuMilliseconds) || first.GpuMilliseconds <= 0 || !std::isfinite(second.GpuMilliseconds) ||
+                second.GpuMilliseconds <= 0)
+            {
+                error = "Decal grid timestamp queries did not report finite GPU durations for both cameras";
+                return false;
+            }
+            if (!gpu.Build(desc, glm::mat4(1), projection, overflowing, 11, 9))
+            {
+                error = "Could not rebuild the overflowing decal view";
+                return false;
+            }
+            // Releasing a view also retires an unsubmitted readback safely.
+            gpu.ReleaseView(11);
+            if (!gpu.MatchesReference(reference.Cells, reference.Indices))
+            {
+                error = "Overflow GPU decal list differs from its complete-list CPU reference";
+                return false;
+            }
+            if (gpu.GetStatistics(11, first) || !gpu.GetStatistics(22, second))
+            {
+                error = "Releasing decal diagnostics affected another camera or resurrected a released view";
+                return false;
+            }
+            return true;
+        }
+
         bool CheckRecordedBufferDiscard(String& error)
         {
+            if (Texture::NORMAL->GetDesc().sRGB)
+            {
+                error = "The neutral normal texture must be sampled in linear space";
+                return false;
+            }
+            PixelData neutral(1, 1, 1, Texture::NORMAL->GetDesc().Format);
+            neutral.AllocateInternalBuffer();
+            Texture::NORMAL->ReadData(neutral);
+            if (neutral.GetColorAt(0, 0) != glm::vec4(0.5f, 0.5f, 1.0f, 1.0f))
+            {
+                error = "The neutral normal texture must encode an exact (0, 0, 1) tangent-space normal";
+                return false;
+            }
             const String source = R"(#lang glsl
 #pragma depth_read false
 #pragma depth_write false
@@ -2020,6 +2195,7 @@ void main() { color = paint.value; }
             api.SetDrawMode(DrawMode::TRIANGLE_LIST);
             params->SetBuffer(0, 0, buffer);
             const Array<glm::vec4, 2> colors{ glm::vec4(1, 0, 0, 1), glm::vec4(0, 1, 0, 1) };
+            Array<Ref<GpuBufferReadback>, 2> readbacks;
             for (uint32_t draw = 0; draw < colors.size(); ++draw)
             {
                 // The second discard must preserve bytes consumed by the first
@@ -2028,11 +2204,58 @@ void main() { color = paint.value; }
                 api.SetViewport(draw * 0.5f, 0, 0.5f, 1);
                 api.SetUniforms(params);
                 api.Draw(0, 3, 1);
+                if (RenderAPI::GetAPI() == RenderAPI::API::Vulkan)
+                {
+                    readbacks[draw] = buffer->QueueReadback(0, sizeof(glm::vec4));
+                    glm::vec4 premature;
+                    if (!readbacks[draw] || readbacks[draw]->TryRead(&premature, sizeof(premature)))
+                    {
+                        error = "Buffer readback completed before its command buffer was submitted";
+                        return false;
+                    }
+                }
+            }
+            const Array<uint32_t, 8> originalWords{ 11, 22, 33, 44, 55, 66, 77, 88 };
+            auto patchedWords = originalWords;
+            patchedWords[3] = 99;
+            Array<Ref<GpuBufferReadback>, 4> rangeReadbacks;
+            if (RenderAPI::GetAPI() == RenderAPI::API::Vulkan)
+            {
+                for (uint32_t usage = 0; usage < 2; ++usage)
+                {
+                    auto ranged = GenericGpuBuffer::Create({ 8, sizeof(uint32_t), GpuBufferType::Structured, BF_UNKNOWN,
+                                                             usage == 0 ? BufferUsage::BU_DYNAMIC_DRAW : BufferUsage::BU_LOADSTORE });
+                    ranged->WriteData(0, sizeof(originalWords), originalWords.data(), BWT_DISCARD);
+                    rangeReadbacks[usage * 2] = ranged->QueueReadback(0, sizeof(originalWords));
+                    ranged->WriteData(3 * sizeof(uint32_t), sizeof(uint32_t), &patchedWords[3], BWT_NORMAL);
+                    rangeReadbacks[usage * 2 + 1] = ranged->QueueReadback(0, sizeof(patchedWords));
+                }
             }
             api.SubmitCommandBuffer(nullptr);
             Image result;
             if (!Capture(color, result, error))
                 return false;
+            for (size_t i = 0; i < readbacks.size(); ++i)
+                if (readbacks[i])
+                {
+                    glm::vec4 captured;
+                    if (!readbacks[i]->TryRead(&captured, sizeof(captured)) || captured != colors[i])
+                    {
+                        error = "Asynchronous buffer readback did not retain its recorded data across source reuse";
+                        return false;
+                    }
+                }
+            for (size_t i = 0; i < rangeReadbacks.size(); ++i)
+                if (RenderAPI::GetAPI() == RenderAPI::API::Vulkan)
+                {
+                    Array<uint32_t, 8> captured{};
+                    if (!rangeReadbacks[i] || !rangeReadbacks[i]->TryRead(captured.data(), sizeof(captured)) ||
+                        captured != (i % 2 == 0 ? originalWords : patchedWords))
+                    {
+                        error = "A recorded partial buffer update lost untouched bytes or changed an earlier readback";
+                        return false;
+                    }
+                }
             const uint8_t* first = result.Pixel(8, 8);
             const uint8_t* second = result.Pixel(24, 8);
             if (first[0] != 255 || first[1] != 0 || second[0] != 0 || second[1] != 255)
@@ -2050,10 +2273,10 @@ void main() { color = paint.value; }
                                       RenderingPath path = RenderingPath::ForwardPlus)
         {
             const bool testDecals = acceptance != DecalAcceptance::None;
-            if (testDecals && !CheckRecordedBufferDiscard(error))
+            if (testDecals && (!CheckRecordedBufferDiscard(error) || !CheckPersistentDecalTables(error) || !CheckDecalGridReadback(error)))
                 return false;
-            const bool cylinder =
-              acceptance == DecalAcceptance::CylinderPartial || acceptance == DecalAcceptance::CylinderFull || acceptance == DecalAcceptance::Coating;
+            const bool coating = acceptance == DecalAcceptance::Coating || acceptance == DecalAcceptance::ToonCoating;
+            const bool cylinder = acceptance == DecalAcceptance::CylinderPartial || acceptance == DecalAcceptance::CylinderFull || coating;
             struct CompatibilityRendererScope
             {
                 CompatibilityRendererScope()
@@ -2149,7 +2372,8 @@ void main() { color = paint.value; }
             LightComponent& light = lightEntity.AddComponent<LightComponent>();
             light.Type = LightType::Directional;
             light.Color = glm::vec3(1.0f);
-            light.Intensity = testDecals ? 3.0f : 100000.0f;
+            // Keep edits measurable at the fixture's fixed unit exposure.
+            light.Intensity = 3.0f;
             light.Shadows.Mode = LightShadowMode::Soft;
             lightEntity.GetTransform().SetRotation(glm::quat(glm::radians(glm::vec3(-50.0f, -30.0f, 0.0f))));
 
@@ -2162,15 +2386,17 @@ void main() { color = paint.value; }
 
             SceneRenderer renderer(scene, target);
             renderer.Init();
-            if (testDecals)
             {
                 auto settings = renderer.GetRenderPipelineSettings();
                 settings.Path = path;
                 settings.EnableTaa = false;
+                // Compare sampled surfaces without Vulkan-only screen effects.
+                settings.EnableBloom = false;
+                settings.EnableGtao = false;
                 renderer.SetRenderPipelineSettings(settings);
             }
             const bool vulkan = RenderAPI::GetAPI() == RenderAPI::API::Vulkan;
-            const auto renderFrame = [&](uint32_t frame) {
+            const auto renderFrame = [&](uint32_t frame, bool validateLists = false) {
                 if (vulkan)
                 {
                     RenderThread* renderThread = Application::Get().GetRenderThread();
@@ -2184,11 +2410,12 @@ void main() { color = paint.value; }
                     snapshot.EnableObjectID = true;
                     renderer.ExtractSnapshot(snapshot, camera, camera.GetViewMatrix(), false);
                     snapshot.EnableObjectID = true;
-                    snapshot.ValidateDecalLists = testDecals && acceptance != DecalAcceptance::Benchmark;
+                    snapshot.ValidateDecalLists = validateLists || (testDecals && acceptance != DecalAcceptance::Benchmark);
                     renderThread->SubmitFrame();
                     renderThread->WaitForFrameDone();
                     RenderAPI::Get().SubmitCommandBuffer(nullptr);
-                    if (testDecals && acceptance != DecalAcceptance::Benchmark && SceneRenderer::GetStatistics().Decals.ListValidationFailures)
+                    if ((validateLists || (testDecals && acceptance != DecalAcceptance::Benchmark)) &&
+                        SceneRenderer::GetStatistics().Decals.ListValidationFailures)
                     {
                         error = "GPU decal lists disagreed with the CPU reference on frame " + std::to_string(frame);
                         return false;
@@ -2228,7 +2455,7 @@ void main() { color = paint.value; }
                 }
             }
 
-            if (!Capture(color, image, error))
+            if (!Capture(color, image, error, CaptureOrigin::SceneViewport))
                 return false;
 
             // The sphere covers the middle of the frame; anything that differs from the background corner counts as drawn.
@@ -2259,13 +2486,25 @@ void main() { color = paint.value; }
                 error = "Viewport material drop could not pick the sphere from its object ID";
                 return false;
             }
-            const Ref<Material> edited = Material::CreateDefault();
-            edited->SetColor("albedo", glm::vec4(0.05f, 0.8f, 0.1f, 1.0f));
-            edited->SetFloat("roughness", 0.73f);
-            if (acceptance == DecalAcceptance::Coating)
+            const bool unlit = acceptance == DecalAcceptance::Unlit;
+            const bool toon = acceptance == DecalAcceptance::Toon || acceptance == DecalAcceptance::ToonCoating;
+            const bool standard = !unlit && !toon;
+            const char* colorParameter = standard ? "albedo" : "tint";
+            const Ref<Material> edited = unlit  ? Material::CreateUnlit(AssetManager::Get().Load<Shader>("Resources/Shaders/Unlit.asset"))
+                                         : toon ? Material::CreateToon(AssetManager::Get().Load<Shader>("Resources/Shaders/Toon.asset"))
+                                                : Material::CreateDefault();
+            edited->SetColor(colorParameter, glm::vec4(0.05f, 0.8f, 0.1f, 1.0f));
+            if (standard)
+                edited->SetFloat("roughness", 0.73f);
+            if (toon)
+            {
+                edited->SetFloat("thickness", 0.0f);
+                edited->SetFloat("toonSilhouetteWidth", 0.0f);
+            }
+            if (coating)
             {
                 edited->SetAlphaMode(AlphaMode::WeightedOIT);
-                edited->SetColor("albedo", glm::vec4(0.05f, 0.8f, 0.1f, 0.15f));
+                edited->SetColor(colorParameter, glm::vec4(0.05f, 0.8f, 0.1f, 0.15f));
                 Entity behind = scene->CreateEntity("Transparent object behind the paper label");
                 behind.GetTransform().SetPosition({ 0, 0, -0.8f });
                 auto& receiver = behind.AddComponent<MeshRendererComponent>();
@@ -2286,10 +2525,10 @@ void main() { color = paint.value; }
                 if (!renderFrame(frame))
                     return false;
             Image assignedImage;
-            if (!Capture(color, assignedImage, error))
+            if (!Capture(color, assignedImage, error, CaptureOrigin::SceneViewport))
                 return false;
-            if (std::abs(edited->GetDataParam<float>("roughness") - 0.73f) > 0.001f ||
-                std::abs(edited->GetDataParam<glm::vec4>("albedo").g - 0.8f) > 0.001f)
+            if ((standard && std::abs(edited->GetDataParam<float>("roughness") - 0.73f) > 0.001f) ||
+                std::abs(edited->GetDataParam<glm::vec4>(colorParameter).g - 0.8f) > 0.001f)
             {
                 error = "Rendering overwrote the assigned material's editable parameters";
                 return false;
@@ -2321,6 +2560,8 @@ void main() { color = paint.value; }
                     decal.SeamRotation = acceptance == DecalAcceptance::CylinderFull ? 0.0f : -90.0f;
                 }
                 const Ref<Material> sticker = Material::CreateDecal();
+                if (acceptance == DecalAcceptance::CameraInside)
+                    decal.Size = glm::vec3(10.0f);
                 if (!sticker || sticker->GetDomain() != MaterialDomain::Decal)
                 {
                     error = "The built-in decal material was not available";
@@ -2357,10 +2598,10 @@ void main() { color = paint.value; }
                             }
                         texture->WriteData(pixels, mip);
                     }
-                    const char* textureSlot = acceptance == DecalAcceptance::Correction ? "decalMaskMap" :
-                                              acceptance == DecalAcceptance::NormalDetail ? "decalNormalMap" : "decalColorMap";
-                    sticker->SetTexture(textureSlot,
-                                        static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(texture)));
+                    const char* textureSlot = acceptance == DecalAcceptance::Correction     ? "decalMaskMap"
+                                              : acceptance == DecalAcceptance::NormalDetail ? "decalNormalMap"
+                                                                                            : "decalColorMap";
+                    sticker->SetTexture(textureSlot, static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(texture)));
                     decal.EdgeFeather = 0.015f;
                 }
                 if (acceptance == DecalAcceptance::Correction)
@@ -2377,7 +2618,7 @@ void main() { color = paint.value; }
                 }
                 if (acceptance == DecalAcceptance::NormalDetail)
                     sticker->SetInt("decalChannels", 2);
-                if (acceptance == DecalAcceptance::Coating)
+                if (coating)
                 {
                     sticker->SetInt("decalChannels", 129);
                     decal.TargetMode = DecalTargetMode::Entity;
@@ -2393,7 +2634,9 @@ void main() { color = paint.value; }
                     return false;
                 }
                 Image decalImage;
-                if (!Capture(color, decalImage, error))
+                if (!Capture(color, decalImage, error, CaptureOrigin::SceneViewport))
+                    return false;
+                if (s_DecalShowcase && !s_DecalShowcase->WriteScene(scene, s_CurrentTestName, error))
                     return false;
                 uint32_t changed = 0;
                 for (uint32_t y = 0; y < image.Height; ++y)
@@ -2411,7 +2654,7 @@ void main() { color = paint.value; }
                     error = "The decal replaced the receiver's picking identity";
                     return false;
                 }
-                if (acceptance == DecalAcceptance::Coating)
+                if (coating)
                 {
                     Entity behind = scene->FindEntityByName("Transparent object behind the paper label");
                     const auto behindMaterial = behind.GetComponent<MeshRendererComponent>().GetMaterial(0);
@@ -2419,7 +2662,7 @@ void main() { color = paint.value; }
                     if (!renderFrame(7))
                         return false;
                     Image changedBehind;
-                    if (!Capture(color, changedBehind, error))
+                    if (!Capture(color, changedBehind, error, CaptureOrigin::SceneViewport))
                         return false;
                     for (uint32_t y = testSize / 2 - 4; y < testSize / 2 + 4; ++y)
                         for (uint32_t x = testSize / 2 - 4; x < testSize / 2 + 4; ++x)
@@ -2439,7 +2682,7 @@ void main() { color = paint.value; }
                     if (!renderFrame(7))
                         return false;
                     Image neutralImage;
-                    if (!Capture(color, neutralImage, error))
+                    if (!Capture(color, neutralImage, error, CaptureOrigin::SceneViewport))
                         return false;
                     for (uint32_t y = 0; y < image.Height; ++y)
                         for (uint32_t x = 0; x < image.Width; ++x)
@@ -2453,13 +2696,30 @@ void main() { color = paint.value; }
                     sticker->SetFloat("decalExposure", -0.5f);
                     sticker->SetFloat("decalContrast", 1.2f);
                 }
+                if (unlit)
+                {
+                    light.Intensity = 0.0f;
+                    if (!renderFrame(7))
+                        return false;
+                    Image withoutLight;
+                    if (!Capture(color, withoutLight, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    for (uint32_t y = 0; y < image.Height; ++y)
+                        for (uint32_t x = 0; x < image.Width; ++x)
+                            if (std::memcmp(decalImage.Pixel(x, y), withoutLight.Pixel(x, y), 3) != 0)
+                            {
+                                error = "A decal caused an unlit receiver to respond to lighting";
+                                return false;
+                            }
+                    light.Intensity = 3.0f;
+                }
                 meshRenderer.ReceiveDecals = false;
-                const uint32_t rejectionStart = acceptance == DecalAcceptance::Coating || acceptance == DecalAcceptance::Correction ? 8u : 7u;
+                const uint32_t rejectionStart = coating || acceptance == DecalAcceptance::Correction || unlit ? 8u : 7u;
                 for (uint32_t frame = rejectionStart; frame < rejectionStart + 2; ++frame)
                     if (!renderFrame(frame))
                         return false;
                 Image rejectedImage;
-                if (!Capture(color, rejectedImage, error))
+                if (!Capture(color, rejectedImage, error, CaptureOrigin::SceneViewport))
                     return false;
                 uint64_t difference = 0;
                 for (uint32_t y = 0; y < image.Height; ++y)
@@ -2472,6 +2732,240 @@ void main() { color = paint.value; }
                     return false;
                 }
                 image = std::move(decalImage);
+                if (acceptance == DecalAcceptance::Box)
+                {
+                    const auto originalMesh = meshRenderer.MeshHandle;
+                    const auto originalSettings = static_cast<const DecalSettings&>(decal);
+                    meshRenderer.ReceiveDecals = true;
+                    decal.Offset.z = 0.3f;
+                    decal.Size.z = 0.02f;
+                    const BufferLayout layout = {
+                        { ShaderDataType::Float3, VertexAttribute::Position },  { ShaderDataType::Float3, VertexAttribute::Normal },
+                        { ShaderDataType::Float3, VertexAttribute::Tangent },   { ShaderDataType::Float3, VertexAttribute::Bitangent },
+                        { ShaderDataType::Float2, VertexAttribute::TexCoord0 }, { ShaderDataType::Float4, VertexAttribute::BlendWeights },
+                        { ShaderDataType::Int4, VertexAttribute::BlendIndices }
+                    };
+                    const auto source = MeshData::Create(4, 6, layout);
+                    source->SetPositions({ { -0.45f, -0.45f, 0.3f }, { 0.45f, -0.45f, 0.3f }, { 0.45f, 0.45f, 0.3f }, { -0.45f, 0.45f, 0.3f } });
+                    source->SetNormals(Vector<glm::vec3>(4, { 0, 0, 1 }));
+                    source->SetTangents(Vector<glm::vec3>(4, { 1, 0, 0 }));
+                    source->SetBitangents(Vector<glm::vec3>(4, { 0, 1, 0 }));
+                    source->SetUVs(0, { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } });
+                    source->SetIndices({ 0, 1, 2, 2, 3, 0 });
+                    const Array<glm::vec4, 4> weights{ glm::vec4(1, 0, 0, 0), glm::vec4(1, 0, 0, 0), glm::vec4(1, 0, 0, 0), glm::vec4(1, 0, 0, 0) };
+                    const Array<glm::ivec4, 4> bones{ glm::ivec4(0), glm::ivec4(0), glm::ivec4(1), glm::ivec4(1) };
+                    source->SetVertexData(VertexAttribute::BlendWeights, weights.data(), sizeof(weights));
+                    source->SetVertexData(VertexAttribute::BlendIndices, bones.data(), sizeof(bones));
+                    const auto skeleton =
+                      Skeleton::Create({ { "Root", INVALID_BONE_INDEX, Transform(), glm::mat4(1) }, { "Upper", 0, Transform(), glm::mat4(1) } });
+                    auto& animation = sphereEntity.AddComponent<AnimationComponent>();
+                    animation.Deformer = CreateRef<MeshDeformer>();
+                    SkeletonPose pose(skeleton);
+                    if (!animation.Deformer->Initialize(source, skeleton) || !animation.Deformer->Deform(&pose))
+                    {
+                        error = "Could not initialize the skinned decal receiver";
+                        return false;
+                    }
+                    MeshDesc description;
+                    description.Data = animation.Deformer->GetOutputMeshData();
+                    description.Usage = MeshUsage::Dynamic | MeshUsage::CpuCached;
+                    description.SubMeshes.emplace_back(0, 6, DrawMode::TRIANGLE_LIST);
+                    animation.RuntimeMesh = Mesh::Create(description);
+                    animation.RuntimeMeshHandle = static_asset_cast<Mesh>(AssetManager::Get().CreateAssetHandle(animation.RuntimeMesh));
+                    if (!renderFrame(20))
+                        return false;
+                    Image bindPose;
+                    if (!Capture(color, bindPose, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    const auto* center = bindPose.Pixel(testSize / 2, testSize / 2);
+                    if (center[0] <= center[1])
+                    {
+                        String captureError;
+                        SaveBmp(Path("artifacts/decals") / ("skin-bind-" + BackendName(RenderAPI::GetAPI()) + ".bmp"), bindPose, captureError);
+                        error = "The thin decal volume did not cover the skinned receiver's bind pose: " + std::to_string(center[0]) + "," +
+                                std::to_string(center[1]) + "," + std::to_string(center[2]);
+                        return false;
+                    }
+                    pose.GetLocalTransform(1).SetPosition({ 0.4f, 0, 0 });
+                    pose.RebuildMatrices();
+                    animation.Deformer->Deform(&pose);
+                    animation.RuntimeMesh->WriteData(animation.Deformer->GetOutputMeshData(), true);
+                    if (!renderFrame(21))
+                        return false;
+                    Image deformed;
+                    if (!Capture(color, deformed, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    const auto* projectedCenter = deformed.Pixel(testSize / 2, testSize / 2);
+                    const auto* outsideProjector = deformed.Pixel(180, testSize / 2);
+                    if (projectedCenter[0] <= projectedCenter[1] || outsideProjector[1] <= outsideProjector[0])
+                    {
+                        error = "The decal followed skin coordinates instead of its fixed world projection";
+                        return false;
+                    }
+                    uint32_t changed = 0;
+                    for (uint32_t y = 0; y < deformed.Height; ++y)
+                        for (uint32_t x = 0; x < deformed.Width; ++x)
+                            changed += std::memcmp(deformed.Pixel(x, y), bindPose.Pixel(x, y), 3) != 0;
+                    if (changed < 100)
+                    {
+                        error = "Skinning did not move the receiver through the fixed decal projection";
+                        return false;
+                    }
+                    // Move the entire skin just behind the thin projection band. It must match disabled reception.
+                    pose.GetLocalTransform(0).SetPosition({ 0, 0, -0.04f });
+                    pose.RebuildMatrices();
+                    animation.Deformer->Deform(&pose);
+                    animation.RuntimeMesh->WriteData(animation.Deformer->GetOutputMeshData(), true);
+                    if (!renderFrame(22))
+                        return false;
+                    Image behindVolume;
+                    if (!Capture(color, behindVolume, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    meshRenderer.ReceiveDecals = false;
+                    if (!renderFrame(23))
+                        return false;
+                    Image excluded;
+                    if (!Capture(color, excluded, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    for (uint32_t y = 0; y < excluded.Height; ++y)
+                        for (uint32_t x = 0; x < excluded.Width; ++x)
+                            if (std::memcmp(excluded.Pixel(x, y), behindVolume.Pixel(x, y), 3) != 0)
+                            {
+                                error = "A decal leaked onto skinned geometry behind its thin projection volume";
+                                return false;
+                            }
+                    sphereEntity.RemoveComponent<AnimationComponent>();
+                    meshRenderer.MeshHandle = originalMesh;
+                    static_cast<DecalSettings&>(decal) = originalSettings;
+                }
+                if (acceptance == DecalAcceptance::CylinderFull)
+                {
+                    meshRenderer.ReceiveDecals = true;
+                    decal.UVScale = glm::vec2(256.0f);
+                    if (!renderFrame(20))
+                        return false;
+                    Image minified;
+                    if (!Capture(color, minified, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    // The authored coarse checker mips are constant 0.6. Compare with that constant
+                    // sampled directly, including the front-facing seam and compatibility atlas wrapping.
+                    const auto checker = sticker->GetTextureHandle("decalColorMap");
+                    sticker->SetTexture("decalColorMap", Texture::WHITE);
+                    sticker->SetColor("decalColor", { 0.54f, 0.018f, 0.012f, 1 });
+                    if (!renderFrame(21))
+                        return false;
+                    Image average;
+                    if (!Capture(color, average, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    for (uint32_t y = 0; y < average.Height; ++y)
+                        for (uint32_t x = 0; x < average.Width; ++x)
+                            for (uint32_t channel = 0; channel < 3; ++channel)
+                                if (std::abs(int(minified.Pixel(x, y)[channel]) - int(average.Pixel(x, y)[channel])) > 2)
+                                {
+                                    error = "Minified cylinder wrap did not converge to its authored mip color at " + std::to_string(x) + "," +
+                                            std::to_string(y);
+                                    return false;
+                                }
+                    sticker->SetTexture("decalColorMap", checker);
+                }
+                if (vulkan && acceptance == DecalAcceptance::Box)
+                {
+                    // Compare the first changed TAA frame with the same surface rendered without history.
+                    // Warm each state first so movement, fading, material edits and removal all exercise live history.
+                    meshRenderer.ReceiveDecals = true;
+                    auto settings = renderer.GetRenderPipelineSettings();
+                    uint32_t frame = 30;
+                    for (uint32_t change = 0; change < 4; ++change)
+                    {
+                        settings.EnableTaa = true;
+                        renderer.SetRenderPipelineSettings(settings);
+                        for (uint32_t warmup = 0; warmup < 8; ++warmup)
+                            if (!renderFrame(frame++))
+                                return false;
+                        switch (change)
+                        {
+                        case 0:
+                            projector.SetPosition({ 0.2f, 0, 0 });
+                            break;
+                        case 1:
+                            decal.Lifetime = 1.0f;
+                            decal.FadeOut = 1.0f;
+                            decal.Age = 1.5f;
+                            break;
+                        case 2:
+                            sticker->SetColor("decalColor", { 0.02f, 0.03f, 0.9f, 1.0f });
+                            break;
+                        case 3:
+                            scene->DestroyEntity(projector);
+                            break;
+                        }
+                        if (!renderFrame(frame++))
+                            return false;
+                        Image temporal;
+                        if (!Capture(color, temporal, error, CaptureOrigin::SceneViewport))
+                            return false;
+                        settings.EnableTaa = false;
+                        renderer.SetRenderPipelineSettings(settings);
+                        if (!renderFrame(frame++))
+                            return false;
+                        Image current;
+                        if (!Capture(color, current, error, CaptureOrigin::SceneViewport))
+                            return false;
+                        for (uint32_t y = 0; y < current.Height; ++y)
+                            for (uint32_t x = 0; x < current.Width; ++x)
+                                for (uint32_t channel = 0; channel < 3; ++channel)
+                                    if (std::abs(int(temporal.Pixel(x, y)[channel]) - int(current.Pixel(x, y)[channel])) > 1)
+                                    {
+                                        error = "Decal TAA history survived change " + std::to_string(change) + " at " + std::to_string(x) + "," +
+                                                std::to_string(y);
+                                        return false;
+                                    }
+                    }
+                }
+                if (acceptance == DecalAcceptance::Overlap)
+                {
+                    meshRenderer.ReceiveDecals = true;
+                    const auto settings = decal;
+                    Entity upperEntity = scene->CreateEntity("Overlapping blue decal");
+                    auto& upper = upperEntity.AddComponent<DecalComponent>();
+                    upper = settings;
+                    upper.SortOrder = 1;
+                    upperEntity.SetPosition({ 0.15f, 0, 0 });
+                    auto blue = Material::CreateDecal();
+                    blue->SetColor("decalColor", { 0.02f, 0.03f, 0.9f, 1.0f });
+                    upper.Material = static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(blue));
+                    if (!renderFrame(20))
+                        return false;
+                    Image higher;
+                    if (!Capture(color, higher, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    upper.SortOrder = -1;
+                    if (!renderFrame(21))
+                        return false;
+                    Image lower;
+                    if (!Capture(color, lower, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    const auto* original = image.Pixel(testSize / 2, testSize / 2);
+                    const auto* below = lower.Pixel(testSize / 2, testSize / 2);
+                    const auto* above = higher.Pixel(testSize / 2, testSize / 2);
+                    if (std::memcmp(original, below, 3) != 0 || above[2] <= above[0] || below[0] <= below[2])
+                    {
+                        error = "Changing decal sort order did not restore the underlying red layer";
+                        return false;
+                    }
+                    scene->DestroyEntity(upperEntity);
+                    if (!renderFrame(22))
+                        return false;
+                    Image removed;
+                    if (!Capture(color, removed, error, CaptureOrigin::SceneViewport))
+                        return false;
+                    if (std::memcmp(original, removed.Pixel(testSize / 2, testSize / 2), 3) != 0)
+                    {
+                        error = "Removing an overlapping decal did not restore the underlying layer";
+                        return false;
+                    }
+                    image = std::move(higher);
+                }
                 if (acceptance == DecalAcceptance::Benchmark)
                 {
                     meshRenderer.ReceiveDecals = true;
@@ -2481,7 +2975,8 @@ void main() { color = paint.value; }
                     fs::create_directories(output.parent_path());
                     std::ofstream metrics(output);
                     metrics << "{\"device\":\"" << EscapeJson(RenderAPI::Get().GetCapabilities().DeviceName)
-                            << "\",\"resolution\":256,\"measurement\":\"CPU submission plus GPU completion latency\",\"scenarios\":[";
+                            << "\",\"resolution\":256,\"taa\":false,\"bloom\":false,\"gtao\":false,"
+                               "\"measurement\":\"CPU submission plus GPU completion latency\",\"scenarios\":[";
                     uint32_t frame = 9;
                     for (uint32_t scenario = 0; scenario < 3; ++scenario)
                     {
@@ -2508,6 +3003,9 @@ void main() { color = paint.value; }
                                 return false;
                         const auto started = std::chrono::steady_clock::now();
                         constexpr uint32_t samples = 12;
+                        double gridMilliseconds = 0;
+                        uint32_t gridSamples = 0;
+                        uint64_t lastGridFrame = 0;
                         for (uint32_t sample = 0; sample < samples; ++sample)
                         {
                             if (!renderFrame(frame++))
@@ -2518,14 +3016,35 @@ void main() { color = paint.value; }
                                 error = "Decal benchmark completion readback failed";
                                 return false;
                             }
+                            const auto stats = SceneRenderer::GetStatistics().Decals;
+                            if (stats.GpuBuiltLists && stats.ClusterStatisticsAvailable && stats.StatisticsFrame != lastGridFrame)
+                            {
+                                gridMilliseconds += stats.GridGpuMilliseconds;
+                                ++gridSamples;
+                                lastGridFrame = stats.StatisticsFrame;
+                            }
                         }
                         const double milliseconds =
                           std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count() / samples;
+                        // Validate the larger and overflowing lists outside the timed interval.
+                        if (!renderFrame(frame++, true))
+                            return false;
                         const auto stats = SceneRenderer::GetStatistics().Decals;
+                        if (!stats.ClusterStatisticsAvailable || (scenario == 2 && stats.OverflowClusters == 0))
+                        {
+                            error = "Decal benchmark did not receive completed cluster overflow statistics";
+                            return false;
+                        }
                         if (scenario)
                             metrics << ',';
                         metrics << "{\"sceneDecals\":" << count << ",\"visible\":" << stats.Visible
-                                << ",\"overflowClusters\":" << stats.OverflowClusters << ",\"milliseconds\":" << milliseconds << '}';
+                                << ",\"overflowClusters\":" << stats.OverflowClusters << ",\"milliseconds\":" << milliseconds
+                                << ",\"gridGpuSamples\":" << gridSamples << ",\"gridGpuMilliseconds\":";
+                        if (gridSamples)
+                            metrics << gridMilliseconds / gridSamples;
+                        else
+                            metrics << "null";
+                        metrics << '}';
                     }
                     metrics << "]}";
                     if (!metrics)
@@ -2535,6 +3054,20 @@ void main() { color = paint.value; }
                     }
                 }
             }
+            return true;
+        }
+
+        bool RenderCoatingCore(Image& image, String& error, DecalAcceptance acceptance, RenderingPath path = RenderingPath::ForwardPlus)
+        {
+            Image scene;
+            if (!RenderPrimitiveLitSphere(scene, error, acceptance, path))
+                return false;
+            // This rectangle is fully inside the authored opaque label. Compare it
+            // independently of the two backends' different glass compositors.
+            image = Image(65, 40);
+            for (uint32_t y = 0; y < image.Height; ++y)
+                for (uint32_t x = 0; x < image.Width; ++x)
+                    std::memcpy(image.Pixel(x, y), scene.Pixel(x + 95, y + 108), 4);
             return true;
         }
 
@@ -2562,14 +3095,24 @@ void main() { color = paint.value; }
             toonTolerance.MaxMeanAbsoluteError = 8.0;
             toonTolerance.MaxFailingPixelRatio = 0.02;
             toonTolerance.CompareAlpha = false;
-            Tolerance primitiveTolerance;
-            // The OpenGL compatibility renderer shades the sphere differently from the Vulkan GPU-driven path; the test
-            // asserts visibility itself, so the golden only guards against gross layout changes.
-            primitiveTolerance.PixelThreshold = 8u;
-            primitiveTolerance.MaxChannelError = 255u;
-            primitiveTolerance.MaxMeanAbsoluteError = 48.0;
-            primitiveTolerance.MaxFailingPixelRatio = 0.15;
-            primitiveTolerance.CompareAlpha = false;
+            Tolerance decalTolerance;
+            // Opaque surfaces share lighting and tone mapping. Allow the measured
+            // background clear and narrow cylindrical seam/interpolation differences.
+            decalTolerance.PixelThreshold = 8u;
+            decalTolerance.MaxChannelError = 40u;
+            decalTolerance.MaxMeanAbsoluteError = 5.2;
+            decalTolerance.MaxFailingPixelRatio = 0.001;
+            decalTolerance.CompareAlpha = false;
+            Tolerance coatingTolerance = decalTolerance;
+            // Sorted LDR glass and HDR weighted OIT differ outside the label core.
+            // Dedicated core captures below retain a strict coating comparison.
+            coatingTolerance.MaxChannelError = 160u;
+            coatingTolerance.MaxMeanAbsoluteError = 10.0;
+            coatingTolerance.MaxFailingPixelRatio = 0.10;
+            Tolerance coatingCoreTolerance = decalTolerance;
+            coatingCoreTolerance.PixelThreshold = 12u;
+            coatingCoreTolerance.MaxChannelError = 16u;
+            coatingCoreTolerance.MaxMeanAbsoluteError = 0.5;
             return {
                 { "solid-clear", exact, RenderSolidClear },
                 { "persistent-sprites", shaderTolerance, RenderPersistentSprites },
@@ -2584,39 +3127,77 @@ void main() { color = paint.value; }
                 { "post-sharpening", shaderTolerance, RenderPostSharpening },
                 { "weighted-oit", shaderTolerance, RenderWeightedOit },
                 { "toon-silhouette", toonTolerance, RenderToonSilhouette },
-                { "primitive-lit-sphere", primitiveTolerance, [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error); } },
-                { "decal-curved-forward", primitiveTolerance,
+                { "primitive-lit-sphere", decalTolerance, [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error); } },
+                { "decal-curved-forward", decalTolerance,
                   [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Box); } },
-                { "decal-curved-deferred", primitiveTolerance,
+                { "decal-curved-deferred", decalTolerance,
                   [](Image& image, String& error) {
                       return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Box, RenderingPath::DeferredPlus);
                   } },
-                { "decal-tapered-partial", primitiveTolerance,
+                { "decal-tapered-partial", decalTolerance,
                   [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::CylinderPartial); } },
-                { "decal-tapered-wrap", primitiveTolerance,
+                { "decal-tapered-wrap", decalTolerance,
                   [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::CylinderFull); } },
-                { "decal-glass-coating", primitiveTolerance,
+                { "decal-glass-coating", coatingTolerance,
                   [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Coating); } },
-                { "decal-masked-correction", primitiveTolerance,
+                { "decal-toon-coating", coatingTolerance,
+                  [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::ToonCoating); } },
+                { "decal-toon-coating-deferred", coatingTolerance,
+                  [](Image& image, String& error) {
+                      return RenderPrimitiveLitSphere(image, error, DecalAcceptance::ToonCoating, RenderingPath::DeferredPlus);
+                  } },
+                { "decal-glass-coating-core", coatingCoreTolerance,
+                  [](Image& image, String& error) { return RenderCoatingCore(image, error, DecalAcceptance::Coating); } },
+                { "decal-toon-coating-core", coatingCoreTolerance,
+                  [](Image& image, String& error) { return RenderCoatingCore(image, error, DecalAcceptance::ToonCoating); } },
+                { "decal-toon-coating-core-deferred", coatingCoreTolerance,
+                  [](Image& image, String& error) {
+                      return RenderCoatingCore(image, error, DecalAcceptance::ToonCoating, RenderingPath::DeferredPlus);
+                  } },
+                { "decal-toon", decalTolerance,
+                  [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Toon); } },
+                { "decal-toon-deferred", decalTolerance,
+                  [](Image& image, String& error) {
+                      return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Toon, RenderingPath::DeferredPlus);
+                  } },
+                { "decal-masked-correction", decalTolerance,
                   [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Correction); } },
-                { "decal-masked-correction-deferred", primitiveTolerance,
+                { "decal-masked-correction-deferred", decalTolerance,
                   [](Image& image, String& error) {
                       return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Correction, RenderingPath::DeferredPlus);
                   } },
-                { "decal-wetness", primitiveTolerance,
+                { "decal-wetness", decalTolerance,
                   [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Wetness); } },
-                { "decal-wetness-deferred", primitiveTolerance,
+                { "decal-wetness-deferred", decalTolerance,
                   [](Image& image, String& error) {
                       return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Wetness, RenderingPath::DeferredPlus);
                   } },
-                { "decal-normal-detail", primitiveTolerance,
+                { "decal-normal-detail", decalTolerance,
                   [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::NormalDetail); } },
-                { "decal-normal-detail-deferred", primitiveTolerance,
+                { "decal-normal-detail-deferred", decalTolerance,
                   [](Image& image, String& error) {
                       return RenderPrimitiveLitSphere(image, error, DecalAcceptance::NormalDetail, RenderingPath::DeferredPlus);
                   } },
-                { "decal-benchmark", primitiveTolerance,
+                { "decal-unlit", decalTolerance,
+                  [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Unlit); } },
+                { "decal-unlit-deferred", decalTolerance,
+                  [](Image& image, String& error) {
+                      return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Unlit, RenderingPath::DeferredPlus);
+                  } },
+                { "decal-benchmark", decalTolerance,
                   [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Benchmark); } },
+                { "decal-camera-inside", decalTolerance,
+                  [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::CameraInside); } },
+                { "decal-camera-inside-deferred", decalTolerance,
+                  [](Image& image, String& error) {
+                      return RenderPrimitiveLitSphere(image, error, DecalAcceptance::CameraInside, RenderingPath::DeferredPlus);
+                  } },
+                { "decal-ordered-overlap", decalTolerance,
+                  [](Image& image, String& error) { return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Overlap); } },
+                { "decal-ordered-overlap-deferred", decalTolerance,
+                  [](Image& image, String& error) {
+                      return RenderPrimitiveLitSphere(image, error, DecalAcceptance::Overlap, RenderingPath::DeferredPlus);
+                  } },
             };
         }
 
@@ -2666,6 +3247,11 @@ void main() { color = paint.value; }
                 options.ShowHelp = true;
             else if (argument == "--update-references")
                 options.UpdateReferences = true;
+            else if (argument == "--benchmark-sprites" || argument == "--benchmark-sprites-smoke")
+            {
+                options.BenchmarkSprites = true;
+                options.BenchmarkSpritesSmoke = argument == "--benchmark-sprites-smoke";
+            }
             else if (argument == "--benchmark-no-cache")
                 options.BenchmarkNoCache = true;
             else if (argument == "--benchmark-legacy-textures")
@@ -2713,6 +3299,13 @@ void main() { color = paint.value; }
                     return false;
                 options.Artifacts = value;
             }
+            else if (argument == "--export-decal-scenes")
+            {
+                const char* value = readValue(argument);
+                if (!value)
+                    return false;
+                options.DecalShowcase = value;
+            }
             else if (argument == "--benchmark-import")
             {
                 const char* value = readValue(argument);
@@ -2754,8 +3347,11 @@ void main() { color = paint.value; }
                   << "  --backend vulkan|opengl   Select the renderer backend\n"
                   << "  --references PATH        Golden BMP directory\n"
                   << "  --artifacts PATH         Actual, expected, diff, and JSON output\n"
+                  << "  --export-decal-scenes PATH  Export decal source scenes to an empty editor project\n"
                   << "  --filter TEXT            Run cases whose names contain TEXT\n"
                   << "  --validate-importers     Check texture and model import contracts\n"
+                  << "  --benchmark-sprites    100,000 moving ECS sprites, 300 warm-up + 1,800 measured frames\n"
+                  << "  --benchmark-sprites-smoke    Same workload, 5 warm-up + 10 measured frames; not an acceptance run\n"
                   << "  --benchmark-texture PATH [--benchmark-texture-normal]\n"
                   << "                           Compare texture compression time and reconstruction error\n"
                   << "  --benchmark-project PATH --benchmark-scene PATH\n"
@@ -2772,6 +3368,8 @@ void main() { color = paint.value; }
     {
         const Path backendArtifacts = options.Artifacts / BackendName(options.Backend);
         fs::create_directories(backendArtifacts);
+        if (options.BenchmarkSprites)
+            return RunSprite2DBenchmark(backendArtifacts, options.BenchmarkSpritesSmoke);
         if (!options.BenchmarkTexture.empty())
         {
             const auto image = ImageLoader::Load(ImageLoadRequest::FromFile(options.BenchmarkTexture));
@@ -2978,6 +3576,8 @@ void main() { color = paint.value; }
             return report ? 0 : 1;
         }
         const Vector<TestCase> cases = BuildCases();
+        if (!options.DecalShowcase.empty())
+            s_DecalShowcase = CreateScope<DecalShowcaseWriter>(options.DecalShowcase);
         Vector<TestResult> results;
         uint32_t failed = 0u;
         for (const TestCase& test : cases)
@@ -2988,6 +3588,7 @@ void main() { color = paint.value; }
             TestResult result;
             result.Name = test.Name;
             Image actual;
+            s_CurrentTestName = test.Name;
             if (!test.Render(actual, result.Message))
             {
                 if (actual.IsValid())

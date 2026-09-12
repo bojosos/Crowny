@@ -4,7 +4,7 @@ Scene: ComplexScene
 ImGuiLayout: ""
 Environment: 00000000-0000-0000-0000-000000000000
 Entities:
-  - Entity: f6df626f-bb32-493d-927a-7a62902056f7
+  - Entity: 53f2332d-be81-4c79-920f-f64c6be28bc2
     TagComponent:
       Tag: GrandChild
     TransformComponent:
@@ -49,7 +49,7 @@ Entities:
     RelationshipComponent:
       Children:
         []
-  - Entity: ad6ef191-1e7d-414e-8a8f-139b693e405a
+  - Entity: db3a068f-081c-4977-a2ac-8d955cb9cccd
     TagComponent:
       Tag: Child2
     TransformComponent:
@@ -58,7 +58,7 @@ Entities:
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
-        - f6df626f-bb32-493d-927a-7a62902056f7
+        - 53f2332d-be81-4c79-920f-f64c6be28bc2
     Rigidbody3DComponent:
       BodyType: 1
       Mass: 3.5
@@ -111,9 +111,9 @@ Entities:
       Layer: 0
       Mask: 4294967295
       Group: 0
-      Mesh: dc5ef6b2-1b97-4d42-b632-6111ee7f5ef2
+      Mesh: f05307d8-476d-42ce-8253-33efe6da3784
       Convex: true
-  - Entity: 54fdfcf6-859a-4db9-b302-afe36cb496fa
+  - Entity: bc0f3eef-7f35-4e92-bd57-de9b7a0d6143
     TagComponent:
       Tag: Child1
     TransformComponent:
@@ -151,7 +151,7 @@ Entities:
     RelationshipComponent:
       Children:
         []
-  - Entity: 8019b63a-7cf0-4b8c-ad26-54e402ad8763
+  - Entity: b678d890-eedb-4798-a7c0-781423b3538f
     TagComponent:
       Tag: Parent
     TransformComponent:
@@ -160,8 +160,8 @@ Entities:
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
-        - 54fdfcf6-859a-4db9-b302-afe36cb496fa
-        - ad6ef191-1e7d-414e-8a8f-139b693e405a
+        - bc0f3eef-7f35-4e92-bd57-de9b7a0d6143
+        - db3a068f-081c-4977-a2ac-8d955cb9cccd
     LightComponent:
       Type: 2
       Color: [0.400000006, 0.600000024, 0.800000012]

@@ -214,7 +214,7 @@ namespace Crowny
         m_Camera.SetViewportSize(static_cast<float>(m_Width), static_cast<float>(m_Height));
         RenderLightData keyLight;
         keyLight.DirectionOuterCosine = glm::vec4(glm::normalize(glm::vec3(-0.6f, -0.8f, -1.0f)), -1.0f);
-        keyLight.ColorIntensity = glm::vec4(1.0f, 0.96f, 0.9f, 10000.0f);
+        keyLight.ColorIntensity = glm::vec4(1.0f, 0.96f, 0.9f, 3.0f);
         keyLight.Metadata =
           glm::uvec4(static_cast<uint32_t>(LightType::Directional),
                      static_cast<uint32_t>(RenderLightFlags::Enabled | RenderLightFlags::AffectDiffuse | RenderLightFlags::AffectSpecular), 0u, 0u);

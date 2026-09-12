@@ -93,6 +93,7 @@ def build_parser():
     render_parser.add_argument("--artifact-root", default="artifacts/render-tests")
     render_parser.add_argument("--update-references", action="store_true")
     render_parser.add_argument("--no-build", action="store_true")
+    render_parser.add_argument("--benchmark-sprites", choices=["full", "smoke"])
 
     subparsers.add_parser(
         "sccache-probe", help="Validate sccache through MSBuild and record the feasibility stamp."
@@ -223,6 +224,7 @@ def main(argv=None):
                 artifact_root=args.artifact_root,
                 update_references=args.update_references,
                 no_build=args.no_build,
+                benchmark_sprites=args.benchmark_sprites,
             )
             return 0
 

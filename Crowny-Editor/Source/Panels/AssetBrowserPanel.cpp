@@ -132,6 +132,18 @@ namespace Crowny
         return entry->ElementName;
     }
 
+    static int SelectAssetNameWithoutExtension(ImGuiInputTextCallbackData* data)
+    {
+        if (*static_cast<const bool*>(data->UserData))
+        {
+            const String extension = Path(data->Buf).extension().string();
+            data->SelectionStart = 0;
+            data->SelectionEnd = data->BufTextLen - static_cast<int>(extension.size());
+            data->CursorPos = data->SelectionEnd;
+        }
+        return 0;
+    }
+
     static String FormatFileSize(uint32_t bytes)
     {
         if (bytes >= 1024 * 1024)
@@ -1413,13 +1425,16 @@ namespace Crowny
                             m_RenamingText.clear();
                         };
                         ImGui::SetNextItemWidth(std::max(80.0f, ImGui::GetColumnWidth() - iconSize - 24.0f));
+                        bool selectName = m_RenameNeedsFocus && entry->Type == LibraryEntryType::File;
                         if (m_RenameNeedsFocus)
                         {
                             ImGui::SetKeyboardFocusHere();
                             m_RenameNeedsFocus = false;
                         }
                         if (ImGui::InputText("##RenameAssetList", &m_RenamingText,
-                                             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                                             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue |
+                                               ImGuiInputTextFlags_CallbackAlways,
+                                             SelectAssetNameWithoutExtension, &selectName))
                             completeRename();
                         else if (ImGui::IsItemDeactivated())
                             completeRename();
@@ -1540,13 +1555,16 @@ namespace Crowny
                         };
                         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
 
+                        bool selectName = m_RenameNeedsFocus && entry->Type == LibraryEntryType::File;
                         if (m_RenameNeedsFocus)
                         {
                             ImGui::SetKeyboardFocusHere();
                             m_RenameNeedsFocus = false;
                         }
                         if (ImGui::InputText("##RenameFile", &m_RenamingText,
-                                             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                                             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue |
+                                               ImGuiInputTextFlags_CallbackAlways,
+                                             SelectAssetNameWithoutExtension, &selectName))
                             completeRename();
                         ImGui::PopStyleVar();
 

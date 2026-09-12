@@ -532,7 +532,9 @@ TEST_CASE("Built-in pack contains current material shader assets", "[Shader][Ass
         std::ifstream looseStream(loosePath, std::ios::binary);
         REQUIRE(looseStream);
         const Vector<uint8_t> looseBytes((std::istreambuf_iterator<char>(looseStream)), std::istreambuf_iterator<char>());
-        CHECK(packedBytes == looseBytes);
+        // Avoid expanding entire SPIR-V blobs in Catch's text reporter on failure.
+        const bool matchesLooseAsset = packedBytes == looseBytes;
+        CHECK(matchesLooseAsset);
     }
 }
 

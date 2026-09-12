@@ -46,6 +46,7 @@ layout(location = 2) in vec3 decalWorldPosition;
 layout(location = 3) in vec3 decalGeometricNormal;
 #define CW_DECAL_COMPATIBILITY
 #include "CrownyDecals.glslinc"
+#include "CrownyToneMapping.glslinc"
 layout(set = 2, binding = 6) uniform cw_DecalDraw { uvec4 receiver; } cwDecalDraw;
 
 layout (binding = 1) uniform UnlitParams {
@@ -73,5 +74,5 @@ void main()
     bool core = cwDecalCoatingCore(originalOpacity, outColor.a);
     if (cwDecalConstants.counts.w == 1u) { if (!core) discard; outColor.a = 1.0; }
     else if (cwDecalConstants.counts.w == 2u && core) discard;
-    outColor.rgb += emission;
+    outColor.rgb = acesFitted(outColor.rgb + emission);
 }

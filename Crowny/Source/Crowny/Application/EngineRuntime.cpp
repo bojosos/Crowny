@@ -9,7 +9,6 @@
 #include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetListener.h"
 #include "Crowny/Assets/AssetManager.h"
-#include "Crowny/Renderer/PrimitiveMeshLibrary.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/BuiltInResourcePack.h"
 #include "Crowny/Common/ConsoleBuffer.h"
@@ -23,6 +22,7 @@
 #include "Crowny/RenderAPI/SamplerState.h"
 #include "Crowny/Renderer/FontManager.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/PrimitiveMeshLibrary.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
@@ -288,10 +288,12 @@ namespace Crowny
         params.Width = 1;
         params.Height = 1;
         params.Format = TextureFormat::RGBA8;
+        // These are linear shader constants, including the neutral tangent-space normal.
+        params.sRGB = false;
 
         const auto createSolidTexture = [&params](StringView debugName, const glm::vec4& color) {
             params.DebugName = debugName;
-            Ref<PixelData> data = PixelData::Create(1, 1, 1, TextureFormat::RGBA8);
+            Ref<PixelData> data = PixelData::Create(1, 1, 1, params.Format);
             data->SetColorAt(0, 0, color);
             Ref<Texture> texture = Texture::Create(params);
             texture->WriteData(*data);
@@ -300,8 +302,11 @@ namespace Crowny
 
         Texture::WHITE = createSolidTexture("BuiltIn/White", glm::vec4(1.0f));
         Texture::BLACK = createSolidTexture("BuiltIn/Black", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        // Half floats represent 0.5 exactly; UNORM8 tilts the supposedly neutral normal.
+        params.Format = TextureFormat::RGBA16F;
         Texture::NORMAL = createSolidTexture("BuiltIn/Normal", glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
 
+        params.Format = TextureFormat::RGBA8;
         params.DebugName = "BuiltIn/Error";
         params.Width = 2;
         params.Height = 2;

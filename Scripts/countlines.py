@@ -1,100 +1,94 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
+"""Count physical and nonblank lines in first-party source, including comments.
 
-from os import walk, path, chdir
-from os.path import isfile, join
-import sys
+Git supplies tracked and non-ignored untracked files. Assets, documentation,
+vendored code and generated outputs are excluded. This is not a lexer-based
+count of statements or comment-free code. Run with -a to audit every file.
+"""
 
-# Set cwd to the script directory
-ap = path.abspath(__file__)
-chdir(path.dirname(ap))
-
-dirs = ["../Crowny/Source", "../Crowny/Resources/Shaders", "../Crowny-Editor/Source", "../Crowny-Sharp/Source", "../Crowny-Editor/Resources/Shaders", "../Crowny-Sandbox/Source"]
-files = ["countlines.py", "../README.md", "../premake5.lua", "genprojects.bat", "../Crowny/Dependencies/glfw/premake5.lua", "../Crowny/Dependencies/glad/premake5.lua", "../.gitignore"]
-
-linecount = 0
-filecount = 0
-charcount = 0
-
-fcc = 0
-largestfcc = 0
-largestfln = 0
-largestfn = ""
-
-class File:
-    def __init__(self, name, charcount, linecount):
-        self.name = name
-        self.charcount = charcount
-        self.linecount = linecount
-
-    def __str__(self):
-        return "File %s, characters %d, lines %d" % (self.name, self.charcount, self.linecount)
-
-readfiles = []
-
-for dir in dirs:
-    dirlines = 0
-    dirchars = 0
-    for (dirpath, dirname, filename) in walk(dir):
-        for fff in filename:
-            if fff.endswith(".spv") or fff.endswith(".asset") or fff=="dte80a.tlh":
-              continue
-            fcc = 0
-            path = join(dirpath, fff)
-            f = open(path, "r")
-            print(fff)
-            flines = f.readlines()
-            if "-a" in sys.argv:
-                print("%s : %d" % (path, flines))
-            filecount += 1
-            linecount += len(flines)
-            dirlines += len(flines)
-            for l in flines:
-                dirchars += len(l)
-                fcc += len(l)
-                charcount += len(l)
-            if largestfcc < fcc:
-                largestfcc = fcc
-                largestfn = fff
-                largestfln = len(flines)
-            readfiles.append(File(str(path), fcc, len(flines)))
-
-    print("Directory: %s : %d, %d" % (dir, dirlines, dirchars))
-
-for file in files:
-    flines = open(file, "r").readlines()
-    filecount += 1
-    linecount += len(flines)
-    filechars = 0
-    fcc = 0
-    for l in flines:
-        charcount += len(l)
-        filechars += len(l)
-        fcc += len(l)
-    if largestfcc < fcc:
-        largestfcc = fcc
-        largestfn = file
-        largestfln = len(flines)
-    readfiles.append(File(file, fcc, len(flines)))
-
-    print("%s : %d, %d" % (file, len(flines), filechars))
-
-def short_info():
-    print("%d lines in %d files, with an average of %f lines per file with a total character length of %d" % (linecount, filecount, linecount / filecount, charcount))
-    print("Largest file %s, with %d lines and %d characters" % (largestfn, largestfln, largestfcc))
-def long_info():
-    import operator
-    readfiles.sort(key=operator.attrgetter('charcount'))
-    for f in readfiles:
-        print(f)
-    short_info()
-long_info()
-
+import argparse
+from collections import defaultdict
 from datetime import datetime
-now = datetime.now()
+from pathlib import Path
+import subprocess
 
-if not '--nowrite' in sys.argv:
-    out = open("count.log", "a")
-    out.write(now.strftime("%d/%m/%Y %H:%M:%S") + "\n")
-    out.write("%d lines, %d files, %f avgl, %d characters\n" % (linecount, filecount, linecount / filecount, charcount))
-    out.write("%s, %d lines, %d characters\n" % (largestfn, largestfln, largestfcc))
-    out.close()
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE_EXTENSIONS = {
+    ".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx", ".inl",
+    ".cs", ".py", ".lua", ".sh", ".bat", ".cmd", ".ps1",
+    ".glsl", ".glslinc", ".vert", ".frag", ".geom", ".comp", ".hlsl",
+    ".cmake", ".props", ".targets", ".csproj",
+}
+EXCLUDED_DIRECTORIES = {
+    "dependencies", "3rdparty", "vendor", "thirdparty", "third_party",
+    "external", "bin", "bin-int", "obj", "cache", "artifacts",
+    ".deps", ".scratch", "__pycache__",
+}
+GENERATED_FILES = {"Crowny/Source/Crowny/Common/UnicodeGraphemeData.inl"}
+SOURCE_NAMES = {"Scripts/crowny", "CMakeLists.txt"}
+
+
+def is_source(relative):
+    path = Path(relative)
+    if any(part.lower() in EXCLUDED_DIRECTORIES for part in path.parts[:-1]):
+        return False
+    # GeneratedMetadataBackend is handwritten, despite its directory name.
+    if relative in GENERATED_FILES or path.name.lower().endswith(".g.cs"):
+        return False
+    return (path.suffix.lower() in SOURCE_EXTENSIONS
+            or relative in SOURCE_NAMES or path.name == "CMakeLists.txt")
+
+
+def source_files(root):
+    result = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--cached", "--others",
+         "--exclude-standard", "-z"],
+        check=True, stdout=subprocess.PIPE,
+    )
+    for relative in sorted(set(result.stdout.decode("utf-8").split("\0"))):
+        path = root / relative
+        if relative and is_source(relative) and path.is_file() and not path.is_symlink():
+            yield relative
+
+
+def count_file(path):
+    with path.open(encoding="utf-8-sig") as source:
+        lines = source.readlines()
+    return len(lines), sum(bool(line.strip()) for line in lines), sum(map(len, lines))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("-a", "--all", action="store_true", help="list every included file")
+    parser.add_argument("--nowrite", action="store_true", help="do not append to count.log")
+    args = parser.parse_args(argv)
+    records = [(name, *count_file(ROOT / name)) for name in source_files(ROOT)]
+    groups = defaultdict(lambda: [0, 0, 0])
+    for name, lines, nonblank, characters in records:
+        group = name.split("/")[0] if "/" in name else "(root)"
+        groups[group][0] += 1
+        groups[group][1] += lines
+        groups[group][2] += nonblank
+        if args.all:
+            print(f"{name}: {lines} physical lines, {nonblank} nonblank lines")
+    print("First-party source; comments included. Dependencies and generated outputs excluded.")
+    for group, (files, lines, nonblank) in sorted(groups.items()):
+        print(f"{group}: {files} files, {lines} physical lines, {nonblank} nonblank lines")
+    lines = sum(record[1] for record in records)
+    nonblank = sum(record[2] for record in records)
+    characters = sum(record[3] for record in records)
+    summary = (f"{lines} physical lines, {nonblank} nonblank lines in {len(records)} files, "
+               f"{characters} characters")
+    print(summary)
+    if records:
+        largest = max(records, key=lambda record: record[1])
+        print(f"Largest file by lines: {largest[0]} ({largest[1]} lines)")
+    if not args.nowrite:
+        with (ROOT / "Scripts/count.log").open("a", encoding="utf-8") as output:
+            output.write(datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n")
+            output.write(summary + "\n")
+
+
+if __name__ == "__main__":
+    main()

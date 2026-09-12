@@ -91,6 +91,8 @@ namespace Crowny
         // 3D objects
         FrameVector<RenderableObject> MeshObjects;
         FrameVector<RenderableDecal> Decals;
+        FrameVector<RenderableDecalChange> DecalChanges;
+        std::shared_ptr<const uint8_t> DecalWorldLifetime;
         FrameVector<glm::uvec4> DecalReceivers;
         // Flat snapshot-owned material storage avoids one heap allocation per
         // renderable while preserving render-thread ownership of the handles.
@@ -189,6 +191,10 @@ namespace Crowny
             for (auto& decal : Decals)
                 decal.Textures = {};
             Decals.Reset();
+            for (auto& change : DecalChanges)
+                change.Record.Textures = {};
+            DecalChanges.Reset();
+            DecalWorldLifetime.reset();
             DecalReceivers.Reset();
             LegacyMaterials.Reset();
             RenderWorldChanges.Reset();

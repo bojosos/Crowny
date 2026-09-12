@@ -88,7 +88,12 @@ namespace Crowny
         void DisableGizmo() { m_GizmoMode = GizmoEditMode::None; }
         void EnableGizmo() { m_GizmoMode = GizmoEditMode::Translate; }
 
-        bool IsMouseOverGizmo() const { return ImGuizmo::IsOver() || m_DecalBounds.IsUsing() || m_DecalHovered; }
+        bool IsMouseOverGizmo() const
+        {
+            // ImGuizmo retains its last hit-test geometry when no selection is drawn.
+            const bool transformHovered = m_SelectedEntity && m_SelectedEntity() && m_GizmoMode != GizmoEditMode::None && ImGuizmo::IsOver();
+            return transformHovered || m_DecalBounds.IsUsing() || m_DecalHovered;
+        }
         bool IsMouseOverHud() const { return m_MouseOverHud; }
         const SceneGizmoSettings& GetSceneGizmoSettings() const { return m_SceneGizmos; }
 

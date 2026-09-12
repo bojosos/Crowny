@@ -28,8 +28,10 @@ struct CwDecalMaterial
     uvec4 textures2;
 };
 layout(set = 2, binding = 0) uniform cw_DecalConstants { uvec4 counts; } cwDecalConstants;
-layout(std430, set = 2, binding = 1) readonly buffer CwDecals { CwDecal cwDecals[]; };
-layout(std430, set = 2, binding = 2) readonly buffer CwDecalMaterials { CwDecalMaterial cwDecalMaterials[]; };
+struct CwDecalSlot { CwDecal data; uvec4 generations; };
+struct CwDecalMaterialSlot { CwDecalMaterial data; uvec4 generation; };
+layout(std430, set = 2, binding = 1) readonly buffer CwDecals { CwDecalSlot cwDecals[]; };
+layout(std430, set = 2, binding = 2) readonly buffer CwDecalMaterials { CwDecalMaterialSlot cwDecalMaterials[]; };
 layout(std430, set = 2, binding = 4) readonly buffer CwDecalReceivers { uvec4 cwDecalReceivers[]; };
 layout(set = 2, binding = 7) uniform cw_DecalGridConstants
 {
@@ -41,6 +43,7 @@ layout(set = 2, binding = 7) uniform cw_DecalGridConstants
 } cwDecalGrid;
 layout(std430, set = 2, binding = 8) readonly buffer CwDecalCells { uvec2 cwDecalCells[]; };
 layout(std430, set = 2, binding = 9) readonly buffer CwDecalIndices { uint cwDecalIndices[]; };
+layout(std430, set = 2, binding = 10) readonly buffer CwDecalVisible { uvec2 cwDecalVisible[]; };
 #ifndef CW_DECAL_COMPATIBILITY
 vec4 cwSampleDecal(uint index, vec2 uv, vec2 dx, vec2 dy)
 {
@@ -173,15 +176,22 @@ void cwApplyDecals(uint objectId, uint response, vec3 position, vec3 geometricNo
     for (uint candidate = 0u; candidate < candidates; ++candidate)
     {
         uint index = cell.y == 0xffffffffu ? candidate : cwDecalIndices[cell.x + candidate];
-        CwDecal d = cwDecals[index];
+        uvec2 reference = cwDecalVisible[index];
+        if (reference.x >= uint(cwDecals.length())) continue;
+        CwDecalSlot slot = cwDecals[reference.x];
+        if (reference.y == 0u || slot.generations.x != reference.y) continue;
+        CwDecal d = slot.data;
         bool accepted = (receiver.y & d.metadata.x) != 0u && receiver.z >= d.metadata.y && receiver.z < d.metadata.z;
         if (!accepted && debugView != 3u) continue;
         vec2 uv, dx, dy;
         float coverage = cwProjectDecal(d, position, geometricNormal, dpdx, dpdy, cameraDistance, uv, dx, dy);
         if (coverage <= 0.0) continue;
+        if (d.metadata.w >= uint(cwDecalMaterials.length())) continue;
+        CwDecalMaterialSlot materialSlot = cwDecalMaterials[d.metadata.w];
+        if (materialSlot.generation.x == 0u || materialSlot.generation.x != slot.generations.y) continue;
         debugVolume = true;
         if (!accepted) continue;
-        CwDecalMaterial m = cwDecalMaterials[d.metadata.w];
+        CwDecalMaterial m = materialSlot.data;
         uint mask = m.modes.x & response & receiver.w;
         if (mask == 0u) continue;
         vec4 base = cwSampleDecal(m.textures.x, uv, dx, dy) * m.color * vec4(d.tint.rgb, 1);

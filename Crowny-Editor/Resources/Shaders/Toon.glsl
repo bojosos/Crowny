@@ -69,6 +69,7 @@ layout (location = 1) out int outEntity;
 
 void main()
 {
+    if (outline.toonSilhouetteWidth <= 0.0) discard;
     outEntity = 0;
     outColor = outline.outlineColor;
 }
@@ -120,10 +121,15 @@ layout(location = 0) in DATA
 } fs_in;
 
 layout (binding = 2) uniform cw_SceneParams {
-    vec4 lightDir;
+    vec4 lightPositionRange[4];
+    vec4 lightDirectionOuter[4];
+    vec4 lightColorIntensity[4];
+    vec4 lightSpotSourceBias[4];
+    ivec4 lightMetadata[4];
+    int lightCount;
     vec3 camPos;
-    float gamma;
-    float exposure;
+    mat4 view;
+    float useIBL;
 } scene;
 
 layout (binding = 3) uniform ToonParams {
@@ -141,6 +147,9 @@ layout (binding = 3) uniform ToonParams {
     float rimThreshold;
     // @range(0.0, 1.0) @name("Shadow Brightness") @default(0.2)
     float shadowBrightness;
+    // @name("Alpha Cutoff") @default(0.5)
+    float alphaCutoff;
+    float alphaMode;
 } toon;
 
 layout (binding = 5) uniform ToonStyleParams {
@@ -194,68 +203,89 @@ layout (binding = 6) uniform sampler2D toonPatternTexture;
 layout (binding = 7) uniform sampler2D toonRampTexture;
 // @name("Matcap") @default(white)
 layout (binding = 8) uniform sampler2D toonMatcapTexture;
+layout (binding = 9) uniform samplerCube cw_samplerIrradiance;
 
 layout (location = 0) out vec4 outColor;
 layout (location = 1) out int outEntity;
 
-vec3 Uncharted2Tonemap(vec3 x)
-{
-    float A = 0.15;
-    float B = 0.50;
-    float C = 0.10;
-    float D = 0.20;
-    float E = 0.02;
-    float F = 0.30;
-    return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
-}
-
 #define CW_DECAL_COMPATIBILITY
 #include "CrownyDecals.glslinc"
+#include "CrownyPbrLighting.glslinc"
+#include "CrownyToneMapping.glslinc"
 layout(set = 2, binding = 6) uniform cw_DecalDraw { uvec4 receiver; } cwDecalDraw;
+
+float samplePattern(vec3 normal, float scale)
+{
+    float signal;
+    if (toonStyle.toonPatternMapping == 1)
+    {
+        vec3 weights = abs(normal);
+        weights /= max(weights.x + weights.y + weights.z, 1e-5);
+        signal = dot(vec3(texture(toonPatternTexture, fs_in.worldPos.yz * scale).r,
+                          texture(toonPatternTexture, fs_in.worldPos.xz * scale).r,
+                          texture(toonPatternTexture, fs_in.worldPos.xy * scale).r), weights);
+    }
+    else if (toonStyle.toonPatternMapping == 2)
+    {
+        vec4 clip = cwDecalGrid.cw_DecalViewProjection * vec4(fs_in.worldPos, 1.0);
+        signal = texture(toonPatternTexture, (clip.xy / clip.w * 0.5 + 0.5) * scale).r;
+    }
+    else
+        signal = texture(toonPatternTexture, fs_in.uv * scale).r;
+    float fadeDistance = max(toonStyle.toonPatternDistanceFade, 0.0);
+    float fade = fadeDistance <= 0.0 ? 1.0 : 1.0 - smoothstep(fadeDistance * 0.75, fadeDistance, length(scene.camPos - fs_in.worldPos));
+    return mix(0.5, signal, fade);
+}
 
 void main()
 {
     outEntity = int(cwDecalDraw.receiver.x);
+    vec3 positionDx = dFdx(fs_in.worldPos), positionDy = dFdy(fs_in.worldPos);
 
     vec3 N = normalize(fs_in.normal);
-    vec3 L = normalize(-scene.lightDir.xyz);
     vec3 V = normalize(scene.camPos - fs_in.worldPos);
-    vec3 H = normalize(V + L);
 
-    vec3 albedo = texture(albedoMap, fs_in.uv).rgb * toon.tint.rgb * fs_in.color.rgb;
+    vec4 sampledColor = texture(albedoMap, fs_in.uv) * toon.tint * fs_in.color;
+    if (toon.alphaMode == 1.0 && sampledColor.a < toon.alphaCutoff) discard;
+    vec3 albedo = sampledColor.rgb;
     vec3 emission = vec3(0);
-    float roughness = 0.5, metallic = 0.0, ao = 1.0, opacity = 1.0;
-    cwApplyDecals(cwDecalDraw.receiver.x, cwDecalDraw.receiver.y, fs_in.worldPos, N, dFdx(fs_in.worldPos), dFdy(fs_in.worldPos),
+    float roughness = 0.5, metallic = 0.0, ao = 1.0, opacity = sampledColor.a;
+    cwApplyDecals(cwDecalDraw.receiver.x, cwDecalDraw.receiver.y, fs_in.worldPos, N, positionDx, positionDy,
                   length(scene.camPos - fs_in.worldPos), 1.0, albedo, N, roughness, metallic, ao, emission, opacity);
+    bool core = cwDecalCoatingCore(sampledColor.a, opacity);
+    if (cwDecalConstants.counts.w == 1u) { if (!core) discard; opacity = 1.0; }
+    else if (cwDecalConstants.counts.w == 2u && core) discard;
 
-    // Cel-shaded diffuse
-    float NdotL = dot(N, L);
-    float halfLambert = NdotL * 0.5 + 0.5;
-    float bandStep = 1.0 / toon.bands;
-    float shade = floor(halfLambert * toon.bands) * bandStep;
-    shade = max(shade, toon.shadowBrightness);
-
-    vec3 diffuse = albedo * shade;
-
-    // Toon specular
-    float NdotH = dot(N, H);
-    float specIntensity = pow(max(NdotH, 0.0), toon.specularSmoothness * 128.0);
-    float specular = smoothstep(toon.specularSize - 0.01, toon.specularSize + 0.01, specIntensity);
-
-    // Rim lighting
-    float NdotV = 1.0 - max(dot(N, V), 0.0);
-    float rimIntensity = pow(NdotV, toon.rimPower);
-    float rimMask = smoothstep(toon.rimThreshold - 0.01, toon.rimThreshold + 0.01, halfLambert);
-    float rim = rimIntensity * rimMask;
-
-    // Combine
-    vec3 color = (diffuse + specular * toonStyle.toonSpecularColor.rgb * toonStyle.toonSpecularStrength +
-                  rim * albedo * toonStyle.toonRimColor.rgb * toonStyle.toonRimStrength) * ao + emission;
-
-    // Tone mapping
-    color = Uncharted2Tonemap(color * scene.exposure);
-    color = color * (1.0 / Uncharted2Tonemap(vec3(11.2)));
-    color = pow(color, vec3(1.0 / scene.gamma));
-
-    outColor = vec4(color, 1.0);
+    CwPbrSurface surface = CwPbrSurface(fs_in.worldPos, N, V, max(albedo, vec3(0.0)), roughness, metallic, ao);
+    vec4 shadowBands = vec4(max(toonStyle.toonShadowColor.rgb, vec3(0.0)), clamp(toon.bands, 2.0, 16.0));
+    vec4 specular = vec4(max(toonStyle.toonSpecularColor.rgb, vec3(0.0)), clamp(toonStyle.toonSpecularThreshold, 0.0, 1.0));
+    vec4 rim = vec4(max(toonStyle.toonRimColor.rgb, vec3(0.0)), clamp(toon.rimThreshold, 0.0, 1.0));
+    vec4 controls = vec4(clamp(toonStyle.toonBandSmoothness, 0.0, 0.5), clamp(toonStyle.toonSpecularSmoothness, 0.0, 0.5),
+                         max(toonStyle.toonSpecularStrength, 0.0), clamp(toonStyle.toonRimSmoothness, 0.0, 0.5));
+    vec4 artistic = vec4(max(toon.rimPower, 0.01), max(toonStyle.toonRimStrength, 0.0),
+                         clamp(toonStyle.toonRimShadowMask, 0.0, 1.0), max(toonStyle.toonIndirectStrength, 0.0));
+    vec4 pattern = vec4(max(toonStyle.toonPatternScale, 0.001), clamp(toonStyle.toonPatternStrength, 0.0, 1.0),
+                        clamp(toonStyle.toonPatternSmoothness, 0.0, 0.5), max(toonStyle.toonPatternDistanceFade, 0.0));
+    float patternSignal = samplePattern(N, pattern.x);
+    vec3 color = emission;
+    for (int i = 0; i < scene.lightCount; ++i)
+    {
+        CwLightRecord light = CwLightRecord(scene.lightPositionRange[i], scene.lightDirectionOuter[i], scene.lightColorIntensity[i],
+                                           scene.lightSpotSourceBias[i], uvec4(scene.lightMetadata[i]));
+        float rampU = clamp(cwToonRampCoordinate(surface, light) + clamp(toonStyle.toonRampOffset, -1.0, 1.0), 0.0, 1.0);
+        vec3 ramp = texture(toonRampTexture, vec2(rampU, 0.5)).rgb;
+        color += cwEvaluateToonDirectLight(surface, light, 1.0, 1.0, shadowBands, specular, rim, controls, artistic, pattern,
+                                           patternSignal, ramp, clamp(toonStyle.toonRampStrength, 0.0, 1.0));
+    }
+    if (scene.useIBL > 0.5)
+        color += texture(cw_samplerIrradiance, N).rgb * surface.baseColor * ao * artistic.w;
+    if (toonStyle.toonMatcapStrength > 0.0)
+    {
+        vec2 uv = normalize(mat3(scene.view) * N).xy;
+        float cosine = cos(toonStyle.toonMatcapRotation), sine = sin(toonStyle.toonMatcapRotation);
+        uv = mat2(cosine, -sine, sine, cosine) * uv;
+        vec3 matcap = texture(toonMatcapTexture, uv * 0.5 + 0.5).rgb;
+        color = mix(color, surface.baseColor * matcap + emission, clamp(toonStyle.toonMatcapStrength, 0.0, 1.0));
+    }
+    outColor = vec4(acesFitted(color), opacity);
 }

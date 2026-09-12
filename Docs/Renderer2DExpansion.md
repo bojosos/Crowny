@@ -20,6 +20,12 @@ cover differing storage/order page sizes, empty views, page restoration, local
 order edits, and transparent overlap with picking. Text-only views skip the
 unused sprite-order buffer.
 
+Pending changes now coalesce as slot indices. Publication copies each final value
+directly into snapshot-owned storage, removing the intermediate arrays of full
+records. The standard-vector adapter remains available. Tests cover cancellation,
+motion settling, warm capacity, and earlier snapshots surviving subsequent drains
+and slot reuse.
+
 Text snapshots own their layout arrays and pin their concrete font objects.
 Layout caching separates layout fields from paint fields. Scene text now uses
 renderer-owned, immutable local-space glyph pages: 48 bytes per instance, with
@@ -44,6 +50,68 @@ history. Shared scene tables are still synchronized before selecting this path;
 2D buffers are still bound inside the draw callback rather than imported into the
 graph. These paths, full scene-pass integration, GPU
 visibility compaction, and the remaining milestone 1 contracts are unfinished.
+
+### Sprite benchmark
+
+`crowny render-tests --backend Vulkan --benchmark-sprites full` runs 100,000
+moving ECS sprites at 1920x1080 with VSync disabled, four texture pages, 8x8-pixel
+quads, alpha 0.5, and a fixed seed. It records 1,800 frames after 300 warm-up
+frames. `--benchmark-sprites smoke` keeps the same object count and resolution
+but runs only 5 warm-up and 10 measured frames. Select OpenGL or All to exercise
+the fallback backend. Image filters and reference updates cannot be combined
+with a sprite benchmark.
+
+Each backend writes `sprites.csv` and `sprites-summary.json` beneath the chosen
+artifact root. Measurements separate ECS updates, snapshot extraction, rendering,
+presentation, asynchronous GPU timing, current-thread C++ allocation counts,
+upload bytes, visibility, and draw batches. Missing GPU samples are reported.
+Every frame checks that the render graph succeeds and all 100,000 sprites remain
+visible. A final offscreen capture and coverage check run after measurement.
+This first diagnostic renders snapshots serially to the hidden render-test
+window. GPU queries cover rendering commands; Vulkan transfer uploads occur
+outside that query. It uses full-texture sprite regions on four pages;
+authored SpriteAtlas assets are still pending. A timing result here does not
+certify the player, atlas, memory, or full roadmap acceptance gates.
+
+Full September 12 runs in the isolated 2D checkout recorded Vulkan p95 61.9024 ms
+and OpenGL p95 62.6256 ms after direct snapshot publication. Both used all 300
+warm-up and 1,800 measured frames, retained 100,000 visible sprites in three draws,
+and returned every GPU timing sample. Extraction allocated nothing. Vulkan made
+93 rendering allocations per measured frame; OpenGL made none in that scope.
+The target remains unmet. The earlier Vulkan baseline was p95 101.341 ms under
+different shared-machine load, so the entire difference is not attributed to the
+code change. Its final capture and the new Vulkan capture are byte-identical.
+
+The isolated Release All build passes. The focused native suite passes 23 cases
+and 259 assertions; the full suite passes 946 cases and 113,362 assertions, with
+one skipped case. Both persistent sprite/text GPU cases and their cross-backend
+capture comparisons pass. The 60 Python tooling tests, generated interop check,
+and parity for 542 managed host functions pass. The verified Vulkan dispatch
+hazard fix from the decal task is included.
+
+After integration, the main Release All build passes. The focused native suite
+passes 23 cases and 259 assertions; the full native suite passes 967 cases and
+113,660 assertions, with one skipped case. Persistent sprite/text rendering and
+both cross-backend capture comparisons pass. Full benchmark runs recorded Vulkan
+p95 52.9667 ms and OpenGL p95 53.6557 ms, each with 300 warm-up and 1,800 measured
+frames. Both retained all sprites and returned every GPU timing sample. Extraction
+again allocated nothing; Vulkan rendering still allocated 93 times per frame.
+Median extraction time was 30.8943 ms on Vulkan and 30.2814 ms on OpenGL, exceeding
+the entire frame budget. These results leave the primary target unfinished.
+
+The final OpenGL capture was visually inspected. The final Vulkan/OpenGL images
+differ above 3/255 at two of 2,073,600 pixels, with maximum channel error 35/255
+and mean error 0.000006631/255. This diagnostic comparison does not replace the
+focused rendering assertions. Linux validation remains open; this Windows
+machine does not have WSL installed.
+
+Run logs and captures are under `artifacts/2d-expansion/benchmark-*` in the isolated
+checkout. The final workload records are in `benchmark-direct/`, with the earlier
+baseline in `benchmark-baseline/`.
+Main integration logs are `benchmark-direct-main-all.log`,
+`benchmark-direct-main-native.log`, and `benchmark-direct-main-render.log` under
+`artifacts/2d-expansion/`. Full main benchmark records and captures are under
+`artifacts/2d-expansion/benchmark-direct-main/`.
 
 ### Retained text validation on September 12, 2026
 

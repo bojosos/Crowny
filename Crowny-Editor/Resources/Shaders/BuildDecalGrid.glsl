@@ -69,6 +69,8 @@ void main()
     {
         if (id >= config.counts.y) return;
         uint count = cells[id].y;
+        atomicMax(counters[2], count);
+        if (count != 0u) atomicAdd(counters[3], 1u);
         cursors[id] = 0u;
         if (count > 64u) { cells[id] = uvec2(0, 0xffffffffu); atomicAdd(counters[1], 1u); return; }
         uint offset = atomicAdd(counters[0], count);

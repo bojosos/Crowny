@@ -7,6 +7,7 @@
 #include "Crowny/Renderer/Decal.h"
 #include "Crowny/Renderer/DecalRenderer.h"
 #include "Crowny/Renderer/DecalWorld.h"
+#include "Crowny/Renderer/GpuDecalWorld.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
 #include "Crowny/Scene/EntityInstantiation.h"
 #include "Crowny/Scene/Prefab.h"
@@ -484,14 +485,42 @@ TEST_CASE("Decal snapshots isolate views and preserve stable overlap and target 
     CHECK(front.Decals[0].Data.Metadata.y == front.DecalReceivers[0].z);
     CHECK(front.Decals[0].Data.Metadata.z == front.DecalReceivers[0].z + 1u);
 
+    DecalExtractionState extraction;
+    GpuDecalWorld gpuWorld;
+    const auto extractTracked = [&](RenderSnapshot& output, const glm::mat4& view) {
+        output.ViewMatrix = view;
+        output.ProjectionMatrix = front.ProjectionMatrix;
+        DecalRenderer::Extract(*scene, output, &extraction);
+        gpuWorld.Apply({ output.DecalChanges.begin(), output.DecalChanges.Size() });
+    };
+    RenderSnapshot trackedFront;
+    extractTracked(trackedFront, front.ViewMatrix);
+    REQUIRE(trackedFront.DecalChanges.Size() == 3);
+    REQUIRE(trackedFront.Decals.Size() == 3);
+    CHECK(gpuWorld.GetActiveCount() == 3);
+    CHECK(gpuWorld.GetMaterialCount() == 1);
+    const auto originalMaterial = gpuWorld.GetMaterialReference(trackedFront.Decals[0].Handle);
+
     RenderSnapshot away;
     away.ViewMatrix = glm::lookAt(glm::vec3(0), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
     away.ProjectionMatrix = front.ProjectionMatrix;
     DecalRenderer::Extract(*scene, away);
     CHECK(away.Decals.Empty());
     CHECK(front.Decals.Size() == 3);
+    RenderSnapshot trackedAway;
+    extractTracked(trackedAway, away.ViewMatrix);
+    CHECK(trackedAway.Decals.Empty());
+    CHECK(trackedAway.DecalChanges.Empty());
+    CHECK(gpuWorld.GetActiveCount() == 3);
+    CHECK(trackedFront.DecalWorldLifetime == trackedAway.DecalWorldLifetime);
     labels[0].GetComponent<DecalComponent>().Opacity = 0.25f;
     CHECK(front.Decals[2].Data.Tint.a == 1);
+    RenderSnapshot changedAway;
+    extractTracked(changedAway, away.ViewMatrix);
+    REQUIRE(changedAway.DecalChanges.Size() == 1);
+    CHECK(changedAway.DecalChanges[0].Type == DecalChangeType::Update);
+    CHECK(changedAway.DecalChanges[0].Record.Data.Tint.a == 0.25f);
+    CHECK(changedAway.Decals.Empty());
     scene->DestroyEntity(receiver);
     RenderSnapshot deleted;
     deleted.ViewMatrix = front.ViewMatrix;
@@ -499,4 +528,73 @@ TEST_CASE("Decal snapshots isolate views and preserve stable overlap and target 
     DecalRenderer::Extract(*scene, deleted);
     CHECK(deleted.Decals.Empty());
     CHECK(front.Decals.Size() == 3);
+    RenderSnapshot trackedDeleted;
+    extractTracked(trackedDeleted, front.ViewMatrix);
+    REQUIRE(trackedDeleted.DecalChanges.Size() == 3);
+    CHECK(gpuWorld.GetActiveCount() == 0);
+    CHECK(gpuWorld.GetMaterialCount() == 0);
+
+    Entity newReceiver = scene->CreateEntity("New receiver");
+    newReceiver.AddComponent<MeshRendererComponent>();
+    labels[0].GetComponent<DecalComponent>().Target = newReceiver.GetUuid();
+    RenderSnapshot recreated;
+    extractTracked(recreated, front.ViewMatrix);
+    REQUIRE(recreated.Decals.Size() == 1);
+    const auto current = recreated.Decals[0].Handle;
+    const auto old =
+      std::find_if(trackedFront.Decals.begin(), trackedFront.Decals.end(), [&](const auto& source) { return source.Handle.Index == current.Index; });
+    REQUIRE(old != trackedFront.Decals.end());
+    CHECK(current.Generation == old->Handle.Generation + 1);
+    CHECK(gpuWorld.GetMaterialReference(current).x == originalMaterial.x);
+    CHECK(gpuWorld.GetMaterialReference(current).y == originalMaterial.y + 1);
+    const Array<RenderableDecalChange, 3> stale{ RenderableDecalChange{ old->Handle, DecalChangeType::Update, *old },
+                                                 RenderableDecalChange{ old->Handle, DecalChangeType::Destroy, {} },
+                                                 RenderableDecalChange{ old->Handle, DecalChangeType::Create, *old } };
+    gpuWorld.Apply(stale);
+    RenderableDecal record;
+    REQUIRE(gpuWorld.TryGet(current, record));
+    CHECK(record.Data.Tint.a == 0.25f);
+    CHECK_FALSE(gpuWorld.TryGet(old->Handle, record));
+
+    auto reloaded = recreated.Decals[0];
+    reloaded.Material.Color = { 0.2f, 0.3f, 0.4f, 1 };
+    ++reloaded.MaterialRevision;
+    const RenderableDecalChange reload{ current, DecalChangeType::Update, reloaded };
+    gpuWorld.Apply({ &reload, 1 });
+    REQUIRE(gpuWorld.TryGet(current, record));
+    CHECK(record.Material.Color == reloaded.Material.Color);
+    CHECK(gpuWorld.GetMaterialCount() == 1);
+
+    GpuDecalWorld independentWorld;
+    independentWorld.Apply({ recreated.DecalChanges.begin(), recreated.DecalChanges.Size() });
+    REQUIRE(independentWorld.TryGet(current, record));
+    CHECK(record.Material.Color != reloaded.Material.Color);
+
+    extraction.Clear();
+    gpuWorld = {};
+    RenderSnapshot freshWorld;
+    extractTracked(freshWorld, front.ViewMatrix);
+    REQUIRE(freshWorld.Decals.Size() == 1);
+    CHECK(freshWorld.DecalWorldLifetime != recreated.DecalWorldLifetime);
+    CHECK(freshWorld.Decals[0].Handle.Generation == 1);
+    CHECK(gpuWorld.GetActiveCount() == 1);
+}
+
+TEST_CASE("Persistent decal generation checks survive counter wrap", "[decals][GpuDecalWorld]")
+{
+    GpuDecalWorld world;
+    RenderableDecal record;
+    record.Handle = { 0, UINT32_MAX };
+    const RenderableDecalChange created{ record.Handle, DecalChangeType::Create, record };
+    world.Apply({ &created, 1 });
+    const RenderableDecalChange removed{ record.Handle, DecalChangeType::Destroy, {} };
+    world.Apply({ &removed, 1 });
+    record.Handle.Generation = 1;
+    const RenderableDecalChange wrapped{ record.Handle, DecalChangeType::Create, record };
+    world.Apply({ &wrapped, 1 });
+    world.Apply({ &removed, 1 });
+    CHECK(world.GetActiveCount() == 1);
+    RenderableDecal retrieved;
+    CHECK(world.TryGet(record.Handle, retrieved));
+    CHECK_FALSE(world.TryGet(created.Handle, retrieved));
 }

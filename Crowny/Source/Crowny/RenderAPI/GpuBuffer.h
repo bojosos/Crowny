@@ -5,6 +5,15 @@
 
 namespace Crowny
 {
+    // A copy recorded in command order. Poll on the render thread; TryRead never
+    // submits work or waits, and the source can be reused after recording it.
+    class GpuBufferReadback : public RefCounted
+    {
+    public:
+        virtual ~GpuBufferReadback() = default;
+        virtual bool TryRead(void* destination, uint32_t length) = 0;
+    };
+
     class GpuBuffer : public RefCounted
     {
     public:
@@ -14,6 +23,9 @@ namespace Crowny
 
         virtual void WriteData(uint32_t offset, uint32_t lenth, const void* src, BufferWriteOptions writeOptions = BWT_NORMAL) = 0;
         virtual void ReadData(uint32_t offset, uint32_t length, void* dest) = 0;
+        // Unsupported backends return nullptr. The request owns its staging data
+        // until released, including when released before GPU completion.
+        virtual Ref<GpuBufferReadback> QueueReadback(uint32_t offset, uint32_t length) { return nullptr; }
 
         // TODO: Implement this properly
         virtual void CopyData(GpuBuffer& src, uint32_t srcOffset, uint32_t dstOffset, uint32_t length, bool discard = false,

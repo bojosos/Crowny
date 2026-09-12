@@ -162,11 +162,13 @@ namespace Crowny
                     properties.Bind("Material", &DecalComponent::Material).Assign(static_asset_cast<Material>(asset));
             }
         }
-        UI::PropertyDropdown("Projection", { "Box", "Cylinder" }, bind("Projection", &DecalComponent::Projection));
+        const auto projection = bind("Projection", &DecalComponent::Projection);
+        UI::PropertyDropdown("Projection", { "Box", "Cylinder wrap" }, projection);
+        const auto projectionValue = projection.Read();
         UI::Property("Offset", bind("Offset", &DecalComponent::Offset), 0.01f);
-        if (primary.GetComponent<DecalComponent>().Projection == DecalProjection::Box)
+        if (!projectionValue.Mixed && *projectionValue.Primary == DecalProjection::Box)
             UI::Property("Width / Height / Depth", bind("Size", &DecalComponent::Size), 0.01f, 0.001f, 10000.0f);
-        else
+        else if (!projectionValue.Mixed)
         {
             UI::Property("Bottom radius", bind("BottomRadius", &DecalComponent::BottomRadius), 0.01f, 0.001f, 10000.0f);
             UI::Property("Top radius", bind("TopRadius", &DecalComponent::TopRadius), 0.01f, 0.001f, 10000.0f);
@@ -178,18 +180,34 @@ namespace Crowny
         UI::PropertyColor("Tint", bind("Tint", &DecalComponent::Tint));
         UI::Property("Opacity", bind("Opacity", &DecalComponent::Opacity), 0.01f, 0.0f, 1.0f);
         UI::Property("UV scale", bind("UVScale", &DecalComponent::UVScale), 0.01f);
-        UI::Property("Flip U", properties.Bind(
-                                 "UVScale", [](const DecalComponent& d) { return std::signbit(d.UVScale.x); },
-                                 [](DecalComponent& d, bool flipped) { d.UVScale.x = std::copysign(d.UVScale.x, flipped ? -1.0f : 1.0f); }));
-        UI::Property("Flip V", properties.Bind(
-                                 "UVScale", [](const DecalComponent& d) { return std::signbit(d.UVScale.y); },
-                                 [](DecalComponent& d, bool flipped) { d.UVScale.y = std::copysign(d.UVScale.y, flipped ? -1.0f : 1.0f); }));
+        UI::Pre("Flip artwork");
+        UI::EditSelectionProperty(properties.Bind(
+                                    "UVScale", [](const DecalComponent& d) { return std::signbit(d.UVScale.x); },
+                                    [](DecalComponent& d, bool flipped) { d.UVScale.x = std::copysign(d.UVScale.x, flipped ? -1.0f : 1.0f); }),
+                                  [](bool& value) {
+                                      const bool changed = ImGui::Checkbox("U", &value);
+                                      UndoRedo::Get().OnItemInteract(changed);
+                                      return changed;
+                                  });
+        ImGui::SameLine();
+        UI::EditSelectionProperty(properties.Bind(
+                                    "UVScale", [](const DecalComponent& d) { return std::signbit(d.UVScale.y); },
+                                    [](DecalComponent& d, bool flipped) { d.UVScale.y = std::copysign(d.UVScale.y, flipped ? -1.0f : 1.0f); }),
+                                  [](bool& value) {
+                                      const bool changed = ImGui::Checkbox("V", &value);
+                                      UndoRedo::Get().OnItemInteract(changed);
+                                      return changed;
+                                  });
+        UI::Post();
         UI::Property("UV offset", bind("UVOffset", &DecalComponent::UVOffset), 0.01f);
         UI::Property("UV rotation", bind("UVRotation", &DecalComponent::UVRotation), 1.0f);
         UI::Property("Preserve texel density", bind("PreserveTexelDensity", &DecalComponent::PreserveTexelDensity));
         UI::Property("Sort order", bind("SortOrder", &DecalComponent::SortOrder));
         UI::Property("Receiver layers", bind("ReceiverLayers", &DecalComponent::ReceiverLayers));
-        UI::PropertyDropdown("Target mode", { "Matching layers", "Entity", "Entity subtree" }, bind("TargetMode", &DecalComponent::TargetMode));
+        const auto targetMode = bind("TargetMode", &DecalComponent::TargetMode);
+        UI::PropertyDropdown("Target mode", { "Matching layers", "Entity", "Entity subtree" }, targetMode);
+        const auto targetModeValue = targetMode.Read();
+        ImGui::BeginDisabled(targetModeValue.Mixed || *targetModeValue.Primary == DecalTargetMode::Layers);
         UI::EditSelectionProperty(bind("Target", &DecalComponent::Target), [&](UUID& id) {
             Entity target = primary.GetScene()->TryGetEntityFromUuid(id);
             if (!UIUtils::EntityReference("Receiver target", target))
@@ -199,16 +217,33 @@ namespace Crowny
             id = target ? target.GetUuid() : UUID::EMPTY;
             return true;
         });
+        ImGui::EndDisabled();
         UI::Property("Edge feather", bind("EdgeFeather", &DecalComponent::EdgeFeather), 0.01f, 0.0f, 10000.0f);
-        UI::Property("Depth feather", bind("DepthFeather", &DecalComponent::DepthFeather), 0.01f, 0.0f, 10000.0f);
+        UI::Property(!projectionValue.Mixed && *projectionValue.Primary == DecalProjection::Cylinder ? "Shell feather" : "Depth feather",
+                     bind("DepthFeather", &DecalComponent::DepthFeather), 0.01f, 0.0f, 10000.0f);
         UI::Property("Angle fade start", bind("AngleFadeStart", &DecalComponent::AngleFadeStart), 1.0f, 0.0f, 180.0f);
         UI::Property("Angle fade end", bind("AngleFadeEnd", &DecalComponent::AngleFadeEnd), 1.0f, 0.0f, 180.0f);
+        {
+            UI::ScopedPropertyTooltip tooltip(
+              "Distance from the camera where the decal disappears. Zero disables distance fading. Must exceed the start distance.");
+            UI::Property("Distance fade end", bind("DistanceFadeEnd", &DecalComponent::DistanceFadeEnd), 1.0f, 0.0f, 100000.0f);
+        }
+        const bool allHaveDistanceFade =
+          std::all_of(entities.begin(), entities.end(), [](Entity entity) { return entity.GetComponent<DecalComponent>().DistanceFadeEnd > 0.0f; });
+        ImGui::BeginDisabled(!allHaveDistanceFade);
         UI::Property("Distance fade start", bind("DistanceFadeStart", &DecalComponent::DistanceFadeStart), 1.0f, 0.0f, 100000.0f);
-        UI::Property("Distance fade end", bind("DistanceFadeEnd", &DecalComponent::DistanceFadeEnd), 1.0f, 0.0f, 100000.0f);
-        UI::Property("Fade in", bind("FadeIn", &DecalComponent::FadeIn), 0.1f, 0.0f, 100000.0f);
-        UI::Property("Lifetime", bind("Lifetime", &DecalComponent::Lifetime), 0.1f, 0.0f, 100000.0f);
-        UI::Property("Fade out", bind("FadeOut", &DecalComponent::FadeOut), 0.1f, 0.0f, 100000.0f);
+        ImGui::EndDisabled();
+        UI::Property("Fade in (s)", bind("FadeIn", &DecalComponent::FadeIn), 0.1f, 0.0f, 100000.0f);
+        {
+            UI::ScopedPropertyTooltip tooltip("Time before fade-out begins. Zero keeps the decal indefinitely.");
+            UI::Property("Lifetime (s)", bind("Lifetime", &DecalComponent::Lifetime), 0.1f, 0.0f, 100000.0f);
+        }
+        const bool allExpire =
+          std::all_of(entities.begin(), entities.end(), [](Entity entity) { return entity.GetComponent<DecalComponent>().Lifetime > 0.0f; });
+        ImGui::BeginDisabled(!allExpire);
+        UI::Property("Fade out (s)", bind("FadeOut", &DecalComponent::FadeOut), 0.1f, 0.0f, 100000.0f);
         UI::Property("Destroy owner on expiry", bind("DestroyOwnerOnExpiry", &DecalComponent::DestroyOwnerOnExpiry));
+        ImGui::EndDisabled();
         const auto& decal = primary.GetComponent<DecalComponent>();
         if (!DecalMath::IsValid(decal, primary.GetComponent<TransformComponent>().GetWorldMatrix(primary.GetParent())))
             ImGui::TextWrapped("Invalid decal dimensions or singular transform. This decal is not rendered.");
@@ -485,7 +520,10 @@ namespace Crowny
         const auto properties = InspectorSelection(entities, "Mesh Filter").Components<MeshRendererComponent>();
         UI::PropertyAsset<Mesh>("Mesh", properties.Bind("Mesh", &MeshRendererComponent::MeshHandle));
         UI::Property("Receive decals", properties.Bind("ReceiveDecals", &MeshRendererComponent::ReceiveDecals));
+        const auto receiveDecals = properties.Bind("ReceiveDecals", &MeshRendererComponent::ReceiveDecals).Read();
+        ImGui::BeginDisabled(receiveDecals.Mixed || !*receiveDecals.Primary);
         UI::Property("Decal layers", properties.Bind("DecalLayers", &MeshRendererComponent::DecalLayers));
+        ImGui::EndDisabled();
 
         uint32_t commonSlots = UINT32_MAX;
         for (Entity entity : entities)

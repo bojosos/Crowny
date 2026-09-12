@@ -28,10 +28,15 @@ def run(
     artifact_root="artifacts/render-tests",
     update_references=False,
     no_build=False,
+    benchmark_sprites=None,
 ):
     root = root or env.repo_root()
     if backend not in ("All", "Vulkan", "OpenGL"):
         raise ValueError(f"Unsupported backend: {backend}")
+    if benchmark_sprites not in (None, "full", "smoke"):
+        raise ValueError(f"Unsupported sprite benchmark mode: {benchmark_sprites}")
+    if benchmark_sprites and (update_references or filter):
+        raise ValueError("Sprite benchmarks cannot update references or select image-test filters.")
 
     if not no_build:
         build_module.build(
@@ -81,9 +86,11 @@ def run(
             ]
             if filter:
                 arguments += ["--filter", filter]
+            if benchmark_sprites:
+                arguments += ["--benchmark-sprites" if benchmark_sprites == "full" else "--benchmark-sprites-smoke"]
             cmd.run_checked(arguments)
 
-        if len(selected) == 2:
+        if len(selected) == 2 and not benchmark_sprites:
             cmd.run_checked(
                 [
                     str(executable),

@@ -416,8 +416,12 @@ namespace Crowny
                      triangleCount);
             snprintf(lines[2], sizeof(lines[2]), "Visible %u / %u   Lights %u", scene.VisibleInstances, scene.ActiveInstances, scene.ActiveLights);
             snprintf(lines[3], sizeof(lines[3]), "Passes %u   RG CPU %.2f ms", scene.RenderPasses, scene.RenderGraphCpuTimeMs);
-            snprintf(lines[4], sizeof(lines[4]), "Decals %u   Textures %u   Overflow %u   Rejected %u", scene.Decals.Visible,
-                     scene.Decals.TextureCount, scene.Decals.OverflowClusters, scene.Decals.RejectedMaterials);
+            if (scene.Decals.ClusterStatisticsAvailable)
+                snprintf(lines[4], sizeof(lines[4]), "Decals %u   Textures %u   Overflow %u   Rejected %u", scene.Decals.Visible,
+                         scene.Decals.TextureCount, scene.Decals.OverflowClusters, scene.Decals.RejectedMaterials);
+            else
+                snprintf(lines[4], sizeof(lines[4]), "Decals %u   Textures %u   GPU statistics pending", scene.Decals.Visible,
+                         scene.Decals.TextureCount);
 
             const uint32_t lineCount = viewportWidth >= 430.0f ? 5u : 3u;
             float textWidth = 0.0f;
@@ -453,6 +457,15 @@ namespace Crowny
                 ImGui::Text("Graph: %u graphics, %u compute, %u transfer", scene.GraphicsPasses, scene.ComputePasses, scene.TransferPasses);
                 ImGui::Text("Scheduled barriers: %u", scene.Barriers);
                 ImGui::Text("Scene upload: %.2f KiB", static_cast<double>(scene.UploadedBytes) / 1024.0);
+                ImGui::Text("Decal upload: %.2f KiB", static_cast<double>(scene.Decals.UploadedBytes) / 1024.0);
+                if (scene.Decals.ClusterStatisticsAvailable)
+                {
+                    ImGui::Text("Decal clusters: %u occupied, %u maximum candidates", scene.Decals.OccupiedClusters,
+                                scene.Decals.MaxClusterCandidates);
+                    if (scene.Decals.GpuBuiltLists)
+                        ImGui::Text("Decal grid GPU: %.3f ms (frame %llu)", scene.Decals.GridGpuMilliseconds,
+                                    static_cast<unsigned long long>(scene.Decals.StatisticsFrame));
+                }
                 ImGui::EndTooltip();
             }
         }

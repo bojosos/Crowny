@@ -39,6 +39,8 @@ namespace Crowny
         UpdateViews();
     }
 
+    Ref<GpuBufferReadback> VulkanGenericGpuBuffer::QueueReadback(uint32_t offset, uint32_t length) { return m_Buffer->QueueReadback(offset, length); }
+
     void* VulkanGenericGpuBuffer::Map(uint32_t offset, uint32_t length, GpuLockOptions options)
     {
         void* data = m_Buffer->Map(offset, length, options);

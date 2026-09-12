@@ -199,6 +199,7 @@ namespace Crowny
         Ref<CommandBuffer> m_CommandBuffer;
         RenderHistoryReleaseSink* m_HistoryReleaseSink = nullptr;
         mutable RenderWorld m_RenderWorld;
+        mutable DecalExtractionState m_DecalExtraction;
         mutable RenderWorld2D m_RenderWorld2D;
         std::shared_ptr<const uint8_t> m_World2DLifetime = std::make_shared<uint8_t>(0);
         struct TrackedSprite2D
@@ -207,7 +208,6 @@ namespace Crowny
             uint64_t LastSeenEpoch = 0;
         };
         mutable UnorderedMap<uint64_t, TrackedSprite2D> m_TrackedSprites2D;
-        mutable Vector<RenderChange2D> m_RenderWorld2DChangeScratch;
         mutable RenderOrder2D m_RenderOrder2D;
         mutable TextLayoutCache m_TextLayoutCache;
         mutable RenderLightWorld m_RenderLightWorld;

@@ -10,7 +10,10 @@ namespace Crowny::RenderTests
         RenderAPI::API Backend = RenderAPI::API::Vulkan;
         Path References = "Crowny-RenderTests/References";
         Path Artifacts = "artifacts/render-tests";
+        Path DecalShowcase;
         String Filter;
+        bool BenchmarkSprites = false;
+        bool BenchmarkSpritesSmoke = false;
         Path BenchmarkProject;
         Path BenchmarkScene;
         Path BenchmarkImport;

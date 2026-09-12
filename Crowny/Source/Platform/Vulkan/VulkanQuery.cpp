@@ -270,7 +270,7 @@ namespace Crowny
                 uint64_t timerBegin = 0, timerEnd = 0;
                 ready &= !start->IsBound() && start->GetResult(timerBegin);
                 ready &= !end->IsBound() && end->GetResult(timerEnd);
-                totalTimeDiff = (timerEnd - timerBegin);
+                totalTimeDiff += timerEnd - timerBegin;
             }
 
             if (ready)
@@ -288,6 +288,7 @@ namespace Crowny
                     if (end != nullptr)
                         queryPool.Release(end);
                 }
+                m_Queries.clear();
             }
         }
 

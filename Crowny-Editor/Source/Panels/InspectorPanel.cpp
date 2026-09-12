@@ -133,7 +133,9 @@ namespace Crowny
             const Entity receiverEntities[] = { entity };
             const auto receiverProperties = InspectorSelection(receiverEntities, "Procedural Mesh").Components<ProceduralMeshComponent>();
             UI::Property("Receive decals", receiverProperties.Bind("ReceiveDecals", &ProceduralMeshComponent::ReceiveDecals));
+            ImGui::BeginDisabled(!comp.ReceiveDecals);
             UI::Property("Decal layers", receiverProperties.Bind("DecalLayers", &ProceduralMeshComponent::DecalLayers));
+            ImGui::EndDisabled();
 
             AssetHandle<Asset> graphAsset = static_asset_cast<Asset>(comp.Graph);
             if (UIUtils::AssetReference("Graph", graphAsset, AssetType::NodeGraph))
@@ -579,44 +581,31 @@ namespace Crowny
             return;
         }
 
-        int32_t alphaMode = mat->HasAlphaModeOverride() ? static_cast<int32_t>(mat->GetAlphaMode()) + 1 : 0;
-        const bool alphaModeChanged =
-          UI::PropertyDropdown("Alpha Mode", { "Inferred (Shader)", "Opaque", "Alpha Mask", "Premultiplied", "Additive", "Weighted OIT" }, alphaMode);
-        applyEdit(alphaModeChanged, [&]() {
-            if (alphaMode == 0)
-                mat->ClearAlphaModeOverride();
-            else
-                mat->SetAlphaMode(static_cast<AlphaMode>(alphaMode - 1));
-        });
+        const bool isDecal = mat->GetDomain() == MaterialDomain::Decal;
+        if (!isDecal)
+        {
+            int32_t alphaMode = mat->HasAlphaModeOverride() ? static_cast<int32_t>(mat->GetAlphaMode()) + 1 : 0;
+            const bool alphaModeChanged = UI::PropertyDropdown(
+              "Alpha Mode", { "Inferred (Shader)", "Opaque", "Alpha Mask", "Premultiplied", "Additive", "Weighted OIT" }, alphaMode);
+            applyEdit(alphaModeChanged, [&]() {
+                if (alphaMode == 0)
+                    mat->ClearAlphaModeOverride();
+                else
+                    mat->SetAlphaMode(static_cast<AlphaMode>(alphaMode - 1));
+            });
+        }
 
         applyEdit(DrawMaterialPresetRow(*mat), []() {});
-        if (mat->GetDomain() == MaterialDomain::Decal)
-        {
-            const char* channels[] = { "Base color",        "Normal",   "Roughness",   "Metallic",
-                                       "Ambient occlusion", "Emission", "Corrections", "Opaque coating" };
-            for (uint32_t channel = 0; channel < 8; ++channel)
-            {
-                int32_t mask = mat->GetDataParam<int32_t>("decalChannels");
-                bool enabled = (mask & (1 << channel)) != 0;
-                applyEdit(UI::Property(channels[channel], enabled),
-                          [&]() { mat->SetInt("decalChannels", enabled ? mask | (1 << channel) : mask & ~(1 << channel)); });
-                if (enabled)
-                {
-                    const char* parameter = channel < 4 ? "decalStrengths" : "decalStrengths2";
-                    glm::vec4 strengths = mat->GetDataParam<glm::vec4>(parameter);
-                    String label = String(channels[channel]) + " strength";
-                    applyEdit(UI::Property(label.c_str(), strengths[channel % 4], 0.01f, 0.0f, 1.0f), [&]() { mat->SetColor(parameter, strengths); });
-                }
-            }
-        }
         if (mat->GetDomain() == MaterialDomain::Surface)
         {
             bool supported = false;
             for (uint32_t pass = 0; pass < mat->GetPassCount(); ++pass)
                 if (const auto pipeline = mat->GetGraphicsPipeline(pass))
-                    supported |= pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 1);
+                    supported |= pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 1) &&
+                                 pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 10);
             if (!supported)
                 ImGui::TextWrapped("This surface shader has no decal response interface.");
+            ImGui::BeginDisabled(!supported);
             const char* responses[] = { "Decal color", "Decal normal",   "Decal roughness",   "Decal metallic",
                                         "Decal AO",    "Decal emission", "Decal corrections", "Decal coating" };
             for (uint32_t channel = 0; channel < 8; ++channel)
@@ -626,6 +615,7 @@ namespace Crowny
                 applyEdit(UI::Property(responses[channel], enabled),
                           [&]() { mat->SetDecalResponseMask(enabled ? mask | (1u << channel) : mask & ~(1u << channel)); });
             }
+            ImGui::EndDisabled();
         }
 
         UI::EndPropertyGrid();
@@ -642,30 +632,117 @@ namespace Crowny
         const Vector<ShaderParameterDesc>& params = m_MaterialSchemaCache.Resolve(*mat);
         Vector<Ref<Texture>> visibleThumbnails;
         size_t visibleCount = 0;
-        for (const char* group : { "Surface", "Toon shading", "Emission", "Transparency", "Outline", "Textures" })
+        const char* decalChannels[] = { "Base color",        "Normal",   "Roughness",   "Metallic",
+                                        "Ambient occlusion", "Emission", "Corrections", "Opaque coating" };
+        const auto decalParameterGroup = [](const String& identifier) -> const char* {
+            if (identifier == "decalColor" || identifier == "decalColorBlend")
+                return "Base color";
+            if (identifier == "decalNormalMap" || identifier == "decalReplaceNormal")
+                return "Normal";
+            if (identifier == "decalRoughness" || identifier == "decalRoughnessBlend")
+                return "Roughness";
+            if (identifier == "decalMetallic")
+                return "Metallic";
+            if (identifier == "decalAO")
+                return "Ambient occlusion";
+            if (identifier == "decalEmission" || identifier == "decalEmissionMap" || identifier == "decalEmissionBlend")
+                return "Emission";
+            if (identifier == "decalCorrectionTint" || identifier == "decalExposure" || identifier == "decalHue" || identifier == "decalSaturation" ||
+                identifier == "decalContrast")
+                return "Corrections";
+            if (identifier == "decalCoating")
+                return "Opaque coating";
+            if (identifier == "decalSurfaceMap")
+                return "Surface map";
+            return "Coverage";
+        };
+        const Vector<const char*> groups = isDecal
+                                             ? Vector<const char*>{ "Coverage",          "Base color",  "Normal",   "Roughness",   "Metallic",
+                                                                    "Ambient occlusion", "Surface map", "Emission", "Corrections", "Opaque coating" }
+                                             : Vector<const char*>{ "Surface", "Toon shading", "Emission", "Transparency", "Outline", "Textures" };
+        for (const char* group : groups)
         {
             const auto matches = [&](const ShaderParameterDesc& parameter) {
                 // Alpha has a typed control above; environment use is supplied by the renderer.
                 return parameter.Identifier != "alphaMode" && parameter.Identifier != "useIBL" && parameter.Identifier != "decalChannels" &&
                        parameter.Identifier != "decalStrengths" && parameter.Identifier != "decalStrengths2" &&
-                       StringView(MaterialParameterGroup(parameter)) == group &&
+                       StringView(isDecal ? decalParameterGroup(parameter.Identifier) : MaterialParameterGroup(parameter)) == group &&
                        (m_MaterialParameterSearch.empty() || StringUtils::IsSearchMathing(parameter.DisplayName, m_MaterialParameterSearch) ||
-                        StringUtils::IsSearchMathing(parameter.Identifier, m_MaterialParameterSearch));
+                        StringUtils::IsSearchMathing(parameter.Identifier, m_MaterialParameterSearch) ||
+                        (isDecal && StringUtils::IsSearchMathing(group, m_MaterialParameterSearch)));
             };
             const size_t count = std::count_if(params.begin(), params.end(), matches);
             visibleCount += count;
             if (count == 0 || !ImGui::CollapsingHeader(group, ImGuiTreeNodeFlags_DefaultOpen))
                 continue;
             ImGui::PushID(group);
+            bool groupEnabled = true;
+            int32_t channelIndex = -1;
+            if (isDecal)
+            {
+                for (uint32_t channel = 0; channel < 8; ++channel)
+                {
+                    if (StringView(group) != decalChannels[channel])
+                        continue;
+                    channelIndex = static_cast<int32_t>(channel);
+                    const int32_t mask = mat->GetDataParam<int32_t>("decalChannels");
+                    groupEnabled = (mask & (1 << channel)) != 0;
+                    const bool enabledChanged = ImGui::Checkbox("Enabled", &groupEnabled);
+                    undoRedo.OnItemInteract(enabledChanged);
+                    applyEdit(enabledChanged, [&]() { mat->SetInt("decalChannels", groupEnabled ? mask | (1 << channel) : mask & ~(1 << channel)); });
+                }
+                if (StringView(group) == "Surface map")
+                    groupEnabled = (mat->GetDataParam<int32_t>("decalChannels") & (4 | 8 | 16)) != 0;
+                if (StringView(group) == "Coverage")
+                {
+                    ImGui::TextWrapped("Coverage controls every enabled channel. Texture alpha still applies when base color is disabled.");
+                }
+            }
+            ImGui::BeginDisabled(!groupEnabled);
             const bool resetGroup = ImGui::SmallButton("Reset group");
             undoRedo.OnItemInteract(resetGroup);
             UI::SetTooltip("Restore the shader defaults for the visible parameters in this group.");
+            const auto resetParameter = [&](const ShaderParameterDesc& parameter) {
+                if (isDecal && parameter.Identifier == "decalColor")
+                {
+                    // Coverage opacity belongs to its own group, even though the shader packs it with color.
+                    const float opacity = mat->GetDataParam<glm::vec4>("decalColor").a;
+                    const glm::vec3 tint(m_MaterialDefaults->GetDataParam<glm::vec4>("decalColor"));
+                    mat->SetColor("decalColor", glm::vec4(tint, opacity));
+                }
+                else
+                    ResetMaterialParameter(*mat, *m_MaterialDefaults, parameter);
+            };
             applyEdit(resetGroup, [&]() {
                 for (const auto& parameter : params)
                     if (matches(parameter))
-                        ResetMaterialParameter(*mat, *m_MaterialDefaults, parameter);
+                        resetParameter(parameter);
+                if (channelIndex >= 0)
+                {
+                    const char* parameter = channelIndex < 4 ? "decalStrengths" : "decalStrengths2";
+                    glm::vec4 strengths = mat->GetDataParam<glm::vec4>(parameter);
+                    strengths[channelIndex % 4] = m_MaterialDefaults->GetDataParam<glm::vec4>(parameter)[channelIndex % 4];
+                    mat->SetColor(parameter, strengths);
+                }
+                if (isDecal && StringView(group) == "Coverage")
+                {
+                    glm::vec4 color = mat->GetDataParam<glm::vec4>("decalColor");
+                    color.a = m_MaterialDefaults->GetDataParam<glm::vec4>("decalColor").a;
+                    mat->SetColor("decalColor", color);
+                }
             });
             UI::BeginPropertyGrid();
+            if (channelIndex >= 0)
+            {
+                const char* parameter = channelIndex < 4 ? "decalStrengths" : "decalStrengths2";
+                glm::vec4 strengths = mat->GetDataParam<glm::vec4>(parameter);
+                applyEdit(UI::Property("Strength", strengths[channelIndex % 4], 0.01f, 0.0f, 1.0f), [&]() { mat->SetColor(parameter, strengths); });
+            }
+            if (isDecal && StringView(group) == "Coverage")
+            {
+                glm::vec4 color = mat->GetDataParam<glm::vec4>("decalColor");
+                applyEdit(UI::Property("Opacity", color.a, 0.01f, 0.0f, 1.0f), [&]() { mat->SetColor("decalColor", color); });
+            }
             for (const auto& param : params)
             {
                 if (!matches(param))
@@ -751,6 +828,22 @@ namespace Crowny
                 case ShaderParamType::Color4: {
                     // Read as vec4, display with color picker
                     glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
+                    if (isDecal && (param.Identifier == "decalColor" || param.Identifier == "decalCorrectionTint"))
+                    {
+                        glm::vec3 tint(value);
+                        applyEdit(UI::PropertyColor("Tint", tint), [&]() { mat->SetColor(param.Identifier, glm::vec4(tint, value.a)); });
+                        break;
+                    }
+                    if (isDecal && param.Identifier == "decalEmission")
+                    {
+                        glm::vec3 tint(value);
+                        applyEdit(UI::PropertyColor("Color", tint), [&]() {
+                            value = glm::vec4(tint, value.a);
+                            mat->SetColor(param.Identifier, value);
+                        });
+                        applyEdit(UI::Property("Intensity", value.a, 0.1f, 0.0f, 100000.0f), [&]() { mat->SetColor(param.Identifier, value); });
+                        break;
+                    }
                     ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
                     const bool modified = UI::PropertyColor(param.DisplayName.c_str(), value, flags);
                     applyEdit(modified, [&]() { mat->SetColor(param.Identifier, value); });
@@ -758,6 +851,18 @@ namespace Crowny
                 }
                 case ShaderParamType::Int: {
                     int value = mat->GetDataParam<int>(param.Identifier);
+                    if (isDecal && (param.Identifier == "decalColorBlend" || param.Identifier == "decalRoughnessBlend" ||
+                                    param.Identifier == "decalEmissionBlend"))
+                    {
+                        applyEdit(UI::PropertyDropdown("Blend", { "Replace", "Multiply", "Add" }, value),
+                                  [&]() { mat->SetInt(param.Identifier, value); });
+                        break;
+                    }
+                    if (isDecal && param.Identifier == "decalReplaceNormal")
+                    {
+                        applyEdit(UI::PropertyDropdown("Blend", { "Detail", "Replace" }, value), [&]() { mat->SetInt(param.Identifier, value); });
+                        break;
+                    }
                     const bool modified = UI::Property(param.DisplayName.c_str(), value);
                     applyEdit(modified, [&]() { mat->SetInt(param.Identifier, value); });
                     break;
@@ -798,12 +903,13 @@ namespace Crowny
                 {
                     const bool reset = ImGui::MenuItem("Reset to shader default");
                     undoRedo.OnItemInteract(reset);
-                    applyEdit(reset, [&]() { ResetMaterialParameter(*mat, *m_MaterialDefaults, param); });
+                    applyEdit(reset, [&]() { resetParameter(param); });
                     ImGui::EndPopup();
                 }
                 ImGui::PopID();
             }
             UI::EndPropertyGrid();
+            ImGui::EndDisabled();
             ImGui::PopID();
         }
         if (visibleCount == 0)
@@ -1814,6 +1920,10 @@ namespace Crowny
 
     void InspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
+        // Clearing the asset browser must not discard the current entity inspector.
+        if (filepath.empty() && m_InspectorMode == InspectorMode::GameObject)
+            return;
+
         const bool selectionChanged = m_InspectedAssetPath != filepath;
         if (selectionChanged)
         {

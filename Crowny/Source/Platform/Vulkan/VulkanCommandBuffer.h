@@ -254,7 +254,7 @@ namespace Crowny
                                       VulkanAccessFlags access, VkPipelineStageFlags stages);
         void RegisterImageTransfer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout, VulkanAccessFlags access);
 
-        void RegisterQuery(VulkanTimerQuery* query) { m_TimerQueries.insert(query); }
+        void RegisterQuery(VulkanTimerQuery* query);
         void RegisterQuery(VulkanPipelineQuery* query) { m_PipelineQueries.insert(query); }
         void RegisterQuery(VulkanOcclusionQuery* query) { m_OcclusionQueries.insert(query); }
 
@@ -293,8 +293,8 @@ namespace Crowny
         void Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount);
         void DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount);
         void DrawIndexedIndirect(VulkanBuffer* argumentBuffer, uint32_t argumentOffset, uint32_t drawCount, uint32_t stride);
-        void DrawIndexedIndirectCount(VulkanBuffer* argumentBuffer, uint32_t argumentOffset, VulkanBuffer* countBuffer,
-                                      uint32_t countOffset, uint32_t maxDrawCount, uint32_t stride);
+        void DrawIndexedIndirectCount(VulkanBuffer* argumentBuffer, uint32_t argumentOffset, VulkanBuffer* countBuffer, uint32_t countOffset,
+                                      uint32_t maxDrawCount, uint32_t stride);
         void TraceRays(uint32_t width, uint32_t height);
         void Dispatch(uint32_t groupsX, uint32_t groupsY, uint32_t groupsZ);
         void DispatchIndirect(VulkanBuffer* argumentBuffer, uint32_t argumentOffset);
@@ -353,7 +353,7 @@ namespace Crowny
         UnorderedMap<VulkanResource*, uint32_t> m_Images;
         UnorderedMap<VulkanSwapChain*, ResourceUseHandle> m_SwapChains;
 
-        UnorderedSet<VulkanTimerQuery*> m_TimerQueries;
+        UnorderedMap<VulkanTimerQuery*, Ref<VulkanTimerQuery>> m_TimerQueries;
         UnorderedSet<VulkanPipelineQuery*> m_PipelineQueries;
         UnorderedSet<VulkanOcclusionQuery*> m_OcclusionQueries;
 
@@ -420,6 +420,7 @@ namespace Crowny
         virtual CommandBufferState GetState() const override;
         virtual void Reset() override;
         void AcquireNewBuffer();
+
     protected:
         VulkanCommandBuffer(VulkanDevice& device, GpuQueueType queueType, uint32_t queueIdx, bool secondary);
 

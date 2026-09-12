@@ -18,6 +18,7 @@ namespace Crowny
 
         virtual void WriteData(uint32_t offset, uint32_t length, const void* src, BufferWriteOptions writeOptions /* = BWT_NORMAL */) override;
         virtual void ReadData(uint32_t offset, uint32_t length, void* dest) override;
+        Ref<GpuBufferReadback> QueueReadback(uint32_t offset, uint32_t length) override;
 
         virtual void* Map(uint32_t offset, uint32_t size, GpuLockOptions options) override;
         virtual void Unmap() override;

@@ -23,6 +23,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <tracy/Tracy.hpp>
+#include <tuple>
 
 #define renderstuff true
 
@@ -50,7 +51,7 @@ namespace Crowny
     {
         DecalRenderer Decals;
         LegacySurfacePass SurfacePass = LegacySurfacePass::All;
-        Map<std::pair<uint64_t, uint32_t>, Ref<GraphicsPipeline>> SurfacePipelines;
+        Map<std::tuple<uint64_t, uint32_t, uint32_t>, Ref<GraphicsPipeline>> SurfacePipelines;
         Ref<Material> SkyboxMaterial;
         Ref<Material> PbrMaterial;
         Ref<Material> WireframeMaterial;
@@ -65,6 +66,7 @@ namespace Crowny
 
         // Per-frame state
         glm::mat4 ViewProjection;
+        glm::mat4 View;
         glm::vec3 CamPos;
         float Gamma = 2.2f;
         float Exposure = 4.5f;
@@ -178,6 +180,7 @@ namespace Crowny
     static void SetupSceneUniforms(const glm::mat4& projection, const glm::mat4& viewMatrix, const glm::vec3& cameraPosition)
     {
         s_Data->ViewProjection = projection * viewMatrix;
+        s_Data->View = viewMatrix;
         s_Data->CamPos = cameraPosition;
 
         // Skybox
@@ -228,6 +231,7 @@ namespace Crowny
     static void ApplySceneUniforms(const Ref<Material>& material, const glm::mat4& model)
     {
         material->SetMatrix("viewProjection"_hstr, s_Data->ViewProjection);
+        material->SetMatrix("view"_hstr, s_Data->View);
         material->SetMatrix("model"_hstr, model);
         material->SetVector3("camPos"_hstr, s_Data->CamPos);
         material->SetColor("lightDir"_hstr, s_Data->LightDirectionOuter[0]);
@@ -246,8 +250,10 @@ namespace Crowny
         if (material->HasBinding("cw_samplerIrradiance"_hstr) && s_Data->ActiveIrradiance)
         {
             material->SetTexture("cw_samplerIrradiance"_hstr, s_Data->ActiveIrradiance);
-            material->SetTexture("cw_samplerBRDFLUT"_hstr, s_Data->BrdfLUT);
-            material->SetTexture("cw_prefilteredMap"_hstr, s_Data->ActivePrefiltered);
+            if (material->HasBinding("cw_samplerBRDFLUT"_hstr))
+                material->SetTexture("cw_samplerBRDFLUT"_hstr, s_Data->BrdfLUT);
+            if (material->HasBinding("cw_prefilteredMap"_hstr))
+                material->SetTexture("cw_prefilteredMap"_hstr, s_Data->ActivePrefiltered);
         }
     }
 
@@ -344,43 +350,61 @@ namespace Crowny
             return;
         if ((surfacePass == LegacySurfacePass::Coating || surfacePass == LegacySurfacePass::Transparent) && !transparent)
             return;
-        if (surfacePass == LegacySurfacePass::Coating &&
-            (!s_Data->Decals.HasCoatings() ||
-             !material->GetGraphicsPipeline()->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 1)))
+        if (surfacePass == LegacySurfacePass::Coating && !s_Data->Decals.HasCoatings())
             return;
-        Ref<GraphicsPipeline> overridePipeline;
-        if (transparent && surfacePass != LegacySurfacePass::All && material->GetPassCount() == 1)
-        {
-            const uint32_t mode = surfacePass == LegacySurfacePass::Coating ? 0u : alpha == AlphaMode::Additive ? 2u : 1u;
-            auto& pipeline = s_Data->SurfacePipelines[{ material->GetLayoutVersion(), mode }];
-            if (!pipeline)
-            {
-                auto blend = CreateRef<BlendStateDesc>();
-                blend->EnableBlending = mode != 0;
-                blend->SrcBlend = BlendFactor::SourceAlpha;
-                blend->DstBlend = mode == 2 ? BlendFactor::One : BlendFactor::InvSourceAlpha;
-                blend->SrcBlendAlpha = BlendFactor::One;
-                blend->DstBlendAlpha = BlendFactor::InvSourceAlpha;
-                auto depth = CreateRef<DepthStencilStateDesc>();
-                depth->DepthCompareFunction = CompareFunction::LESS_EQUAL;
-                depth->EnableDepthWrite = mode == 0;
-                GraphicsMaterial adapter;
-                if (adapter.Initialize(material->GetShader(), material->GetVariation(), blend, depth))
-                    pipeline = adapter.GetPipeline();
-            }
-            overridePipeline = pipeline;
-        }
         material->FlushUniformBuffers();
         for (uint32_t p = 0; p < material->GetPassCount(); p++)
         {
-            rapi.SetGraphicsPipeline(overridePipeline ? overridePipeline : material->GetGraphicsPipeline(p));
+            const auto& original = material->GetGraphicsPipeline(p);
+            const bool receivesDecals = original->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 1) &&
+                                        original->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 10);
+            // A multi-pass material may begin with an outline or another pass
+            // that does not evaluate a surface. Only opted-in passes coat it.
+            if (surfacePass == LegacySurfacePass::Coating && !receivesDecals)
+                continue;
+            Ref<GraphicsPipeline> overridePipeline;
+            if (transparent && surfacePass != LegacySurfacePass::All && receivesDecals)
+            {
+                const uint32_t mode = surfacePass == LegacySurfacePass::Coating ? 0u : alpha == AlphaMode::Additive ? 2u : 1u;
+                auto& pipeline = s_Data->SurfacePipelines[{ material->GetLayoutVersion(), p, mode }];
+                if (!pipeline)
+                {
+                    auto blend = CreateRef<BlendStateDesc>();
+                    blend->EnableBlending = mode != 0;
+                    blend->SrcBlend = BlendFactor::SourceAlpha;
+                    blend->DstBlend = mode == 2 ? BlendFactor::One : BlendFactor::InvSourceAlpha;
+                    blend->SrcBlendAlpha = BlendFactor::One;
+                    blend->DstBlendAlpha = BlendFactor::InvSourceAlpha;
+                    auto depth = CreateRef<DepthStencilStateDesc>();
+                    depth->DepthCompareFunction = CompareFunction::LESS_EQUAL;
+                    depth->EnableDepthWrite = mode == 0;
+                    const auto& technique = material->GetShader()->GetTechnique(material->GetVariation());
+                    auto description = technique->GetRenderPasses()[p]->GetPassDesc();
+                    description.BlendState = blend;
+                    description.DepthStencilState = depth;
+                    auto pass = ShaderRenderPass::Create(description);
+                    pass->Compile();
+                    pipeline = pass->GetGraphicsPipeline();
+                }
+                overridePipeline = pipeline;
+            }
+            rapi.SetGraphicsPipeline(overridePipeline ? overridePipeline : original);
             rapi.SetUniforms(material->GetUniformParams(p));
             rapi.SetDrawMode(drawMode);
             rapi.DrawIndexed(indexOffset, indexCount, 0, vertexCount);
         }
     }
 
-    void ForwardRenderer::PrepareDecals(const RenderSnapshot& snapshot) { s_Data->Decals.PrepareCompatibility(snapshot); }
+    void ForwardRenderer::PrepareDecals(const RenderSnapshot& snapshot, GpuDecalWorld* world)
+    {
+        s_Data->Decals.PrepareCompatibility(snapshot, world);
+    }
+
+    void ForwardRenderer::ReleaseDecalView(uint64_t view)
+    {
+        if (s_Data)
+            s_Data->Decals.ReleaseView(view);
+    }
     void ForwardRenderer::SetSurfacePass(LegacySurfacePass pass) { s_Data->SurfacePass = pass; }
     const DecalRenderStats& ForwardRenderer::GetDecalStatistics() { return s_Data->Decals.GetStats(); }
 

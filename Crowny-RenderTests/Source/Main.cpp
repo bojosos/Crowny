@@ -51,8 +51,8 @@ int main(int argc, char** argv)
         applicationDesc.InternalDirectory = options.Artifacts.parent_path() / "import-runtime/Assets";
     applicationDesc.DeferRuntimeServices = true;
     applicationDesc.Window.Title = "Crowny Render Tests";
-    applicationDesc.Window.Width = 64u;
-    applicationDesc.Window.Height = 64u;
+    applicationDesc.Window.Width = options.BenchmarkSprites ? 1920u : 64u;
+    applicationDesc.Window.Height = options.BenchmarkSprites ? 1080u : 64u;
     applicationDesc.Window.Hidden = true;
     applicationDesc.Window.VSync = false;
     applicationDesc.Window.DepthBuffer = false;

@@ -3,6 +3,7 @@
 #include "Crowny/Renderer/DecalRenderer.h"
 
 #include "Crowny/Renderer/ComputeMaterial.h"
+#include "Crowny/Renderer/GpuDecalWorld.h"
 #include "Crowny/Renderer/GpuScene.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
@@ -39,11 +40,58 @@ namespace Crowny
         }
     } // namespace
 
-    void DecalRenderer::Extract(Scene& scene, RenderSnapshot& snapshot)
+    void DecalExtractionState::Clear()
     {
+        // A scene switch starts a new journal. Queued snapshots retain the old
+        // token and GPU resources until their frames finish.
+        m_World = {};
+        m_Tracked.clear();
+        m_Changes.clear();
+        m_Lifetime = std::make_shared<uint8_t>(0);
+    }
+
+    void DecalExtractionState::BeginSnapshot(RenderSnapshot& snapshot)
+    {
+        snapshot.DecalWorldLifetime = m_Lifetime;
+        for (auto& [_, tracked] : m_Tracked)
+            tracked.Seen = false;
+    }
+
+    void DecalExtractionState::EndSnapshot(RenderSnapshot& snapshot)
+    {
+        for (auto it = m_Tracked.begin(); it != m_Tracked.end();)
+        {
+            if (it->second.Seen)
+                ++it;
+            else
+            {
+                m_World.Destroy(it->second.Source.Handle);
+                it = m_Tracked.erase(it);
+            }
+        }
+        m_World.DrainChanges(m_Changes);
+        for (const auto& change : m_Changes)
+        {
+            auto& output = snapshot.DecalChanges.Acquire();
+            output = {};
+            output.Handle = change.Handle;
+            output.Type = change.Type;
+            if (change.Type != DecalChangeType::Destroy)
+                output.Record = m_Tracked.at(change.Record.Id).Source;
+        }
+    }
+
+    void DecalRenderer::Extract(Scene& scene, RenderSnapshot& snapshot, DecalExtractionState* state)
+    {
+        if (state)
+            state->BeginSnapshot(snapshot);
         auto decals = scene.GetAllEntitiesWith<DecalComponent>();
         if (decals.begin() == decals.end())
+        {
+            if (state)
+                state->EndSnapshot(snapshot);
             return;
+        }
         // DFS intervals make subtree targeting independent of depth and parent count in the shader.
         UnorderedMap<UUID, glm::uvec2> intervals;
         uint32_t next = 1;
@@ -86,6 +134,7 @@ namespace Crowny
         }
         std::sort(snapshot.DecalReceivers.begin(), snapshot.DecalReceivers.end(), [](const auto& a, const auto& b) { return a.x < b.x; });
         const auto frustum = VisibilityFrustum::FromViewProjection(snapshot.ProjectionMatrix * snapshot.ViewMatrix);
+        UnorderedMap<UUID, RenderableDecal> materialCaptures;
         for (auto handle : decals)
         {
             Entity entity{ handle, &scene };
@@ -96,7 +145,8 @@ namespace Crowny
             if (!DecalMath::IsValid(s, world))
                 continue;
             const auto bounds = DecalMath::Bounds(s, world);
-            if (!frustum.IntersectsSphere(glm::vec3(bounds), bounds.w))
+            const bool visible = frustum.IntersectsSphere(glm::vec3(bounds), bounds.w);
+            if (!visible && !state)
                 continue;
             glm::uvec2 target(0, 0xffffffffu);
             if (s.TargetMode != DecalTargetMode::Layers)
@@ -108,9 +158,9 @@ namespace Crowny
                 if (s.TargetMode == DecalTargetMode::Entity)
                     target.y = target.x + 1;
             }
-            auto& decal = snapshot.Decals.Acquire();
-            decal = {};
+            RenderableDecal decal;
             decal.Id = entity.GetUuid();
+            decal.MaterialId = s.Material.GetUUID();
             decal.SortOrder = s.SortOrder;
             decal.MaterialRevision = s.Material->GetParamVersion();
             decal.Bounds = bounds;
@@ -126,12 +176,40 @@ namespace Crowny
             d.UV = { s.UVScale, s.UVOffset };
             d.Controls = { glm::radians(s.UVRotation), glm::radians(s.SeamRotation), s.DistanceFadeStart, s.DistanceFadeEnd };
             d.Metadata = { s.ReceiverLayers, target, 0 };
-            decal.Material = CaptureMaterial(*s.Material);
-            for (uint32_t slot = 0; slot < 5; ++slot)
-                decal.Textures[slot] = s.Material->GetTexture(0, slot);
+            auto [capture, inserted] = materialCaptures.try_emplace(decal.MaterialId);
+            if (inserted)
+            {
+                capture->second.Material = CaptureMaterial(*s.Material);
+                for (uint32_t slot = 0; slot < 5; ++slot)
+                    capture->second.Textures[slot] = s.Material->GetTexture(0, slot);
+            }
+            decal.Material = capture->second.Material;
+            decal.Textures = capture->second.Textures;
+            if (state)
+            {
+                auto [tracked, created] = state->m_Tracked.try_emplace(decal.Id);
+                const auto& previous = tracked->second.Source;
+                DecalRecord record{ decal.Id, decal.MaterialId, s, world };
+                if (created)
+                    decal.Handle = state->m_World.Create(record);
+                else
+                {
+                    decal.Handle = previous.Handle;
+                    if (previous.MaterialId != decal.MaterialId || previous.SortOrder != decal.SortOrder ||
+                        previous.MaterialRevision != decal.MaterialRevision || previous.Textures != decal.Textures ||
+                        std::memcmp(&previous.Data, &decal.Data, sizeof(decal.Data)) != 0 ||
+                        std::memcmp(&previous.Material, &decal.Material, sizeof(decal.Material)) != 0)
+                        state->m_World.Update(decal.Handle, record);
+                }
+                tracked->second = { decal, true };
+            }
+            if (visible)
+                snapshot.Decals.Acquire() = std::move(decal);
         }
         std::sort(snapshot.Decals.begin(), snapshot.Decals.end(),
                   [](const auto& a, const auto& b) { return a.SortOrder != b.SortOrder ? a.SortOrder < b.SortOrder : a.Id < b.Id; });
+        if (state)
+            state->EndSnapshot(snapshot);
     }
 
     template <typename T> void DecalRenderer::Upload(Ref<GenericGpuBuffer>& buffer, Vector<T>& previous, const Vector<T>& data)
@@ -147,17 +225,33 @@ namespace Crowny
             buffer = GenericGpuBuffer::Create(desc);
             previous.clear();
         }
-        if (bytes && (previous.size() != data.size() || std::memcmp(previous.data(), data.data(), bytes) != 0))
+        if (bytes && previous.size() != data.size())
         {
             buffer->WriteData(0, bytes, data.data(), BWT_DISCARD);
             m_Stats.UploadedBytes += bytes;
-            previous = data;
         }
-        if (data.empty())
-            previous.clear();
+        else
+        {
+            for (size_t first = 0; first < data.size();)
+            {
+                if (std::memcmp(&previous[first], &data[first], sizeof(T)) == 0)
+                {
+                    ++first;
+                    continue;
+                }
+                size_t end = first + 1;
+                while (end < data.size() && std::memcmp(&previous[end], &data[end], sizeof(T)) != 0)
+                    ++end;
+                const uint32_t size = static_cast<uint32_t>((end - first) * sizeof(T));
+                buffer->WriteData(static_cast<uint32_t>(first * sizeof(T)), size, data.data() + first, BWT_NORMAL);
+                m_Stats.UploadedBytes += size;
+                first = end;
+            }
+        }
+        previous = data;
     }
 
-    void DecalRenderer::Prepare(const RenderSnapshot& snapshot, GpuScene* gpuScene)
+    void DecalRenderer::Prepare(const RenderSnapshot& snapshot, GpuScene* gpuScene, GpuDecalWorld* world)
     {
         m_Stats = {};
         uint64_t revision = 14695981039346656037ull;
@@ -182,7 +276,7 @@ namespace Crowny
         if (!snapshot.Decals.Empty())
             hashBytes(snapshot.DecalReceivers.begin(), snapshot.DecalReceivers.Size() * sizeof(glm::uvec4));
         for (uint64_t released : snapshot.ReleasedHistoryNamespaces)
-            m_ViewRevisions.erase(released);
+            ReleaseView(released);
         auto [history, inserted] = m_ViewRevisions.try_emplace(snapshot.HistoryNamespace);
         auto& previousView = history->second;
         m_HistoryChanged = inserted || previousView.Revision != revision;
@@ -227,74 +321,141 @@ namespace Crowny
         Vector<glm::vec4> bounds;
         Vector<GpuDecalMaterial> materials;
         Vector<glm::uvec4> receivers(snapshot.DecalReceivers.begin(), snapshot.DecalReceivers.end());
-        m_Textures.clear();
-        m_Textures.push_back(Texture::WHITE);
-        for (const auto& source : snapshot.Decals)
+        Vector<glm::uvec2> references;
+        m_HasCoatings = false;
+        if (world && !world->Prepare(gpuScene, m_Stats))
         {
-            auto material = source.Material;
-            const size_t textureCountBefore = m_Textures.size();
-            uint32_t indices[5]{};
-            bool admitted = true;
-            for (uint32_t slot = 0; slot < 5; ++slot)
-            {
-                const Ref<Texture> texture = source.Textures[slot] ? source.Textures[slot] : slot == 1 ? Texture::NORMAL : Texture::WHITE;
-                auto found = std::find(m_Textures.begin(), m_Textures.end(), texture);
-                if (found == m_Textures.end())
-                {
-                    if (!gpuScene && m_Textures.size() == 256)
-                    {
-                        admitted = false;
-                        break;
-                    }
-                    indices[slot] = static_cast<uint32_t>(m_Textures.size());
-                    m_Textures.push_back(texture);
-                }
-                else
-                    indices[slot] = static_cast<uint32_t>(found - m_Textures.begin());
-            }
-            if (!admitted)
-            {
-                m_Textures.resize(textureCountBefore);
-                ++m_Stats.RejectedMaterials;
-                continue;
-            }
-            material.Textures = { indices[0], indices[1], indices[2], indices[3] };
-            material.Textures2.x = indices[4];
-            auto data = source.Data;
-            data.Metadata.w = static_cast<uint32_t>(materials.size());
-            decals.push_back(data);
-            bounds.push_back(source.Bounds);
-            materials.push_back(material);
+            CW_ENGINE_WARN("Persistent decal tables exceeded buffer limits; using visible records for this view.");
+            world = nullptr;
         }
-        if (gpuScene)
+        if (world)
         {
-            Vector<uint32_t> descriptorIndices;
-            gpuScene->SetDecalTextures(m_Textures, descriptorIndices);
-            size_t admitted = 0;
-            for (size_t i = 0; i < decals.size(); ++i)
+            m_Decals = world->GetDecalBuffer();
+            m_Materials = world->GetMaterialBuffer();
+            m_Textures = world->GetTextures();
+            for (const auto& source : snapshot.Decals)
             {
-                auto material = materials[i];
-                bool valid = true;
-                for (int channel = 0; channel < 4; ++channel)
+                glm::uvec2 reference;
+                if (!world->GetReference(source.Handle, reference))
+                    continue;
+                references.push_back(reference);
+                decals.push_back(source.Data);
+                bounds.push_back(source.Bounds);
+                m_HasCoatings |= (source.Material.Modes.x & 128u) != 0 && source.Material.Surface.w > 0 && source.Material.Strengths2.w > 0;
+            }
+        }
+        else
+        {
+            m_Textures.clear();
+            m_Textures.push_back(Texture::WHITE);
+            for (const auto& source : snapshot.Decals)
+            {
+                auto material = source.Material;
+                const size_t textureCountBefore = m_Textures.size();
+                uint32_t indices[5]{};
+                bool admitted = true;
+                for (uint32_t slot = 0; slot < 5; ++slot)
                 {
-                    material.Textures[channel] = descriptorIndices[material.Textures[channel]];
-                    valid &= material.Textures[channel] != UINT32_MAX;
+                    const Ref<Texture> texture = source.Textures[slot] ? source.Textures[slot] : slot == 1 ? Texture::NORMAL : Texture::WHITE;
+                    auto found = std::find(m_Textures.begin(), m_Textures.end(), texture);
+                    if (found == m_Textures.end())
+                    {
+                        if (!gpuScene && m_Textures.size() == 256)
+                        {
+                            admitted = false;
+                            break;
+                        }
+                        indices[slot] = static_cast<uint32_t>(m_Textures.size());
+                        m_Textures.push_back(texture);
+                    }
+                    else
+                        indices[slot] = static_cast<uint32_t>(found - m_Textures.begin());
                 }
-                material.Textures2.x = descriptorIndices[material.Textures2.x];
-                valid &= material.Textures2.x != UINT32_MAX;
-                if (!valid)
+                if (!admitted)
                 {
+                    m_Textures.resize(textureCountBefore);
                     ++m_Stats.RejectedMaterials;
                     continue;
                 }
-                decals[admitted] = decals[i];
-                decals[admitted].Metadata.w = static_cast<uint32_t>(admitted);
-                bounds[admitted] = bounds[i];
-                materials[admitted++] = material;
+                material.Textures = { indices[0], indices[1], indices[2], indices[3] };
+                material.Textures2.x = indices[4];
+                auto data = source.Data;
+                data.Metadata.w = static_cast<uint32_t>(materials.size());
+                decals.push_back(data);
+                bounds.push_back(source.Bounds);
+                materials.push_back(material);
             }
-            decals.resize(admitted);
-            bounds.resize(admitted);
-            materials.resize(admitted);
+            if (gpuScene)
+            {
+                Vector<uint32_t> descriptorIndices;
+                gpuScene->SetDecalTextures(m_Textures, descriptorIndices);
+                size_t admitted = 0;
+                for (size_t i = 0; i < decals.size(); ++i)
+                {
+                    auto material = materials[i];
+                    bool valid = true;
+                    for (int channel = 0; channel < 4; ++channel)
+                    {
+                        material.Textures[channel] = descriptorIndices[material.Textures[channel]];
+                        valid &= material.Textures[channel] != UINT32_MAX;
+                    }
+                    material.Textures2.x = descriptorIndices[material.Textures2.x];
+                    valid &= material.Textures2.x != UINT32_MAX;
+                    if (!valid)
+                    {
+                        ++m_Stats.RejectedMaterials;
+                        continue;
+                    }
+                    decals[admitted] = decals[i];
+                    decals[admitted].Metadata.w = static_cast<uint32_t>(admitted);
+                    bounds[admitted] = bounds[i];
+                    materials[admitted++] = material;
+                }
+                decals.resize(admitted);
+                bounds.resize(admitted);
+                materials.resize(admitted);
+            }
+            // Instances sharing a material (including its admitted texture indices)
+            // share one GPU record. Hash buckets still compare bytes to handle collisions.
+            Vector<GpuDecalMaterial> uniqueMaterials;
+            UnorderedMap<uint64_t, Vector<uint32_t>> materialBuckets;
+            for (auto& decal : decals)
+            {
+                const auto& material = materials[decal.Metadata.w];
+                uint64_t hash = 14695981039346656037ull;
+                const auto* bytes = reinterpret_cast<const uint8_t*>(&material);
+                for (size_t i = 0; i < sizeof(material); ++i)
+                    hash = (hash ^ bytes[i]) * 1099511628211ull;
+                auto& bucket = materialBuckets[hash];
+                const auto found = std::find_if(bucket.begin(), bucket.end(), [&](uint32_t index) {
+                    return std::memcmp(&uniqueMaterials[index], &material, sizeof(material)) == 0;
+                });
+                if (found != bucket.end())
+                    decal.Metadata.w = *found;
+                else
+                {
+                    decal.Metadata.w = static_cast<uint32_t>(uniqueMaterials.size());
+                    bucket.push_back(decal.Metadata.w);
+                    uniqueMaterials.push_back(material);
+                }
+            }
+            materials = std::move(uniqueMaterials);
+            Vector<GpuDecalSlot> slots;
+            for (const auto& decal : decals)
+            {
+                references.push_back({ static_cast<uint32_t>(slots.size()), 1 });
+                slots.push_back({ decal, { 1, 1, 0, 0 } });
+            }
+            Vector<GpuDecalMaterialSlot> materialSlots;
+            for (const auto& material : materials)
+            {
+                materialSlots.push_back({ material, { 1, 0, 0, 0 } });
+                m_HasCoatings |= (material.Modes.x & 128u) != 0 && material.Surface.w > 0 && material.Strengths2.w > 0;
+            }
+            Upload(m_FallbackDecals, m_PreviousDecals, slots);
+            Upload(m_FallbackMaterials, m_PreviousMaterials, materialSlots);
+            m_Decals = m_FallbackDecals;
+            m_Materials = m_FallbackMaterials;
         }
         m_Counts = { decals.size(), receivers.size(), 0, 0 };
         m_Stats.Visible = static_cast<uint32_t>(decals.size());
@@ -307,27 +468,34 @@ namespace Crowny
         m_GridConstants.DepthRow =
           -glm::vec4(snapshot.ViewMatrix[0][2], snapshot.ViewMatrix[1][2], snapshot.ViewMatrix[2][2], snapshot.ViewMatrix[3][2]);
         m_GridConstants.DepthViewport = { gridDesc.NearPlane, gridDesc.FarPlane, float(width), float(height) };
-        if (!decals.empty())
-            m_Grid.Build(gridDesc, snapshot.ViewMatrix, snapshot.ProjectionMatrix, bounds);
-        else
-        {
-            m_Grid.Cells.clear();
-            m_Grid.Indices.clear();
-            m_Grid.Overflow = 0;
-        }
-        m_GridConstants.Dimensions = { m_Grid.Dimensions, gridDesc.TileSize };
-        m_Counts.z = static_cast<uint32_t>(m_Grid.Cells.size());
-        m_Stats.OverflowClusters = m_Grid.Overflow;
+        const auto dimensions = ClusteredLightBuilder::GetDimensions(gridDesc);
+        m_GridConstants.Dimensions = { dimensions, gridDesc.TileSize };
+        m_Counts.z = decals.empty() ? 0 : dimensions.x * dimensions.y * dimensions.z;
+        DecalGridStatistics statistics;
+        const bool haveStatistics = m_GpuGrid.GetStatistics(snapshot.HistoryNamespace, statistics);
         if (gpuScene && !decals.empty() &&
-            m_GpuGrid.Build(gridDesc, snapshot.ViewMatrix, snapshot.ProjectionMatrix, bounds, static_cast<uint32_t>(m_Grid.Indices.size())))
+            m_GpuGrid.Build(gridDesc, snapshot.ViewMatrix, snapshot.ProjectionMatrix, bounds, snapshot.HistoryNamespace, snapshot.FrameNumber))
         {
             m_Cells = m_GpuGrid.GetCells();
             m_Indices = m_GpuGrid.GetIndices();
             m_Stats.GpuBuiltLists = true;
-            if (snapshot.ValidateDecalLists && !m_GpuGrid.MatchesReference(m_Grid.Cells, m_Grid.Indices))
+            m_Stats.ClusterStatisticsAvailable = haveStatistics;
+            if (haveStatistics)
             {
-                ++m_Stats.ListValidationFailures;
-                CW_ENGINE_ERROR("GPU decal lists differ from the CPU reference.");
+                m_Stats.StatisticsFrame = statistics.FrameNumber;
+                m_Stats.OverflowClusters = statistics.Overflow;
+                m_Stats.MaxClusterCandidates = statistics.MaxCandidates;
+                m_Stats.OccupiedClusters = statistics.OccupiedCells;
+                m_Stats.GridGpuMilliseconds = statistics.GpuMilliseconds;
+            }
+            if (snapshot.ValidateDecalLists)
+            {
+                m_Grid.Build(gridDesc, snapshot.ViewMatrix, snapshot.ProjectionMatrix, bounds);
+                if (!m_GpuGrid.MatchesReference(m_Grid.Cells, m_Grid.Indices))
+                {
+                    ++m_Stats.ListValidationFailures;
+                    CW_ENGINE_ERROR("GPU decal lists differ from the CPU reference.");
+                }
             }
             m_Stats.UploadedBytes += bounds.size() * sizeof(glm::vec4);
             // Clear CPU upload mirrors so a later compatibility fallback uploads its own ordering.
@@ -336,11 +504,24 @@ namespace Crowny
         }
         else
         {
+            if (!decals.empty())
+                m_Grid.Build(gridDesc, snapshot.ViewMatrix, snapshot.ProjectionMatrix, bounds);
+            else
+            {
+                m_Grid.Cells.clear();
+                m_Grid.Indices.clear();
+                m_Grid.Overflow = 0;
+                m_GpuGrid.ReleaseView(snapshot.HistoryNamespace);
+            }
+            m_Stats.ClusterStatisticsAvailable = true;
+            m_Stats.StatisticsFrame = snapshot.FrameNumber;
+            m_Stats.OverflowClusters = m_Grid.Overflow;
+            for (const auto cell : m_Grid.Cells)
+                m_Stats.OccupiedClusters += cell.y != 0;
             Upload(m_Cells, m_PreviousCells, m_Grid.Cells);
             Upload(m_Indices, m_PreviousIndices, m_Grid.Indices);
         }
-        Upload(m_Decals, m_PreviousDecals, decals);
-        Upload(m_Materials, m_PreviousMaterials, materials);
+        Upload(m_Visible, m_PreviousVisible, references);
         Upload(m_Receivers, m_PreviousReceivers, receivers);
         if (m_Stats.RejectedMaterials)
             CW_ENGINE_WARN("Decal texture capacity exceeded: {} decals rejected", m_Stats.RejectedMaterials);
@@ -355,14 +536,16 @@ namespace Crowny
         material.WriteUniformBlock(2, 7, &m_GridConstants, sizeof(m_GridConstants));
         material.SetBuffer(2, 8, m_Cells);
         material.SetBuffer(2, 9, m_Indices);
+        material.SetBuffer(2, 10, m_Visible);
     }
 
-    bool DecalRenderer::HasCoatings() const
+    void DecalRenderer::ReleaseView(uint64_t view)
     {
-        return std::any_of(m_PreviousMaterials.begin(), m_PreviousMaterials.end(), [](const auto& material) {
-            return (material.Modes.x & 128u) != 0 && material.Surface.w > 0 && material.Strengths2.w > 0;
-        });
+        m_ViewRevisions.erase(view);
+        m_GpuGrid.ReleaseView(view);
     }
+
+    bool DecalRenderer::HasCoatings() const { return m_Counts.x != 0 && m_HasCoatings; }
 
     void DecalRenderer::BindCoatingMode(GraphicsMaterial& material, uint32_t mode) const
     {
@@ -371,9 +554,9 @@ namespace Crowny
         material.WriteUniformBlock(2, 0, &counts, sizeof(counts));
     }
 
-    void DecalRenderer::PrepareCompatibility(const RenderSnapshot& snapshot)
+    void DecalRenderer::PrepareCompatibility(const RenderSnapshot& snapshot, GpuDecalWorld* world)
     {
-        Prepare(snapshot);
+        Prepare(snapshot, nullptr, world);
         if (!m_Atlas.Update(m_Textures))
         {
             m_Stats.RejectedMaterials += m_Counts.x;
@@ -391,7 +574,7 @@ namespace Crowny
                 continue;
             auto uniforms = material.GetUniformParams(pass);
             auto info = pipeline->GetParamInfo();
-            if (!info->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 1))
+            if (!info->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 1) || !info->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 10))
                 continue;
             const auto write = [&](uint32_t slot, const glm::uvec4& data) {
                 auto block = uniforms->GetUniformBlockBuffer(2, slot);
@@ -418,6 +601,7 @@ namespace Crowny
             }
             uniforms->SetBuffer(2, 8, m_Cells);
             uniforms->SetBuffer(2, 9, m_Indices);
+            uniforms->SetBuffer(2, 10, m_Visible);
         }
     }
 } // namespace Crowny

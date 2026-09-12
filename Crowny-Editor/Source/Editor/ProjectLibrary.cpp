@@ -7,6 +7,7 @@
 #include "Crowny/Serialization/MaterialPresetSerializer.h"
 #include "Crowny/Serialization/MaterialSerializer.h"
 #include "Crowny/Serialization/NodeGraphSerializer.h"
+#include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorUtils.h"
@@ -692,10 +693,25 @@ namespace Crowny
                     Path logical = file->Filepath.lexically_relative(m_ProjectFolder);
                     if (dependent)
                         logical = Path("Subassets") / (metadata->Uuid.ToString() + ".asset");
+                    Vector<UUID> dependencies;
+                    if (!dependent &&
+                        (metadata->Type == AssetType::Scene || metadata->Type == AssetType::Prefab || metadata->Type == AssetType::Material))
+                    {
+                        try
+                        {
+                            const auto source = YAML::LoadFile(file->Filepath.string());
+                            dependencies = metadata->Type == AssetType::Material ? MaterialSerializer::GatherTextureDependencies(source)
+                                                                                 : SceneSerializer::GatherDecalMaterialDependencies(source);
+                        }
+                        catch (const std::exception& error)
+                        {
+                            throw std::runtime_error("Cannot gather content dependencies from " + file->Filepath.string() + ": " + error.what());
+                        }
+                    }
                     database.Assets.push_back({ metadata->Uuid,
                                                 logical,
                                                 cooked.lexically_relative(m_ProjectFolder),
-                                                {},
+                                                std::move(dependencies),
                                                 metadata->Type == AssetType::Scene ? "Scene" : "Asset",
                                                 {} });
                 };

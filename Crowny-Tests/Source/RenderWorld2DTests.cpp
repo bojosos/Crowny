@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Crowny/Memory/AllocationCounter.h"
+#include "Crowny/Memory/FrameVector.h"
 #include "Crowny/Renderer/RenderWorld2D.h"
 
 using namespace Crowny;
@@ -73,6 +74,35 @@ TEST_CASE("2D world cancels unpublished creates without reusing pending slots", 
     CHECK(world.GetActiveCount() == 1);
 }
 
+TEST_CASE("Published 2D changes survive later drains and slot reuse", "[Renderer][2D]")
+{
+    RenderWorld2D world(2);
+    Vector<RenderChange2D> firstCamera, laterCamera;
+    RenderInstance2DDesc desc;
+    desc.Transform[3].x = 3;
+    const auto first = world.Create(desc);
+    const auto cancelled = world.Create({});
+    REQUIRE(world.Destroy(cancelled));
+    world.DrainChanges(firstCamera);
+    REQUIRE(firstCamera.size() == 1);
+    CHECK(firstCamera[0].Handle == first);
+    desc.Transform[3].x = 7;
+    REQUIRE(world.Update(first, desc));
+    world.DrainChanges(laterCamera);
+    REQUIRE(laterCamera.size() == 1);
+    CHECK(laterCamera[0].Data.Transform.Row0.w == 7);
+    CHECK(firstCamera[0].Data.Transform.Row0.w == 3);
+    REQUIRE(world.Destroy(first));
+    world.DrainChanges(laterCamera);
+    const auto replacement = world.Create(desc);
+    CHECK(replacement.GetIndex() == first.GetIndex());
+    CHECK(replacement.GetGeneration() != first.GetGeneration());
+    world.DrainChanges(laterCamera);
+    CHECK(firstCamera[0].Handle == first);
+    CHECK(firstCamera[0].Type == RenderChange2DType::Create);
+    CHECK(firstCamera[0].Data.Transform.Row0.w == 3);
+}
+
 TEST_CASE("Moving retained 2D instances reuse warmed change storage", "[Renderer][2D][Memory]")
 {
     constexpr uint32_t count = 1024;
@@ -104,4 +134,38 @@ TEST_CASE("Moving retained 2D instances reuse warmed change storage", "[Renderer
     REQUIRE(changes.size() == count);
     CHECK(changes.front().Data.Transform.Row0.w == 19.0f);
     CHECK(changes.front().Data.PreviousTransform.Row0.w == 18.0f);
+}
+
+TEST_CASE("2D changes publish directly into reusable snapshot storage", "[Renderer][2D][Memory]")
+{
+    RenderWorld2D world(1);
+    FrameVector<RenderChange2D> changes;
+    RenderInstance2DDesc desc;
+    const auto handle = world.Create(desc);
+    world.DrainChanges(changes);
+    REQUIRE(changes.Size() == 1);
+    CHECK(changes[0].Type == RenderChange2DType::Create);
+    const auto before = Memory::GetThreadAllocationSnapshot();
+    for (uint64_t frame = 1; frame < 10; ++frame)
+    {
+        world.BeginFrame(frame);
+        desc.Transform[3].x = float(frame);
+        world.Update(handle, desc);
+        world.DrainChanges(changes);
+    }
+    const auto delta = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+    CHECK(delta.AllocationCount == 0);
+    REQUIRE(changes.Size() == 1);
+    CHECK(changes[0].Data.Transform.Row0.w == 9);
+    CHECK(changes[0].Data.PreviousTransform.Row0.w == 8);
+    REQUIRE(world.Destroy(handle));
+    world.DrainChanges(changes);
+    REQUIRE(changes.Size() == 1);
+    CHECK(changes[0].Type == RenderChange2DType::Destroy);
+    world.DrainChanges(changes);
+    CHECK(changes.Empty());
+    const auto cancelled = world.Create({});
+    REQUIRE(world.Destroy(cancelled));
+    world.DrainChanges(changes);
+    CHECK(changes.Empty());
 }

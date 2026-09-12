@@ -38,27 +38,7 @@ layout(location = 0) out vec4 cwColor;
 layout(location = 1) out int cwObjectId;
 #endif
 
-float finiteOrZero(float value)
-{
-    return isnan(value) || isinf(value) ? 0.0 : value;
-}
-
-vec3 finiteOrZero(vec3 value)
-{
-    return vec3(finiteOrZero(value.x), finiteOrZero(value.y), finiteOrZero(value.z));
-}
-
-vec3 acesFitted(vec3 value)
-{
-    const float a = 2.51;
-    const float b = 0.03;
-    const float c = 2.43;
-    const float d = 0.59;
-    const float e = 0.14;
-    value = max(finiteOrZero(value), vec3(0.0));
-    vec3 mapped = (value * (a * value + b)) / (value * (c * value + d) + e);
-    return clamp(finiteOrZero(mapped), vec3(0.0), vec3(1.0));
-}
+#include "CrownyToneMapping.glslinc"
 
 vec3 sampleToneMapped(ivec2 pixel, ivec2 imageSize)
 {

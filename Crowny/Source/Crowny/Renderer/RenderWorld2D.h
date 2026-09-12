@@ -8,6 +8,7 @@
 namespace Crowny
 {
     class Texture;
+    template <typename T> class FrameVector;
 
     class RenderHandle2D
     {
@@ -88,26 +89,27 @@ namespace Crowny
         bool Destroy(RenderHandle2D handle);
         bool IsAlive(RenderHandle2D handle) const;
         void DrainChanges(Vector<RenderChange2D>& output);
+        void DrainChanges(FrameVector<RenderChange2D>& output);
         uint32_t GetActiveCount() const { return m_ActiveCount; }
 
     private:
-        static constexpr uint32_t NoChange = 0xffffffffu;
         struct Slot
         {
             RenderChange2D Value;
             uint32_t Generation = 1;
-            uint32_t PendingChange = NoChange;
+            bool PendingChange = false;
             bool Alive = false;
             bool NeedsSettle = false;
         };
         void Queue(uint32_t index, RenderChange2DType type);
         void Assign(Slot& slot, const RenderInstance2DDesc& desc);
+        template <typename Append> void DrainTo(Append&& append);
 
         Vector<Slot> m_Slots;
         Vector<uint32_t> m_Free;
         Vector<uint32_t> m_Retired;
         Vector<uint32_t> m_Moving;
-        Vector<RenderChange2D> m_Changes;
+        Vector<uint32_t> m_Changes;
         uint64_t m_FrameNumber = 0;
         uint32_t m_ActiveCount = 0;
         bool m_HasFrame = false;

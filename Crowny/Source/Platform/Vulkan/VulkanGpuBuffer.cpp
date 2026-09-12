@@ -8,6 +8,51 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        class VulkanBufferReadback final : public GpuBufferReadback
+        {
+        public:
+            VulkanBufferReadback(VulkanBuffer* buffer, uint32_t size) : m_Buffer(buffer), m_Size(size) {}
+            ~VulkanBufferReadback() override { m_Buffer->Destroy(); }
+
+            bool TryRead(void* destination, uint32_t length) override
+            {
+                if (!destination || length != m_Size || m_Buffer->IsBound() || m_Buffer->IsUsed())
+                    return false;
+                const uint8_t* data = m_Buffer->Map(0, m_Size);
+                if (!data)
+                    return false;
+                std::memcpy(destination, data, m_Size);
+                m_Buffer->Unmap();
+                return true;
+            }
+
+        private:
+            VulkanBuffer* m_Buffer;
+            uint32_t m_Size;
+        };
+    } // namespace
+
+    Ref<GpuBufferReadback> VulkanGpuBuffer::QueueReadback(uint32_t offset, uint32_t length)
+    {
+        if (length == 0 || offset > m_Size || length > m_Size - offset)
+            return nullptr;
+        auto* command = gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal();
+        if (command->IsInRenderPass())
+            command->EndRenderPass();
+        VulkanBuffer* staging = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice(), length, true, true);
+        command->MemoryBarrier(m_Buffer->GetHandle(), VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                               VK_PIPELINE_STAGE_TRANSFER_BIT);
+        m_Buffer->Copy(command, staging, offset, 0, length);
+        command->MemoryBarrier(staging->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_HOST_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                               VK_PIPELINE_STAGE_HOST_BIT);
+        command->MemoryBarrier(m_Buffer->GetHandle(), VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        command->RegisterBuffer(m_Buffer, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Read);
+        command->RegisterBuffer(staging, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Write);
+        return CreateRef<VulkanBufferReadback>(staging, length);
+    }
 
     VulkanBuffer::VulkanBuffer(VulkanResourceManager* owner, VkBuffer buffer, VmaAllocation allocation, uint32_t rowPitch, uint32_t slicePitch)
       : VulkanResource(owner, false), m_Buffer(buffer), m_Allocation(allocation), m_RowPitch(rowPitch)
@@ -307,10 +352,11 @@ namespace Crowny
 
                     if (options != GpuLockOptions::WRITE_DISCARD)
                     {
-                        uint8_t* src = m_Buffer->Map(offset, length);
-                        uint8_t* dst = newBuffer->Map(offset, length);
+                        uint8_t* src = m_Buffer->Map(0, m_Size);
+                        uint8_t* dst = newBuffer->Map(0, m_Size);
 
-                        std::memcpy(dst, src, length);
+                        // A range update preserves every other byte in the allocation.
+                        std::memcpy(dst, src, m_Size);
                         m_Buffer->Unmap();
                         newBuffer->Unmap();
                     }
@@ -452,8 +498,12 @@ namespace Crowny
                         VulkanBuffer* newBuffer = CreateBuffer(device, m_Size, false, true);
                         if (m_MappedOffset > 0 || m_MappedSize != m_Size)
                         {
+                            transferCB->MemoryBarrier(m_Buffer->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+                                                      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                             m_Buffer->Copy(transferCB->GetCB(), newBuffer, 0, 0, m_Size);
                             transferCB->GetCB()->RegisterBuffer(m_Buffer, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Read);
+                            transferCB->MemoryBarrier(newBuffer->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                                                      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                         }
 
                         m_Buffer->Destroy();

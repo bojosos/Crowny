@@ -18,6 +18,28 @@
 
 namespace Crowny
 {
+    Vector<UUID> SceneSerializer::GatherDecalMaterialDependencies(const YAML::Node& source)
+    {
+        Vector<UUID> dependencies;
+        const auto entities = source["Entities"];
+        if (!entities)
+            return dependencies;
+        if (!entities.IsSequence())
+            throw std::runtime_error("Scene Entities must be a sequence when gathering decal dependencies.");
+        for (const auto& entity : entities)
+        {
+            const auto decal = entity["DecalComponent"];
+            if (!decal)
+                continue;
+            const UUID material = decal["Material"].as<UUID>(UUID::EMPTY);
+            if (!material.Empty())
+                dependencies.push_back(material);
+        }
+        std::sort(dependencies.begin(), dependencies.end());
+        dependencies.erase(std::unique(dependencies.begin(), dependencies.end()), dependencies.end());
+        return dependencies;
+    }
+
     namespace
     {
         template <typename T> AssetHandle<T> LoadAssetReference(const UUID& uuid)

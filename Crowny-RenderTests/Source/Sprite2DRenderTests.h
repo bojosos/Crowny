@@ -8,4 +8,5 @@ namespace Crowny::RenderTests
     bool RenderMixed2DOrder(Image& image, String& error);
     bool RenderPersistentText(Image& image, String& error);
     bool RenderIntegerClearDraw(Image& image, String& error);
+    int RunSprite2DBenchmark(const Path& artifacts, bool smoke);
 } // namespace Crowny::RenderTests

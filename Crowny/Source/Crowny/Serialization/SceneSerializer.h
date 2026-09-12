@@ -35,6 +35,9 @@ namespace Crowny
         void DeserializeEntities(const YAML::Node& entitiesNode);
         bool DeserializeBinary(const Path& filepath);
 
+        // Reads scene or prefab source without loading assets or constructing a runtime scene.
+        static Vector<UUID> GatherDecalMaterialDependencies(const YAML::Node& source);
+
     private:
         Ref<Scene> m_Scene;
     };

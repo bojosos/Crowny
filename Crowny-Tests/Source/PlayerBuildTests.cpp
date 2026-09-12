@@ -4,6 +4,9 @@
 #include "Crowny/Build/ContentGraph.h"
 #include "Crowny/Build/ContentPack.h"
 #include "Crowny/Build/PlayerTemplate.h"
+#include "Crowny/Common/Yaml.h"
+#include "Crowny/Serialization/MaterialSerializer.h"
+#include "Crowny/Serialization/SceneSerializer.h"
 
 #include <fstream>
 
@@ -176,6 +179,86 @@ namespace Crowny
         CHECK(validation.ContainsCode("content.asset.path.unsafe"));
         CHECK(validation.ContainsCode("content.dependency.duplicate"));
         CHECK(validation.ContainsCode("content.dependency.missing"));
+    }
+
+    TEST_CASE("Scene and prefab decal roots retain shared material textures in cooked content", "[Build][decals]")
+    {
+        TemporaryDirectory temporary;
+        const UUID scene("10000000-0000-0000-0000-000000000001");
+        const UUID material("20000000-0000-0000-0000-000000000002");
+        const UUID texture("30000000-0000-0000-0000-000000000003");
+        const String entities = R"(Entities:
+  - Entity: 40000000-0000-0000-0000-000000000004
+    DecalComponent:
+      Material: 20000000-0000-0000-0000-000000000002
+      Target: 50000000-0000-0000-0000-000000000005
+      Enabled: false
+  - Entity: 60000000-0000-0000-0000-000000000006
+    DecalComponent:
+      Material: 20000000-0000-0000-0000-000000000002
+)";
+        const String materialSource = R"(Domain: Decal
+Textures:
+  - Name: decalColorMap
+    UUID: 30000000-0000-0000-0000-000000000003
+  - Name: decalMaskMap
+    UUID: 30000000-0000-0000-0000-000000000003
+  - Name: decalNormalMap
+    UUID: 00000000-0000-0000-0000-000000000000
+)";
+        const auto textureDependencies = MaterialSerializer::GatherTextureDependencies(YAML::Load(materialSource));
+        REQUIRE(textureDependencies == Vector<UUID>{ texture });
+        CHECK(MaterialSerializer::GatherTextureDependencies(YAML::Load("Domain: Decal")).empty());
+        CHECK(SceneSerializer::GatherDecalMaterialDependencies(YAML::Load("Entities: []")).empty());
+        CHECK_THROWS(SceneSerializer::GatherDecalMaterialDependencies(YAML::Load("Entities: malformed")));
+        CHECK_THROWS(MaterialSerializer::GatherTextureDependencies(YAML::Load("Textures: malformed")));
+        WriteText(temporary.Root / "material.asset", materialSource);
+        WriteText(temporary.Root / "texture.asset", "cooked decal texture payload");
+        for (bool prefab : { false, true })
+        {
+            CAPTURE(prefab);
+            const String source = (prefab ? "PrefabName: Bottle\n" : "Scene: Bottle\n") + entities;
+            const auto materialDependencies = SceneSerializer::GatherDecalMaterialDependencies(YAML::Load(source));
+            REQUIRE(materialDependencies == Vector<UUID>{ material });
+            WriteText(temporary.Root / "scene.asset", source);
+            ContentDatabase database;
+            database.Assets = {
+                { scene,
+                  prefab ? "Assets/Bottle.cwprefab" : "Assets/Bottle.cwscene",
+                  "scene.asset",
+                  materialDependencies,
+                  prefab ? "Prefab" : "Scene",
+                  {} },
+                { material, "Assets/Label.cwmat", "material.asset", textureDependencies, "Material", {} },
+                { texture, "Assets/Label.png", "texture.asset", {}, "Texture", {} },
+            };
+            ContentResolveRequest request;
+            if (prefab)
+                request.AssetRoots = { scene };
+            else
+                request.SceneRoots = { scene };
+            const auto resolved = ResolveContent(database, request);
+            REQUIRE(resolved.Validation.IsValid());
+            REQUIRE(resolved.Assets.size() == 3);
+            Vector<ContentPackInput> inputs;
+            for (const auto& included : resolved.Assets)
+                inputs.push_back({ included.Asset.Id, included.Asset.LogicalPath, temporary.Root / included.Asset.CookedPath });
+            const Path pack = temporary.Root / (prefab ? "prefab.cwpack" : "scene.cwpack");
+            ContentPackDescriptor descriptor;
+            descriptor.EngineVersion = "0.1.0";
+            const String packError = ContentPackWriter::Write(pack, descriptor, inputs);
+            INFO(packError);
+            REQUIRE(packError.empty());
+            ContentPackReader reader;
+            REQUIRE(reader.Open(pack).empty());
+            Vector<uint8_t> payload;
+            REQUIRE(reader.Read(texture, payload).empty());
+            CHECK(String(payload.begin(), payload.end()) == "cooked decal texture payload");
+            request.ExcludedAssets = { texture };
+            CHECK_FALSE(ResolveContent(database, request).Validation.IsValid());
+            database.Assets.pop_back();
+            CHECK_FALSE(ValidateContentDatabase(database).IsValid());
+        }
     }
 
     TEST_CASE("Content packs are byte-identical and support random access", "[Build]")

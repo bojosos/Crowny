@@ -1,3 +1,4 @@
+import subprocess
 import sys
 
 from . import cmd, env, log
@@ -10,6 +11,28 @@ def update_submodules(root):
     log.info("Initializing Git submodules...")
     cmd.run_checked([git_executable, "submodule", "sync", "--recursive"], cwd=root)
     cmd.run_checked([git_executable, "submodule", "update", "--init", "--recursive"], cwd=root)
+    apply_dependency_patches(root, git_executable)
+
+
+def apply_dependency_patches(root, git_executable=None):
+    root = root.resolve()
+    git_executable = git_executable or git.find_git()
+    dependency = root / "Crowny/Dependencies/glfw"
+    patch = root / "Scripts/patches/glfw-active-window-ownership.patch"
+    base = [str(git_executable), "apply"]
+    for reverse in (False, True):
+        check = base + (["--reverse"] if reverse else []) + ["--check", str(patch)]
+        result = subprocess.run(check, cwd=dependency, capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            if not reverse:
+                log.info("Applying GLFW active-window ownership fix...")
+                cmd.run_checked(base + [patch], cwd=dependency)
+            return
+    raise RuntimeError(
+        "The GLFW active-window ownership patch neither applies nor is already applied. "
+        "Preserve local dependency edits and reconcile Scripts/patches/glfw-active-window-ownership.patch. "
+        + result.stderr.strip()
+    )
 
 
 def setup(

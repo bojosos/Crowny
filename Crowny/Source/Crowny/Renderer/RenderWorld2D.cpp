@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Memory/FrameVector.h"
 #include "Crowny/Renderer/RenderWorld2D.h"
 
 #include <algorithm>
@@ -81,7 +82,7 @@ namespace Crowny
             old.OrderInLayer == desc.OrderInLayer && old.Visible == desc.Visible)
             return true;
         Assign(slot, desc);
-        const bool pendingCreate = slot.PendingChange != NoChange && m_Changes[slot.PendingChange].Type == RenderChange2DType::Create;
+        const bool pendingCreate = slot.PendingChange && slot.Value.Type == RenderChange2DType::Create;
         if (pendingCreate)
             slot.Value.Data.PreviousTransform = transform;
         else if (transformChanged && !slot.NeedsSettle)
@@ -98,7 +99,7 @@ namespace Crowny
         if (!IsAlive(handle))
             return false;
         Slot& slot = m_Slots[handle.GetIndex()];
-        const bool pendingCreate = slot.PendingChange != NoChange && m_Changes[slot.PendingChange].Type == RenderChange2DType::Create;
+        const bool pendingCreate = slot.PendingChange && slot.Value.Type == RenderChange2DType::Create;
         Queue(handle.GetIndex(), pendingCreate ? RenderChange2DType::Cancelled : RenderChange2DType::Destroy);
         slot.Alive = false;
         --m_ActiveCount;
@@ -110,13 +111,11 @@ namespace Crowny
     {
         Slot& slot = m_Slots[index];
         slot.Value.Type = type;
-        if (slot.PendingChange == NoChange)
+        if (!slot.PendingChange)
         {
-            slot.PendingChange = static_cast<uint32_t>(m_Changes.size());
-            m_Changes.push_back(slot.Value);
+            slot.PendingChange = true;
+            m_Changes.push_back(index);
         }
-        else
-            m_Changes[slot.PendingChange] = slot.Value;
     }
 
     void RenderWorld2D::BeginFrame(uint64_t frameNumber)
@@ -139,15 +138,16 @@ namespace Crowny
         m_Moving.clear();
     }
 
-    void RenderWorld2D::DrainChanges(Vector<RenderChange2D>& output)
+    template <typename Append> void RenderWorld2D::DrainTo(Append&& append)
     {
-        output.clear();
-        output.reserve(m_Changes.size());
-        for (const RenderChange2D& change : m_Changes)
+        // Queue each slot once and copy its final value only at publication.
+        // Retired slots cannot be reused until every pending value is published.
+        for (uint32_t index : m_Changes)
         {
-            if (change.Type != RenderChange2DType::Cancelled)
-                output.push_back(change);
-            m_Slots[change.Handle.GetIndex()].PendingChange = NoChange;
+            Slot& slot = m_Slots[index];
+            if (slot.Value.Type != RenderChange2DType::Cancelled)
+                append(slot.Value);
+            slot.PendingChange = false;
         }
         m_Changes.clear();
         for (uint32_t index : m_Retired)
@@ -164,5 +164,21 @@ namespace Crowny
             }
         }
         m_Retired.clear();
+    }
+
+    void RenderWorld2D::DrainChanges(Vector<RenderChange2D>& output)
+    {
+        output.clear();
+        output.reserve(m_Changes.size());
+        DrainTo([&](const RenderChange2D& change) { output.push_back(change); });
+    }
+
+    void RenderWorld2D::DrainChanges(FrameVector<RenderChange2D>& output)
+    {
+        for (RenderChange2D& change : output)
+            change.TextureResource.Reset();
+        output.Reset();
+        output.Reserve(m_Changes.size());
+        DrainTo([&](const RenderChange2D& change) { output.Acquire() = change; });
     }
 } // namespace Crowny
