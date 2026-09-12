@@ -204,10 +204,14 @@ namespace Crowny
         std::shared_ptr<const uint8_t> m_World2DLifetime = std::make_shared<uint8_t>(0);
         struct TrackedSprite2D
         {
+            uint64_t InstanceId = 0;
             RenderHandle2D Handle;
             uint64_t LastSeenEpoch = 0;
         };
-        mutable UnorderedMap<uint64_t, TrackedSprite2D> m_TrackedSprites2D;
+        static constexpr uint32_t SpritesPerTrackingPage = 1024;
+        using SpriteTrackingPage = std::array<TrackedSprite2D, SpritesPerTrackingPage>;
+        mutable Vector<std::unique_ptr<SpriteTrackingPage>> m_SpriteTrackingPages;
+        mutable Vector<uint32_t> m_TrackedSpriteIndices;
         mutable RenderOrder2D m_RenderOrder2D;
         mutable TextLayoutCache m_TextLayoutCache;
         mutable RenderLightWorld m_RenderLightWorld;

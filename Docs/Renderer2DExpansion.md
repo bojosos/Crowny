@@ -26,6 +26,24 @@ records. The standard-vector adapter remains available. Tests cover cancellation
 motion settling, warm capacity, and earlier snapshots surviving subsequent drains
 and slot reuse.
 
+Sprite synchronization now uses lazily allocated 1,024-slot tracking pages keyed
+by ECS entity index. It keeps a dense list of active indices for retirement, so
+sparse entity ranges do not require scanning unused pages. Component identities
+distinguish replacement and entity reuse. Sprite moves preserve those identities
+through ECS pool compaction; copies for duplication still receive fresh identities.
+The regression originally produced four changes when removing two sprites because
+compaction also changed an unrelated sprite's identity.
+
+Transform composition scales the rotation matrix columns and writes translation
+directly, avoiding two general matrix multiplications. Retained sprite updates
+also avoid changing texture reference counts when the texture is unchanged.
+
+Scene snapshots now carry four-byte sprite handles instead of another full copy
+of each sprite's transform, color, and texture reference. The render-thread mirror
+supplies culling transforms and can reconstruct full payloads for compatibility
+drawing. Legacy native producers can still populate the existing `Sprites` array.
+Scene-produced ordered sprite indices address `SpriteHandles`.
+
 Text snapshots own their layout arrays and pin their concrete font objects.
 Layout caching separates layout fields from paint fields. Scene text now uses
 renderer-owned, immutable local-space glyph pages: 48 bytes per instance, with
@@ -112,6 +130,76 @@ Main integration logs are `benchmark-direct-main-all.log`,
 `benchmark-direct-main-native.log`, and `benchmark-direct-main-render.log` under
 `artifacts/2d-expansion/`. Full main benchmark records and captures are under
 `artifacts/2d-expansion/benchmark-direct-main/`.
+
+### Paged sprite tracking validation on September 12, 2026
+
+The instrumented 100,000-sprite diagnostic measured tracking lookup at roughly
+10-12 ms per frame with the hash map and 1.4-1.6 ms with paged entity lookup.
+Those values include per-object probe overhead. The probes were removed before
+the final builds and measurements; use full-frame records for performance gates.
+
+- Release All builds pass in the main and isolated checkouts, including editor,
+  managed assemblies, render tests, and staged player templates.
+- The focused native suite passes 27 cases and 443 assertions in both checkouts.
+  The main full suite passes 973 cases and 113,902 assertions, with one skipped
+  case. The isolated full suite passes 950 cases and 113,546 assertions, with one
+  skipped case.
+- The main renderer suite passes all 39 cases on Vulkan and OpenGL, and all 39
+  cross-backend capture comparisons pass. The first OpenGL run failed a texture
+  cache reimport check when Windows denied an atomic file replacement. A retry
+  passed without source or reference changes. Persistent sprite/text captures
+  were visually inspected; the isolated focused GPU checks also pass.
+- All 65 Python tooling tests, generated interop checking, and parity for 542
+  managed host functions pass. Native formatting and diff whitespace checks pass.
+- Linux and Windows editor interaction checks remain open. These results do not
+  complete milestone 1 or the expansion roadmap.
+
+Main logs are `tracking-main-all.log`, `tracking-main-native-focused.log`,
+`tracking-main-native-full.log`, `tracking-main-render.log`,
+`tracking-main-render-opengl-retry.log`, `tracking-main-compare.log`, and
+`tracking-tooling.log` under `artifacts/2d-expansion/`. Captures are under
+`tracking-main-render/` in the same directory.
+
+Before compact snapshots, the full main benchmark recorded Vulkan p95 26.5627 ms
+and OpenGL p95 28.0406 ms. Median extraction was 13.3672 ms and 13.4018 ms,
+respectively. Both runs retained 100,000 visible sprites, made no extraction
+allocations, and returned every GPU sample. Vulkan still made 93 rendering
+allocations per frame. The 16.67 ms gate remains unmet. The Vulkan final image is
+byte-identical to the earlier main capture; OpenGL differs above 3/255 at one
+pixel, with maximum channel error 16/255. Records are under
+`artifacts/2d-expansion/tracking-main-benchmark/`.
+
+### Compact snapshot validation on September 12, 2026
+
+The main Release All build passes after moving scene snapshots to sprite handles.
+The focused native suite passes 28 cases and 457 assertions. The full native suite
+passes 974 cases and 113,916 assertions, with one skipped case. All 39 rendering
+cases pass on each backend, and all 39 Vulkan/OpenGL capture comparisons pass.
+Persistent sprite/text captures were visually inspected. The mixed scene check
+uses compact handles and verifies premultiplied color, depth clearing, and picking;
+earlier direct draws in that check retain full legacy payloads.
+
+Logs are `compact-main-all.log`, `compact-main-native-focused.log`,
+`compact-main-native-full.log`, `compact-main-focused-render.log`, and
+`compact-main-render.log` under `artifacts/2d-expansion/`. Captures are under
+`compact-main-render/`.
+
+Full compact-snapshot runs recorded Vulkan p95 48.5364 ms and OpenGL p95
+46.7850 ms, with median extraction 23.2614 ms and 22.9295 ms. A Vulkan repeat
+recorded p95 49.0293 ms. The preceding implementation, rerun as an isolated-checkout
+control under the later conditions, recorded p95 51.3889 ms and median extraction
+26.0424 ms. Its unchanged ECS update stage also slowed to 3.4496 ms median,
+matching the compact run's 3.4000 ms and exceeding the earlier run's 1.7651 ms.
+The cause of this broad CPU timing variation remains unresolved; do not attribute
+the difference between the earlier 26.5627 ms and later runs solely to code.
+
+Every run used all 100,000 moving sprites, 300 warm-up frames, and 1,800 measured
+frames. Both backends retained three sprite draws, zero extraction allocations,
+and every GPU timing sample. Vulkan still made 93 rendering allocations per frame.
+The final compact captures are byte-identical to the preceding tracking captures
+on each backend. The performance gate remains unmet. Full records and images are
+under `compact-main-benchmark/` and `compact-main-repeat/` in the main artifact
+directory; the control is under the isolated checkout's `tracking-control/`.
 
 ### Retained text validation on September 12, 2026
 
@@ -286,7 +374,7 @@ changes.
 
 ## Milestone 1: renderer and pipeline
 
-- [ ] Persistent RenderWorld2D and immutable create/update/destroy changes.
+- [x] Persistent RenderWorld2D and immutable create/update/destroy changes.
 - [ ] DrawList2D recording interface, ordered adjacent batching, shared unit quad
   instances, renderer-owned contexts, and legacy Renderer2D adapters.
 - [ ] Retained radix ordering, sorting groups, custom-axis sorting, bounds culling.

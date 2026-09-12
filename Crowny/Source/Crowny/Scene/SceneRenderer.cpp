@@ -1861,8 +1861,9 @@ namespace Crowny
                     statistics.UploadedBytes += spriteStats.UploadedBytes;
                 }
             }
-            statistics.VisibleVertices += static_cast<uint64_t>(snapshot.Sprites.Size()) * 6u;
-            statistics.VisibleTriangles += static_cast<uint64_t>(snapshot.Sprites.Size()) * 2u;
+            const size_t spriteCount = snapshot.SpriteHandles.Empty() ? snapshot.Sprites.Size() : snapshot.SpriteHandles.Size();
+            statistics.VisibleVertices += static_cast<uint64_t>(spriteCount) * 6u;
+            statistics.VisibleTriangles += static_cast<uint64_t>(spriteCount) * 2u;
             for (const RenderableText& text : snapshot.Texts)
             {
                 statistics.VisibleVertices += static_cast<uint64_t>(text.TextData.Text.size()) * 6u;
@@ -2480,34 +2481,45 @@ namespace Crowny
             m_RenderWorld2D.BeginFrame(snapshot.FrameNumber);
             snapshot.World2DLifetime = m_World2DLifetime;
             const auto spriteRendererComponents = m_Scene->m_Registry.view<SpriteRendererComponent, TransformComponent, RelationshipComponent>();
-            snapshot.Sprites.Reserve(spriteRendererComponents.size_hint());
+            snapshot.SpriteHandles.Reserve(spriteRendererComponents.size_hint());
             snapshot.Ordered2D.Reserve(spriteRendererComponents.size_hint());
             for (const entt::entity ee : spriteRendererComponents)
             {
                 auto [sprite, transform, relationship] =
                   spriteRendererComponents.get<SpriteRendererComponent, TransformComponent, RelationshipComponent>(ee);
-                RenderableSprite& renderable = snapshot.Sprites.Acquire();
-                renderable.WorldMatrix = transform.GetWorldMatrix(relationship.Parent);
-                renderable.Texture = sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr;
-                renderable.Color = sprite.Color;
-                renderable.EntityId = ((int32_t)ee) + 1;
                 RenderInstance2DDesc desc;
-                desc.Transform = renderable.WorldMatrix;
+                desc.Transform = transform.GetWorldMatrix(relationship.Parent);
                 desc.Color = sprite.Color;
-                desc.TextureResource = renderable.Texture;
-                desc.ObjectID = { static_cast<uint32_t>(renderable.EntityId) };
+                desc.TextureResource = sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr;
+                desc.ObjectID = { static_cast<uint32_t>(entt::to_integral(ee)) + 1u };
                 desc.SortingLayer = sprite.SortingLayer;
                 desc.OrderInLayer = sprite.OrderInLayer;
-                auto [tracked, inserted] = m_TrackedSprites2D.try_emplace(sprite.InstanceId);
-                if (inserted)
-                    tracked->second.Handle = m_RenderWorld2D.Create(desc);
+                const uint32_t entityIndex = static_cast<uint32_t>(entt::to_entity(ee));
+                const uint32_t pageIndex = entityIndex / SpritesPerTrackingPage;
+                if (pageIndex >= m_SpriteTrackingPages.size())
+                    m_SpriteTrackingPages.resize(pageIndex + 1);
+                auto& page = m_SpriteTrackingPages[pageIndex];
+                if (!page)
+                    page = std::make_unique<SpriteTrackingPage>();
+                TrackedSprite2D& tracked = (*page)[entityIndex % SpritesPerTrackingPage];
+                if (tracked.InstanceId != sprite.InstanceId)
+                {
+                    // Component identity also changes when an ECS entity slot is
+                    // recycled or its sprite component is removed and re-added.
+                    if (tracked.InstanceId != 0)
+                        m_RenderWorld2D.Destroy(tracked.Handle);
+                    else
+                        m_TrackedSpriteIndices.push_back(entityIndex);
+                    tracked.InstanceId = sprite.InstanceId;
+                    tracked.Handle = m_RenderWorld2D.Create(desc);
+                }
                 else
-                    m_RenderWorld2D.Update(tracked->second.Handle, desc);
-                tracked->second.LastSeenEpoch = m_RenderSyncEpoch;
-                renderable.Handle = tracked->second.Handle;
+                    m_RenderWorld2D.Update(tracked.Handle, desc);
+                tracked.LastSeenEpoch = m_RenderSyncEpoch;
+                snapshot.SpriteHandles.Acquire() = tracked.Handle;
                 Renderable2DOrder& order = snapshot.Ordered2D.Acquire();
                 order.Type = Renderable2DType::Sprite;
-                order.Index = static_cast<uint32_t>(snapshot.Sprites.Size() - 1u);
+                order.Index = static_cast<uint32_t>(snapshot.SpriteHandles.Size() - 1u);
                 order.SortingLayer = sprite.SortingLayer;
                 order.OrderInLayer = sprite.OrderInLayer;
                 order.ViewDepth = 0.0f;
@@ -2541,14 +2553,18 @@ namespace Crowny
 
         m_TextLayoutCache.EndExtraction();
         m_RenderOrder2D.Sort({ snapshot.Ordered2D.begin(), snapshot.Ordered2D.Size() });
-        for (auto tracked = m_TrackedSprites2D.begin(); tracked != m_TrackedSprites2D.end();)
+        for (size_t index = 0; index < m_TrackedSpriteIndices.size();)
         {
-            if (tracked->second.LastSeenEpoch == m_RenderSyncEpoch)
-                ++tracked;
+            const uint32_t entityIndex = m_TrackedSpriteIndices[index];
+            TrackedSprite2D& tracked = (*m_SpriteTrackingPages[entityIndex / SpritesPerTrackingPage])[entityIndex % SpritesPerTrackingPage];
+            if (tracked.LastSeenEpoch == m_RenderSyncEpoch)
+                ++index;
             else
             {
-                m_RenderWorld2D.Destroy(tracked->second.Handle);
-                tracked = m_TrackedSprites2D.erase(tracked);
+                m_RenderWorld2D.Destroy(tracked.Handle);
+                tracked = {};
+                m_TrackedSpriteIndices[index] = m_TrackedSpriteIndices.back();
+                m_TrackedSpriteIndices.pop_back();
             }
         }
         m_RenderWorld2D.DrainChanges(snapshot.RenderWorld2DChanges);
@@ -2961,9 +2977,13 @@ namespace Crowny
     {
         m_DecalExtraction.Clear();
         m_TextLayoutCache.Clear();
-        for (const auto& [_, sprite] : m_TrackedSprites2D)
+        for (uint32_t entityIndex : m_TrackedSpriteIndices)
+        {
+            auto& sprite = (*m_SpriteTrackingPages[entityIndex / SpritesPerTrackingPage])[entityIndex % SpritesPerTrackingPage];
             m_RenderWorld2D.Destroy(sprite.Handle);
-        m_TrackedSprites2D.clear();
+            sprite = {};
+        }
+        m_TrackedSpriteIndices.clear();
         for (const auto& [_, instance] : m_TrackedRenderInstances)
             m_RenderWorld.DestroyInstance(instance.Handle);
         m_TrackedRenderInstances.clear();
@@ -3045,6 +3065,19 @@ namespace Crowny
             const auto drawSprite = [&](const RenderableSprite& sprite) {
                 Renderer2D::FillRect(sprite.WorldMatrix, sprite.Texture, sprite.Color, sprite.EntityId);
             };
+            const auto drawRetainedSprite = [&](RenderHandle2D handle) {
+                RenderableSprite sprite;
+                if (s_RenderThreadResources)
+                {
+                    const auto world = s_RenderThreadResources->Worlds2D.find(snapshot.HistoryOwnerId);
+                    if (world != s_RenderThreadResources->Worlds2D.end() && world->second.World.GetSprite(handle, sprite))
+                    {
+                        drawSprite(sprite);
+                        return;
+                    }
+                }
+                CW_ENGINE_ERROR("Cannot resolve retained sprite {} for compatibility rendering", handle.GetValue());
+            };
             const auto drawText = [&](const RenderableText& text) {
                 Renderer2D::DrawString(text.TextData, text.WorldMatrix, text.EntityId, text.Layout.get());
             };
@@ -3052,8 +3085,12 @@ namespace Crowny
             if (snapshot.Ordered2D.Empty())
             {
                 // Snapshots produced by older native integrations do not contain the combined order list.
-                for (const RenderableSprite& sprite : snapshot.Sprites)
-                    drawSprite(sprite);
+                if (!snapshot.SpriteHandles.Empty())
+                    for (RenderHandle2D handle : snapshot.SpriteHandles)
+                        drawRetainedSprite(handle);
+                else
+                    for (const RenderableSprite& sprite : snapshot.Sprites)
+                        drawSprite(sprite);
                 for (const RenderableText& text : snapshot.Texts)
                     drawText(text);
             }
@@ -3063,7 +3100,9 @@ namespace Crowny
                 {
                     if (item.Type == Renderable2DType::Sprite)
                     {
-                        if (item.Index < snapshot.Sprites.Size())
+                        if (!snapshot.SpriteHandles.Empty() && item.Index < snapshot.SpriteHandles.Size())
+                            drawRetainedSprite(snapshot.SpriteHandles[item.Index]);
+                        else if (snapshot.SpriteHandles.Empty() && item.Index < snapshot.Sprites.Size())
                             drawSprite(snapshot.Sprites[item.Index]);
                     }
                     else if (item.Index < snapshot.Texts.Size())

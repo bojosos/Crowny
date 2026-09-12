@@ -8,6 +8,7 @@
 namespace Crowny
 {
     struct RenderSnapshot;
+    struct RenderableSprite;
 
     struct GpuWorld2DStatistics
     {
@@ -37,6 +38,7 @@ namespace Crowny
         // The device storage-buffer limit may reduce these page sizes further.
         explicit GpuWorld2D(uint32_t maxInstancesPerPage = 65536, uint32_t maxOrderEntriesPerPage = 65536);
         void Apply(std::span<const RenderChange2D> changes);
+        bool GetSprite(RenderHandle2D handle, RenderableSprite& output) const;
         void ReleaseView(uint64_t viewIdentity);
         bool Render(const RenderSnapshot& snapshot);
         const GpuWorld2DStatistics& GetStatistics() const { return m_Statistics; }

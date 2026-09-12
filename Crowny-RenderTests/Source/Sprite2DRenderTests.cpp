@@ -391,6 +391,14 @@ namespace Crowny::RenderTests
             snapshot.World2DLifetime = std::make_shared<const uint8_t>(0);
             for (const auto& change : changes)
                 snapshot.RenderWorld2DChanges.Acquire() = change;
+            // Scene extraction now sends only handles. Keep the earlier direct
+            // draws above on legacy payloads, and exercise compact MRT draws here.
+            for (auto& sprite : snapshot.Sprites)
+            {
+                snapshot.SpriteHandles.Acquire() = sprite.Handle;
+                sprite.Texture.Reset();
+            }
+            snapshot.Sprites.Reset();
             SceneRenderer::RenderFromSnapshot(snapshot);
             api.SubmitCommandBuffer(nullptr);
             std::array<uint8_t, 4> leftColor{}, rightColor{};

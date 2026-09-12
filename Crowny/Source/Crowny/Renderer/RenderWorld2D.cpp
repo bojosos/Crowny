@@ -35,7 +35,8 @@ namespace Crowny
         slot.Value.Data.Transform = AffineTransform3x4::FromMatrix(desc.Transform);
         slot.Value.Data.Color = desc.Color;
         slot.Value.Data.UvRect = desc.UvRect;
-        slot.Value.TextureResource = desc.TextureResource;
+        if (slot.Value.TextureResource != desc.TextureResource)
+            slot.Value.TextureResource = desc.TextureResource;
         slot.Value.VisibilityLayers = desc.VisibilityLayers;
         slot.Value.ObjectID = desc.ObjectID;
         slot.Value.SortingLayer = desc.SortingLayer;

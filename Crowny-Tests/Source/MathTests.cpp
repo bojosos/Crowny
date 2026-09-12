@@ -65,6 +65,26 @@ TEST_CASE("Math::Matrix", "[Math]")
     }
 }
 
+TEST_CASE("Composed transforms apply scale then rotation then translation", "[Math][2D]")
+{
+    const glm::vec3 position(17.0f, -31.0f, 8.0f);
+    for (const glm::vec3 axis : { glm::vec3(0, 0, 1), glm::normalize(glm::vec3(1, 2, -3)) })
+        for (float angle : { 0.0f, 0.7f, -2.3f })
+            for (const glm::vec3 scale : { glm::vec3(1), glm::vec3(-2, 3, .5f), glm::vec3(0, 8, 0) })
+            {
+                const glm::quat rotation = glm::angleAxis(angle, axis);
+                const glm::mat4 matrix = Math::ComposeMatrix(position, rotation, scale);
+                for (const glm::vec3 point : { glm::vec3(0), glm::vec3(1, -2, 3) })
+                {
+                    const glm::vec3 expected = position + rotation * (scale * point);
+                    const glm::vec4 actual = matrix * glm::vec4(point, 1);
+                    for (uint32_t component = 0; component < 3; ++component)
+                        CHECK_THAT(actual[component], Catch::Matchers::WithinAbs(expected[component], .00001f));
+                    CHECK(actual.w == 1.0f);
+                }
+            }
+}
+
 TEST_CASE("Matrix decomposition preserves rotations across quaternion trace branches", "[Math]")
 {
     const glm::vec3 position(1.0f, 2.0f, 3.0f);

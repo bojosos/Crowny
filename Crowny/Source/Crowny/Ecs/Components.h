@@ -393,6 +393,28 @@ namespace Crowny
 
         SpriteRendererComponent() : ComponentBase() {}
         SpriteRendererComponent(const SpriteRendererComponent&) = default;
+        SpriteRendererComponent& operator=(const SpriteRendererComponent&) = default;
+
+        // ECS pool compaction moves the component to another storage slot.
+        // Preserve its identity; copying for duplication still creates a new one.
+        SpriteRendererComponent(SpriteRendererComponent&& other) noexcept
+          : Texture(std::move(other.Texture)), Color(other.Color), SortingLayer(other.SortingLayer), OrderInLayer(other.OrderInLayer)
+        {
+            InstanceId = other.InstanceId;
+        }
+
+        SpriteRendererComponent& operator=(SpriteRendererComponent&& other) noexcept
+        {
+            if (this != &other)
+            {
+                InstanceId = other.InstanceId;
+                Texture = std::move(other.Texture);
+                Color = other.Color;
+                SortingLayer = other.SortingLayer;
+                OrderInLayer = other.OrderInLayer;
+            }
+            return *this;
+        }
     };
 
     template <> void ComponentEditorWidget<SpriteRendererComponent>(Entity e);
@@ -402,7 +424,12 @@ namespace Crowny
         AssetHandle<Crowny::Material> Material;
         float Age = 0.0f;
         bool LifetimeRunning = true;
-        void RestartLifetime() { Age = 0.0f; Enabled = true; LifetimeRunning = true; }
+        void RestartLifetime()
+        {
+            Age = 0.0f;
+            Enabled = true;
+            LifetimeRunning = true;
+        }
         void StopLifetime() { LifetimeRunning = false; }
     };
 
@@ -1187,11 +1214,11 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<AnimationComponent>(Entity e);
 
-    using AllComponents =
-      ComponentGroup<TransformComponent, CameraComponent, LightComponent, DecalComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
-                     ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent, RelationshipComponent, ManagedScriptComponent,
-                     Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent, Rigidbody3DComponent, BoxCollider3DComponent,
-                     SphereCollider3DComponent, CapsuleCollider3DComponent, MeshCollider3DComponent, AnimationComponent, PrefabComponent>;
+    using AllComponents = ComponentGroup<TransformComponent, CameraComponent, LightComponent, DecalComponent, TextComponent, SpriteRendererComponent,
+                                         MeshRendererComponent, ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent,
+                                         RelationshipComponent, ManagedScriptComponent, Rigidbody2DComponent, BoxCollider2DComponent,
+                                         CircleCollider2DComponent, Rigidbody3DComponent, BoxCollider3DComponent, SphereCollider3DComponent,
+                                         CapsuleCollider3DComponent, MeshCollider3DComponent, AnimationComponent, PrefabComponent>;
 
     using TransformChangedNotifyComponents = ComponentGroup<AudioListenerComponent, AudioSourceComponent>;
 } // namespace Crowny

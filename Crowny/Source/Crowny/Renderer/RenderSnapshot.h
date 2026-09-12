@@ -114,6 +114,9 @@ namespace Crowny
         DirectionalShadowRenderData DirectionalShadow;
 
         // 2D objects
+        // Scene extraction publishes handles; immutable changes update the
+        // render-thread mirror. Full payloads remain for legacy producers.
+        FrameVector<RenderHandle2D> SpriteHandles;
         FrameVector<RenderableSprite> Sprites;
         FrameVector<RenderableText> Texts;
         FrameVector<Renderable2DOrder> Ordered2D;
@@ -213,6 +216,7 @@ namespace Crowny
             LegacyLights.Reset();
             ShadowUpdateRequests.Reset();
             DirectionalShadow = {};
+            SpriteHandles.Reset();
             Sprites.Reset();
             Texts.Reset();
             Ordered2D.Reset();

@@ -85,8 +85,8 @@ namespace Crowny
                 slot = {};
                 continue;
             }
-            const Ref<Texture> previous = slot.Texture ? m_Textures[slot.Texture].Resource : nullptr;
-            if (previous != change.TextureResource)
+            const Texture* previous = slot.Texture ? m_Textures[slot.Texture].Resource.Get() : nullptr;
+            if (previous != change.TextureResource.Get())
             {
                 const uint32_t texture = AcquireTexture(change.TextureResource);
                 ReleaseTexture(slot.Texture);
@@ -103,6 +103,22 @@ namespace Crowny
                 m_Dirty.push_back(index);
             }
         }
+    }
+
+    bool GpuWorld2D::GetSprite(RenderHandle2D handle, RenderableSprite& output) const
+    {
+        if (!handle || handle.GetIndex() >= m_Slots.size())
+            return false;
+        const Slot& slot = m_Slots[handle.GetIndex()];
+        if (slot.Handle != handle)
+            return false;
+        const Instance& instance = m_Instances[handle.GetIndex()];
+        output.Handle = handle;
+        output.WorldMatrix = instance.Data.Transform.ToMatrix();
+        output.Color = instance.Data.Color;
+        output.Texture = slot.Texture ? m_Textures[slot.Texture].Resource : nullptr;
+        output.EntityId = static_cast<int32_t>(instance.Metadata.x);
+        return true;
     }
 
     bool GpuWorld2D::Upload()
@@ -177,22 +193,36 @@ namespace Crowny
                 view.DrawList.Append({ item.Index, 0, 0, 0, Primitive2D::Glyph });
                 continue;
             }
-            if (item.Index >= snapshot.Sprites.Size())
-                return false;
-            const RenderableSprite& sprite = snapshot.Sprites[item.Index];
+            RenderHandle2D handle;
+            if (!snapshot.SpriteHandles.Empty())
+            {
+                if (item.Index >= snapshot.SpriteHandles.Size())
+                    return false;
+                handle = snapshot.SpriteHandles[item.Index];
+            }
+            else
+            {
+                if (item.Index >= snapshot.Sprites.Size())
+                    return false;
+                handle = snapshot.Sprites[item.Index].Handle;
+            }
             ++m_Statistics.Submitted;
-            if (!sprite.Handle || sprite.Handle.GetIndex() >= m_Slots.size())
+            if (!handle || handle.GetIndex() >= m_Slots.size())
                 return false;
-            const Slot& slot = m_Slots[sprite.Handle.GetIndex()];
-            if (slot.Handle != sprite.Handle)
+            const Slot& slot = m_Slots[handle.GetIndex()];
+            if (slot.Handle != handle)
                 return false;
             if (!slot.Visible)
                 continue;
-            const float radius = 0.5f * (glm::length(glm::vec3(sprite.WorldMatrix[0])) + glm::length(glm::vec3(sprite.WorldMatrix[1])));
-            if (!frustum.IntersectsSphere(glm::vec3(sprite.WorldMatrix[3]), radius))
+            const auto& transform = m_Instances[handle.GetIndex()].Data.Transform;
+            const glm::vec3 xAxis(transform.Row0.x, transform.Row1.x, transform.Row2.x);
+            const glm::vec3 yAxis(transform.Row0.y, transform.Row1.y, transform.Row2.y);
+            const glm::vec3 center(transform.Row0.w, transform.Row1.w, transform.Row2.w);
+            const float radius = 0.5f * (glm::length(xAxis) + glm::length(yAxis));
+            if (!frustum.IntersectsSphere(center, radius))
                 continue;
             ++m_Statistics.Visible;
-            const uint32_t index = sprite.Handle.GetIndex();
+            const uint32_t index = handle.GetIndex();
             view.DrawList.Append({ index % m_InstancesPerPage, slot.Texture, 0, 0, Primitive2D::Sprite, index / m_InstancesPerPage });
         }
         for (const DrawBatch2D& batch : view.DrawList.GetBatches())

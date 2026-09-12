@@ -66,8 +66,12 @@ namespace Crowny
 
     glm::mat4 Math::ComposeMatrix(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale)
     {
-        const glm::mat4 rotationMatrix = glm::toMat4(glm::quat(rotation));
-        return glm::translate(glm::mat4(1.0f), position) * rotationMatrix * glm::scale(glm::mat4(1.0f), scale);
+        glm::mat4 result = glm::toMat4(rotation);
+        result[0] *= scale.x;
+        result[1] *= scale.y;
+        result[2] *= scale.z;
+        result[3] = glm::vec4(position, 1.0f);
+        return result;
     }
 
     Transform::Transform() : m_Position(0.0f), m_Rotation(1.0f, 0.0f, 0.0f, 0.0f), m_Scale(1.0f) {}
