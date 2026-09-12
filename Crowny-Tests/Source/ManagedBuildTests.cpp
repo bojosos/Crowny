@@ -266,6 +266,9 @@ TEST_CASE("Managed build compiles and inspects a real assembly when Mono is avai
     request.Timeout = std::chrono::seconds(30);
     request.MaxCapturedOutputBytes = 256 * 1024;
 
+    SECTION("Development uses portable symbols") { request.Configuration = BuildConfiguration::Development; }
+    SECTION("Shipping uses portable symbols") { request.Configuration = BuildConfiguration::Shipping; }
+
     const ManagedCompileResult compilation = CompileManagedAssembly(request, toolchain);
     INFO(compilation.StandardOutput);
     INFO(compilation.StandardError);

@@ -25,6 +25,7 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider3D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptLight.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptDecal.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptMeshComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody3D.h"

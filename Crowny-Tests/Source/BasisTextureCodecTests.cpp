@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <future>
 
 #include "Crowny/Renderer/BasisTextureCodec.h"
 
@@ -6,8 +7,7 @@ using namespace Crowny;
 
 namespace
 {
-    Ref<PixelData> MakeSourceTexture(uint32_t width = 8, uint32_t height = 8,
-                                     const glm::vec4* solidColor = nullptr)
+    Ref<PixelData> MakeSourceTexture(uint32_t width = 8, uint32_t height = 8, const glm::vec4* solidColor = nullptr)
     {
         Ref<PixelData> pixels = PixelData::Create(width, height, 1, TextureFormat::RGBA8);
         for (uint32_t y = 0; y < height; y++)
@@ -22,10 +22,8 @@ namespace
                 const float extentScale = static_cast<float>(combinedExtent > 2 ? combinedExtent - 2u : 1u);
                 const glm::vec4 color = solidColor != nullptr
                                           ? *solidColor
-                                          : glm::vec4(static_cast<float>(x) / widthScale,
-                                                      static_cast<float>(y) / heightScale,
-                                                      static_cast<float>(x ^ y) / largestScale,
-                                                      static_cast<float>(x + y) / extentScale);
+                                          : glm::vec4(static_cast<float>(x) / widthScale, static_cast<float>(y) / heightScale,
+                                                      static_cast<float>(x ^ y) / largestScale, static_cast<float>(x + y) / extentScale);
                 pixels->SetColorAt(x, y, color);
             }
         }
@@ -99,8 +97,7 @@ TEST_CASE("Basis KTX2 payloads retain mips and transcode to GPU blocks", "[Rende
         CHECK(info.DiskFormat == diskFormat);
 
         BasisTextureTranscodeResult blocks;
-        REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8, TextureFormat::BC3,
-                                             0, blocks, &error));
+        REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8, TextureFormat::BC3, 0, blocks, &error));
         INFO(error);
         REQUIRE(blocks.Subresources.size() == 4);
         CHECK(blocks.Format == TextureFormat::BC3);
@@ -110,8 +107,7 @@ TEST_CASE("Basis KTX2 payloads retain mips and transcode to GPU blocks", "[Rende
         CHECK(blocks.Subresources[3].Pixels->GetSize() == 16);
 
         BasisTextureTranscodeResult rgba;
-        REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8, TextureFormat::RGBA8,
-                                             2, rgba, &error));
+        REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8, TextureFormat::RGBA8, 2, rgba, &error));
         INFO(error);
         REQUIRE(rgba.Subresources.size() == 2);
         CHECK(rgba.Subresources[0].Pixels->GetSize() == 8 * 8 * 4);
@@ -126,8 +122,7 @@ TEST_CASE("Basis KTX2 preserves validated authored mip chains", "[Renderer][Text
     {
         const uint32_t dimension = 8u >> mip;
         Ref<PixelData> pixels = PixelData::Create(dimension, dimension, 1, TextureFormat::RGBA8);
-        const glm::vec4 color(static_cast<float>(mip) / 3.0f, 1.0f - static_cast<float>(mip) / 3.0f,
-                              0.25f * static_cast<float>(mip), 1.0f);
+        const glm::vec4 color(static_cast<float>(mip) / 3.0f, 1.0f - static_cast<float>(mip) / 3.0f, 0.25f * static_cast<float>(mip), 1.0f);
         for (uint32_t y = 0; y < dimension; ++y)
         {
             for (uint32_t x = 0; x < dimension; ++x)
@@ -144,8 +139,7 @@ TEST_CASE("Basis KTX2 preserves validated authored mip chains", "[Renderer][Text
     CHECK(info.Levels == 4);
 
     BasisTextureTranscodeResult decoded;
-    REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8,
-                                         TextureFormat::RGBA8, 0, decoded, &error));
+    REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8, TextureFormat::RGBA8, 0, decoded, &error));
     INFO(error);
     REQUIRE(decoded.Subresources.size() == 4);
     for (uint32_t mip = 0; mip < decoded.Subresources.size(); ++mip)
@@ -166,18 +160,14 @@ TEST_CASE("Basis KTX2 preserves validated authored mip chains", "[Renderer][Text
 
 TEST_CASE("Basis KTX2 texture arrays retain layer face and mip identity", "[Renderer][Texture][Basis][Array]")
 {
-    const std::array<glm::vec4, 4> colors = {
-        glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)
-    };
+    const std::array<glm::vec4, 4> colors = { glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+                                              glm::vec4(1.0f, 1.0f, 0.0f, 1.0f) };
     BasisTextureSource source;
     source.Layers = 2;
     source.Faces = 1;
     source.Levels = 2;
-    source.Subresources = {
-        MakeSourceTexture(8, 8, &colors[0]), MakeSourceTexture(8, 8, &colors[1]),
-        MakeSourceTexture(4, 4, &colors[2]), MakeSourceTexture(4, 4, &colors[3])
-    };
+    source.Subresources = { MakeSourceTexture(8, 8, &colors[0]), MakeSourceTexture(8, 8, &colors[1]), MakeSourceTexture(4, 4, &colors[2]),
+                            MakeSourceTexture(4, 4, &colors[3]) };
 
     Vector<uint8_t> encoded;
     BasisTextureInfo info;
@@ -192,8 +182,7 @@ TEST_CASE("Basis KTX2 texture arrays retain layer face and mip identity", "[Rend
     CHECK(info.GetRuntimeShape() == TextureShape::TEXTURE_2D);
 
     BasisTextureTranscodeResult decoded;
-    REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8,
-                                         TextureFormat::RGBA8, 0, decoded, &error));
+    REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8, TextureFormat::RGBA8, 0, decoded, &error));
     INFO(error);
     REQUIRE(decoded.Subresources.size() == 4);
     for (uint32_t mip = 0; mip < 2; mip++)
@@ -225,8 +214,7 @@ TEST_CASE("Basis KTX2 cube arrays retain six faces per layer", "[Renderer][Textu
         {
             for (uint32_t face = 0; face < source.Faces; face++)
             {
-                const glm::vec4 color(static_cast<float>(face) / 5.0f, static_cast<float>(layer),
-                                      static_cast<float>(mip), 1.0f);
+                const glm::vec4 color(static_cast<float>(face) / 5.0f, static_cast<float>(layer), static_cast<float>(mip), 1.0f);
                 source.Subresources.push_back(MakeSourceTexture(dimension, dimension, &color));
             }
         }
@@ -245,8 +233,7 @@ TEST_CASE("Basis KTX2 cube arrays retain six faces per layer", "[Renderer][Textu
     CHECK(info.GetRuntimeShape() == TextureShape::TEXTURE_CUBE);
 
     BasisTextureTranscodeResult decoded;
-    REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8,
-                                         TextureFormat::BC3, 0, decoded, &error));
+    REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8, TextureFormat::BC3, 0, decoded, &error));
     INFO(error);
     REQUIRE(decoded.Subresources.size() == 24);
     CHECK(decoded.Subresources[0].MipLevel == 0);
@@ -295,7 +282,59 @@ TEST_CASE("Basis KTX2 rejects unsafe array ranges", "[Renderer][Texture][Basis][
 
     Vector<uint8_t> truncated(encoded.begin(), encoded.begin() + encoded.size() / 2u);
     BasisTextureTranscodeResult decoded;
-    CHECK_FALSE(BasisTextureCodec::Transcode(truncated.data(), truncated.size(), TextureFormat::RGBA8,
-                                             TextureFormat::RGBA8, 0, decoded, &error));
+    CHECK_FALSE(BasisTextureCodec::Transcode(truncated.data(), truncated.size(), TextureFormat::RGBA8, TextureFormat::RGBA8, 0, decoded, &error));
     CHECK(decoded.Subresources.empty());
+}
+
+TEST_CASE("Concurrent Basis cooks preserve each input and can reuse encoder queues", "[Renderer][Texture][Basis]")
+{
+    // More simultaneous callers than encoder slots exercises leasing and reuse.
+    for (auto format : { TextureDiskFormat::ETC1S, TextureDiskFormat::UASTC })
+    {
+        Vector<Ref<PixelData>> sources;
+        Vector<Vector<uint8_t>> expected(9);
+        for (uint32_t index = 0; index < 9; ++index)
+        {
+            const glm::vec4 color(index / 8.0f, 0.5f, 1.0f - index / 8.0f, 1.0f);
+            sources.push_back(MakeSourceTexture(32, 32, &color));
+            REQUIRE(BasisTextureCodec::Encode(Vector<Ref<PixelData>>{ sources.back() }, format, true, expected[index]));
+        }
+        Vector<std::future<Vector<uint8_t>>> cooks;
+        for (uint32_t index = 0; index < 9; ++index)
+            cooks.push_back(std::async(std::launch::async, [source = sources[index], format] {
+                Vector<uint8_t> bytes;
+                if (!BasisTextureCodec::Encode(Vector<Ref<PixelData>>{ source }, format, true, bytes))
+                    bytes.clear();
+                return bytes;
+            }));
+        for (size_t index = 0; index < cooks.size(); ++index)
+            CHECK(cooks[index].get() == expected[index]);
+    }
+}
+
+TEST_CASE("UASTC effort preserves the texture contract and rejects invalid levels", "[Renderer][Texture][Basis]")
+{
+    BasisTextureSource source;
+    source.Subresources = { MakeSourceTexture(16, 16) };
+    Vector<uint8_t> encoded;
+    BasisTextureInfo info;
+    String error;
+    for (uint32_t effort : { 0u, 1u, 2u, 3u, 4u })
+    {
+        source.UASTCEffort = effort;
+        REQUIRE(BasisTextureCodec::Encode(source, TextureDiskFormat::UASTC, true, encoded, &info, &error));
+        CHECK(info.DiskFormat == TextureDiskFormat::UASTC);
+        CHECK(info.SRGB);
+        CHECK(info.Width == 16);
+        CHECK(info.Height == 16);
+        CHECK(info.Levels == 1);
+        BasisTextureTranscodeResult decoded;
+        REQUIRE(BasisTextureCodec::Transcode(encoded.data(), encoded.size(), TextureFormat::RGBA8, TextureFormat::RGBA8, 0, decoded, &error));
+        REQUIRE(decoded.Subresources.size() == 1);
+        CHECK(decoded.Subresources.front().Pixels->IsValid());
+    }
+    source.UASTCEffort = 5;
+    CHECK_FALSE(BasisTextureCodec::Encode(source, TextureDiskFormat::UASTC, true, encoded, &info, &error));
+    CHECK(encoded.empty());
+    CHECK(error.find("effort") != String::npos);
 }

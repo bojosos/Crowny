@@ -5,6 +5,7 @@
 #include "Crowny/Common/Yaml.h"
 
 #include <cctype>
+#include <thread>
 
 namespace Crowny
 {
@@ -34,10 +35,10 @@ namespace Crowny
         bool IsPathWithin(const Path& root, const Path& candidate)
         {
             std::error_code error;
-            const Path normalizedRoot = fs::weakly_canonical(root, error);
+            const Path normalizedRoot = fs::weakly_canonical(BuildFileIoPath(root), error);
             if (error)
                 return false;
-            const Path normalizedCandidate = fs::weakly_canonical(candidate, error);
+            const Path normalizedCandidate = fs::weakly_canonical(BuildFileIoPath(candidate), error);
             if (error)
                 return false;
             const Path relative = normalizedCandidate.lexically_relative(normalizedRoot);
@@ -91,8 +92,8 @@ namespace Crowny
 
         String CopyFileWithCancellation(const Path& source, const Path& destination, const BuildCancellationCheck& cancellation)
         {
-            std::ifstream input(source, std::ios::binary);
-            std::ofstream output(destination, std::ios::binary | std::ios::trunc);
+            std::ifstream input(BuildFileIoPath(source), std::ios::binary);
+            std::ofstream output(BuildFileIoPath(destination), std::ios::binary | std::ios::trunc);
             if (!input || !output)
                 return "Cannot open the source or destination file.";
 
@@ -110,7 +111,30 @@ namespace Crowny
             return input.eof() && output ? String() : "Copying the file failed.";
         }
 
-        String PublishStagedDirectory(const Path& temporary, const Path& destination)
+        void RenameStagingDirectory(const Path& source, const Path& destination, std::error_code& error,
+                                    const BuildCancellationCheck& cancellation = {})
+        {
+            for (uint32_t attempt = 0;; ++attempt)
+            {
+                if (cancellation && cancellation())
+                {
+                    error = std::make_error_code(std::errc::operation_canceled);
+                    return;
+                }
+                fs::rename(BuildFileIoPath(source), BuildFileIoPath(destination), error);
+#ifdef CW_PLATFORM_WIN32
+                // Runtime scanners can briefly keep freshly copied DLL directories open.
+                if (attempt < 20 && (error == std::errc::permission_denied || error == std::errc::device_or_resource_busy))
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    continue;
+                }
+#endif
+                return;
+            }
+        }
+
+        String PublishStagedDirectory(const Path& temporary, const Path& destination, const BuildCancellationCheck& cancellation)
         {
             std::error_code error;
             const bool destinationExists = fs::exists(destination, error);
@@ -120,19 +144,19 @@ namespace Crowny
             const Path backup = UniqueSibling(destination, ".previous-");
             if (destinationExists)
             {
-                fs::rename(destination, backup, error);
+                RenameStagingDirectory(destination, backup, error, cancellation);
                 if (error)
                     return "Cannot preserve existing staging directory: " + error.message();
             }
 
-            fs::rename(temporary, destination, error);
+            RenameStagingDirectory(temporary, destination, error, cancellation);
             if (error)
             {
                 String message = "Cannot publish staging directory: " + error.message();
                 if (destinationExists)
                 {
                     std::error_code restoreError;
-                    fs::rename(backup, destination, restoreError);
+                    RenameStagingDirectory(backup, destination, restoreError);
                     if (restoreError)
                         message += "; restoring the previous directory also failed: " + restoreError.message();
                 }
@@ -366,7 +390,7 @@ namespace Crowny
             else if (!hashValid)
                 validation.Error("template.file.hash_invalid", "Template file has an invalid SHA-256 hash.", relative);
             const Path absolute = root / file.RelativePath;
-            if (!fs::is_regular_file(absolute) || !IsPathWithin(root, absolute))
+            if (!fs::is_regular_file(BuildFileIoPath(absolute)) || !IsPathWithin(root, absolute))
             {
                 validation.Error("template.file.missing", "Template file is missing or resolves outside the template.", relative);
                 continue;
@@ -424,7 +448,7 @@ namespace Crowny
             if (!IsSha256(file.Sha256))
                 return "Template file has a missing or invalid SHA-256 hash: '" + relative + "'.";
             const Path source = root / file.RelativePath;
-            if (!IsPathWithin(root, source) || !fs::is_regular_file(source))
+            if (!IsPathWithin(root, source) || !fs::is_regular_file(BuildFileIoPath(source)))
                 return "Template file is missing or resolves outside its root: '" + relative + "'.";
             preparedFiles.push_back({ &file, source, relative });
         }
@@ -456,7 +480,7 @@ namespace Crowny
                 return "Template file hash changed before staging: '" + prepared.Relative + "'.";
 
             const Path destination = temporary / file.RelativePath;
-            fs::create_directories(destination.parent_path(), error);
+            fs::create_directories(BuildFileIoPath(destination.parent_path()), error);
             if (error)
                 return "Cannot create staging subdirectory: " + error.message();
             const String copyError = CopyFileWithCancellation(prepared.Source, destination, cancellation);
@@ -480,7 +504,7 @@ namespace Crowny
 
         if (cancelled())
             return "Player template staging was cancelled.";
-        const String publishError = PublishStagedDirectory(temporary, stageDirectory);
+        const String publishError = PublishStagedDirectory(temporary, stageDirectory, cancellation);
         if (publishError.empty())
             temporaryCleanup.Enabled = false;
         return publishError;

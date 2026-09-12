@@ -2,6 +2,7 @@
 
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Common/Uuid.h"
+#include "Crowny/Physics/PhysicsMesh.h"
 #include "Crowny/Renderer/Mesh.h"
 
 namespace Crowny
@@ -31,7 +32,11 @@ namespace Crowny
         static const char* GetName(PrimitiveMeshType type);
         static const UUID& GetUuid(PrimitiveMeshType type);
         static bool TryGetType(const UUID& uuid, PrimitiveMeshType& outType);
-        static bool IsPrimitiveMesh(const UUID& uuid) { PrimitiveMeshType type; return TryGetType(uuid, type); }
+        static bool IsPrimitiveMesh(const UUID& uuid)
+        {
+            PrimitiveMeshType type;
+            return TryGetType(uuid, type);
+        }
 
         // CPU-side geometry for the primitive using the library's canonical dimensions (unit-sized shapes).
         static Ref<MeshData> CreateData(PrimitiveMeshType type);
@@ -42,11 +47,19 @@ namespace Crowny
         // Returns an empty handle when no AssetManager is running.
         static AssetHandle<Mesh> GetMesh(PrimitiveMeshType type);
 
+        // Fixed UUID of the cooked collision geometry that pairs with the primitive (Mesh::GetCollisionMeshUuid()).
+        static const UUID& GetPhysicsMeshUuid(PrimitiveMeshType type);
+
+        // Returns the shared collision geometry for the primitive, cooking and registering it (AssetManager +
+        // PhysicsMeshResolver) on first use. Needs no RenderAPI, so it also works headless and in tests.
+        // Returns an empty handle when no AssetManager is running.
+        static AssetHandle<PhysicsMesh> GetPhysicsMesh(PrimitiveMeshType type);
+
         // Creates and registers every primitive that is not registered yet. Cheap once everything is cached.
-        // Call after the RenderAPI and AssetManager are up (and after loading scenes that reference primitives).
+        // Collision geometry is registered whenever an AssetManager exists; render meshes also need the RenderAPI.
         static void EnsureRegistered();
 
-        // Drops the cached handles. Call before the RenderAPI shuts down.
+        // Drops the cached handles and the collision registrations. Call before the RenderAPI shuts down.
         static void Shutdown();
 
     private:

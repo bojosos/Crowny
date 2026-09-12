@@ -5,6 +5,7 @@
 #include "Crowny/Utils/Bitwise.h"
 
 #include "basis_universal/encoder/basisu_enc.h"
+#include "basis_universal/encoder/basisu_resampler.h"
 
 #include <bit>
 #include <cstdint>
@@ -38,6 +39,59 @@ namespace Crowny
         {
             if (error != nullptr)
                 *error = message;
+        }
+
+        bool ResampleMip(const basisu::imagef& source, basisu::imagef& destination, const char* filter, bool wrap)
+        {
+            const uint32_t sourceWidth = source.get_width(), sourceHeight = source.get_height();
+            const uint32_t width = destination.get_width(), height = destination.get_height();
+            if (std::max(sourceWidth, sourceHeight) > BASISU_RESAMPLER_MAX_DIMENSION)
+                return false;
+            // Reuse Basis's filter coefficients and axis ordering, processing RGBA
+            // together instead of running four scalar resamplers and scanline copies.
+            basisu::Resampler coefficients(sourceWidth, sourceHeight, width, height,
+                                           wrap ? basisu::Resampler::BOUNDARY_WRAP : basisu::Resampler::BOUNDARY_CLAMP, 1.0f, 0.0f, filter);
+            if (coefficients.status() != basisu::Resampler::STATUS_OKAY)
+                return false;
+            const auto* horizontal = coefficients.get_clist_x();
+            const auto* vertical = coefficients.get_clist_y();
+            uint64_t xOps = 0, yOps = 0;
+            for (uint32_t x = 0; x < width; ++x)
+                xOps += horizontal[x].n;
+            for (uint32_t y = 0; y < height; ++y)
+                yOps += vertical[y].n;
+            const uint64_t xyOps = xOps * sourceHeight + (4 * yOps * width) / 3;
+            const uint64_t yxOps = (4 * yOps * sourceWidth) / 3 + xOps * height;
+            const bool verticalFirst = xyOps > yxOps || (xyOps == yxOps && sourceWidth < width);
+            const uint32_t intermediateWidth = verticalFirst ? sourceWidth : width;
+            const uint32_t intermediateHeight = verticalFirst ? height : sourceHeight;
+            const uint64_t intermediatePixels = static_cast<uint64_t>(intermediateWidth) * intermediateHeight;
+            // Large images retain the streaming implementation's memory behavior.
+            if (intermediatePixels > (64u * 1024u * 1024u) / sizeof(glm::vec4))
+                return basisu::image_resample(source, destination, filter, 1.0f, wrap, 0, 4);
+            Vector<glm::vec4> intermediate(static_cast<size_t>(intermediatePixels));
+            const auto load = [](const basisu::vec4F& pixel) { return glm::vec4(pixel[0], pixel[1], pixel[2], pixel[3]); };
+            const auto sum = [](const basisu::Resampler::Contrib_List& contributions, const auto& sample) {
+                glm::vec4 value = sample(contributions.p[0].pixel) * contributions.p[0].weight;
+                for (uint32_t index = 1; index < contributions.n; ++index)
+                    value += sample(contributions.p[index].pixel) * contributions.p[index].weight;
+                return value;
+            };
+            for (uint32_t y = 0; y < intermediateHeight; ++y)
+                for (uint32_t x = 0; x < intermediateWidth; ++x)
+                    intermediate[static_cast<size_t>(y) * intermediateWidth + x] =
+                      verticalFirst ? sum(vertical[y], [&](uint32_t row) { return load(source(x, row)); })
+                                    : sum(horizontal[x], [&](uint32_t column) { return load(source(column, y)); });
+            for (uint32_t y = 0; y < height; ++y)
+                for (uint32_t x = 0; x < width; ++x)
+                {
+                    const glm::vec4 value =
+                      verticalFirst
+                        ? sum(horizontal[x], [&](uint32_t column) { return intermediate[static_cast<size_t>(y) * intermediateWidth + column]; })
+                        : sum(vertical[y], [&](uint32_t row) { return intermediate[static_cast<size_t>(row) * intermediateWidth + x]; });
+                    destination(x, y).set(value.r, value.g, value.b, value.a);
+                }
+            return true;
         }
 
         float AlphaCoverage(const basisu::imagef& image, float cutoff, float scale = 1.0f)
@@ -244,7 +298,7 @@ namespace Crowny
             const uint32_t width = std::max(source.GetWidth() >> mip, 1u);
             const uint32_t height = std::max(source.GetHeight() >> mip, 1u);
             basisu::imagef mipImage(width, height);
-            if (!basisu::image_resample(baseImage, mipImage, filter, 1.0f, options.Wrap, 0, 4))
+            if (!ResampleMip(baseImage, mipImage, filter, options.Wrap))
             {
                 SetMipError(error, "Basis Universal failed to resample a mip level");
                 output.clear();

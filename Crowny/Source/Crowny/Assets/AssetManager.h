@@ -44,6 +44,11 @@ namespace Crowny
         bool Save(const AssetHandle<Asset>& asset, const Path& path, bool overwrite = false);
         void Save(const Ref<Asset>& asset); // TODO: Compression
         bool Save(const Ref<Asset>& asset, const Path& filepath);
+        // Serialize on the caller thread (codecs may read GPU resources), then
+        // overlap bounded independent atomic disk writes. Notifications remain
+        // on the caller thread. False can leave earlier entries published, as with
+        // individual Save calls; callers own batch metadata/rollback.
+        bool SaveBatch(const Vector<std::pair<Ref<Asset>, Path>>& assets);
 
         bool GetAssetPath(const UUID& uuid, Path& outPath) const;
         bool IsAssetRegistered(const UUID& uuid) const;
@@ -59,6 +64,7 @@ namespace Crowny
         AssetHandle<Asset> Load(const UUID& uuid, const Path& filepath, bool keepInternalRef, bool keepSourceData);
         void GetFilepathFromUUID(const UUID& uuid, Path& outFilepath) const;
         bool GetUUIDFromFilepath(const Path& filepath, UUID& outUUID) const;
+        void NotifyAssetSaved(const Ref<Asset>& asset, const Path& filepath);
 
         const UnorderedMap<UUID, WeakAssetHandle<Asset>>& GetLoadedAssets() const { return m_Handles; }
         friend class UIUtils;

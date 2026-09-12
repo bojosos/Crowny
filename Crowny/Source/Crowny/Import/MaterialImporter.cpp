@@ -1,9 +1,12 @@
 #include "cwpch.h"
 
+#include "Crowny/Assets/AssetCodecs.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/Constants.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Import/MaterialImporter.h"
 #include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/Renderer/BuiltInShaderCatalog.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Serialization/MaterialSerializer.h"
 
@@ -15,23 +18,31 @@ namespace Crowny
 
     Ref<Asset> MaterialImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        const String ext = NormalizeImportExtension(path.extension().string());
-
-        if (ext == "cwmat")
+        BuiltInShaderCatalog::EnsureRegistered();
+        AssetFileHeader header;
+        if (PeekAssetHeader(path, header) && header.Type == AssetType::Material)
         {
-            // Load from YAML source file
-            const AssetHandle<Shader> fallbackShader = AssetManager::TryGet()->Load<Shader>(UNLIT_SHADER_PATH);
-            const Ref<Material> material = Material::Create(fallbackShader ? fallbackShader : AssetHandle<Shader>{});
-            MaterialSerializer serializer(material);
-            serializer.Deserialize(path);
-            return material;
+            const AssetHandle<Material> material = AssetManager::Get().Load<Material>(path);
+            return material.GetInternalPtr();
         }
-
-        // Legacy .mat: create a default Unlit material
-        const AssetHandle<Shader> shader = AssetManager::TryGet()->Load<Shader>(UNLIT_SHADER_PATH);
-        if (shader)
-            return Material::CreateUnlit(shader);
-
-        return CreateRef<Material>(AssetHandle<Shader>{});
+        const Ref<DataStream> stream = FileSystem::OpenFile(path);
+        if (!stream)
+            return nullptr;
+        const String contents = stream->GetAsString();
+        stream->Close();
+        const Ref<Material> material = Material::Create({});
+        if (!MaterialSerializer(material).DeserializeFromString(contents))
+            return nullptr;
+        if (!material->GetShader())
+        {
+            const Ref<Material> fallback = Material::CreateDefault();
+            if (!fallback)
+                return nullptr;
+            material->SetShader(fallback->GetShader());
+            material->ApplyModelDefaults();
+            if (!MaterialSerializer(material).DeserializeFromString(contents))
+                return nullptr;
+        }
+        return material;
     }
 } // namespace Crowny

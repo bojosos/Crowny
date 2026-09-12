@@ -62,4 +62,16 @@ namespace Crowny
 
     private:
     };
+
+    class ScriptMeshCollider3D : public TScriptComponent<ScriptMeshCollider3D, MeshCollider3DComponent, ScriptCollider3DBase>
+    {
+    public:
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "MeshCollider3D")
+
+        ScriptMeshCollider3D(MonoObject* instance, Entity entity);
+        Collider3D& GetCollider3D() override { return GetComponent(); }
+        Entity GetEntity() override { return GetNativeEntity(); }
+
+    private:
+    };
 } // namespace Crowny

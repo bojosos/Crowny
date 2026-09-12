@@ -134,7 +134,9 @@ namespace Crowny
                 return left->BuiltIn;
             if (left->BuiltIn && left->MaterialCapable != right->MaterialCapable)
                 return left->MaterialCapable;
-            return StringUtils::CaseInsensitiveCompare(left->Name, right->Name);
+            return std::lexicographical_compare(
+              left->Name.begin(), left->Name.end(), right->Name.begin(), right->Name.end(),
+              [](unsigned char leftCharacter, unsigned char rightCharacter) { return std::tolower(leftCharacter) < std::tolower(rightCharacter); });
         });
         return result;
     }

@@ -113,6 +113,46 @@ TEST_CASE("Render features add passes only at their insertion point", "[Renderer
     CHECK(graph.Compile().Succeeded);
 }
 
+TEST_CASE("2D-only frame graphs allocate no mesh, lighting, shadow or post-processing resources", "[Renderer][Pipeline][2D]")
+{
+    for (const RenderingPath path : { RenderingPath::ForwardPlus, RenderingPath::DeferredPlus })
+    {
+        RenderGraph graph;
+        RenderBlackboard blackboard;
+        RenderView view;
+        view.EnableObjectID = view.EnableMotionVectors = true;
+        RenderPipelineAsset pipeline;
+        RenderPipelineGraphDesc desc;
+        desc.Path = path;
+        desc.Only2D = true;
+        desc.OutputTarget = ImportOutput(graph);
+        blackboard.Set("ShadowAtlas", desc.OutputTarget);
+        Vector<uint32_t> executed;
+        desc.Prerequisite = graph.AddPass(
+          "Apply2DChanges", RenderGraphQueue::Transfer, [](RenderGraphPassBuilder&) {}, [&](RenderGraphContext&) { executed.push_back(0); });
+        desc.Clear2DTarget = [&](RenderGraphContext&) { executed.push_back(1); };
+        desc.FinalComposition = [&](RenderGraphContext&) { executed.push_back(2); };
+        const auto output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
+        const auto& compiled = graph.Compile();
+        INFO(compiled.Error);
+        REQUIRE(compiled.Succeeded);
+        CHECK(compiled.Resources.size() == 1);
+        CHECK(compiled.TransientTextureBytes == 0);
+        CHECK(compiled.TransientBufferBytes == 0);
+        CHECK(output.FinalTarget == desc.OutputTarget);
+        CHECK_FALSE(output.SceneDepth.IsValid());
+        CHECK_FALSE(output.CurrentHiZ.IsValid());
+        CHECK_FALSE(output.HdrColor.IsValid());
+        CHECK_FALSE(blackboard.Contains("ShadowAtlas"));
+        CHECK_FALSE(blackboard.Contains("ClusterLightIndices"));
+        REQUIRE(compiled.PassOrder.size() == 3);
+        CHECK(graph.GetPassName(compiled.PassOrder[1]) == "Clear2DTarget");
+        CHECK(graph.GetPassName(compiled.PassOrder[2]) == "World2D");
+        REQUIRE(graph.Execute());
+        CHECK((executed == Vector<uint32_t>{ 0, 1, 2 }));
+    }
+}
+
 TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence", "[Renderer][Pipeline]")
 {
     RenderGraph graph;
@@ -350,6 +390,7 @@ TEST_CASE("Depth prepass configures motion-vector and object-ID outputs independ
             view.EnableMotionVectors = outputCase.MotionVectors;
             view.EnableObjectID = outputCase.ObjectID;
             desc.EnablePostProcessing = false;
+            desc.EnableToonOutlines = false;
 
             const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
             const RenderGraphCompileResult& compiled = graph.Compile();
@@ -363,6 +404,14 @@ TEST_CASE("Depth prepass configures motion-vector and object-ID outputs independ
             CHECK(blackboard.Contains("Velocity") == outputCase.MotionVectors);
             CHECK(output.ObjectID.IsValid() == outputCase.ObjectID);
             CHECK(blackboard.Contains("ObjectID") == outputCase.ObjectID);
+            const bool needsMaterialId = path == RenderingPath::ForwardPlus && outputCase.ObjectID;
+            CHECK(blackboard.Contains("MaterialID") == needsMaterialId);
+            if (needsMaterialId)
+            {
+                const RenderGraphResourceHandle materialId = blackboard.Get("MaterialID");
+                REQUIRE(materialId.IsValid());
+                CHECK(compiled.Resources[materialId.Index].Desc.Texture.Format == TextureFormat::R32I);
+            }
             if (outputCase.MotionVectors)
             {
                 const RenderGraphResourceHandle velocity = blackboard.Get("Velocity");

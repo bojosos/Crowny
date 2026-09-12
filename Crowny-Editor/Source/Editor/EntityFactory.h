@@ -4,6 +4,7 @@
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Renderer/PrimitiveMeshLibrary.h"
 #include "Crowny/Renderer/RenderLight.h"
+#include "Crowny/Renderer/Decal.h"
 
 namespace Crowny
 {
@@ -24,6 +25,7 @@ namespace Crowny
         // All entities are parented to `parent` when it is valid and belongs to `scene`, otherwise to the scene root.
         static Entity CreateEmpty(const Ref<Scene>& scene, Entity parent, const String& name = DefaultEntityName);
         static Entity CreateLight(const Ref<Scene>& scene, Entity parent, LightType type);
+        static Entity CreateDecal(const Ref<Scene>& scene, Entity parent, DecalProjection projection);
         static Entity CreatePrimitive(const Ref<Scene>& scene, Entity parent, PrimitiveMeshType type);
 
         // Entity with a MeshRendererComponent referencing `mesh`. Materials are left empty so the renderer's

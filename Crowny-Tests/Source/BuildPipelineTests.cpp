@@ -146,6 +146,7 @@ namespace Crowny
                 };
                 operations.CompileManaged = [&](const ManagedBuildRequest& request, const ManagedToolchain&) {
                     Calls.push_back("Compile Managed");
+                    CHECK(IsSafeRelativeBuildPath(request.OutputAssembly.lexically_relative(request.ProjectRoot)));
                     ManagedCompileResult result;
                     result.ProcessStarted = true;
                     if (CancelDuringCompile)
@@ -610,6 +611,29 @@ namespace Crowny
         CHECK(report.Find(BuildPipelineStage::Publish)->Status == BuildPipelineStageStatus::Failed);
         CHECK(report.Find(BuildPipelineStage::Publish)->Diagnostics.ContainsCode("pipeline.publish.rollback_failed"));
         CHECK(fs::is_directory(request.OutputDirectory));
+    }
+
+    TEST_CASE("Build pipeline exposes managed compiler output", "[Build][Pipeline]")
+    {
+        TemporaryDirectory temporary;
+        const auto request = CreateRequest(temporary, temporary.Root / "Build");
+        FakeBuildTools tools;
+        auto operations = tools.Operations();
+        operations.CompileManaged = [](const ManagedBuildRequest&, const ManagedToolchain&) {
+            ManagedCompileResult result;
+            result.ProcessStarted = true;
+            result.ExitCode = 1;
+            result.StandardOutput = "Game.cs(1): error CS1002: ; expected";
+            result.StandardError = "Compiler could not emit the assembly.";
+            return result;
+        };
+        const auto report = BuildPipelineTestAccess::Create(std::move(operations)).Run(request);
+        REQUIRE_FALSE(report.Succeeded());
+        const auto* compile = report.Find(BuildPipelineStage::CompileManaged);
+        REQUIRE(compile != nullptr);
+        const auto errors = compile->Diagnostics.GetErrors();
+        CHECK(std::find(errors.begin(), errors.end(), "Game.cs(1): error CS1002: ; expected") != errors.end());
+        CHECK(std::find(errors.begin(), errors.end(), "Compiler could not emit the assembly.") != errors.end());
     }
 
     TEST_CASE("Build pipeline attributes stage failure and preserves the last good build", "[Build][Pipeline]")

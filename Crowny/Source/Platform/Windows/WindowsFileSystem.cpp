@@ -6,6 +6,7 @@
 #include "Crowny/Common/BuiltInResourcePack.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/UTF8.h"
+#include "Crowny/Window/Window.h"
 
 #include <GLFW/glfw3.h>
 
@@ -128,8 +129,13 @@ namespace Crowny
 
         std::error_code directoryError;
         const Path parent = path.parent_path();
-        if (!parent.empty())
+        // Asset batches commonly write thousands of files into the same directories.
+        // Avoid attempting CreateDirectoryW for each file when the parent already exists.
+        if (!parent.empty() && !fs::is_directory(parent, directoryError))
+        {
+            directoryError.clear();
             fs::create_directories(parent, directoryError);
+        }
         if (directoryError)
         {
             if (outError != nullptr)
@@ -267,11 +273,18 @@ namespace Crowny
     bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title, const Path& initialDir,
                                     const Vector<DialogFilter>& filter, const String& filename)
     {
-        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+        const HRESULT initialization = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+        if (FAILED(initialization) && initialization != RPC_E_CHANGED_MODE)
+            return false;
         IFileDialog* fileDialog = nullptr;
         bool isOpenDialog = type == FileDialogType::OpenFile || type == FileDialogType::OpenFolder || type == FileDialogType::Multiselect;
         IID classId = isOpenDialog ? CLSID_FileOpenDialog : CLSID_FileSaveDialog;
-        CoCreateInstance(classId, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&fileDialog));
+        if (FAILED(CoCreateInstance(classId, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&fileDialog))))
+        {
+            if (SUCCEEDED(initialization))
+                CoUninitialize();
+            return false;
+        }
 
         AddFilters(fileDialog, filter);
         SetInitialDir(fileDialog, initialDir);
@@ -312,7 +325,10 @@ namespace Crowny
         }
 
         bool finalResult = false;
-        if (SUCCEEDED(fileDialog->Show(nullptr)))
+        HWND owner = nullptr;
+        if (Application::TryGet() != nullptr)
+            owner = glfwGetWin32Window(static_cast<GLFWwindow*>(Application::TryGet()->GetWindow().GetNativeWindow()));
+        if (SUCCEEDED(fileDialog->Show(owner)))
         {
             if (type == FileDialogType::Multiselect)
             {
@@ -337,7 +353,9 @@ namespace Crowny
             finalResult = true;
         }
 
-        CoUninitialize();
+        fileDialog->Release();
+        if (SUCCEEDED(initialization))
+            CoUninitialize();
         return finalResult;
     }
 

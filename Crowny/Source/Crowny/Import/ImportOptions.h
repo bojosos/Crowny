@@ -35,6 +35,7 @@ namespace Crowny
         TextureImportOptions() = default;
 
         bool AutomaticFormat = true;
+        bool GenerateEnvironmentMap = false;
         TextureFormat Format = TextureFormat::RGBA8;
         TextureShape Shape = TextureShape::TEXTURE_2D;
         bool GenerateMips = true;
@@ -48,6 +49,7 @@ namespace Crowny
         // New and legacy metadata without an explicit value use the color-texture default.
         bool SRGB = true;
         TextureDiskFormat DiskFormat = TextureDiskFormat::UASTC; // TODO: Auto based on texture type.
+        uint32_t UASTCEffort = 2;                                // 0 is fastest; 4 searches most thoroughly.
         // CubemapSourceType CubemapSource = CubemapSourceType::Faces;
 
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Texture; }
@@ -221,12 +223,20 @@ namespace Crowny
         bool ImportBones = false;
         bool ImportRootMotion = false;
         bool ImportMaterials = true;
+        bool FastTextureCompression = true;
+        // Keep the combined mesh primary; optionally cook a prefab with source nodes, lights and cameras.
+        bool GeneratePrefab = false;
+        bool ImportLights = true;
+        bool ImportCameras = true;
         bool ImportVertexColors = true;
         bool FlipUVs = false;
         bool FlipWindingOrder = false;
         bool GenerateMeshlets = true;
         bool GenerateLods = true;
         uint32_t LodCount = 4;
+        // Cook a PhysicsMesh dependent (welded triangles + hull point cloud) for mesh colliders.
+        bool GenerateCollision = true;
+        uint32_t CollisionMaxConvexPoints = 255;
         Vector<ExtraAnimationClipInfo> AnimationInfo;
 
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Mesh; }

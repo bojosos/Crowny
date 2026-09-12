@@ -3,12 +3,26 @@
 #include "Crowny/Import/MeshImporter.h"
 
 #include "Crowny/Animation/AnimationClip.h"
+#include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/FileSystem.h"
+#include "Crowny/Ecs/Components.h"
+#include "Crowny/Import/ImageLoader.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Import/TextureImporter.h"
+#include "Crowny/Physics/PhysicsMesh.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MeshProcessing.h"
+#include "Crowny/Scene/Prefab.h"
+#include "Crowny/Scene/Scene.h"
+#include "Crowny/Utils/Cryptography.h"
+#include "Crowny/Utils/PixelUtils.h"
+#include <assimp/GltfMaterial.h>
+#include <atomic>
+#include <fstream>
+#include <future>
+#include <thread>
 
 #include <assimp/Importer.hpp>
 #include <assimp/config.h>
@@ -61,10 +75,7 @@ namespace Crowny
             bool HasNodeTransform = false;
         };
 
-        bool IsFinite(const glm::vec3& value)
-        {
-            return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
-        }
+        bool IsFinite(const glm::vec3& value) { return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z); }
 
         bool IsFinite(const glm::mat4& value)
         {
@@ -116,8 +127,7 @@ namespace Crowny
             return IsFinite(value);
         }
 
-        bool BuildInstanceTransform(const glm::mat4& nodeToScene, float scaleFactor, StringView instanceName,
-                                    MeshInstanceTransform& transform)
+        bool BuildInstanceTransform(const glm::mat4& nodeToScene, float scaleFactor, StringView instanceName, MeshInstanceTransform& transform)
         {
             constexpr float affineTolerance = 1e-5f;
             if (!IsFinite(nodeToScene) || std::abs(nodeToScene[0][3]) > affineTolerance || std::abs(nodeToScene[1][3]) > affineTolerance ||
@@ -481,8 +491,8 @@ namespace Crowny
             Vector<glm::vec3> positions(mesh.mNumVertices);
             for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
             {
-                positions[vertex] = glm::vec3(instanceTransform.NodeToScene * glm::vec4(ToGlm(mesh.mVertices[vertex]), 1.0f)) *
-                                    instanceTransform.ScaleFactor;
+                positions[vertex] =
+                  glm::vec3(instanceTransform.NodeToScene * glm::vec4(ToGlm(mesh.mVertices[vertex]), 1.0f)) * instanceTransform.ScaleFactor;
                 if (!IsFinite(positions[vertex]))
                 {
                     CW_ENGINE_WARN("Skipping mesh instance '{}' because transformed position {} is non-finite.", instanceName, vertex);
@@ -511,6 +521,7 @@ namespace Crowny
             {
                 Vector<glm::vec3> tangents(mesh.mNumVertices);
                 Vector<glm::vec3> bitangents(mesh.mNumVertices);
+                uint32_t repairedBases = 0;
                 for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
                 {
                     const glm::vec3 sourceTangent = ToGlm(mesh.mTangents[vertex]);
@@ -523,11 +534,18 @@ namespace Crowny
                         const glm::vec3& normal = normals[vertex];
                         const float sourceOrientation = glm::dot(glm::cross(sourceNormal, sourceTangent), sourceBitangent);
                         tangents[vertex] -= normal * glm::dot(normal, tangents[vertex]);
-                        if (!std::isfinite(sourceOrientation) || std::abs(sourceOrientation) <= std::numeric_limits<float>::epsilon() ||
-                            !NormalizeDirection(tangents[vertex]))
+                        const bool validTangent = NormalizeDirection(tangents[vertex]);
+                        if (!validTangent || !std::isfinite(sourceOrientation) ||
+                            std::abs(sourceOrientation) <= std::numeric_limits<float>::epsilon())
                         {
-                            CW_ENGINE_WARN("Skipping mesh instance '{}' because tangent basis {} is degenerate.", instanceName, vertex);
-                            return nullptr;
+                            // A collapsed UV edge can produce a zero tangent at just one vertex.
+                            // Keep the geometry and use an orthonormal basis at that vertex.
+                            if (!validTangent)
+                            {
+                                const glm::vec3 axis = std::abs(normal.y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
+                                tangents[vertex] = glm::normalize(glm::cross(axis, normal));
+                            }
+                            repairedBases++;
                         }
                         bitangents[vertex] = glm::cross(normal, tangents[vertex]);
                         bitangents[vertex] *= sourceOrientation < 0.0f ? -1.0f : 1.0f;
@@ -536,13 +554,21 @@ namespace Crowny
                     else
                     {
                         bitangents[vertex] = instanceTransform.Linear * sourceBitangent;
-                        if (!NormalizeDirection(tangents[vertex]) || !NormalizeDirection(bitangents[vertex]))
+                        if (!NormalizeDirection(tangents[vertex]))
                         {
-                            CW_ENGINE_WARN("Skipping mesh instance '{}' because tangent basis {} is degenerate.", instanceName, vertex);
-                            return nullptr;
+                            tangents[vertex] = glm::vec3(1, 0, 0);
+                            repairedBases++;
+                        }
+                        if (!NormalizeDirection(bitangents[vertex]))
+                        {
+                            const glm::vec3 axis = std::abs(tangents[vertex].y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(0, 0, 1);
+                            bitangents[vertex] = glm::normalize(glm::cross(tangents[vertex], axis));
+                            repairedBases++;
                         }
                     }
                 }
+                if (repairedBases != 0)
+                    CW_ENGINE_WARN("Repaired {} degenerate tangent bases in mesh instance '{}'.", repairedBases, instanceName);
                 data->SetTangents(tangents);
                 data->SetBitangents(bitangents);
             }
@@ -1011,14 +1037,139 @@ namespace Crowny
             return clips;
         }
 
-        using TextureCache = UnorderedMap<String, Ref<Texture>>;
+        UUID ImportedEntityId(const String& key)
+        {
+            // Fixed hashes of source-relative node paths, independent of machine and import order.
+            uint64_t first = 14695981039346656037ull;
+            uint64_t second = 7809847782465536322ull;
+            for (unsigned char value : key)
+            {
+                first = (first ^ value) * 1099511628211ull;
+                second = (second ^ value) * 1099511628211ull;
+            }
+            return UUID(static_cast<uint32_t>(first >> 32), static_cast<uint32_t>(first), static_cast<uint32_t>(second >> 32),
+                        static_cast<uint32_t>(second));
+        }
 
-        Ref<TextureImportOptions> CreateMaterialTextureOptions(TextureMipMode mode, bool sRGB)
+        glm::quat ImportedOrientation(const aiVector3D& direction, const aiVector3D& sourceUp)
+        {
+            glm::vec3 forward = ToGlm(direction);
+            if (!IsFinite(forward) || glm::dot(forward, forward) < 1e-8f)
+                return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            forward = glm::normalize(forward);
+            glm::vec3 up = ToGlm(sourceUp);
+            if (!IsFinite(up) || glm::dot(up, up) < 1e-8f || glm::length(glm::cross(forward, up)) < 1e-4f)
+                up = std::abs(forward.y) < 0.99f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
+            return glm::quatLookAtRH(forward, glm::normalize(up));
+        }
+
+        Ref<Prefab> ImportPrefab(const aiScene& source, const Path& path, const MeshImportOptions& options)
+        {
+            const Ref<Prefab> prefab = CreateRef<Prefab>();
+            prefab->SetName(path.stem().string() + " Prefab");
+            const Ref<Scene>& scene = prefab->GetInternalScene();
+            scene->CreateRootEntity();
+            Entity root = scene->CreateEntityWithUuid(ImportedEntityId("model"), path.stem().string());
+            prefab->SetRootEntityUuid(root.GetUuid());
+            const float scaleFactor = GetScaleFactor(options);
+            String extension = path.extension().string();
+            std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            const bool gltf = extension == ".gltf" || extension == ".glb";
+            std::function<void(const aiNode&, Entity, const String&)> visit = [&](const aiNode& node, Entity parent, const String& key) {
+                Entity entity = scene->CreateEntityWithUuid(ImportedEntityId(key), node.mName.C_Str());
+                entity.SetParent(parent);
+                entity.GetTransform().SetLocalTransform(ToTransform(node.mTransformation, scaleFactor));
+                if (options.ImportLights)
+                    for (uint32_t index = 0; index < source.mNumLights; index++)
+                    {
+                        const aiLight& light = *source.mLights[index];
+                        if (light.mName != node.mName)
+                            continue;
+                        if (light.mType != aiLightSource_DIRECTIONAL && light.mType != aiLightSource_POINT && light.mType != aiLightSource_SPOT)
+                        {
+                            CW_ENGINE_WARN("Light '{}' uses an unsupported source light type {}.", light.mName.C_Str(),
+                                           static_cast<int>(light.mType));
+                            continue;
+                        }
+                        Entity child = scene->CreateEntityWithUuid(ImportedEntityId(key + "/@light"), String(node.mName.C_Str()) + " Light");
+                        child.SetParent(entity);
+                        child.GetTransform().SetPosition(ToGlm(light.mPosition) * scaleFactor);
+                        child.GetTransform().SetRotation(ImportedOrientation(light.mDirection, light.mUp));
+                        auto& component = child.AddComponent<LightComponent>();
+                        component.Type = light.mType == aiLightSource_DIRECTIONAL ? LightType::Directional
+                                         : light.mType == aiLightSource_SPOT      ? LightType::Spot
+                                                                                  : LightType::Point;
+                        const glm::vec3 radiance =
+                          glm::max(glm::vec3(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b), glm::vec3(0));
+                        component.Intensity = std::max({ radiance.x, radiance.y, radiance.z });
+                        component.Color = component.Intensity > 0 ? radiance / component.Intensity : glm::vec3(1);
+                        component.SpotInnerAngle = std::clamp(light.mAngleInnerCone, 0.0f, glm::half_pi<float>());
+                        component.SpotOuterAngle = std::clamp(light.mAngleOuterCone, component.SpotInnerAngle, glm::half_pi<float>());
+                        // Assimp folds glTF lux/candela into RGB. Crowny stores local lights in lumens.
+                        if (component.Type == LightType::Point)
+                            component.Intensity *= 4.0f * glm::pi<float>();
+                        else if (component.Type == LightType::Spot)
+                            component.Intensity *= std::max(2.0f * glm::pi<float>() * (1.0f - std::cos(component.SpotOuterAngle)), 0.001f);
+                        float range = 0.0f;
+                        if (node.mMetaData && node.mMetaData->Get("PBR_LightRange", range) && range > 0.0)
+                            component.Range = range * std::abs(scaleFactor);
+                        else if (component.Type != LightType::Directional)
+                            component.Range = 1000.0f * std::abs(scaleFactor);
+                    }
+                if (options.ImportCameras)
+                    for (uint32_t index = 0; index < source.mNumCameras; index++)
+                    {
+                        const aiCamera& camera = *source.mCameras[index];
+                        if (camera.mName != node.mName)
+                            continue;
+                        Entity child = scene->CreateEntityWithUuid(ImportedEntityId(key + "/@camera"), String(node.mName.C_Str()) + " Camera");
+                        child.SetParent(entity);
+                        child.GetTransform().SetPosition(ToGlm(camera.mPosition) * scaleFactor);
+                        child.GetTransform().SetRotation(ImportedOrientation(camera.mLookAt, camera.mUp));
+                        auto& output = child.AddComponent<CameraComponent>().Camera;
+                        const float aspect = camera.mAspect > 0 ? camera.mAspect : 1.0f;
+                        output.SetAspectRatio(aspect);
+                        const float nearClip = std::max(camera.mClipPlaneNear * std::abs(scaleFactor), 0.0001f);
+                        const float farClip = std::max(camera.mClipPlaneFar * std::abs(scaleFactor), nearClip + 0.001f);
+                        if (camera.mOrthographicWidth > 0)
+                            output.SetOrthographic(2.0f * camera.mOrthographicWidth * std::abs(scaleFactor) / aspect, nearClip, farClip);
+                        else
+                        {
+                            // This Assimp revision exposes full FOV for glTF, half FOV for FBX.
+                            const float halfFov = camera.mHorizontalFOV * (gltf ? 0.5f : 1.0f);
+                            output.SetPerspective(2.0f * std::atan(std::tan(halfFov) / aspect), nearClip, farClip);
+                        }
+                    }
+                UnorderedMap<String, uint32_t> occurrences;
+                for (uint32_t index = 0; index < node.mNumChildren; index++)
+                {
+                    const aiNode& child = *node.mChildren[index];
+                    const String name = child.mName.C_Str();
+                    visit(child, entity, key + "/" + std::to_string(name.size()) + ":" + name + "#" + std::to_string(occurrences[name]++));
+                }
+            };
+            visit(*source.mRootNode, root, "model/source");
+            return prefab;
+        }
+
+        struct ImportedTexture
+        {
+            Ref<Texture> TextureAsset;
+            bool Cutout = false;
+        };
+        struct TextureCache
+        {
+            UnorderedMap<String, ImportedTexture> Textures;
+            bool FastCompression = true;
+        };
+
+        Ref<TextureImportOptions> CreateMaterialTextureOptions(TextureMipMode mode, bool sRGB, bool fastCompression)
         {
             Ref<TextureImportOptions> options = CreateRef<TextureImportOptions>();
             options->MipMode = mode;
             options->SRGB = sRGB;
-            options->DiskFormat = mode == TextureMipMode::Color ? TextureDiskFormat::ETC1S : TextureDiskFormat::UASTC;
+            options->DiskFormat = !fastCompression && mode == TextureMipMode::Color ? TextureDiskFormat::ETC1S : TextureDiskFormat::UASTC;
+            options->UASTCEffort = fastCompression ? 1u : 2u;
             return options;
         }
 
@@ -1044,19 +1195,111 @@ namespace Crowny
             return pixels;
         }
 
-        Ref<Texture> ImportTexture(const aiScene& scene, const aiMaterial& sourceMaterial, const Path& meshPath, aiTextureType textureType,
-                                   const String& shaderParameter, TextureMipMode mode, bool sRGB, const Ref<Material>& material,
-                                   TextureCache& textureCache)
+        bool HasVaryingAlpha(const Ref<PixelData>& pixels)
+        {
+            if (!pixels || !PixelUtils::HasAlpha(pixels->GetFormat()))
+                return false;
+            float minimum = 1.0f, maximum = 0.0f;
+            const bool byteAlpha = pixels->GetFormat() == TextureFormat::RGBA8 || pixels->GetFormat() == TextureFormat::BGRA8;
+            for (uint32_t y = 0; y < pixels->GetHeight(); ++y)
+            {
+                const uint8_t* row = pixels->GetData() + static_cast<size_t>(y) * pixels->GetRowPitch();
+                for (uint32_t x = 0; x < pixels->GetWidth(); ++x)
+                {
+                    const float alpha = byteAlpha ? row[static_cast<size_t>(x) * 4u + 3u] / 255.0f : pixels->GetColorAt(x, y).a;
+                    minimum = std::min(minimum, alpha);
+                    maximum = std::max(maximum, alpha);
+                    if (minimum < 0.5f && maximum > 0.5f)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        bool ReadAlbedoCoverage(const aiTexture* embedded, const Path& path)
+        {
+            Path cacheRoot;
+            if (const auto* application = Application::TryGet(); application && !application->GetInternalDirectory().empty())
+            {
+                const Path& internal = application->GetInternalDirectory();
+                cacheRoot = (internal.filename() == "Assets" ? internal.parent_path() : internal) / "ImportCache/Alpha-v1";
+            }
+            String source;
+            if (!cacheRoot.empty())
+            {
+                if (embedded)
+                {
+                    const uint64_t bytes =
+                      embedded->mHeight ? static_cast<uint64_t>(embedded->mWidth) * embedded->mHeight * sizeof(aiTexel) : embedded->mWidth;
+                    if (bytes < 512 * 1024 * 1024)
+                        source.assign(reinterpret_cast<const char*>(embedded->pcData), static_cast<size_t>(bytes));
+                }
+                else
+                {
+                    std::ifstream stream(path, std::ios::binary | std::ios::ate);
+                    const auto bytes = stream.tellg();
+                    if (bytes > 0 && bytes < 512 * 1024 * 1024)
+                    {
+                        source.resize(static_cast<size_t>(bytes));
+                        stream.seekg(0);
+                        if (!stream.read(source.data(), bytes))
+                            source.clear();
+                    }
+                }
+            }
+            const String sourceKind =
+              embedded && embedded->mHeight ? std::to_string(embedded->mWidth) + "x" + std::to_string(embedded->mHeight) : "encoded";
+            const String digest = source.empty() ? String{} : Cryptography::SHA256(sourceKind + "|" + Cryptography::SHA256(source));
+            const Path cachePath = digest.empty() ? Path{} : cacheRoot / (digest + ".coverage");
+            if (!cachePath.empty())
+            {
+                std::ifstream stream(cachePath, std::ios::binary | std::ios::ate);
+                if (stream.tellg() == 65)
+                {
+                    String entry(65, '\0');
+                    stream.seekg(0);
+                    if (stream.read(entry.data(), entry.size()) && (entry.back() == '0' || entry.back() == '1') &&
+                        entry.substr(0, 64) == Cryptography::SHA256("alpha-v1|" + digest + "|" + entry.back()))
+                        return entry.back() == '1';
+                }
+            }
+            const Ref<PixelData> pixels =
+              embedded ? (embedded->mHeight ? DecodeEmbeddedTexels(*embedded)
+                                            : ImageLoader::DecodeMemory(reinterpret_cast<const uint8_t*>(embedded->pcData), embedded->mWidth).Pixels)
+                       : ImageLoader::Decode(path).Pixels;
+            const bool cutout = HasVaryingAlpha(pixels);
+            if (pixels && !cachePath.empty())
+            {
+                const char value = cutout ? '1' : '0';
+                const String entry = Cryptography::SHA256("alpha-v1|" + digest + "|" + value) + value;
+                FileSystem::WriteFileAtomic(cachePath, reinterpret_cast<const byte*>(entry.data()), entry.size());
+            }
+            return cutout;
+        }
+
+        struct MaterialTextureRequest
+        {
+            String Key;
+            String Name;
+            Path File;
+            const aiTexture* Embedded = nullptr;
+            TextureMipMode Mode = TextureMipMode::Color;
+            bool SRGB = true;
+            bool Coverage = false;
+        };
+
+        bool DescribeTexture(const aiScene& scene, const aiMaterial& sourceMaterial, const Path& meshPath, aiTextureType textureType,
+                             TextureMipMode mode, bool sRGB, MaterialTextureRequest& request)
         {
             aiString importedPath;
             if (sourceMaterial.GetTexture(textureType, 0, &importedPath) != aiReturn_SUCCESS)
-                return nullptr;
-
+                return false;
             const String rawPath = importedPath.C_Str();
+            request.Name = rawPath;
             const String profileKey = "|" + std::to_string(static_cast<uint32_t>(mode)) + (sRGB ? "|srgb" : "|linear");
-            const aiTexture* embedded = scene.GetEmbeddedTexture(rawPath.c_str());
-            Path texturePath;
-            const String cacheKey = embedded != nullptr ? "embedded:" + rawPath + profileKey : [&]() {
+            const aiTexture* embedded = request.Embedded = scene.GetEmbeddedTexture(rawPath.c_str());
+            Path& texturePath = request.File;
+            request.Key = embedded != nullptr ? "embedded:" + rawPath + profileKey : [&]() {
                 texturePath = Path(rawPath);
                 if (texturePath.is_relative())
                     texturePath = meshPath.parent_path() / texturePath;
@@ -1064,21 +1307,104 @@ namespace Crowny
                 return texturePath.generic_string() + profileKey;
             }();
 
-            auto cached = textureCache.find(cacheKey);
-            if (cached != textureCache.end())
-            {
-                material->SetTexture(shaderParameter, cached->second);
-                return cached->second;
-            }
+            request.Mode = mode;
+            request.SRGB = sRGB;
+            return true;
+        }
 
-            const Ref<TextureImportOptions> options = CreateMaterialTextureOptions(mode, sRGB);
+        struct MaterialTextureCooks
+        {
+            std::mutex Mutex;
+            UnorderedMap<String, std::shared_future<Ref<Texture>>> Pending;
+
+            Ref<Texture> Import(const Path& path, const Ref<TextureImportOptions>& options)
+            {
+                const auto cook = [&]() -> Ref<Texture> {
+                    const auto assets = Importer::Get().ImportAllDeferred(path, options);
+                    return !assets.empty() && assets.front()->GetAssetType() == AssetType::Texture ? StaticRefCast<Texture>(assets.front()) : nullptr;
+                };
+                // Coalesce identical source bytes within this import, including the
+                // first-ever import. This table never survives the current batch.
+                String bytes;
+                std::ifstream input(path, std::ios::binary | std::ios::ate);
+                const auto size = input.tellg();
+                if (size <= 0 || size > 32 * 1024 * 1024)
+                    return cook();
+                const auto* importer = Importer::Get().GetImporterForFile(path);
+                if (!importer || typeid(*importer) != typeid(TextureImporter))
+                    return cook();
+                bytes.resize(static_cast<size_t>(size));
+                input.seekg(0);
+                if (!input.read(bytes.data(), size))
+                    return cook();
+                const auto probe = ImageLoader::ProbeMemory(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size());
+                if (!probe || probe.Info.Container != ImageContainerFormat::Raster || probe.Info.BitDepth > 8 || probe.Info.IsFloat ||
+                    probe.Info.IsHDR)
+                    return cook();
+                // All other settings are fixed by CreateMaterialTextureOptions.
+                const String key = Cryptography::SHA256(bytes) + "|" + path.extension().string() + "|" +
+                                   std::to_string(static_cast<uint32_t>(options->MipMode)) + (options->SRGB ? "|srgb" : "|linear");
+                bytes.clear();
+                std::shared_future<Ref<Texture>> pending;
+                std::promise<Ref<Texture>> producer;
+                bool owner;
+                {
+                    std::lock_guard lock(Mutex);
+                    const auto [entry, inserted] = Pending.emplace(key, producer.get_future().share());
+                    owner = inserted;
+                    pending = entry->second;
+                }
+                if (owner)
+                {
+                    try
+                    {
+                        auto texture = cook();
+                        producer.set_value(texture);
+                        return texture;
+                    }
+                    catch (...)
+                    {
+                        producer.set_exception(std::current_exception());
+                        throw;
+                    }
+                }
+                const auto original = pending.get();
+                if (!original)
+                    return nullptr;
+                if (!original->HasEncodedSourceData())
+                    return cook();
+                // Different source names remain different assets and keep their
+                // existing UUID reconciliation. Only their CPU cook is shared.
+                auto desc = original->GetDesc();
+                desc.DebugName = path.filename().string();
+                auto texture = Texture::CreateDeferred(desc);
+                texture->SetEncodedSourceData(original->GetDiskFormat(), original->GetSourceFormat(), original->GetEncodedSourceData());
+                texture->SetCpuCached(original->IsCpuCached());
+                texture->SetName(desc.DebugName);
+                return texture;
+            }
+        };
+
+        ImportedTexture PrepareMaterialTexture(const MaterialTextureRequest& request, const Path& meshPath, bool fastCompression,
+                                               MaterialTextureCooks* cooks = nullptr)
+        {
+            const aiTexture* embedded = request.Embedded;
+            const String& rawPath = request.Name;
+            Path texturePath = request.File;
+            const Ref<TextureImportOptions> options = CreateMaterialTextureOptions(request.Mode, request.SRGB, fastCompression);
+            const auto importFile = [&options, cooks](const Path& path) -> Ref<Texture> {
+                if (cooks)
+                    return cooks->Import(path, options);
+                const auto assets = Importer::Get().ImportAllDeferred(path, options);
+                return !assets.empty() && assets.front()->GetAssetType() == AssetType::Texture ? StaticRefCast<Texture>(assets.front()) : nullptr;
+            };
             Ref<Texture> texture;
             if (embedded != nullptr)
             {
                 if (embedded->mHeight == 0)
                 {
-                    texture = TextureImporter::ImportFromMemory(reinterpret_cast<const uint8_t*>(embedded->pcData), embedded->mWidth, rawPath,
-                                                                options);
+                    texture =
+                      TextureImporter::ImportFromMemory(reinterpret_cast<const uint8_t*>(embedded->pcData), embedded->mWidth, rawPath, options);
                 }
                 else
                 {
@@ -1087,21 +1413,155 @@ namespace Crowny
                 }
             }
             else
-                texture = Importer::Get().Import<Texture>(texturePath, options);
+            {
+                if (FileSystem::FileExists(texturePath))
+                    texture = importFile(texturePath);
+                if (!texture)
+                {
+                    // Source files frequently reference textures by the author's absolute path, or as GPU-compressed containers
+                    // (.dds) the image loader cannot decode. Look next to the mesh (and in a Textures folder beside it) for a file
+                    // with the same stem in a supported format, so scenes only need their textures converted, not relinked.
+                    const Path meshDirectory = meshPath.parent_path();
+                    const Path stem = texturePath.stem();
+                    const Path directories[] = { texturePath.parent_path(), meshDirectory, meshDirectory / "Textures", meshDirectory / "textures" };
+                    for (const Path& directory : directories)
+                    {
+                        for (const char* extension : { ".png", ".tga", ".jpg", ".jpeg", ".hdr" })
+                        {
+                            const Path candidate = directory / Path(stem.string() + extension);
+                            if (candidate == texturePath || !fs::exists(candidate))
+                                continue;
+                            texture = importFile(candidate);
+                            if (texture)
+                            {
+                                texturePath = candidate;
+                                break;
+                            }
+                        }
+                        if (texture)
+                            break;
+                    }
+                }
+            }
             if (!texture)
             {
                 CW_ENGINE_WARN("Failed to import texture '{}' referenced by '{}'.", rawPath, meshPath);
-                return nullptr;
+                return {};
             }
 
-            textureCache.emplace(cacheKey, texture);
-            material->SetTexture(shaderParameter, texture);
-            return texture;
+            bool cutout = false;
+            if (request.Coverage)
+            {
+                // Constant-zero alpha remains unused; explicit source alpha modes below take precedence.
+                cutout = ReadAlbedoCoverage(embedded, texturePath);
+            }
+            return { texture, cutout };
+        }
+
+        Ref<Texture> ImportTexture(const aiScene& scene, const aiMaterial& sourceMaterial, const Path& meshPath, aiTextureType textureType,
+                                   const String& shaderParameter, TextureMipMode mode, bool sRGB, const Ref<Material>& material,
+                                   TextureCache& textureCache)
+        {
+            MaterialTextureRequest request;
+            if (!DescribeTexture(scene, sourceMaterial, meshPath, textureType, mode, sRGB, request))
+                return nullptr;
+            auto cached = textureCache.Textures.find(request.Key);
+            if (cached == textureCache.Textures.end())
+            {
+                // A preferred source failed. Resolve later semantic fallbacks on
+                // the caller thread without eagerly cooking unused texture slots.
+                request.Coverage = shaderParameter == "albedoMap";
+                auto prepared = PrepareMaterialTexture(request, meshPath, textureCache.FastCompression);
+                if (prepared.TextureAsset)
+                    prepared.TextureAsset->Init();
+                cached = textureCache.Textures.emplace(request.Key, std::move(prepared)).first;
+            }
+            if (!cached->second.TextureAsset)
+                return nullptr;
+            material->SetTexture(shaderParameter, cached->second.TextureAsset);
+            if (shaderParameter == "albedoMap" && cached->second.Cutout)
+                material->SetAlphaMode(AlphaMode::Mask);
+            return cached->second.TextureAsset;
+        }
+
+        TextureCache PrepareMaterialTextures(const aiScene& scene, const Path& meshPath, const Vector<uint32_t>& materialIndices,
+                                             bool fastCompression)
+        {
+            Vector<MaterialTextureRequest> requests;
+            UnorderedMap<String, size_t> indices;
+            const auto add = [&](const aiMaterial& material, aiTextureType type, TextureMipMode mode, bool sRGB, bool coverage) {
+                MaterialTextureRequest request;
+                if (!DescribeTexture(scene, material, meshPath, type, mode, sRGB, request))
+                    return false;
+                const auto [entry, inserted] = indices.emplace(request.Key, requests.size());
+                if (inserted)
+                    requests.push_back(std::move(request));
+                requests[entry->second].Coverage |= coverage;
+                return true;
+            };
+            for (uint32_t index : materialIndices)
+            {
+                if (index >= scene.mNumMaterials)
+                    continue;
+                const auto& material = *scene.mMaterials[index];
+                for (auto type : { aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE })
+                    if (add(material, type, TextureMipMode::Color, true, true))
+                        break;
+                for (auto type : { aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS })
+                    add(material, type, TextureMipMode::Data, false, false);
+                for (auto type : { aiTextureType_AMBIENT_OCCLUSION, aiTextureType_LIGHTMAP })
+                    if (add(material, type, TextureMipMode::Data, false, false))
+                        break;
+                for (auto type : { aiTextureType_NORMALS, aiTextureType_NORMAL_CAMERA, aiTextureType_HEIGHT })
+                    if (add(material, type, TextureMipMode::NormalMap, false, false))
+                        break;
+                for (auto type : { aiTextureType_EMISSION_COLOR, aiTextureType_EMISSIVE })
+                    if (add(material, type, TextureMipMode::Color, true, false))
+                        break;
+            }
+            Vector<ImportedTexture> prepared(requests.size());
+            MaterialTextureCooks cooks;
+            std::atomic<size_t> next{ 0 };
+            const auto prepare = [&] {
+                for (size_t index = next.fetch_add(1); index < requests.size(); index = next.fetch_add(1))
+                    prepared[index] = PrepareMaterialTexture(requests[index], meshPath, fastCompression, &cooks);
+            };
+            // Respect custom importers too. A main-thread or serialized override for
+            // any source/fallback format keeps this batch on the caller thread.
+            UnorderedSet<String> extensions{ ".png", ".tga", ".jpg", ".jpeg", ".hdr" };
+            for (const auto& request : requests)
+                if (!request.Embedded)
+                    extensions.insert(request.File.extension().string());
+            bool parallelSafe = true;
+            for (const auto& extension : extensions)
+            {
+                if (!Importer::Get().SupportsFileType(extension))
+                    continue;
+                const auto* importer = Importer::Get().GetImporterForFile(Path("texture" + extension));
+                parallelSafe &= importer && importer->GetThreadingPolicy() == ImporterThreadingPolicy::ParallelWorker;
+            }
+            const size_t workerCount = parallelSafe ? std::min<size_t>({ 4, std::max(1u, std::thread::hardware_concurrency()), requests.size() }) : 1;
+            Vector<std::future<void>> workers;
+            for (size_t worker = 1; worker < workerCount; ++worker)
+                workers.push_back(std::async(std::launch::async, prepare));
+            prepare();
+            for (auto& worker : workers)
+                worker.get();
+            TextureCache cache;
+            cache.FastCompression = fastCompression;
+            // Publish on the caller thread, in source order. Workers only create deferred CPU assets.
+            for (size_t index = 0; index < requests.size(); ++index)
+            {
+                if (prepared[index].TextureAsset)
+                    prepared[index].TextureAsset->Init();
+                cache.Textures.emplace(std::move(requests[index].Key), std::move(prepared[index]));
+            }
+            return cache;
         }
 
         Ref<Texture> ImportFirstTexture(const aiScene& scene, const aiMaterial& sourceMaterial, const Path& meshPath,
-                                        std::initializer_list<aiTextureType> textureTypes, const String& shaderParameter,
-                                        TextureMipMode mode, bool sRGB, const Ref<Material>& material, TextureCache& textureCache)
+                                        std::initializer_list<aiTextureType> textureTypes, const String& shaderParameter, TextureMipMode mode,
+                                        bool sRGB, const Ref<Material>& material, TextureCache& textureCache)
         {
             for (aiTextureType type : textureTypes)
             {
@@ -1112,26 +1572,30 @@ namespace Crowny
             return nullptr;
         }
 
-        Vector<Ref<Asset>> ImportMaterials(const aiScene& scene, const Path& meshPath)
+        Vector<Ref<Asset>> ImportMaterials(const aiScene& scene, const Path& meshPath, const Vector<uint32_t>& materialIndices, bool fastCompression)
         {
             Vector<Ref<Asset>> assets;
-            TextureCache textureCache;
+            TextureCache textureCache = PrepareMaterialTextures(scene, meshPath, materialIndices, fastCompression);
             const AssetHandle<Shader> pbrShader = AssetManager::TryGet()->Load<Shader>(PBRIBL_SHADER_PATH);
 
-            for (uint32_t meshIndex = 0; meshIndex < scene.mNumMeshes; meshIndex++)
+            // ParseScene emits submeshes in node-instance order, which can differ
+            // from the source mesh table and can contain repeated mesh instances.
+            for (uint32_t materialIndex : materialIndices)
             {
-                const aiMesh& mesh = *scene.mMeshes[meshIndex];
-                if (mesh.mMaterialIndex >= scene.mNumMaterials)
+                if (materialIndex >= scene.mNumMaterials)
                 {
-                    CW_ENGINE_WARN("Mesh '{}' references missing material {}.", mesh.mName.C_Str(), mesh.mMaterialIndex);
+                    CW_ENGINE_WARN("Mesh '{}' references missing material {}.", meshPath, materialIndex);
+                    const Ref<Material> fallback = Material::CreatePBR(pbrShader);
+                    fallback->SetName("Material_" + std::to_string(materialIndex));
+                    assets.push_back(fallback);
                     continue;
                 }
 
-                const aiMaterial& sourceMaterial = *scene.mMaterials[mesh.mMaterialIndex];
-                const Ref<Material> material = Material::Create(pbrShader);
+                const aiMaterial& sourceMaterial = *scene.mMaterials[materialIndex];
+                const Ref<Material> material = Material::CreatePBR(pbrShader);
                 String materialName = sourceMaterial.GetName().C_Str();
                 if (materialName.empty())
-                    materialName = "Material_" + std::to_string(mesh.mMaterialIndex);
+                    materialName = "Material_" + std::to_string(materialIndex);
                 material->SetName(materialName);
 
                 const auto addTexture = [&assets](const Ref<Texture>& texture) {
@@ -1150,10 +1614,38 @@ namespace Crowny
                 addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_AMBIENT_OCCLUSION, aiTextureType_LIGHTMAP }, "aoMap",
                                               TextureMipMode::Data, false, material, textureCache));
 
+                addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_EMISSION_COLOR, aiTextureType_EMISSIVE },
+                                              "emissiveMap", TextureMipMode::Color, true, material, textureCache));
+                aiColor3D emission(0.0f, 0.0f, 0.0f);
+                if (sourceMaterial.Get(AI_MATKEY_COLOR_EMISSIVE, emission) == aiReturn_SUCCESS)
+                    material->SetColor("emissive", { emission.r, emission.g, emission.b, 1.0f });
+                float emissionIntensity = 1.0f;
+                sourceMaterial.Get(AI_MATKEY_EMISSIVE_INTENSITY, emissionIntensity);
+                material->SetFloat("emissiveIntensity", emissionIntensity);
+
                 aiColor4D color(1.0f, 1.0f, 1.0f, 1.0f);
                 if (sourceMaterial.Get(AI_MATKEY_BASE_COLOR, color) == aiReturn_SUCCESS ||
                     sourceMaterial.Get(AI_MATKEY_COLOR_DIFFUSE, color) == aiReturn_SUCCESS)
                     material->SetColor("albedo", { color.r, color.g, color.b, color.a });
+                float opacity = 1.0f;
+                sourceMaterial.Get(AI_MATKEY_OPACITY, opacity);
+                aiColor4D baseColor;
+                // glTF exposes the same alpha through both base color and opacity.
+                if (sourceMaterial.Get(AI_MATKEY_BASE_COLOR, baseColor) != aiReturn_SUCCESS)
+                    color.a *= opacity;
+                color.a = std::clamp(color.a, 0.0f, 1.0f);
+                material->SetColor("albedo", { color.r, color.g, color.b, color.a });
+                if (color.a < 1.0f)
+                    material->SetAlphaMode(AlphaMode::WeightedOIT);
+                aiString alphaMode;
+                if (sourceMaterial.Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode) == aiReturn_SUCCESS)
+                {
+                    const String mode = alphaMode.C_Str();
+                    material->SetAlphaMode(mode == "MASK" ? AlphaMode::Mask : mode == "BLEND" ? AlphaMode::WeightedOIT : AlphaMode::Opaque);
+                }
+                float alphaCutoff = 0.5f;
+                sourceMaterial.Get(AI_MATKEY_GLTF_ALPHACUTOFF, alphaCutoff);
+                material->SetFloat("alphaCutoff", alphaCutoff);
 
                 float metalness = 0.0f;
                 if (sourceMaterial.Get(AI_MATKEY_METALLIC_FACTOR, metalness) == aiReturn_SUCCESS)
@@ -1191,6 +1683,13 @@ namespace Crowny
             return {};
         }
         return ParseScene(*scene, importOptions);
+    }
+
+    Ref<Prefab> MeshImporter::ParsePrefab(const Path& path, const MeshImportOptions& importOptions)
+    {
+        Assimp::Importer importer;
+        const aiScene* scene = ReadScene(importer, path, importOptions);
+        return scene ? ImportPrefab(*scene, path, importOptions) : nullptr;
     }
 
     Ref<Asset> MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
@@ -1233,6 +1732,20 @@ namespace Crowny
         mesh->SetName(path.filename().string());
 
         Vector<Ref<Asset>> assets{ mesh };
+        if (options->GenerateCollision)
+        {
+            PhysicsMeshBuildSettings collisionSettings;
+            collisionSettings.MaxConvexPoints = options->CollisionMaxConvexPoints;
+            const Ref<PhysicsMesh> collision = PhysicsMesh::Build(*parsed.Data, parsed.SubMeshes, collisionSettings);
+            if (collision != nullptr)
+            {
+                // Dependents are keyed by "<type>:<name>#<n>", so the name must be deterministic across reimports.
+                collision->SetName(path.stem().string() + " Collision");
+                assets.push_back(collision);
+            }
+            else
+                CW_ENGINE_WARN("Mesh import produced no collision geometry: {}", path);
+        }
         if (options->ImportAnimations)
         {
             const Vector<Ref<AnimationClip>> animations = ImportAnimationClips(*scene, *options, parsed.MeshSkeleton);
@@ -1240,8 +1753,18 @@ namespace Crowny
         }
         if (options->ImportMaterials)
         {
-            const Vector<Ref<Asset>> materialAssets = ImportMaterials(*scene, path);
+            const Vector<Ref<Asset>> materialAssets = ImportMaterials(*scene, path, parsed.MaterialIndices, options->FastTextureCompression);
             assets.insert(assets.end(), materialAssets.begin(), materialAssets.end());
+        }
+        if (options->GeneratePrefab)
+        {
+            const Ref<Prefab> prefab = ImportPrefab(*scene, path, *options);
+            auto& renderer = prefab->GetRootEntity().AddComponent<MeshRendererComponent>();
+            renderer.MeshHandle = static_asset_cast<Mesh>(AssetManager::Get().CreateAssetHandle(mesh));
+            for (const Ref<Asset>& asset : assets)
+                if (asset->GetAssetType() == AssetType::Material)
+                    renderer.Materials.push_back(static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(asset)));
+            assets.push_back(prefab);
         }
         return assets;
     }

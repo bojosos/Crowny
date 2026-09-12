@@ -119,7 +119,8 @@ namespace Crowny
         output.MetallicRoughnessNormalAo = { std::clamp(desc.Metallic, 0.0f, 1.0f), std::clamp(desc.Roughness, 0.045f, 1.0f),
                                              std::max(desc.NormalScale, 0.0f), std::clamp(desc.AmbientOcclusion, 0.0f, 1.0f) };
         output.TextureIndices0 = { desc.BaseColorTexture, desc.NormalTexture, desc.MetallicRoughnessTexture, desc.AmbientOcclusionTexture };
-        output.TextureIndices1 = { desc.EmissiveTexture, desc.SamplerIndex, static_cast<uint32_t>(desc.Flags),
+        output.TextureIndices1 = { desc.EmissiveTexture, desc.SamplerIndex,
+                                   static_cast<uint32_t>(desc.Flags) | ((~desc.DecalResponseMask & 255u) << 8u),
                                    PackModelAndAlpha(desc.Model, desc.Alpha) };
         output.ToonShadowBands = { glm::max(desc.ToonShadowColor, glm::vec3(0.0f)), std::clamp(desc.ToonBands, 2.0f, 16.0f) };
         output.ToonSpecular = { glm::max(desc.ToonSpecularColor, glm::vec3(0.0f)), std::clamp(desc.ToonSpecularThreshold, 0.0f, 1.0f) };

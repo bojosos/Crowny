@@ -20,6 +20,10 @@ namespace Crowny
         Vector<Ref<Asset>> ImportAll(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
         Vector<Ref<Asset>> ImportAllDeferred(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
 
+        // Resolve each object's final identity once, retaining the existing last-ID-wins
+        // behavior when a model returns one texture in several dependent slots.
+        static bool ResolveDependencies(const Vector<std::pair<Ref<Asset>, UUID>>& assignments);
+
         template <class T> Ref<T> Import(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr)
         {
             return StaticRefCast<T>(Import(filepath, importOptions));

@@ -431,6 +431,15 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SpriteRendererGetOrderInLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> SpriteRendererSetOrderInLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> LightGetType;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, float*, NativeStatus> DecalGetFloat;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, float, NativeStatus> DecalSetFloat;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, int*, NativeStatus> DecalGetInt;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, int, NativeStatus> DecalSetInt;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeVec4*, NativeStatus> DecalGetVector;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeVec4*, NativeStatus> DecalSetVector;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeUuid*, NativeStatus> DecalGetReference;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint, NativeUuid, NativeStatus> DecalSetReference;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> DecalLifetime;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> LightSetType;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> LightGetColor;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> LightSetColor;
@@ -577,6 +586,10 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CapsuleCollider3DSetRadius;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> CapsuleCollider3DGetHeight;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> CapsuleCollider3DSetHeight;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> MeshCollider3DGetMesh;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> MeshCollider3DSetMesh;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> MeshCollider3DGetConvex;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> MeshCollider3DSetConvex;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> Rigidbody3DGetBodyType;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> Rigidbody3DSetBodyType;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> Rigidbody3DGetMass;
@@ -962,6 +975,15 @@ namespace Crowny.ManagedHost.Interop
                    SpriteRendererGetOrderInLayer != null &&
                    SpriteRendererSetOrderInLayer != null &&
                    LightGetType != null &&
+                   DecalGetFloat != null &&
+                   DecalSetFloat != null &&
+                   DecalGetInt != null &&
+                   DecalSetInt != null &&
+                   DecalGetVector != null &&
+                   DecalSetVector != null &&
+                   DecalGetReference != null &&
+                   DecalSetReference != null &&
+                   DecalLifetime != null &&
                    LightSetType != null &&
                    LightGetColor != null &&
                    LightSetColor != null &&
@@ -1108,6 +1130,10 @@ namespace Crowny.ManagedHost.Interop
                    CapsuleCollider3DSetRadius != null &&
                    CapsuleCollider3DGetHeight != null &&
                    CapsuleCollider3DSetHeight != null &&
+                   MeshCollider3DGetMesh != null &&
+                   MeshCollider3DSetMesh != null &&
+                   MeshCollider3DGetConvex != null &&
+                   MeshCollider3DSetConvex != null &&
                    Rigidbody3DGetBodyType != null &&
                    Rigidbody3DSetBodyType != null &&
                    Rigidbody3DGetMass != null &&
@@ -1281,7 +1307,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 19;
+        public const uint Version = 20;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

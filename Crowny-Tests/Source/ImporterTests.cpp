@@ -1,9 +1,16 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Assets/AssetManifest.h"
+#include "Crowny/Ecs/Components.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Import/MeshImporter.h"
+#include "Crowny/Scene/EntityInstantiation.h"
+#include "Crowny/Scene/Prefab.h"
+#include "Crowny/Scene/Scene.h"
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
+#include "Crowny/Serialization/PrefabSerializer.h"
 
 #include <chrono>
 #include <cmath>
@@ -12,6 +19,36 @@
 #include <yaml-cpp/yaml.h>
 
 using namespace Crowny;
+
+TEST_CASE("Import dependency resolution preserves final IDs for repeated asset references", "[Import][Dependencies]")
+{
+    struct Receiver : Asset
+    {
+        UnorderedMap<const Asset*, UUID> Resolved;
+        uint32_t Calls = 0;
+        void OnDependentAssigned(const Ref<Asset>& asset, const UUID& id) override
+        {
+            Resolved[asset.get()] = id;
+            ++Calls;
+        }
+    };
+    const auto first = CreateRef<Receiver>();
+    const auto second = CreateRef<Receiver>();
+    const UUID firstId = UuidGenerator::Generate();
+    const UUID secondId = UuidGenerator::Generate();
+    const UUID finalId = UuidGenerator::Generate();
+    REQUIRE(Importer::ResolveDependencies({ { first, firstId }, { second, secondId }, { first, finalId } }));
+    for (const auto& receiver : { first, second })
+    {
+        CHECK(receiver->Calls == 2);
+        CHECK(receiver->Resolved.at(first.get()) == finalId);
+        CHECK(receiver->Resolved.at(second.get()) == secondId);
+    }
+    CHECK_FALSE(Importer::ResolveDependencies({ { first, firstId }, { second, UUID::EMPTY } }));
+    CHECK_FALSE(Importer::ResolveDependencies({ { first, firstId }, { nullptr, secondId } }));
+    CHECK(first->Calls == 2);
+    CHECK(second->Calls == 2);
+}
 
 namespace
 {
@@ -430,6 +467,7 @@ TEST_CASE("Mesh import options survive metadata round trip", "[Assets][Importer]
     source->ImportMorphMeshes = true;
     source->ImportBones = true;
     source->ImportMaterials = false;
+    source->FastTextureCompression = false;
     source->ImportVertexColors = false;
     source->FlipUVs = true;
     source->FlipWindingOrder = true;
@@ -448,6 +486,10 @@ TEST_CASE("Mesh import options survive metadata round trip", "[Assets][Importer]
     CHECK(restored->ImportMorphMeshes);
     CHECK(restored->ImportBones);
     CHECK_FALSE(restored->ImportMaterials);
+    CHECK_FALSE(restored->FastTextureCompression);
+    const auto legacy = StaticRefCast<MeshImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load("MeshImporter: {}")));
+    REQUIRE(legacy);
+    CHECK(legacy->FastTextureCompression);
     CHECK_FALSE(restored->ImportVertexColors);
     CHECK(restored->FlipUVs);
     CHECK(restored->FlipWindingOrder);
@@ -461,6 +503,7 @@ TEST_CASE("Texture import options survive metadata round trip", "[Assets][Import
 {
     Ref<TextureImportOptions> source = CreateRef<TextureImportOptions>();
     source->AutomaticFormat = false;
+    source->GenerateEnvironmentMap = true;
     source->Format = TextureFormat::RG8;
     source->Shape = TextureShape::TEXTURE_2D;
     source->GenerateMips = true;
@@ -468,6 +511,7 @@ TEST_CASE("Texture import options survive metadata round trip", "[Assets][Import
     source->CpuCached = true;
     source->SRGB = true;
     source->DiskFormat = TextureDiskFormat::ETC1S;
+    source->UASTCEffort = 1;
 
     YAML::Emitter emitter;
     emitter << YAML::BeginMap;
@@ -477,6 +521,7 @@ TEST_CASE("Texture import options survive metadata round trip", "[Assets][Import
 
     REQUIRE(restored != nullptr);
     CHECK_FALSE(restored->AutomaticFormat);
+    CHECK(restored->GenerateEnvironmentMap);
     CHECK(restored->Format == TextureFormat::RG8);
     CHECK(restored->Shape == TextureShape::TEXTURE_2D);
     CHECK(restored->GenerateMips);
@@ -484,6 +529,7 @@ TEST_CASE("Texture import options survive metadata round trip", "[Assets][Import
     CHECK(restored->CpuCached);
     CHECK(restored->SRGB);
     CHECK(restored->DiskFormat == TextureDiskFormat::ETC1S);
+    CHECK(restored->UASTCEffort == 1);
 
     const Ref<TextureImportOptions> defaults = CreateRef<TextureImportOptions>();
     const Ref<TextureImportOptions> missingSRGB =
@@ -491,6 +537,11 @@ TEST_CASE("Texture import options survive metadata round trip", "[Assets][Import
     REQUIRE(missingSRGB != nullptr);
     CHECK(missingSRGB->SRGB == defaults->SRGB);
     CHECK(missingSRGB->SRGB);
+    CHECK(missingSRGB->UASTCEffort == 2);
+    const auto invalidEffort =
+      StaticRefCast<TextureImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load("TextureImporter: { UASTCEffort: 5 }")));
+    REQUIRE(invalidEffort);
+    CHECK(invalidEffort->UASTCEffort == 2);
 }
 
 TEST_CASE("Font import options survive metadata round trip", "[Assets][Importer][Font]")
@@ -582,14 +633,15 @@ namespace
         while (bin.size() % 4 != 0)
             bin.push_back('\0');
 
-        String json = R"GLTF({"asset":{"version":"2.0"},"buffers":[{"byteLength":126}],)GLTF"
-                      R"GLTF("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36,"target":34962},{"buffer":0,"byteOffset":36,"byteLength":36,"target":34962},)GLTF"
-                      R"GLTF({"buffer":0,"byteOffset":72,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":120,"byteLength":6,"target":34963}],)GLTF"
-                      R"GLTF("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},)GLTF"
-                      R"GLTF({"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},)GLTF"
-                      R"GLTF({"bufferView":3,"componentType":5123,"count":3,"type":"SCALAR"}],)GLTF"
-                      R"GLTF("meshes":[{"name":"Triangle","primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TANGENT":2},"indices":3,"mode":4}]}],)GLTF"
-                      R"GLTF("nodes":[{"name":"Root","mesh":0}],"scenes":[{"nodes":[0]}],"scene":0})GLTF";
+        String json =
+          R"GLTF({"asset":{"version":"2.0"},"buffers":[{"byteLength":126}],)GLTF"
+          R"GLTF("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36,"target":34962},{"buffer":0,"byteOffset":36,"byteLength":36,"target":34962},)GLTF"
+          R"GLTF({"buffer":0,"byteOffset":72,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":120,"byteLength":6,"target":34963}],)GLTF"
+          R"GLTF("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},)GLTF"
+          R"GLTF({"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},)GLTF"
+          R"GLTF({"bufferView":3,"componentType":5123,"count":3,"type":"SCALAR"}],)GLTF"
+          R"GLTF("meshes":[{"name":"Triangle","primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TANGENT":2},"indices":3,"mode":4}]}],)GLTF"
+          R"GLTF("nodes":[{"name":"Root","mesh":0}],"scenes":[{"nodes":[0]}],"scene":0})GLTF";
         while (json.size() % 4 != 0)
             json.push_back(' ');
 
@@ -642,4 +694,153 @@ TEST_CASE("Mesh parser reports the reader error for unreadable sources", "[Asset
     const MeshImportResult result = MeshImporter::Parse(source.GetPath(), MeshImportOptions{}, &error);
     CHECK_FALSE(result);
     CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("Model prefab imports light units and camera transforms through the cooked asset pipeline", "[Assets][Importer][Prefab]")
+{
+    String gltf = BuildTriangleGltf(R"([{"primitives":[{"attributes":{"POSITION":0,"NORMAL":1},"indices":3}]}])",
+                                    R"([{"name":"Parent","translation":[2,3,4],"children":[1,2,3]},
+          {"name":"Lamp","translation":[1,0,0],"extensions":{"KHR_lights_punctual":{"light":0}}},
+          {"name":"Camera","camera":0,"translation":[0,1,0]},
+          {"name":"Triangle","mesh":0}])",
+                                    "[0]");
+    gltf.pop_back();
+    gltf += R"(,"extensionsUsed":["KHR_lights_punctual"],"extensions":{"KHR_lights_punctual":{"lights":[
+        {"type":"point","color":[1,0.5,0.25],"intensity":2,"range":12}]}},
+        "cameras":[{"type":"perspective","perspective":{"yfov":0.8,"aspectRatio":2,"znear":0.1,"zfar":100}}]})";
+    const TemporaryMeshFile source(gltf, "gltf");
+    MeshImportOptions options;
+    options.ScaleFactor = 2.0f;
+    const Ref<Prefab> prefab = MeshImporter::ParsePrefab(source.GetPath(), options);
+    REQUIRE(prefab);
+    const Ref<Scene>& scene = prefab->GetInternalScene();
+    const auto lights = scene->GetAllEntitiesWith<LightComponent>();
+    REQUIRE(lights.size() == 1);
+    const auto& light = lights.get<LightComponent>(lights.front());
+    CHECK(light.Type == LightType::Point);
+    CHECK_THAT(light.Intensity, Catch::Matchers::WithinAbs(8.0f * glm::pi<float>(), 0.001f));
+    CHECK_THAT(light.Color.y, Catch::Matchers::WithinAbs(0.5f, 0.001f));
+    CHECK_THAT(light.Range, Catch::Matchers::WithinAbs(24.0f, 0.001f));
+    const Entity lightEntity(lights.front(), scene.get());
+    CHECK_THAT(lightEntity.GetWorldMatrix()[3].x, Catch::Matchers::WithinAbs(6.0f, 0.001f));
+    CHECK_THAT(lightEntity.GetWorldMatrix()[3].y, Catch::Matchers::WithinAbs(6.0f, 0.001f));
+    const auto cameras = scene->GetAllEntitiesWith<CameraComponent>();
+    REQUIRE(cameras.size() == 1);
+    const auto& camera = cameras.get<CameraComponent>(cameras.front()).Camera;
+    CHECK_THAT(camera.GetPerspectiveVerticalFOV(), Catch::Matchers::WithinAbs(0.8f, 0.001f));
+    CHECK_THAT(camera.GetPerspectiveNearClip(), Catch::Matchers::WithinAbs(0.2f, 0.001f));
+    CHECK_THAT(camera.GetPerspectiveFarClip(), Catch::Matchers::WithinAbs(200.0f, 0.001f));
+
+    const Ref<Prefab> reimported = MeshImporter::ParsePrefab(source.GetPath(), options);
+    REQUIRE(reimported);
+    CHECK(reimported->GetRootEntityUuid() == prefab->GetRootEntityUuid());
+    CHECK(reimported->GetInternalScene()->GetEntityFromUuid(lightEntity.GetUuid()));
+
+    const bool ownsManager = AssetManager::TryGet() == nullptr;
+    if (ownsManager)
+        AssetManager::StartUp();
+    const TemporaryMeshFile cooked("", "asset");
+    REQUIRE(AssetManager::Get().Save(prefab, cooked.GetPath()));
+    const AssetHandle<Prefab> loaded = AssetManager::Get().Load<Prefab>(cooked.GetPath());
+    REQUIRE(loaded.IsLoaded());
+    CHECK(loaded->GetRootEntityUuid() == prefab->GetRootEntityUuid());
+    const Entity restored = loaded->GetInternalScene()->GetEntityFromUuid(lightEntity.GetUuid());
+    REQUIRE(restored);
+    CHECK_THAT(restored.GetComponent<LightComponent>().Intensity, Catch::Matchers::WithinAbs(light.Intensity, 0.001f));
+    CHECK_THAT(restored.GetWorldMatrix()[3].x, Catch::Matchers::WithinAbs(6.0f, 0.001f));
+    if (ownsManager)
+        AssetManager::Shutdown();
+
+    options.ImportLights = false;
+    options.ImportCameras = false;
+    const Ref<Prefab> disabled = MeshImporter::ParsePrefab(source.GetPath(), options);
+    REQUIRE(disabled);
+    CHECK(disabled->GetInternalScene()->GetAllEntitiesWith<LightComponent>().empty());
+    CHECK(disabled->GetInternalScene()->GetAllEntitiesWith<CameraComponent>().empty());
+}
+
+TEST_CASE("Captured prefabs load from legacy YAML caches and current binary caches", "[Assets][Importer][Prefab][PrefabCache]")
+{
+    Ref<Scene> source = CreateRef<Scene>(false);
+    Entity root = source->CreateEntity("Point Light");
+    root.AddComponent<LightComponent>().Intensity = 1234.0f;
+    Entity child = source->CreateEntity("Child");
+    child.SetParent(root);
+    auto prefab = CreateRef<Prefab>();
+    prefab->CaptureFromEntity(*source, root);
+
+    // Older editor versions copied the source YAML directly into the .asset cache.
+    const TemporaryMeshFile cached(PrefabSerializer(prefab).SerializeToString(), "asset");
+    AssetManager manager;
+    const UUID prefabUuid = UuidGenerator::Generate();
+    auto manifest = CreateRef<AssetManifest>("Prefab cache");
+    manifest->RegisterAsset(prefabUuid, cached.GetPath());
+    manager.RegisterAssetManifest(manifest);
+    SECTION("Legacy YAML cache") {}
+    SECTION("Current binary cache") { REQUIRE(manager.SaveBatch({ { prefab, cached.GetPath() } })); }
+
+    const AssetHandle<Prefab> loaded = manager.Load<Prefab>(cached.GetPath(), false);
+    REQUIRE(loaded.IsLoaded());
+    CHECK(loaded.GetUUID() == prefabUuid);
+    CHECK(loaded->GetRootEntityUuid() == root.GetUuid());
+    REQUIRE(loaded->GetRootEntity());
+    CHECK(loaded->GetRootEntity().GetComponent<LightComponent>().Intensity == 1234.0f);
+    REQUIRE(loaded->GetRootEntity().GetChildCount() == 1);
+    CHECK(loaded->GetRootEntity().GetChild(0).GetUuid() == child.GetUuid());
+
+    Scene target(false);
+    Entity instance = EntityInstantiator::InstantiatePrefab(target, loaded);
+    REQUIRE(instance);
+    CHECK(instance.GetName() == "Point Light");
+    CHECK(instance.GetComponent<PrefabComponent>().PrefabAssetUuid == loaded.GetUUID());
+    REQUIRE(instance.GetChildCount() == 1);
+    CHECK(instance.GetChild(0).GetName() == "Child");
+}
+
+TEST_CASE("Mesh prefab options round trip and preserve legacy defaults", "[Assets][Importer][Prefab]")
+{
+    const Ref<MeshImportOptions> options = CreateRef<MeshImportOptions>();
+    options->GeneratePrefab = true;
+    options->ImportLights = false;
+    options->ImportCameras = false;
+    YAML::Emitter output;
+    output << YAML::BeginMap;
+    ImportOptionsSerializer::Serialize(output, options);
+    output << YAML::EndMap;
+    const auto loaded = StaticRefCast<MeshImportOptions>(ImportOptionsSerializer::Deserialize(YAML::Load(output.c_str())));
+    REQUIRE(loaded);
+    CHECK(loaded->GeneratePrefab);
+    CHECK_FALSE(loaded->ImportLights);
+    CHECK_FALSE(loaded->ImportCameras);
+    const MeshImportOptions defaults;
+    CHECK_FALSE(defaults.GeneratePrefab);
+    CHECK(defaults.ImportLights);
+    CHECK(defaults.ImportCameras);
+}
+
+TEST_CASE("Mesh import repairs one degenerate tangent without dropping the mesh", "[Assets][Importer][Mesh]")
+{
+    String gltf = BuildTriangleGltf(R"([{"name":"Wall","primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TANGENT":2},"indices":3}]}])",
+                                    R"([{"name":"Wall","mesh":0,"scale":[2,1,1]}])", "[0]");
+    const String degenerateBuffer = "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/"
+                                    "AACAPwAAgD8AAAAAAAAAAAAAgD8AAIA/AAAAAAAAAAAAAIA/AAABAAIA";
+    gltf.replace(gltf.find(TRIANGLE_BUFFER_BASE64), TRIANGLE_BUFFER_BASE64.size(), degenerateBuffer);
+    const TemporaryMeshFile source(gltf, "gltf");
+    MeshImportOptions options;
+    options.TangentsMode = NormalsImportMode::Import;
+    const MeshImportResult result = MeshImporter::Parse(source.GetPath(), options);
+    REQUIRE(result);
+    REQUIRE(result.SubMeshes.size() == 1);
+    CHECK(result.Data->GetIndexCount() == 3);
+    const auto normals = result.Data->GetNormals();
+    const auto tangents = result.Data->GetTangents();
+    const auto bitangents = result.Data->GetBitangents();
+    REQUIRE(tangents.size() == 3);
+    REQUIRE(bitangents.size() == 3);
+    for (size_t index = 0; index < tangents.size(); index++)
+    {
+        CHECK_THAT(glm::length(tangents[index]), Catch::Matchers::WithinAbs(1.0f, 0.001f));
+        CHECK_THAT(glm::dot(normals[index], tangents[index]), Catch::Matchers::WithinAbs(0.0f, 0.001f));
+        CHECK_THAT(glm::length(bitangents[index]), Catch::Matchers::WithinAbs(1.0f, 0.001f));
+    }
 }

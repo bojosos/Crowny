@@ -24,6 +24,8 @@ namespace Crowny
         explicit EnvironmentMap(const Path& hdrPath);
         EnvironmentMap(const Path& hdrPath, const Settings& settings);
         ~EnvironmentMap() override = default;
+        static Ref<EnvironmentMap> CreateDeferred(const Path& hdrPath);
+        void Init() override;
 
         AssetType GetAssetType() const override { return AssetType::EnvironmentMap; }
         static AssetType GetStaticType() { return AssetType::EnvironmentMap; }
@@ -51,6 +53,7 @@ namespace Crowny
         Ref<Texture> m_PrefilteredMap;
         std::array<glm::vec4, 9> m_DiffuseSh{};
         Settings m_Settings;
+        Path m_PendingSource;
 
         // Temporary — used during generation, not serialized
         Ref<VertexBuffer> m_CubeVbo;

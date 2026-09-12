@@ -1,4 +1,4 @@
-# Repository Guidelines
+﻿# Repository Guidelines
 
 ## Project structure and modules
 
@@ -18,7 +18,7 @@ git submodule update --init --recursive
 - `Scripts\crowny.bat setup --build --test` bootstraps local SDKs, generates VS2022 projects, builds Release, and runs Catch2. Add `--configuration Debug --sanitizer Address` for ASan-instrumented tests with the Windows CRT leak checker.
 - `Scripts\crowny.bat doctor` reports discovered tools, MSBuild, and dependency roots.
 - `Scripts\crowny.bat deps vulkan|openal|physics|spirv-cross|dotnet` bootstraps a single dependency.
-- `Scripts\crowny.bat build Engine|Editor|Tests|RenderTests|All` is the Windows daily-build entrypoint; `Scripts\crowny.bat test` builds and runs Catch2. Agents must use these commands instead of raw MSBuild. Auto scheduling gives the first build 8 of 12 compiler workers, leaves four for another output family, serializes overlapping output writes, and permits concurrent test readers. Pass `--jobs` to request a fixed share; `--jobs 12` waits for exclusive compiler capacity. `--inner-loop` skips building project references for fast single-file iteration after a full build. `--profile` records binlogs and build metrics under `artifacts/build-metrics/`.
+- `Scripts\crowny.bat build Engine|Editor|Tests|RenderTests|All` is the Windows daily-build entrypoint; `Scripts\crowny.bat test` builds and runs Catch2. Agents must use these commands instead of raw MSBuild. Auto scheduling gives the first build 10 of 12 compiler workers (one codegen thread per cl process via CGThreads=1, so workers are well-behaved), leaves two for another output family, serializes overlapping output writes, and permits concurrent test readers. Full All builds run two MSBuild invocations: the engine first, then the four applications with project reference building disabled, which avoids re-evaluating the just-rebuilt engine project once per application. Pass `--jobs` to request a fixed share; `--jobs 12` waits for exclusive compiler capacity. `--inner-loop` skips building project references for fast single-file iteration after a full build. `--profile` records binlogs and build metrics under `artifacts/build-metrics/`.
 - `Scripts\crowny.bat managed` builds the managed C# assemblies; `Scripts\crowny.bat gen --force` regenerates `Crowny.sln` with node-editor support.
 - `Scripts\crowny.bat render-tests` builds the render harness, checks Vulkan and OpenGL against shared references, and compares both outputs.
 - `Scripts\crowny.bat measure` runs Clean/NoOp/TouchedSource timing scenarios; `Scripts\crowny.bat sccache-probe` validates sccache through MSBuild before enabling `--compiler-cache Sccache`.

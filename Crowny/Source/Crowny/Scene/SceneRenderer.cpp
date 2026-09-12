@@ -17,10 +17,12 @@
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/GpuScene.h"
+#include "Crowny/Renderer/GpuWorld2D.h"
 #include "Crowny/Renderer/RenderGraph.h"
 #include "Crowny/Renderer/RenderGraphResources.h"
 #include "Crowny/Renderer/RenderPipeline.h"
 #include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Renderer/ReverseZ.h"
 #include "Crowny/Renderer/ShaderVariation.h"
 
 #include "Crowny/Application/Application.h"
@@ -181,6 +183,7 @@ namespace Crowny
         class GpuDrivenPassExecutor final : public IRenderPipelinePassExecutor
         {
         public:
+            const DecalRenderStats& GetDecalStatistics() const { return m_Decals.GetStats(); }
             void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
                             const GpuDrawBinLayout* drawBinLayout, const RenderSnapshot& snapshot, const Ref<EnvironmentMap>& environment,
                             const RenderPipelineSettings& settings, bool enablePostProcessing)
@@ -199,6 +202,8 @@ namespace Crowny
                 m_GpuMeshletCullingReady = false;
                 m_GpuDrawCompactionReady = false;
                 m_WeightedOitReady = false;
+                m_Decals.Prepare(snapshot, &scene);
+                m_CoatingDepthReady = false;
             }
 
             void Execute(RenderPipelinePass pass, RenderGraphContext& context) override
@@ -466,6 +471,7 @@ namespace Crowny
                 glm::uvec2 Resolution = glm::uvec2(1u);
                 uint32_t HistoryValid = 0;
                 float Feedback = 0.9f;
+                glm::vec4 DecalInvalidation{ 1, 1, 0, 0 };
             };
 
             struct WeightedOitConstants
@@ -563,18 +569,19 @@ namespace Crowny
             static constexpr size_t DepthProgramIndex(DepthPrepassProgram program) { return static_cast<size_t>(program); }
             static constexpr size_t DEPTH_PROGRAM_COUNT = static_cast<size_t>(DepthPrepassProgram::AnimatedObjectID) + 1u;
 
-            GraphicsMaterial* ResolveDepthMaterial(DepthPrepassProgram program, bool masked)
+            GraphicsMaterial* ResolveDepthMaterial(DepthPrepassProgram program, bool masked, bool coating = false)
             {
-                if (masked)
+                if (masked || coating)
                 {
                     const size_t index = DepthProgramIndex(program);
                     ShaderVariation variation;
+                    variation.Set("CW_DEPTH_COATING", coating);
                     variation.Set("CW_DEPTH_ANIMATED", program == DepthPrepassProgram::Animated || program == DepthPrepassProgram::AnimatedObjectID);
                     variation.Set("CW_DEPTH_OBJECT_ID_ONLY",
                                   program == DepthPrepassProgram::StaticObjectID || program == DepthPrepassProgram::AnimatedObjectID);
-                    return Ensure(m_MaskedDepth[index], m_MaskedDepthAttempted[index], "Resources/Shaders/GpuMaskedDepth.asset", variation)
-                             ? &m_MaskedDepth[index]
-                             : nullptr;
+                    auto& material = coating ? m_CoatingDepth[index] : m_MaskedDepth[index];
+                    auto& attempted = coating ? m_CoatingDepthAttempted[index] : m_MaskedDepthAttempted[index];
+                    return Ensure(material, attempted, "Resources/Shaders/GpuMaskedDepth.asset", variation) ? &material : nullptr;
                 }
                 switch (program)
                 {
@@ -876,25 +883,40 @@ namespace Crowny
                 GraphicsMaterial* boundMaterial = nullptr;
                 RenderTarget* boundTarget = outputTarget.get();
                 Ref<RenderTarget> depthOnlyTarget;
+                m_CoatingDepthReady = m_Decals.HasCoatings();
+                if (m_CoatingDepthReady)
+                    for (const GpuDrawRun& run : m_DepthDrawList->Runs)
+                    {
+                        if (run.Bin.Alpha < AlphaMode::Premultiplied || run.CommandCount == 0)
+                            continue;
+                        auto vertices = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
+                        if (!vertices)
+                            continue;
+                        const auto program =
+                          ResolveDepthPrepassProgram(outputLayout.Mode, vertices->GetLayout()->HasAttribute(VertexAttribute::PreviousPosition));
+                        if (!ResolveDepthMaterial(program.Primary, true, true))
+                            m_CoatingDepthReady = false;
+                    }
                 for (const GpuDrawRun& run : m_DepthDrawList->Runs)
                 {
+                    const bool coating = m_CoatingDepthReady && run.Bin.Alpha >= AlphaMode::Premultiplied;
                     const bool depthPhase = run.Bin.Phase == RenderDrawPhase::Opaque || run.Bin.Phase == RenderDrawPhase::ForwardOpaque;
-                    if (!depthPhase || !ParticipatesInDepthPrepass(run.Bin.Alpha) || run.CommandCount == 0)
+                    if ((!coating && (!depthPhase || !ParticipatesInDepthPrepass(run.Bin.Alpha))) || run.CommandCount == 0)
                         continue;
                     const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
                     const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
                     if (!vertexBuffer || !indexBuffer)
                         continue;
                     const bool animated = vertexBuffer->GetLayout()->HasAttribute(VertexAttribute::PreviousPosition);
-                    const bool masked = run.Bin.Alpha == AlphaMode::Mask;
+                    const bool masked = run.Bin.Alpha == AlphaMode::Mask || coating;
                     const DepthPrepassProgramSelection program = ResolveDepthPrepassProgram(outputLayout.Mode, animated);
                     DepthPrepassProgram selectedProgram = program.Primary;
-                    GraphicsMaterial* depthMaterial = ResolveDepthMaterial(selectedProgram, masked);
+                    GraphicsMaterial* depthMaterial = ResolveDepthMaterial(selectedProgram, masked, coating);
                     bool depthOnlyFallback = false;
                     if (depthMaterial == nullptr && program.HasFallback)
                     {
                         selectedProgram = program.Fallback;
-                        depthMaterial = ResolveDepthMaterial(selectedProgram, masked);
+                        depthMaterial = ResolveDepthMaterial(selectedProgram, masked, coating);
                         depthOnlyFallback = depthMaterial != nullptr;
                     }
                     if (depthMaterial == nullptr)
@@ -925,7 +947,10 @@ namespace Crowny
                         depthMaterial->SetBuffer(0, 1, instances);
                         depthMaterial->SetBuffer(0, 2, instanceIds);
                         if (masked)
-                            BindMaterialTable(*depthMaterial, m_MaskedDepthTextureVersions[DepthProgramIndex(selectedProgram)], context);
+                            BindMaterialTable(*depthMaterial,
+                                              coating ? m_CoatingDepthTextureVersions[DepthProgramIndex(selectedProgram)]
+                                                      : m_MaskedDepthTextureVersions[DepthProgramIndex(selectedProgram)],
+                                              context);
                         if (!depthMaterial->Bind())
                             continue;
                         boundMaterial = depthMaterial;
@@ -1003,6 +1028,14 @@ namespace Crowny
 
             void EnsureLightingResources()
             {
+                if (!m_EnvironmentSampler)
+                {
+                    SamplerStateDesc desc;
+                    desc.AddressMode = { TextureWrap::CLAMP_TO_EDGE, TextureWrap::CLAMP_TO_EDGE, TextureWrap::CLAMP_TO_EDGE };
+                    desc.MaxAnsio = 1;
+                    desc.MipMin = 0.0f;
+                    m_EnvironmentSampler = SamplerState::Create(desc);
+                }
                 if (!m_BrdfAttempted && AssetManager::TryGet() != nullptr)
                 {
                     m_BrdfAttempted = true;
@@ -1032,6 +1065,8 @@ namespace Crowny
                 material.WriteUniformBlock(0, 8, &environment, sizeof(environment));
                 material.SetTexture(0, 9, m_Environment ? m_Environment->GetPrefilteredMap() : nullptr);
                 material.SetTexture(0, 10, m_BrdfLut);
+                material.SetSamplerState(0, 9, m_EnvironmentSampler);
+                material.SetSamplerState(0, 10, m_EnvironmentSampler);
                 material.SetBuffer(0, 11, m_Scene->GetShadowLightBuffer());
                 material.SetBuffer(0, 12, m_Scene->GetShadowViewBuffer());
                 material.SetTexture(0, 13, TextureResource(context, "ShadowAtlas"));
@@ -1044,6 +1079,8 @@ namespace Crowny
 
             template <typename T> void BindMaterialTable(T& material, uint64_t& textureVersion, RenderGraphContext& context)
             {
+                if constexpr (std::is_same_v<T, GraphicsMaterial>)
+                    m_Decals.Bind(material);
                 material.SetBuffer(1, 0, Buffer(context, "MaterialTable"));
                 if (textureVersion == m_Scene->GetBindlessTextureVersion())
                     return;
@@ -1053,7 +1090,8 @@ namespace Crowny
             }
 
             void DrawCpuOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList, bool skipGpuBins,
-                                   bool includeForwardOnly = false, uint32_t materialTemplate = std::numeric_limits<uint32_t>::max())
+                                   bool includeForwardOnly = false, uint32_t materialTemplate = std::numeric_limits<uint32_t>::max(),
+                                   bool coatingOnly = false)
             {
                 if (commands == nullptr || !material.Bind())
                     return;
@@ -1061,7 +1099,9 @@ namespace Crowny
                 {
                     const bool supportedPhase =
                       run.Bin.Phase == RenderDrawPhase::Opaque || (includeForwardOnly && run.Bin.Phase == RenderDrawPhase::ForwardOpaque);
-                    if (!supportedPhase || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) || run.CommandCount == 0)
+                    if ((coatingOnly ? run.Bin.Alpha < AlphaMode::Premultiplied
+                                     : !supportedPhase || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask)) ||
+                        run.CommandCount == 0)
                         continue;
                     if (materialTemplate != std::numeric_limits<uint32_t>::max() && run.Bin.MaterialTemplate != materialTemplate)
                         continue;
@@ -1165,6 +1205,11 @@ namespace Crowny
                 const bool gpuSubmitted = DrawGpuOpaqueBins(m_ForwardPlus, gpuCommands, gpuCounts);
                 m_ForwardPlus.SetBuffer(0, 2, instanceIds);
                 DrawCpuOpaqueRuns(m_ForwardPlus, commands, *m_DepthDrawList, gpuSubmitted);
+                if (m_CoatingDepthReady)
+                {
+                    m_Decals.BindCoatingMode(m_ForwardPlus, 1);
+                    DrawCpuOpaqueRuns(m_ForwardPlus, commands, *m_DepthDrawList, false, false, std::numeric_limits<uint32_t>::max(), true);
+                }
             }
 
             void RenderDeferredGBuffer(RenderGraphContext& context)
@@ -1212,6 +1257,24 @@ namespace Crowny
                 const bool gpuSubmitted = DrawGpuOpaqueBins(m_DeferredGBuffer, gpuCommands, gpuCounts);
                 m_DeferredGBuffer.SetBuffer(0, 2, instanceIds);
                 DrawCpuOpaqueRuns(m_DeferredGBuffer, commands, *m_DepthDrawList, gpuSubmitted);
+                if (m_CoatingDepthReady)
+                {
+                    m_Decals.BindCoatingMode(m_DeferredGBuffer, 1);
+                    DrawCpuOpaqueRuns(m_DeferredGBuffer, commands, *m_DepthDrawList, false, false, std::numeric_limits<uint32_t>::max(), true);
+                }
+            }
+
+            Ref<SamplerState> GetIntegerSampler()
+            {
+                if (!m_IntegerSampler)
+                {
+                    SamplerStateDesc samplerDesc;
+                    samplerDesc.MinFilter = TextureFilter::NEAREST;
+                    samplerDesc.MagFilter = TextureFilter::NEAREST;
+                    samplerDesc.MipFilter = TextureFilter::NEAREST;
+                    m_IntegerSampler = SamplerState::Create(samplerDesc);
+                }
+                return m_IntegerSampler;
             }
 
             void RenderDeferredLighting(RenderGraphContext& context)
@@ -1223,6 +1286,7 @@ namespace Crowny
                 m_DeferredLighting.SetTexture(0, 17, TextureResource(context, "GBufferNormalRoughMetal"));
                 m_DeferredLighting.SetTexture(0, 18, TextureResource(context, "GBufferEmissive"));
                 m_DeferredLighting.SetTexture(0, 19, TextureResource(context, "GBufferMaterialFlags"));
+                m_DeferredLighting.SetSamplerState(0, 19, GetIntegerSampler());
                 m_DeferredLighting.SetTexture(0, 20, TextureResource(context, "SceneDepth"));
                 m_DeferredLighting.SetLoadStoreTexture(0, 21, TextureResource(context, "HdrColor"));
                 m_DeferredLighting.SetTexture(
@@ -1318,6 +1382,8 @@ namespace Crowny
                     material.SetTexture(0, 16,
                                         TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
                     BindMaterialTable(material, textureVersion, context);
+                    if (m_CoatingDepthReady)
+                        m_Decals.BindCoatingMode(material, 2);
                 };
                 prepare(m_WeightedOitAccumulation, m_WeightedOitAccumulationTextureVersion);
                 prepare(m_WeightedOitRevealage, m_WeightedOitRevealageTextureVersion);
@@ -1408,6 +1474,8 @@ namespace Crowny
                     return;
                 if (needsAdditive && !EnsureTransparent(m_ForwardAdditive, m_ForwardAdditiveAttempted, true))
                     return;
+                if (!needsPremultiplied && !needsAdditive)
+                    return;
 
                 auto prepare = [&](GraphicsMaterial& material, uint64_t& textureVersion) {
                     material.SetBuffer(0, 1, instances);
@@ -1416,6 +1484,8 @@ namespace Crowny
                     material.SetTexture(0, 16,
                                         TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
                     BindMaterialTable(material, textureVersion, context);
+                    if (m_CoatingDepthReady)
+                        m_Decals.BindCoatingMode(material, 2);
                 };
                 if (needsPremultiplied)
                     prepare(m_ForwardPremultiplied, m_PremultipliedTextureVersion);
@@ -1429,7 +1499,7 @@ namespace Crowny
                 const Ref<RenderTarget> target = context.GetRenderTarget(attachments);
                 if (!target)
                     return;
-                RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
+                RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_ALL);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
 
                 GraphicsMaterial* boundMaterial = nullptr;
@@ -1473,6 +1543,7 @@ namespace Crowny
                 TemporalConstants constants;
                 constants.Resolution = { resolved->GetWidth(), resolved->GetHeight() };
                 constants.HistoryValid = context.IsHistoryValid(Resource("TaaHistoryRead")) && !m_View.CameraCut ? 1u : 0u;
+                constants.DecalInvalidation = m_Decals.GetHistoryInvalidationRect();
                 m_TemporalResolve.WriteUniformBlock(0, 0, &constants, sizeof(constants));
                 m_TemporalResolve.SetTexture(0, 1, current);
                 m_TemporalResolve.SetTexture(0, 2, depth);
@@ -1520,7 +1591,10 @@ namespace Crowny
                 toneMap.SetTexture(0, 0, TextureResource(context, "ResolvedColor"));
                 toneMap.WriteUniformBlock(0, 1, &constants, sizeof(constants));
                 if (writeObjectId)
+                {
                     toneMap.SetTexture(0, 2, TextureResource(context, "ObjectID"));
+                    toneMap.SetSamplerState(0, 2, GetIntegerSampler());
+                }
                 toneMap.SetTexture(0, 3, TextureResource(context, "SceneDepth"));
                 toneMap.SetTexture(0, 4, TextureResource(context, "Bloom") ? TextureResource(context, "Bloom") : Texture::BLACK);
                 RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_ALL);
@@ -1592,6 +1666,7 @@ namespace Crowny
             ComputeMaterial m_ExpandMeshlets;
             ComputeMaterial m_CullMeshlets;
             ComputeMaterial m_BinAndCompactDraws;
+            DecalRenderer m_Decals;
             ComputeMaterial m_BuildClusters;
             ComputeMaterial m_BuildHiZ;
             ComputeMaterial m_Gtao;
@@ -1605,6 +1680,10 @@ namespace Crowny
             GraphicsMaterial m_DepthObjectID;
             GraphicsMaterial m_AnimatedDepthObjectID;
             Array<GraphicsMaterial, DEPTH_PROGRAM_COUNT> m_MaskedDepth;
+            Array<GraphicsMaterial, DEPTH_PROGRAM_COUNT> m_CoatingDepth;
+            Array<uint64_t, DEPTH_PROGRAM_COUNT> m_CoatingDepthTextureVersions{};
+            Array<bool, DEPTH_PROGRAM_COUNT> m_CoatingDepthAttempted{};
+            bool m_CoatingDepthReady = false;
             GraphicsMaterial m_ShadowDepth;
             GraphicsMaterial m_ForwardPlus;
             GraphicsMaterial m_ForwardPremultiplied;
@@ -1616,7 +1695,9 @@ namespace Crowny
             std::array<GraphicsMaterial, 2> m_ToneMap;
             GraphicsMaterial m_Sky;
             Ref<Texture> m_BrdfLut;
+            Ref<SamplerState> m_EnvironmentSampler;
             Ref<SamplerState> m_ShadowSampler;
+            Ref<SamplerState> m_IntegerSampler;
             Vector<uint32_t> m_ZeroDrawBinCounts;
             uint64_t m_ForwardTextureVersion = 0;
             uint64_t m_PremultipliedTextureVersion = 0;
@@ -1666,6 +1747,12 @@ namespace Crowny
 
         struct SceneRendererThreadResources
         {
+            struct World2DEntry
+            {
+                std::weak_ptr<const uint8_t> Lifetime;
+                GpuWorld2D World;
+            };
+            UnorderedMap<uint64_t, World2DEntry> Worlds2D;
             struct HistoryConfiguration
             {
                 RenderingPath Path = RenderingPath::Auto;
@@ -1744,6 +1831,19 @@ namespace Crowny
 
         void Add2DStatistics(const RenderSnapshot& snapshot, SceneRenderStatistics& statistics)
         {
+            if (snapshot.World2DLifetime && s_RenderThreadResources)
+            {
+                const auto world = s_RenderThreadResources->Worlds2D.find(snapshot.HistoryOwnerId);
+                if (world != s_RenderThreadResources->Worlds2D.end())
+                {
+                    const auto& spriteStats = world->second.World.GetStatistics();
+                    statistics.SubmittedSprites2D = spriteStats.Submitted;
+                    statistics.VisibleSprites2D = spriteStats.Visible;
+                    statistics.SpriteBatches2D = spriteStats.Batches;
+                    statistics.UploadedBytes2D = spriteStats.UploadedBytes;
+                    statistics.UploadedBytes += spriteStats.UploadedBytes;
+                }
+            }
             statistics.VisibleVertices += static_cast<uint64_t>(snapshot.Sprites.Size()) * 6u;
             statistics.VisibleTriangles += static_cast<uint64_t>(snapshot.Sprites.Size()) * 2u;
             for (const RenderableText& text : snapshot.Texts)
@@ -1756,6 +1856,7 @@ namespace Crowny
         SceneRenderStatistics BuildLegacyStatistics(const RenderSnapshot& snapshot)
         {
             SceneRenderStatistics statistics;
+            statistics.FrameRendered = true;
             statistics.FrameNumber = snapshot.FrameNumber;
             const VisibilityFrustum frustum =
               VisibilityFrustum::FromViewProjection(snapshot.ProjectionMatrix * snapshot.ViewMatrix, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
@@ -1778,6 +1879,7 @@ namespace Crowny
             statistics.UploadedBytes = gpuStatistics.UploadedBytes;
             statistics.ActiveInstances = gpuStatistics.ActiveInstances;
             statistics.ActiveLights = gpuStatistics.ActiveLights;
+            statistics.Decals = ForwardRenderer::GetDecalStatistics();
             return statistics;
         }
     } // namespace
@@ -2153,8 +2255,8 @@ namespace Crowny
                 Entity entity(handle, m_Scene.get());
                 const Transform& delta = animation.Player->GetRootMotionDelta();
                 const Transform& local = entity.GetLocalTransform();
-                entity.SetLocalTransform(Transform(local.GetPosition() + delta.GetPosition(),
-                                                   glm::normalize(local.GetRotation() * delta.GetRotation()), local.GetScale()));
+                entity.SetLocalTransform(
+                  Transform(local.GetPosition() + delta.GetPosition(), glm::normalize(local.GetRotation() * delta.GetRotation()), local.GetScale()));
             }
 
             // Animation time, events, and root motion must not depend on render-thread upload latency.
@@ -2213,7 +2315,10 @@ namespace Crowny
 
     void SceneRenderer::ExtractSnapshot(RenderSnapshot& snapshot, bool drawGrid) const
     {
-        const uint64_t frameNumber = snapshot.FrameNumber != 0 ? snapshot.FrameNumber : m_RenderSyncEpoch + 1;
+        const uint64_t frameNumber =
+          snapshot.FrameNumber != 0
+            ? snapshot.FrameNumber
+            : (Application::TryGet() ? std::max(uint64_t(1), Application::Get().GetTime().GetFrameCount()) : m_RenderSyncEpoch + 1);
         snapshot.Clear();
         snapshot.FrameNumber = frameNumber;
         Camera* mainCamera = nullptr;
@@ -2269,6 +2374,12 @@ namespace Crowny
         snapshot.Clear();
         snapshot.FrameNumber = frameNumber;
         snapshot.ProjectionMatrix = camera.GetProjection();
+        // Camera projections use the conventional [-1, 1] clip depth range.
+        // GPU scene passes use reverse depth; compatibility materials retain their
+        // less-than depth tests. Both shader paths consume the [0, 1] clip range.
+        const bool reverseDepth =
+          RenderAPI::TryGet() == nullptr || RenderAPI::TryGet()->GetCapabilities().GetFeatureTier() != RenderFeatureTier::Compatibility;
+        snapshot.ProjectionMatrix = ReverseZ::ConvertClipDepth(camera.GetProjection(), reverseDepth);
         snapshot.ViewMatrix = viewTransform;
         snapshot.HistoryOwnerId = m_HistoryOwnerId;
         snapshot.HistoryNamespace = historyNamespace;
@@ -2300,6 +2411,7 @@ namespace Crowny
         SyncRenderWorld(snapshot);
 
         // 3D mesh objects
+        DecalRenderer::Extract(*m_Scene, snapshot);
         {
             auto objs = m_Scene->m_Registry.view<MeshRendererComponent, TransformComponent, RelationshipComponent>();
             snapshot.MeshObjects.Reserve(objs.size_hint());
@@ -2318,6 +2430,7 @@ namespace Crowny
                                                    : renderMesh->GetSphereBounds();
                     object.BoundingSphere = VisibilityCulling::TransformSphere(bounds, object.WorldMatrix);
                     object.MeshHandle = renderMesh;
+                    object.ObjectID = static_cast<uint32_t>(entt::to_integral(ee)) + 1u;
                     snapshot.SetMaterials(object, mesh.Materials);
                     object.VisibilityLayers = mesh.VisibilityLayers;
                     object.Visible = mesh.Visible;
@@ -2337,6 +2450,7 @@ namespace Crowny
                     object.WorldMatrix = transform.GetWorldMatrix(relationship.Parent);
                     object.BoundingSphere = VisibilityCulling::TransformSphere(proc.RuntimeMeshHandle->GetSphereBounds(), object.WorldMatrix);
                     object.MeshHandle = proc.RuntimeMeshHandle;
+                    object.ObjectID = static_cast<uint32_t>(entt::to_integral(ee)) + 1u;
                     snapshot.SetMaterials(object, proc.Materials);
                     object.VisibilityLayers = RenderLayerMask::All();
                     object.Visible = true;
@@ -2346,6 +2460,8 @@ namespace Crowny
 
         // 2D sprites
         {
+            m_RenderWorld2D.BeginFrame(snapshot.FrameNumber);
+            snapshot.World2DLifetime = m_World2DLifetime;
             const auto spriteRendererComponents = m_Scene->m_Registry.view<SpriteRendererComponent, TransformComponent, RelationshipComponent>();
             snapshot.Sprites.Reserve(spriteRendererComponents.size_hint());
             snapshot.Ordered2D.Reserve(spriteRendererComponents.size_hint());
@@ -2358,17 +2474,33 @@ namespace Crowny
                 renderable.Texture = sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr;
                 renderable.Color = sprite.Color;
                 renderable.EntityId = ((int32_t)ee) + 1;
+                RenderInstance2DDesc desc;
+                desc.Transform = renderable.WorldMatrix;
+                desc.Color = sprite.Color;
+                desc.TextureResource = renderable.Texture;
+                desc.ObjectID = { static_cast<uint32_t>(renderable.EntityId) };
+                desc.SortingLayer = sprite.SortingLayer;
+                desc.OrderInLayer = sprite.OrderInLayer;
+                auto [tracked, inserted] = m_TrackedSprites2D.try_emplace(sprite.InstanceId);
+                if (inserted)
+                    tracked->second.Handle = m_RenderWorld2D.Create(desc);
+                else
+                    m_RenderWorld2D.Update(tracked->second.Handle, desc);
+                tracked->second.LastSeenEpoch = m_RenderSyncEpoch;
+                renderable.Handle = tracked->second.Handle;
                 Renderable2DOrder& order = snapshot.Ordered2D.Acquire();
                 order.Type = Renderable2DType::Sprite;
                 order.Index = static_cast<uint32_t>(snapshot.Sprites.Size() - 1u);
                 order.SortingLayer = sprite.SortingLayer;
                 order.OrderInLayer = sprite.OrderInLayer;
+                order.ViewDepth = 0.0f;
                 order.StableOrder = static_cast<uint32_t>(entt::to_integral(ee));
             }
         }
 
         // Text
         {
+            m_TextLayoutCache.BeginExtraction();
             const auto textComponents = m_Scene->m_Registry.view<TextComponent, TransformComponent, RelationshipComponent>();
             snapshot.Texts.Reserve(textComponents.size_hint());
             snapshot.Ordered2D.Reserve(snapshot.Ordered2D.Size() + textComponents.size_hint());
@@ -2377,6 +2509,7 @@ namespace Crowny
                 auto [text, transform, relationship] = textComponents.get<TextComponent, TransformComponent, RelationshipComponent>(ee);
                 RenderableText& renderable = snapshot.Texts.Acquire();
                 renderable.TextData = text;
+                renderable.Layout = m_TextLayoutCache.Get(text.InstanceId, text);
                 renderable.WorldMatrix = transform.GetWorldMatrix(relationship.Parent);
                 renderable.EntityId = (int32_t)ee + 1;
                 Renderable2DOrder& order = snapshot.Ordered2D.Acquire();
@@ -2384,11 +2517,27 @@ namespace Crowny
                 order.Index = static_cast<uint32_t>(snapshot.Texts.Size() - 1u);
                 order.SortingLayer = text.SortingLayer;
                 order.OrderInLayer = text.OrderInLayer;
+                order.ViewDepth = 0.0f;
                 order.StableOrder = static_cast<uint32_t>(entt::to_integral(ee));
             }
         }
 
-        std::sort(snapshot.Ordered2D.begin(), snapshot.Ordered2D.end(), Renderable2DOrderLess);
+        m_TextLayoutCache.EndExtraction();
+        m_RenderOrder2D.Sort({ snapshot.Ordered2D.begin(), snapshot.Ordered2D.Size() });
+        for (auto tracked = m_TrackedSprites2D.begin(); tracked != m_TrackedSprites2D.end();)
+        {
+            if (tracked->second.LastSeenEpoch == m_RenderSyncEpoch)
+                ++tracked;
+            else
+            {
+                m_RenderWorld2D.Destroy(tracked->second.Handle);
+                tracked = m_TrackedSprites2D.erase(tracked);
+            }
+        }
+        m_RenderWorld2D.DrainChanges(m_RenderWorld2DChangeScratch);
+        snapshot.RenderWorld2DChanges.Reserve(m_RenderWorld2DChangeScratch.size());
+        for (const RenderChange2D& change : m_RenderWorld2DChangeScratch)
+            snapshot.RenderWorld2DChanges.Acquire() = change;
     }
 
     uint32_t SceneRenderer::GetResourceIndex(const AssetHandleData* identity, UnorderedMap<const AssetHandleData*, uint32_t>& resources,
@@ -2796,6 +2945,10 @@ namespace Crowny
 
     void SceneRenderer::ResetTrackedRenderWorld()
     {
+        m_TextLayoutCache.Clear();
+        for (const auto& [_, sprite] : m_TrackedSprites2D)
+            m_RenderWorld2D.Destroy(sprite.Handle);
+        m_TrackedSprites2D.clear();
         for (const auto& [_, instance] : m_TrackedRenderInstances)
             m_RenderWorld.DestroyInstance(instance.Handle);
         m_TrackedRenderInstances.clear();
@@ -2811,6 +2964,7 @@ namespace Crowny
         if (!snapshot.Target)
             return; // No render target — nothing to draw into this frame.
 
+        ForwardRenderer::PrepareDecals(snapshot);
         RenderAPI& rapi = (*RenderAPI::TryGet());
         rapi.SetRenderTarget(snapshot.Target);
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
@@ -2824,11 +2978,20 @@ namespace Crowny
             ForwardRenderer::SetLights(snapshot.LegacyLights.begin(), static_cast<uint32_t>(snapshot.LegacyLights.Size()));
             const VisibilityFrustum frustum =
               VisibilityFrustum::FromViewProjection(snapshot.ProjectionMatrix * snapshot.ViewMatrix, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
+            Vector<const RenderableObject*> visible;
             for (const auto& obj : snapshot.MeshObjects)
-            {
                 if (IsRenderableObjectVisible(obj, frustum, RenderLayerMask::All()))
-                    ForwardRenderer::Submit(obj.MeshHandle, snapshot.GetMaterials(obj), obj.WorldMatrix);
+                    visible.push_back(&obj);
+            std::stable_sort(visible.begin(), visible.end(), [&](const auto* a, const auto* b) {
+                return (snapshot.ViewMatrix * a->WorldMatrix[3]).z < (snapshot.ViewMatrix * b->WorldMatrix[3]).z;
+            });
+            for (LegacySurfacePass pass : { LegacySurfacePass::Opaque, LegacySurfacePass::Coating, LegacySurfacePass::Transparent })
+            {
+                ForwardRenderer::SetSurfacePass(pass);
+                for (const auto* obj : visible)
+                    ForwardRenderer::Submit(obj->MeshHandle, snapshot.GetMaterials(*obj), obj->WorldMatrix, obj->ObjectID);
             }
+            ForwardRenderer::SetSurfacePass(LegacySurfacePass::All);
             ForwardRenderer::Flush();
             ForwardRenderer::EndScene();
             ForwardRenderer::End();
@@ -2853,13 +3016,23 @@ namespace Crowny
             DrawGrid(snapshot.ProjectionMatrix * snapshot.ViewMatrix, snapshot.CameraPosition, snapshot.Grid);
         }
 
+        if (snapshot.World2DLifetime && s_RenderThreadResources)
+        {
+            const auto world = s_RenderThreadResources->Worlds2D.find(snapshot.HistoryOwnerId);
+            if (world != s_RenderThreadResources->Worlds2D.end() && world->second.World.Render(snapshot))
+                return;
+        }
+
         // 2D pass
         {
-            Renderer2D::Begin(snapshot.ProjectionMatrix, snapshot.ViewMatrix);
+            Renderer2D::Begin(snapshot.ProjectionMatrix, snapshot.ViewMatrix,
+                              RenderAPI::TryGet()->GetCapabilities().GetFeatureTier() != RenderFeatureTier::Compatibility);
             const auto drawSprite = [&](const RenderableSprite& sprite) {
                 Renderer2D::FillRect(sprite.WorldMatrix, sprite.Texture, sprite.Color, sprite.EntityId);
             };
-            const auto drawText = [&](const RenderableText& text) { Renderer2D::DrawString(text.TextData, text.WorldMatrix, text.EntityId); };
+            const auto drawText = [&](const RenderableText& text) {
+                Renderer2D::DrawString(text.TextData, text.WorldMatrix, text.EntityId, text.Layout.get());
+            };
 
             if (snapshot.Ordered2D.Empty())
             {
@@ -2899,15 +3072,91 @@ namespace Crowny
         s_RenderThreadResources->HistoryConfigurations.erase(historyNamespace);
     }
 
+    void SceneRenderer::Render2DOnlySnapshot(const RenderSnapshot& snapshot)
+    {
+        auto& resources = GetSceneRendererThreadResources();
+        // A view that no longer draws 3D must release its old TAA/HiZ/shadow history.
+        if (resources.HistoryConfigurations.contains(snapshot.HistoryNamespace))
+            ReleaseRenderThreadHistory(snapshot.HistoryNamespace);
+        RenderGraph& graph = resources.Graph;
+        RenderGraphTextureDesc targetDesc;
+        targetDesc.Width = snapshot.Target->GetProperties().Width;
+        targetDesc.Height = snapshot.Target->GetProperties().Height;
+        targetDesc.Samples = std::max(1u, snapshot.Target->GetProperties().Samples);
+        RenderPipelineGraphDesc desc;
+        desc.Only2D = true;
+        desc.OutputTarget = graph.ImportTexture("CameraTarget2D", targetDesc, reinterpret_cast<uint64_t>(snapshot.Target.get()),
+                                                RenderGraphResourceState::ColorAttachment, RenderGraphResourceState::ColorAttachment);
+        const auto clearTarget = [&]() {
+            RenderAPI& api = RenderAPI::Get();
+            api.SetRenderTarget(snapshot.Target);
+            api.SetViewport(0, 0, 1, 1);
+            const float clearDepth = api.GetCapabilities().GetFeatureTier() == RenderFeatureTier::Compatibility ? 1.0f : 0.0f;
+            api.ClearRenderTarget(FBT_COLOR | FBT_DEPTH, glm::vec4(0, 0, 0, 1), clearDepth);
+        };
+        desc.Clear2DTarget = [&](RenderGraphContext&) { clearTarget(); };
+        desc.FinalComposition = [&](RenderGraphContext&) { RenderLegacyOverlays(snapshot); };
+        RenderView view;
+        resources.Pipeline.BuildFrameGraph(graph, view, desc, resources.Blackboard);
+        const auto& compiled = graph.Compile();
+        const bool frameBegun = resources.GraphResources.BeginFrame(compiled, snapshot.FrameNumber, snapshot.HistoryNamespace, true);
+        const bool executed = frameBegun && resources.GraphResources.BindExternalRenderTarget(desc.OutputTarget, snapshot.Target) &&
+                              graph.Execute(nullptr, &resources.GraphResources);
+        if (frameBegun)
+        {
+            if (executed)
+                resources.GraphResources.EndFrame();
+            else
+                resources.GraphResources.AbortFrame();
+        }
+        if (!executed)
+        {
+            CW_ENGINE_ERROR("2D render graph failed: {}", compiled.Succeeded ? resources.GraphResources.GetAllocationError() : compiled.Error);
+            clearTarget();
+            RenderLegacyOverlays(snapshot);
+        }
+        SceneRenderStatistics statistics;
+        statistics.FrameNumber = snapshot.FrameNumber;
+        Add2DStatistics(snapshot, statistics);
+        const auto& graphStatistics = graph.GetExecutionStats();
+        statistics.RenderPasses = graphStatistics.ExecutedPasses;
+        statistics.GraphicsPasses = graphStatistics.GraphicsPasses;
+        statistics.ComputePasses = graphStatistics.ComputePasses;
+        statistics.TransferPasses = graphStatistics.TransferPasses;
+        statistics.Barriers = graphStatistics.ScheduledBarriers;
+        statistics.RenderGraphCpuTimeMs = graphStatistics.CpuTimeMs;
+        statistics.RenderGraphSucceeded = executed;
+        statistics.FrameRendered = executed;
+        statistics.UploadedBytes += Renderer::GetGpuScene().GetStats().UploadedBytes;
+        PublishStatistics(statistics);
+    }
+
     void SceneRenderer::RenderFromSnapshot(const RenderSnapshot& snapshot)
     {
         ZoneScopedN("RenderGraphFrame");
         for (uint64_t historyNamespace : snapshot.ReleasedHistoryNamespaces)
             ReleaseRenderThreadHistory(historyNamespace);
-        if (!snapshot.Target && !s_RenderThreadResources)
+        if (!snapshot.Target && !s_RenderThreadResources && snapshot.RenderWorld2DChanges.Empty())
             return;
 
         SceneRendererThreadResources& threadResources = GetSceneRendererThreadResources();
+        for (auto world = threadResources.Worlds2D.begin(); world != threadResources.Worlds2D.end();)
+        {
+            if (world->second.Lifetime.expired())
+                world = threadResources.Worlds2D.erase(world);
+            else
+            {
+                for (uint64_t view : snapshot.ReleasedHistoryNamespaces)
+                    world->second.World.ReleaseView(view);
+                ++world;
+            }
+        }
+        if (snapshot.World2DLifetime)
+        {
+            auto& world = threadResources.Worlds2D[snapshot.HistoryOwnerId];
+            world.Lifetime = snapshot.World2DLifetime;
+            world.World.Apply({ snapshot.RenderWorld2DChanges.begin(), snapshot.RenderWorld2DChanges.Size() });
+        }
         RenderGraph& renderGraph = threadResources.Graph;
         RenderGraphResourceRegistry& graphResources = threadResources.GraphResources;
         if (!snapshot.Target)
@@ -2919,6 +3168,11 @@ namespace Crowny
         gpuScene.ApplyResources(snapshot.MeshResourceChanges, snapshot.MaterialResourceChanges);
         const RenderCapabilities& capabilities = RenderAPI::TryGet()->GetCapabilities();
         const RenderFeatureTier featureTier = capabilities.GetFeatureTier();
+        if (snapshot.MeshObjects.Empty() && !snapshot.Environment && threadResources.Pipeline.GetFeatures().empty())
+        {
+            Render2DOnlySnapshot(snapshot);
+            return;
+        }
         if (featureTier == RenderFeatureTier::Compatibility)
         {
             if (threadResources.HistoryConfigurations.erase(snapshot.HistoryNamespace) != 0)
@@ -3310,7 +3564,7 @@ namespace Crowny
             Add2DStatistics(snapshot, statistics);
 
             const GpuSceneUploadStats& gpuStatistics = gpuScene.GetStats();
-            statistics.UploadedBytes = gpuStatistics.UploadedBytes;
+            statistics.UploadedBytes += gpuStatistics.UploadedBytes;
             statistics.VisibleInstances = gpuStatistics.VisibleInstances;
             statistics.ActiveInstances = gpuStatistics.ActiveInstances;
             statistics.ActiveLights = gpuStatistics.ActiveLights;
@@ -3323,6 +3577,9 @@ namespace Crowny
             statistics.Barriers = graphStatistics.ScheduledBarriers;
             statistics.RenderGraphCpuTimeMs = graphStatistics.CpuTimeMs;
             statistics.RenderGraphSucceeded = graphStatistics.Succeeded;
+            statistics.FrameRendered = graphStatistics.Succeeded;
+            statistics.Decals = gpuDrivenExecutor.GetDecalStatistics();
+            statistics.UploadedBytes += statistics.Decals.UploadedBytes;
             PublishStatistics(statistics);
         }
     }

@@ -159,7 +159,7 @@ namespace Crowny
 
             VkWriteDescriptorSet* writeSetInfos = new VkWriteDescriptorSet[numBindingsPerSet];
             WriteInfo* writeInfos = new WriteInfo[numBindingsPerSet];
-            VkDescriptorImageInfo** imageArrayInfos = new VkDescriptorImageInfo*[numBindingsPerSet]{};
+            VkDescriptorImageInfo** imageArrayInfos = new VkDescriptorImageInfo* [numBindingsPerSet] {};
 
             setData.WriteSetInfos = writeSetInfos;
             setData.WriteInfos = writeInfos;
@@ -416,10 +416,9 @@ namespace Crowny
         m_SetsDirty[set] = true;
     }
 
-    void VulkanUniformParams::SetTextureArray(uint32_t set, uint32_t slot, const Ref<Texture>* textures,
-                                              uint32_t count, const TextureSurface* surfaces)
+    void VulkanUniformParams::SetTextureArray(uint32_t set, uint32_t slot, const Ref<Texture>* textures, uint32_t count,
+                                              const TextureSurface* surfaces)
     {
-        UniformParams::SetTextureArray(set, slot, textures, count, surfaces);
         VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo);
         const uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
         if (bindingIdx == (uint32_t)-1)
@@ -430,6 +429,9 @@ namespace Crowny
         PerSetData& data = m_PerSetData[set];
         VkDescriptorImageInfo* imageInfos = data.ImageArrayInfos[bindingIdx];
         const uint32_t capacity = paramInfo.GetBindings(set)[bindingIdx].descriptorCount;
+        if (count > capacity)
+            throw std::out_of_range("Texture array exceeds its Vulkan descriptor binding capacity");
+        UniformParams::SetTextureArray(set, slot, textures, count, surfaces);
         if (imageInfos == nullptr || capacity <= 1)
         {
             SetTexture(set, slot, count != 0 && textures != nullptr ? textures[0] : nullptr,
@@ -445,8 +447,7 @@ namespace Crowny
         const VkSampler sampler = data.WriteSetInfos[bindingIdx].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
                                     ? defaultSampler->GetSampler()->GetHandle()
                                     : VK_NULL_HANDLE;
-        const VkDescriptorImageInfo dummyInfo{ sampler, dummy->GetView(dummyFormat, false),
-                                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+        const VkDescriptorImageInfo dummyInfo{ sampler, dummy->GetView(dummyFormat, false), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
         std::fill_n(imageInfos, capacity, dummyInfo);
 
         const uint32_t sequentialIndex = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
@@ -465,9 +466,8 @@ namespace Crowny
             if (surface.NumFaces == 0)
                 surface.NumFaces = textureDesc.Faces;
             imageInfos[index].imageView = image->GetView(surface, false);
-            imageInfos[index].imageLayout = (textureDesc.Usage & TextureUsage::TEXTURE_DYNAMIC)
-                                              ? VK_IMAGE_LAYOUT_GENERAL
-                                              : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfos[index].imageLayout =
+              (textureDesc.Usage & TextureUsage::TEXTURE_DYNAMIC) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
         m_SetsDirty[set] = true;
     }
@@ -853,8 +853,7 @@ namespace Crowny
             {
                 VkDescriptorImageInfo* imageInfos = m_PerSetData[set].ImageArrayInfos[bindingIdx];
                 const Vector<TextureData>& array = m_SampledTextureArrays[i];
-                const uint32_t count = std::min<uint32_t>(perSetBindings[bindingIdx].descriptorCount,
-                                                          static_cast<uint32_t>(array.size()));
+                const uint32_t count = std::min<uint32_t>(perSetBindings[bindingIdx].descriptorCount, static_cast<uint32_t>(array.size()));
                 const VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(perSetBindings[bindingIdx].stageFlags);
                 for (uint32_t element = 0; element < count; element++)
                 {
@@ -864,14 +863,15 @@ namespace Crowny
                         continue;
                     const TextureSurface& surface = array[element].Surface;
                     const VkImageSubresourceRange range = image->GetRange(surface);
-                    const VkImageLayout requestedLayout = (texture->GetDesc().Usage & TextureUsage::TEXTURE_DYNAMIC)
-                                                            ? VK_IMAGE_LAYOUT_GENERAL
-                                                            : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    const VkImageLayout requestedLayout =
+                      (texture->GetDesc().Usage & TextureUsage::TEXTURE_DYNAMIC) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                     buffer.RegisterImageShader(image, range, requestedLayout, VulkanAccessFlagBits::Read, stages);
                     const VkImageLayout layout = buffer.GetCurrentLayout(image, range, true);
-                    if (imageInfos[element].imageLayout != layout)
+                    const VkImageView view = image->GetView(surface, false);
+                    if (imageInfos[element].imageLayout != layout || imageInfos[element].imageView != view)
                     {
                         imageInfos[element].imageLayout = layout;
+                        imageInfos[element].imageView = view;
                         m_SetsDirty[set] = true;
                     }
                 }
@@ -996,7 +996,21 @@ namespace Crowny
                     data.Sets.push_back(data.LatestSet);
                 }
             }
-            data.LatestSet->Write(data.WriteSetInfos, data.Count);
+            // Each cached set can contain an older table. Compare against that set's own snapshot,
+            // including on reuse, so untouched descriptors survive without rewriting the whole array.
+            auto& snapshots = data.ImageSnapshots[data.LatestSet];
+            snapshots.resize(data.Count);
+            data.PendingWrites.clear();
+            for (uint32_t binding = 0; binding < data.Count; binding++)
+            {
+                const VkWriteDescriptorSet& write = data.WriteSetInfos[binding];
+                if (data.ImageArrayInfos[binding] != nullptr)
+                    VulkanDescriptorSet::AppendImageWrites(write, snapshots[binding], data.PendingWrites);
+                else
+                    data.PendingWrites.push_back(write);
+            }
+            if (!data.PendingWrites.empty())
+                data.LatestSet->Write(data.PendingWrites.data(), static_cast<uint32_t>(data.PendingWrites.size()));
             m_SetsDirty[i] = false;
         }
 

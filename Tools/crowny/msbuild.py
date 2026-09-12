@@ -99,6 +99,7 @@ def build(
     scripts_dir=None,
     collect_profile=False,
     build_project_references=True,
+    nodes=1,
 ):
     target_actions = [f"{t}:Rebuild" if clean else t for t in targets]
     arguments = [
@@ -106,10 +107,15 @@ def build(
         str(solution),
         "/nologo",
         "/v:minimal",
-        "/m:1",
+        f"/m:{nodes}",
         "/nodeReuse:false",
         "/p:UseMultiToolTask=false",
         f"/p:CL_MPCount={jobs}",
+        # cl.exe defaults /cgthreads to every logical processor; combined with
+        # /MP it oversubscribes the machine several times over and was measured
+        # at 2.5x slower full builds. One codegen thread per cl process keeps
+        # the parallelism in /MP where it can be controlled.
+        "/p:CGThreads=1",
         f"/p:Configuration={configuration}",
         f"/p:Platform={platform}",
         f"/t:{';'.join(target_actions)}",

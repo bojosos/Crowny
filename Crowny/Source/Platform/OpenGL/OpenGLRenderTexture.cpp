@@ -62,7 +62,7 @@ namespace Crowny
     {
         OpenGLTexture* texture = static_cast<OpenGLTexture*>(surface.Texture.get());
         const GLenum target = texture->GetTarget();
-        if (target == GL_TEXTURE_3D)
+        if (target == GL_TEXTURE_3D || target == GL_TEXTURE_2D_ARRAY || target == GL_TEXTURE_CUBE_MAP_ARRAY)
             glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment, texture->GetRendererID(), surface.MipLevel, surface.Face);
         else if (target == GL_TEXTURE_CUBE_MAP)
             glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_CUBE_MAP_POSITIVE_X + surface.Face, texture->GetRendererID(),

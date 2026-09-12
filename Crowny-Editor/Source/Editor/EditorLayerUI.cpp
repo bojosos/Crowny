@@ -26,9 +26,9 @@
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AudioMixerPanel.h"
-#include "Panels/EntityInspector.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/EditorPanelRegistry.h"
+#include "Panels/EntityInspector.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InputSettingsEditor.h"
 #include "Panels/InspectorPanel.h"
@@ -381,7 +381,9 @@ namespace Crowny
                         ImGui::TextColored(ImVec4(0.95f, 0.48f, 0.38f, 1.0f), "Folder missing  |  %s", project.ProjectPath.string().c_str());
                     UI::SetTooltip(project.ProjectPath.string());
                     // The overlay text moved the cursor; restore it so the next entry starts below this one.
+                    // The Dummy() clears ImGui's SetCursorPos boundary check when this is the last entry before EndChild().
                     ImGui::SetCursorPos(cursorAfterItem);
+                    ImGui::Dummy(ImVec2(0.0f, 0.0f));
 
                     ImGui::PopID();
                 }
@@ -784,7 +786,7 @@ namespace Crowny
     void EditorLayer::AddNotification(const String& message, NotificationKind kind)
     {
         // Errors stay a little longer than informational cards; a card may also be closed with its X button.
-        const float lifetime = kind == NotificationKind::Error ? 8.0f : 5.0f;
+        const float lifetime = kind == NotificationKind::Error ? 5.0f : 3.0f;
         for (Notification& notification : m_Notifications)
         {
             if (notification.Message == message)
@@ -805,57 +807,65 @@ namespace Crowny
         if (m_Notifications.empty())
             return;
 
-        constexpr float fadeDuration = 0.4f;
-        constexpr float maxCardWidth = 380.0f;
+        constexpr float fadeDuration = 0.25f;
+        const float scale = ImGui::GetFontSize() / 13.0f;
+        const float margin = 16.0f * scale;
+        const ImVec2 padding(14.0f * scale, 12.0f * scale);
+        const float closeSize = ImGui::GetFontSize();
+        const float gap = 12.0f * scale;
         const float deltaTime = std::max(0.0f, ImGui::GetIO().DeltaTime);
-        const ImGuiStyle& style = ImGui::GetStyle();
-
         ImGuiViewport* viewport = ImGui::GetMainViewport();
-        float y = viewport->WorkPos.y + 42.0f;
+        const float cardWidth = std::min(340.0f * scale, std::max(1.0f, viewport->WorkSize.x - margin * 2.0f));
+        const float wrapWidth = std::max(1.0f, cardWidth - padding.x * 2.0f - closeSize - gap);
+        float y = viewport->WorkPos.y + viewport->WorkSize.y - margin;
         for (size_t i = 0; i < m_Notifications.size();)
         {
             Notification& notification = m_Notifications[i];
+            notification.SecondsLeft -= deltaTime;
+            if (notification.SecondsLeft <= 0.0f)
+            {
+                m_Notifications.erase(m_Notifications.begin() + static_cast<ptrdiff_t>(i));
+                continue;
+            }
+
             const ImVec4 accent = notification.Kind == NotificationKind::Success ? ImVec4(0.30f, 0.78f, 0.44f, 1.0f)
                                   : notification.Kind == NotificationKind::Error ? ImVec4(0.92f, 0.30f, 0.28f, 1.0f)
                                                                                  : ImGui::ColorConvertU32ToFloat4(UI::Colors::Accent);
             const float alpha = std::clamp(notification.SecondsLeft / fadeDuration, 0.0f, 1.0f);
+            const float textHeight = ImGui::CalcTextSize(notification.Message.c_str(), nullptr, false, wrapWidth).y;
+            const float cardHeight = std::max(textHeight, closeSize) + padding.y * 2.0f;
 
-            ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 14.0f, y), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
-            ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, 0.0f), ImVec2(maxCardWidth, FLT_MAX));
-            ImGui::SetNextWindowBgAlpha(0.96f * alpha);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.0f);
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
-            ImGui::PushStyleColor(ImGuiCol_Border, accent);
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - margin, y), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+            ImGui::SetNextWindowSize(ImVec2(cardWidth, cardHeight), ImGuiCond_Always);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f * scale);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * alpha);
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.19f, 0.22f, 0.27f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.32f, 0.37f, 0.44f, 1.0f));
             const String windowName = fmt::format("##Notification{0}", notification.Id);
             ImGui::Begin(windowName.c_str(), nullptr,
-                         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove |
-                           ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoSavedSettings);
+                         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing |
+                           ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoSavedSettings);
 
-            // Reserve the close button's column so the wrapped message never runs underneath it.
-            const float closeSize = ImGui::GetFrameHeight();
-            const float wrapWidth = maxCardWidth - style.WindowPadding.x * 2.0f - closeSize - style.ItemSpacing.x;
-            ImGui::BeginGroup();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + wrapWidth);
+            const ImVec2 pos = ImGui::GetWindowPos();
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x, pos.y + padding.y), ImVec2(pos.x + 3.0f * scale, pos.y + cardHeight - padding.y),
+                                                      ImGui::GetColorU32(accent), scale);
+            ImGui::PushTextWrapPos(padding.x + wrapWidth);
             ImGui::TextUnformatted(notification.Message.c_str());
             ImGui::PopTextWrapPos();
-            ImGui::EndGroup();
-            ImGui::SameLine();
-            const bool dismissed = ImGui::CloseButton(ImGui::GetID("##close"), ImGui::GetCursorScreenPos());
+            // CloseButton uses screen coordinates and does not participate in cursor layout.
+            const bool dismissed = ImGui::CloseButton(ImGui::GetID("##close"), ImVec2(pos.x + cardWidth - padding.x - closeSize, pos.y + padding.y));
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Dismiss");
 
-            // Hovering pauses the countdown (and cancels an in-progress fade) so the user can finish reading.
-            if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
-                notification.SecondsLeft = std::max(notification.SecondsLeft, fadeDuration);
-            else
-                notification.SecondsLeft -= deltaTime;
-
-            y += ImGui::GetWindowSize().y + 8.0f;
+            y -= cardHeight + 8.0f * scale;
             ImGui::End();
-            ImGui::PopStyleColor();
-            ImGui::PopStyleVar(2);
+            ImGui::PopStyleColor(2);
+            ImGui::PopStyleVar(4);
 
-            if (dismissed || notification.SecondsLeft <= 0.0f)
+            if (dismissed)
                 m_Notifications.erase(m_Notifications.begin() + static_cast<ptrdiff_t>(i));
             else
                 i++;
@@ -1171,6 +1181,12 @@ namespace Crowny
             m_WireframeMode = true;
 
         ImGui::Checkbox("Show Statistics", &m_ShowRenderingStatistics);
+        if (const Ref<Scene> scene = SceneManager::Get().GetActiveScene())
+        {
+            AssetHandle<EnvironmentMap> environment = scene->GetEnvironmentAsset();
+            if (UIUtils::AssetReference<EnvironmentMap>("Environment", environment))
+                scene->SetEnvironmentAsset(environment);
+        }
 
         ImGui::Spacing();
 
@@ -1438,13 +1454,12 @@ namespace Crowny
         }
 
         if (!m_SettingsSearch.empty() &&
-            !matchesSection({ "startup project recent auto load", "code editor IDE Visual Studio", "managed C# assembly dependency mono coreclr runtime",
-                              "viewport grid wireframe collider rendering",
+            !matchesSection({ "startup project recent auto load", "code editor IDE Visual Studio",
+                              "managed C# assembly dependency mono coreclr runtime", "viewport grid wireframe collider rendering",
                               "time scale fixed timestep maximum", "physics 2D gravity solver layers collision matrix",
                               "input actions bindings keyboard mouse gamepad controls rebinding", "workspace layout reset panels command palette",
                               "developer debug diagnostics ImGui asset entity C#" }))
             ImGui::TextDisabled("No matching settings.");
-
     }
 
 } // namespace Crowny

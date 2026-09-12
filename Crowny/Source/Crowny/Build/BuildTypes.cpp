@@ -6,6 +6,20 @@
 
 namespace Crowny
 {
+    Path BuildFileIoPath(const Path& path)
+    {
+#ifdef CW_PLATFORM_WIN32
+        const auto absolute = fs::absolute(path).lexically_normal().make_preferred().native();
+        if (absolute.starts_with(L"\\\\?\\"))
+            return Path(absolute);
+        if (absolute.starts_with(L"\\\\"))
+            return Path(L"\\\\?\\UNC\\" + absolute.substr(2));
+        return Path(L"\\\\?\\" + absolute);
+#else
+        return path;
+#endif
+    }
+
     void BuildValidation::Error(String code, String message, String subject)
     {
         Issues.push_back({ BuildIssueSeverity::Error, std::move(code), std::move(message), std::move(subject) });

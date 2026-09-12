@@ -30,6 +30,8 @@ namespace Crowny
         // Mip-major, then layer-major, then face-major. Cubemap faces use
         // +X, -X, +Y, -Y, +Z, -Z order within each layer.
         Vector<Ref<PixelData>> Subresources;
+        // UASTC search effort: 0 is fastest, 4 is slowest. 2 retains the default quality.
+        uint32_t UASTCEffort = 2;
     };
 
     struct BasisTextureSubresource
@@ -52,16 +54,15 @@ namespace Crowny
     class BasisTextureCodec
     {
     public:
-        static bool Encode(const PixelData& source, TextureDiskFormat diskFormat, bool sRGB, bool generateMips,
-                           Vector<uint8_t>& output, BasisTextureInfo* info = nullptr, String* error = nullptr);
-        static bool Encode(const Vector<Ref<PixelData>>& mipChain, TextureDiskFormat diskFormat, bool sRGB,
-                           Vector<uint8_t>& output, BasisTextureInfo* info = nullptr, String* error = nullptr);
-        static bool Encode(const BasisTextureSource& source, TextureDiskFormat diskFormat, bool sRGB,
-                           Vector<uint8_t>& output, BasisTextureInfo* info = nullptr, String* error = nullptr);
+        static bool Encode(const PixelData& source, TextureDiskFormat diskFormat, bool sRGB, bool generateMips, Vector<uint8_t>& output,
+                           BasisTextureInfo* info = nullptr, String* error = nullptr);
+        static bool Encode(const Vector<Ref<PixelData>>& mipChain, TextureDiskFormat diskFormat, bool sRGB, Vector<uint8_t>& output,
+                           BasisTextureInfo* info = nullptr, String* error = nullptr);
+        static bool Encode(const BasisTextureSource& source, TextureDiskFormat diskFormat, bool sRGB, Vector<uint8_t>& output,
+                           BasisTextureInfo* info = nullptr, String* error = nullptr);
         static bool Inspect(const void* data, size_t size, BasisTextureInfo& info, String* error = nullptr);
-        static TextureFormat SelectTarget(const BasisTextureInfo& info, TextureFormat sourceFormat,
-                                          const RenderCapabilities& capabilities);
-        static bool Transcode(const void* data, size_t size, TextureFormat sourceFormat, TextureFormat targetFormat,
-                              uint32_t maximumLevels, BasisTextureTranscodeResult& output, String* error = nullptr);
+        static TextureFormat SelectTarget(const BasisTextureInfo& info, TextureFormat sourceFormat, const RenderCapabilities& capabilities);
+        static bool Transcode(const void* data, size_t size, TextureFormat sourceFormat, TextureFormat targetFormat, uint32_t maximumLevels,
+                              BasisTextureTranscodeResult& output, String* error = nullptr);
     };
 } // namespace Crowny

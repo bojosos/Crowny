@@ -81,7 +81,17 @@ layout (binding = 9) uniform sampler2D normalMap;
 // @name("AO Map") @default(white)
 layout (binding = 10) uniform sampler2D aoMap;
 
+// @name("Emission Map") @default(white)
+layout (binding = 12) uniform sampler2D emissiveMap;
+
 layout (binding = 11) uniform Parameters {
+    // @color @name("Emission") @default(0.0, 0.0, 0.0, 1.0)
+    vec4 emissive;
+    // @name("Emission Intensity") @default(1.0)
+    float emissiveIntensity;
+    // @name("Alpha Cutoff") @default(0.5)
+    float alphaCutoff;
+    float alphaMode;
     // @color @name("Albedo") @default(1.0, 1.0, 1.0, 1.0)
     vec4 albedo;
     // @range(0.0, 1.0) @name("Roughness") @default(0.5)
@@ -185,17 +195,38 @@ vec3 calculateNormal()
 	return normalize(TBN * tangentNormal);
 }
 
+#define CW_DECAL_COMPATIBILITY
+#include "CrownyDecals.glslinc"
+layout(set = 2, binding = 6) uniform cw_DecalDraw { uvec4 receiver; } cwDecalDraw;
+
 void main()
 {
-	outEntity = 0;
+    vec3 positionDx = dFdx(fs_in.worldPos), positionDy = dFdy(fs_in.worldPos);
+	outEntity = int(cwDecalDraw.receiver.x);
+    float alpha = texture(albedoMap, fs_in.uv).a * parameters.albedo.a * fs_in.color.a;
+    if (parameters.alphaMode == 1.0 && alpha < parameters.alphaCutoff)
+        discard;
 
 	vec3 N = calculateNormal();
 	vec3 V = normalize(uboParams.camPos - fs_in.worldPos);
-	vec3 R = reflect(-V, N);
 
 	vec3 albedo = pow(texture(albedoMap, fs_in.uv).rgb * parameters.albedo.rgb * fs_in.color.rgb, vec3(2.2));
 	float metallic = texture(metallicMap, fs_in.uv).r * parameters.metalness;
 	float roughness = texture(roughnessMap, fs_in.uv).r * parameters.roughness;
+    float ao = texture(aoMap, fs_in.uv).r;
+    vec3 emission = texture(emissiveMap, fs_in.uv).rgb * parameters.emissive.rgb * parameters.emissiveIntensity;
+    float receiverOpacity = alpha;
+    cwApplyDecals(cwDecalDraw.receiver.x, cwDecalDraw.receiver.y, fs_in.worldPos, normalize(fs_in.normal),
+                  positionDx, positionDy, length(uboParams.camPos - fs_in.worldPos), 1.0,
+                  albedo, N, roughness, metallic, ao, emission, alpha);
+    vec3 R = reflect(-V, N);
+    bool core = cwDecalCoatingCore(receiverOpacity, alpha);
+    if (cwDecalConstants.counts.w == 1u)
+    {
+        if (!core) discard;
+        alpha = 1.0;
+    }
+    else if (cwDecalConstants.counts.w == 2u && core) discard;
 
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo, metallic);
@@ -249,10 +280,10 @@ void main()
 		vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
 		vec3 specular = reflection * (F * brdf.x + brdf.y);
 		vec3 kD = (1.0 - F) * (1.0 - metallic);
-		ambient = (kD * diffuse + specular) * texture(aoMap, fs_in.uv).rrr;
+		ambient = (kD * diffuse + specular) * ao;
 	}
 
-	vec3 color = ambient + Lo;
+	vec3 color = ambient + Lo + emission;
 
 	// Tone mapping
 	color = Uncharted2Tonemap(color * uboParams.exposure);
@@ -260,5 +291,5 @@ void main()
 	// Gamma correction
 	color = pow(color, vec3(1.0f / uboParams.gamma));
 
-	outColor = vec4(color, 1.0);
+	outColor = vec4(color, alpha);
 }

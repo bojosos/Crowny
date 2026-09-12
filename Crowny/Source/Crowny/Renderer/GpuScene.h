@@ -25,6 +25,7 @@ namespace Crowny
         uint32_t ShadowRanges = 0;
         uint32_t MeshRanges = 0;
         uint32_t MaterialRanges = 0;
+        uint32_t MaterialRecordsUpdated = 0;
         uint32_t ActiveInstances = 0;
         uint32_t ActiveLights = 0;
         uint32_t InstanceCapacity = 0;
@@ -39,6 +40,8 @@ namespace Crowny
         uint32_t RetiredMeshMetadata = 0;
         uint32_t MaterialCapacity = 0;
         uint32_t BindlessTextureCount = 0;
+        uint32_t BindlessTextureCapacity = 0;
+        uint32_t BindlessTextureOverflowMaterials = 0;
         uint32_t VisibleInstances = 0;
         uint32_t IndirectCommands = 0;
         uint32_t IndirectRuns = 0;
@@ -61,7 +64,8 @@ namespace Crowny
     class GpuScene
     {
     public:
-        explicit GpuScene(bool enableGpuBuffers = true);
+        // Zero selects the renderer's texture capacity; a nonzero value may lower it, including the fallback slot.
+        explicit GpuScene(bool enableGpuBuffers = true, uint32_t textureCapacity = 0);
 
         void BeginFrame(uint64_t frameNumber);
         void Apply(const RenderWorldChange* instanceChanges, uint32_t instanceChangeCount, const RenderLightChange* lightChanges,
@@ -91,6 +95,7 @@ namespace Crowny
         const Ref<GenericGpuBuffer>& GetMeshletBuffer() const { return m_MeshletBuffer; }
         const Ref<GenericGpuBuffer>& GetMaterialBuffer() const { return m_MaterialBuffer; }
         uint32_t GetMaterialCount() const { return static_cast<uint32_t>(m_Materials.size()); }
+        const GpuMaterialData* GetMaterialData(uint32_t index) const { return index < m_Materials.size() ? &m_Materials[index] : nullptr; }
         bool HasForwardOnlyOpaqueMaterials() const { return m_ForwardOnlyOpaqueMaterialCount != 0; }
         bool HasToonOutlineMaterials() const { return m_ToonOutlineMaterialCount != 0; }
         bool HasToonSilhouetteMaterials() const { return m_ToonSilhouetteMaterialCount != 0; }
@@ -101,6 +106,9 @@ namespace Crowny
         const AssetHandle<Material>& GetMaterialResource(uint32_t materialIndex) const;
         const Vector<Ref<Texture>>& GetBindlessTextures() const { return m_BindlessTextureResources; }
         uint64_t GetBindlessTextureVersion() const { return m_BindlessTextureVersion; }
+        // Retains the current view's decal textures in the shared descriptor table.
+        // UINT32_MAX reports admission failure; descriptors already in flight retain their resources.
+        void SetDecalTextures(const Vector<Ref<Texture>>& textures, Vector<uint32_t>& indices);
         void DrainBindlessTextureUpdates(Vector<BindlessResourceUpdate>& output);
         void PrepareGpuDrawBins(const GpuDrawBinLayoutDesc& desc);
         void BuildCpuDrawList(const RenderView& view, GpuDrawList& output, GpuDrawBuffers* outputBuffers = nullptr, bool shadowCastersOnly = false);
@@ -144,6 +152,15 @@ namespace Crowny
         {
             AssetHandle<Material> Resource;
             uint64_t Version = 0;
+            Array<Ref<Texture>, 8> Textures{};
+            bool ToonOutline = false;
+            bool ToonSilhouette = false;
+        };
+
+        struct TextureReference
+        {
+            BindlessResourceHandle Handle;
+            uint32_t Count = 0;
         };
 
         struct GeometryHeapPage
@@ -162,7 +179,8 @@ namespace Crowny
         void UpdateGeometryResource(uint32_t meshIndex);
         void ReleaseGeometryResource(uint32_t meshIndex);
         void FlushGeometryTables();
-        void RebuildMaterialTable();
+        void UpdateMaterialTable();
+        GpuMaterialData PackMaterialRecord(uint32_t materialIndex);
         void UploadTable(Ref<GenericGpuBuffer>& buffer, const void* data, uint32_t elementCount, uint32_t elementSize, uint32_t minimumCapacity,
                          uint32_t& capacity, uint32_t& rangeCount);
         void UploadTableRanges(Ref<GenericGpuBuffer>& buffer, const void* data, uint32_t elementCount, uint32_t elementSize, uint32_t minimumCapacity,
@@ -210,6 +228,10 @@ namespace Crowny
         Vector<Ref<Texture>> m_BindlessTextureResources;
         uint64_t m_BindlessTextureVersion = 0;
         Scope<BindlessResourceTable> m_BindlessTextures;
+        UnorderedMap<const Texture*, TextureReference> m_TextureReferences;
+        Vector<Ref<Texture>> m_DecalTextures;
+        Vector<uint32_t> m_OverflowMaterials;
+        uint32_t m_RequestedTextureCapacity = 0;
         Vector<GpuDrawCandidate> m_DrawCandidates;
         GpuDrawListBuilder m_DrawListBuilder;
         GpuDrawBuffers m_DrawBuffers;
@@ -220,11 +242,13 @@ namespace Crowny
         Vector<uint32_t> m_DirtyInstanceIndices;
         Vector<uint32_t> m_DirtyLightIndices;
         Vector<uint32_t> m_DirtyMeshIndices;
+        Vector<uint32_t> m_DirtyMaterialIndices;
         Vector<DirtyRange> m_InstanceRanges;
         Vector<DirtyRange> m_LightRanges;
         Vector<DirtyRange> m_MeshRanges;
         Vector<DirtyRange> m_MeshLodRanges;
         Vector<DirtyRange> m_MeshletRanges;
+        Vector<DirtyRange> m_MaterialRanges;
         Ref<GenericGpuBuffer> m_InstanceBuffer;
         Ref<GenericGpuBuffer> m_LightBuffer;
         Ref<GenericGpuBuffer> m_ShadowLightBuffer;

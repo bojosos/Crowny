@@ -1,5 +1,7 @@
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/MeshProcessing.h"
 
 #include <limits>
@@ -36,7 +38,7 @@ namespace
         data->SetIndices(indices);
         return data;
     }
-}
+} // namespace
 
 TEST_CASE("Mesh processing creates bounded meshlets and conventional LODs", "[Renderer][MeshProcessing]")
 {
@@ -86,6 +88,114 @@ TEST_CASE("Mesh processing output is deterministic", "[Renderer][MeshProcessing]
         CHECK(first.Meshlets[index].TriangleOffset == second.Meshlets[index].TriangleOffset);
         CHECK(first.Meshlets[index].BoundingSphere == second.Meshlets[index].BoundingSphere);
         CHECK(first.Meshlets[index].NormalCone == second.Meshlets[index].NormalCone);
+    }
+}
+
+TEST_CASE("Mesh processing allocation grows with the total geometry across material groups", "[Renderer][MeshProcessing]")
+{
+    const auto measure = [](uint32_t subMeshCount) {
+        Vector<glm::vec3> positions;
+        Vector<uint32_t> indices;
+        Vector<SubMesh> subMeshes;
+        for (uint32_t group = 0; group < subMeshCount; group++)
+        {
+            const float x = static_cast<float>(group) * 2.0f;
+            positions.insert(positions.end(), { { x, 0, 0 }, { x + 1, 0, 0 }, { x, 0, 1 }, { x + 1, 0, 1 } });
+            const uint32_t first = group * 4u;
+            subMeshes.emplace_back(static_cast<uint32_t>(indices.size()), 6, DrawMode::TRIANGLE_LIST);
+            indices.insert(indices.end(), { first, first + 2u, first + 1u, first + 1u, first + 2u, first + 3u });
+        }
+        const BufferLayout layout{ { ShaderDataType::Float3, VertexAttribute::Position } };
+        Ref<MeshData> data = MeshData::Create(static_cast<uint32_t>(positions.size()), static_cast<uint32_t>(indices.size()), layout);
+        data->SetPositions(positions);
+        data->SetIndices(indices);
+        MeshProcessingSettings settings;
+        settings.LodCount = 1;
+        const auto before = Memory::GetThreadAllocationSnapshot();
+        const MeshGpuGeometry geometry = MeshProcessing::BuildGpuGeometry(*data, subMeshes, settings);
+        const auto allocations = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+        REQUIRE(geometry.LodSubMeshes.size() == subMeshCount);
+        REQUIRE(geometry.Meshlets.size() == subMeshCount);
+        return allocations.RequestedBytes;
+    };
+    const uint64_t small = measure(32);
+    const uint64_t large = measure(128);
+    INFO("32 groups allocated " << small << " bytes; 128 groups allocated " << large << " bytes");
+    // Four times the independent geometry must not cause quadratic scratch/output allocation.
+    CHECK(large < small * 6);
+}
+
+TEST_CASE("Mesh processing preserves scattered submesh vertices and world-space LOD errors", "[Renderer][MeshProcessing]")
+{
+    const Ref<MeshData> grid = CreateGrid(8);
+    Vector<glm::vec3> gridPositions = grid->GetPositions();
+    for (glm::vec3& position : gridPositions)
+        position.y = std::sin(position.x) * std::cos(position.z);
+    grid->SetPositions(gridPositions);
+
+    // Interleave two distant material groups so neither occupies a contiguous vertex range.
+    Vector<glm::vec3> positions;
+    for (const glm::vec3& position : gridPositions)
+    {
+        positions.push_back(position + glm::vec3(1024.0f, 0.0f, 0.0f));
+        positions.push_back(position);
+    }
+    Vector<uint32_t> indices;
+    for (uint32_t materialSlot = 0; materialSlot < 2; materialSlot++)
+    {
+        for (uint32_t index : grid->GetIndices())
+            indices.push_back(index * 2u + materialSlot);
+    }
+    Ref<MeshData> combined =
+      MeshData::Create(static_cast<uint32_t>(positions.size()), static_cast<uint32_t>(indices.size()), grid->GetBufferLayout());
+    combined->SetPositions(positions);
+    combined->SetIndices(indices);
+    MeshProcessingSettings settings;
+    settings.LodTargetError = 0.2f;
+    const MeshGpuGeometry isolated = MeshProcessing::BuildGpuGeometry(*grid, {}, settings);
+    const MeshGpuGeometry geometry = MeshProcessing::BuildGpuGeometry(
+      *combined,
+      { SubMesh(0, grid->GetIndexCount(), DrawMode::TRIANGLE_LIST), SubMesh(grid->GetIndexCount(), grid->GetIndexCount(), DrawMode::TRIANGLE_LIST) },
+      settings);
+
+    REQUIRE(isolated.Lods.size() > 1);
+    REQUIRE(geometry.Lods.size() == isolated.Lods.size());
+    CHECK(isolated.Lods[1].Error > 0.0f);
+    for (size_t lodIndex = 0; lodIndex < geometry.Lods.size(); lodIndex++)
+    {
+        const MeshLod& lod = geometry.Lods[lodIndex];
+        CHECK(lod.Error == Catch::Approx(isolated.Lods[lodIndex].Error).margin(0.0001f));
+        REQUIRE(lod.SubMeshCount == 2);
+        REQUIRE(lod.MeshletCount > 0);
+        for (uint32_t offset = 0; offset < lod.SubMeshCount; offset++)
+        {
+            const MeshLodSubMesh& subMesh = geometry.LodSubMeshes[lod.FirstSubMesh + offset];
+            REQUIRE(subMesh.IndexCount > 0);
+            for (uint32_t index = 0; index < subMesh.IndexCount; index++)
+            {
+                const uint32_t vertex = geometry.LodIndices[subMesh.IndexOffset + index];
+                REQUIRE(vertex < positions.size());
+                CHECK(vertex % 2u == subMesh.MaterialSlot);
+            }
+        }
+        for (uint32_t offset = 0; offset < lod.MeshletCount; offset++)
+        {
+            const Meshlet& meshlet = geometry.Meshlets[lod.FirstMeshlet + offset];
+            CHECK(meshlet.LodError == Catch::Approx(isolated.Lods[lodIndex].Error).margin(0.0001f));
+            for (uint32_t index = 0; index < meshlet.VertexCount; index++)
+            {
+                const uint32_t vertex = geometry.MeshletVertices[meshlet.VertexOffset + index];
+                REQUIRE(vertex < positions.size());
+                CHECK(vertex % 2u == meshlet.MaterialSlot);
+                CHECK(glm::distance(positions[vertex], glm::vec3(meshlet.BoundingSphere)) <= meshlet.BoundingSphere.w + 0.001f);
+            }
+            for (uint32_t index = 0; index < meshlet.TriangleCount * 3u; index++)
+            {
+                const uint32_t localVertex = geometry.MeshletTriangles[meshlet.TriangleOffset + index];
+                REQUIRE(localVertex < meshlet.VertexCount);
+                CHECK(geometry.MeshletIndices[meshlet.TriangleOffset + index] == geometry.MeshletVertices[meshlet.VertexOffset + localVertex]);
+            }
+        }
     }
 }
 

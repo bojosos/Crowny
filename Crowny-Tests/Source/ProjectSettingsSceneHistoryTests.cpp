@@ -15,6 +15,20 @@ namespace
     }
 } // namespace
 
+TEST_CASE("Game build selection persists independently of the open editor scene", "[Build][Editor][SceneHistory]")
+{
+    auto settings = CreateRef<ProjectSettings>();
+    settings->LastOpenSceneId = UUID(1, 2, 3, 4);
+    settings->GameStartupScene = UUID(5, 6, 7, 8);
+    settings->GameBuildOutput = "Build/My Game";
+    settings->GameBuildDevelopment = true;
+    const auto restored = ProjectSettingsSerializer::Deserialize(SerializeSettings(settings));
+    CHECK(restored->GameStartupScene == settings->GameStartupScene);
+    CHECK(restored->GameStartupScene != restored->LastOpenSceneId);
+    CHECK(restored->GameBuildOutput == settings->GameBuildOutput);
+    CHECK(restored->GameBuildDevelopment);
+}
+
 TEST_CASE("Project scene history serializes stable asset identities", "[Editor][ProjectSettings][SceneHistory]")
 {
     const UUID activeId(1, 2, 3, 4);

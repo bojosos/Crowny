@@ -5,6 +5,7 @@
 #include "Crowny/Common/Math.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Physics/PhysicsMesh.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/Scene.h"
 
@@ -17,6 +18,10 @@ namespace Crowny::ColliderOverlay
     {
         constexpr uint32_t CIRCLE_SEGMENTS = 32;
         constexpr float LINE_THICKNESS = 0.01f;
+        // Mesh colliders above this edge count (or past the per-frame budget) fall back to their bounds.
+        // Renderer2D batches at most 20000 lines per frame, so the budget leaves room for the other overlays.
+        constexpr uint32_t MESH_OVERLAY_MAX_EDGES = 4096;
+        constexpr uint32_t MESH_OVERLAY_LINE_BUDGET = 12000;
 
         glm::vec3 TransformPoint(const glm::mat4& transform, const glm::vec3& point) { return glm::vec3(transform * glm::vec4(point, 1.0f)); }
 
@@ -172,6 +177,45 @@ namespace Crowny::ColliderOverlay
                 const float radius = std::max(collider.GetRadius() * std::max(scale.x, scale.z), 0.001f);
                 const float height = std::max(collider.GetHeight() * scale.y, radius * 2.0f);
                 DrawWireCapsule(GetPhysics3DColliderTransform(world, collider), radius, height, color);
+            }
+
+            // Convex colliders draw the source mesh edges as well; the cooked hull is an approximation of the same
+            // geometry and drawing the triangle edges keeps the overlay cheap and stable.
+            uint32_t remainingEdgeBudget = MESH_OVERLAY_LINE_BUDGET;
+            for (auto handle : scene.GetAllEntitiesWith<TransformComponent, MeshCollider3DComponent>())
+            {
+                Entity entity(handle, &scene);
+                const MeshCollider3DComponent& collider = entity.GetComponent<MeshCollider3DComponent>();
+                const Ref<PhysicsMesh> geometry = PhysicsMeshResolver::Resolve(collider.GetMesh());
+                if (geometry == nullptr)
+                    continue;
+
+                const Transform& world = entity.GetWorldTransform();
+                const glm::quat worldRotation = world.GetRotation();
+                const glm::vec3 center = world.GetPosition() + worldRotation * (collider.GetOffset() * world.GetScale());
+                // The runtime bakes the signed world scale into the shape vertices, so mirror it here.
+                glm::vec3 signedScale = world.GetScale();
+                for (glm::length_t axis = 0; axis < 3; axis++)
+                {
+                    const float sign = signedScale[axis] < 0.0f ? -1.0f : 1.0f;
+                    signedScale[axis] = sign * std::max(std::abs(signedScale[axis]), 0.001f);
+                }
+                const glm::mat4 transform = Math::ComposeMatrix(center, glm::normalize(worldRotation * collider.GetRotation()), signedScale);
+
+                const Vector<glm::u32vec2>& edges = geometry->GetEdges();
+                const uint32_t edgeCount = static_cast<uint32_t>(edges.size());
+                if (edgeCount == 0u || edgeCount > MESH_OVERLAY_MAX_EDGES || edgeCount > remainingEdgeBudget)
+                {
+                    const AABox& bounds = geometry->GetBounds();
+                    DrawWireBox(transform * glm::translate(glm::mat4(1.0f), bounds.GetCenter()), (bounds.GetMax() - bounds.GetMin()) * 0.5f, color);
+                    continue;
+                }
+
+                const Vector<glm::vec3>& positions = geometry->GetPositions();
+                for (const glm::u32vec2& edge : edges)
+                    Renderer2D::DrawLine(TransformPoint(transform, positions[edge.x]), TransformPoint(transform, positions[edge.y]), color,
+                                         LINE_THICKNESS);
+                remainingEdgeBudget -= edgeCount;
             }
         }
     } // namespace

@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
+#include "Crowny/Scripting/Managed/ManagedScripting.h"
 
 namespace Crowny
 {
@@ -19,6 +19,8 @@ namespace Crowny
     ManagedScripting::ManagedScripting() { m_Instances.resize(1); }
 
     ManagedScripting::~ManagedScripting() { Shutdown(); }
+
+    bool ManagedScripting::IsInstanceAlive(ScriptInstanceHandle handle) const { return IsStarted() && Resolve(handle) != nullptr; }
 
     ManagedOperationResult ManagedScripting::Start(const ManagedScriptingConfig& config)
     {
@@ -63,18 +65,15 @@ namespace Crowny
         m_Capabilities = {};
     }
 
-    const ScriptCatalog& ManagedScripting::GetScriptCatalog() const
-    {
-        return IsStarted() ? m_Backend->GetScriptCatalog() : EMPTY_CATALOG;
-    }
+    const ScriptCatalog& ManagedScripting::GetScriptCatalog() const { return IsStarted() ? m_Backend->GetScriptCatalog() : EMPTY_CATALOG; }
 
     ManagedOperationResult ManagedScripting::LoadProgram(const ManagedProgramDefinition& program)
     {
         if (ManagedOperationResult ready = RequireStarted(); !ready.Succeeded)
             return ready;
         if (program.Generation == 0)
-            return ManagedOperationResult::Failure("managed.program.generation_invalid",
-                                                   "A managed program generation must be nonzero.", m_Config.Backend);
+            return ManagedOperationResult::Failure("managed.program.generation_invalid", "A managed program generation must be nonzero.",
+                                                   m_Config.Backend);
         if (std::any_of(m_Instances.begin() + 1, m_Instances.end(), [](const InstanceSlot& slot) { return slot.Active; }))
             return ManagedOperationResult::Failure("managed.program.instances_active",
                                                    "Destroy live script instances before loading a different managed program.", m_Config.Backend);
@@ -90,8 +89,8 @@ namespace Crowny
                                                    String("Managed backend ") + ToString(m_Config.Backend) + " does not support program reload.",
                                                    m_Config.Backend);
         if (program.Generation == 0)
-            return ManagedOperationResult::Failure("managed.program.generation_invalid",
-                                                   "A managed program generation must be nonzero.", m_Config.Backend);
+            return ManagedOperationResult::Failure("managed.program.generation_invalid", "A managed program generation must be nonzero.",
+                                                   m_Config.Backend);
 
         Vector<ManagedBackendReloadInstance> instances;
         Vector<size_t> publicSlots;
@@ -118,8 +117,8 @@ namespace Crowny
             return ManagedOperationResult::Failure("managed.reload.handle_count_mismatch",
                                                    "The backend returned an invalid replacement-handle count.", m_Config.Backend);
         if (std::any_of(result.ReplacementHandles.begin(), result.ReplacementHandles.end(), [](uint64_t handle) { return handle == 0; }))
-            return ManagedOperationResult::Failure("managed.reload.handle_invalid",
-                                                   "The backend returned an invalid replacement handle.", m_Config.Backend);
+            return ManagedOperationResult::Failure("managed.reload.handle_invalid", "The backend returned an invalid replacement handle.",
+                                                   m_Config.Backend);
         for (size_t index = 0; index < publicSlots.size(); ++index)
             m_Instances[publicSlots[index]].BackendHandle = result.ReplacementHandles[index];
         return result.Result;
@@ -136,8 +135,8 @@ namespace Crowny
         if (!backendResult.Result.Succeeded)
             return { std::move(backendResult.Result), {} };
         if (backendResult.Handle == 0)
-            return { ManagedOperationResult::Failure("managed.backend.handle_invalid",
-                                                     "The managed backend returned an invalid script handle.", m_Config.Backend),
+            return { ManagedOperationResult::Failure("managed.backend.handle_invalid", "The managed backend returned an invalid script handle.",
+                                                     m_Config.Backend),
                      {} };
         return { std::move(backendResult.Result), AllocateHandle(backendResult.Handle, request.Entity) };
     }
@@ -188,8 +187,7 @@ namespace Crowny
         return slot != nullptr ? m_Backend->ApplyState(slot->BackendHandle, state) : StaleHandle(m_Config.Backend);
     }
 
-    ScriptInvocationResult ManagedScripting::InvokeButton(ScriptInstanceHandle handle, uint64_t methodId,
-                                                           const Vector<ScriptValue>& arguments)
+    ScriptInvocationResult ManagedScripting::InvokeButton(ScriptInstanceHandle handle, uint64_t methodId, const Vector<ScriptValue>& arguments)
     {
         if (ManagedOperationResult ready = RequireStarted(); !ready.Succeeded)
             return { std::move(ready), false, {} };
@@ -227,8 +225,7 @@ namespace Crowny
     ManagedOperationResult ManagedScripting::RequireStarted() const
     {
         return IsStarted() ? ManagedOperationResult::Success()
-                           : ManagedOperationResult::Failure("managed.module.not_started", "Managed scripting is not running.",
-                                                             m_Config.Backend);
+                           : ManagedOperationResult::Failure("managed.module.not_started", "Managed scripting is not running.", m_Config.Backend);
     }
 
     ManagedScripting::InstanceSlot* ManagedScripting::Resolve(ScriptInstanceHandle handle)

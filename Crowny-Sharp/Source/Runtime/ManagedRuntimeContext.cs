@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -9,6 +10,48 @@ namespace Crowny
         [ThreadStatic]
         private static float callbackDeltaTime;
         private static Func<UUID, Type, Component> scriptResolver;
+        private static ulong componentCacheEpoch = 1;
+
+        internal sealed class ComponentCache
+        {
+            internal UUID EntityId;
+            internal ulong Epoch;
+            internal Entity Owner;
+            internal Transform Transform;
+            internal Dictionary<Type, Component> Components;
+        }
+
+        internal static void InvalidateComponentCaches()
+        {
+            unchecked { ++componentCacheEpoch; }
+        }
+
+        private static ComponentCache GetComponentCache(UUID entity, ref ComponentCache cache)
+        {
+            if (cache == null || cache.EntityId != entity || cache.Epoch != componentCacheEpoch)
+                cache = new ComponentCache { EntityId = entity, Epoch = componentCacheEpoch };
+            return cache;
+        }
+
+        internal static Entity GetComponentEntity(UUID entity, ref ComponentCache cache)
+        {
+            ComponentCache current = GetComponentCache(entity, ref cache);
+            if (current.Owner == null)
+                current.Owner = new Entity { m_ManagedUuid = entity, m_ComponentCache = current };
+            return current.Owner;
+        }
+
+        internal static Transform GetTransform(UUID entity, ref ComponentCache cache)
+        {
+            ComponentCache current = GetComponentCache(entity, ref cache);
+            if (current.Transform == null)
+            {
+                if (!EntityHasComponent(entity, "Crowny.Transform"))
+                    return null;
+                current.Transform = new Transform { m_ManagedEntityId = entity, m_ComponentCache = current };
+            }
+            return current.Transform;
+        }
 
         internal static float DeltaTime => callbackDeltaTime;
 
@@ -21,7 +64,17 @@ namespace Crowny
 
         internal static void SetNativeHostApi(ManagedNativeHostApi api)
         {
+            InvalidateComponentCaches();
             ManagedHostTransport.SetApi(api);
+        }
+
+        internal static void ClearNativeHostApi()
+        {
+            InvalidateComponentCaches();
+            ManagedHostTransport.SetApi(default);
+            scriptResolver = null;
+            callbackDeltaTime = 0;
+            SceneManager.ClearEventHandlers();
         }
 
         internal static void SetScriptResolver(Func<UUID, Type, Component> resolver)
@@ -29,21 +82,45 @@ namespace Crowny
             scriptResolver = resolver;
         }
 
-        internal static T GetComponent<T>(UUID entity) where T : Component
+        internal static T GetComponent<T>(UUID entity, ref ComponentCache cache) where T : Component
         {
-            return GetComponent(entity, typeof(T)) as T;
+            if (typeof(T) == typeof(Transform))
+                return GetTransform(entity, ref cache) as T;
+            return GetComponent(entity, typeof(T), ref cache) as T;
         }
 
         internal static Component GetComponent(UUID entity, Type type)
+        {
+            ComponentCache cache = null;
+            return GetComponent(entity, type, ref cache);
+        }
+
+        private static Component GetComponent(UUID entity, Type type, ref ComponentCache cache)
         {
             if (!typeof(Component).IsAssignableFrom(type))
                 throw new ArgumentException("The requested managed type is not a component.", "type");
             if (typeof(EntityBehaviour).IsAssignableFrom(type))
                 return ManagedRuntimeAdapter.ResolveScriptComponent(entity, type);
+            if (type == typeof(Transform))
+                return GetTransform(entity, ref cache);
+            ComponentCache current = GetComponentCache(entity, ref cache);
             if (!EntityHasComponent(entity, type.FullName ?? type.Name))
+            {
+                current.Components?.Remove(type);
                 return null;
+            }
+            if (current.Components != null && current.Components.TryGetValue(type, out Component cached))
+                return cached;
             Component component = (Component)Activator.CreateInstance(type, true);
             component.m_ManagedEntityId = entity;
+            component.m_ComponentCache = current;
+            // Only engine wrappers belong here. A game-defined type must not outlive its load context.
+            if (type.Assembly == typeof(Component).Assembly)
+            {
+                if (current.Components == null)
+                    current.Components = new Dictionary<Type, Component>();
+                current.Components[type] = component;
+            }
             return component;
         }
 
@@ -55,7 +132,7 @@ namespace Crowny
             return EntityHasComponent(entity, type.FullName ?? type.Name);
         }
 
-        internal static T AddComponent<T>(UUID entity) where T : Component
+        internal static T AddComponent<T>(UUID entity, ref ComponentCache cache) where T : Component
         {
             Type type = typeof(T);
             if (typeof(EntityBehaviour).IsAssignableFrom(type))
@@ -67,7 +144,7 @@ namespace Crowny
                 return script as T;
             }
             EntityAddComponent(entity, type.FullName ?? type.Name);
-            return GetComponent(entity, type) as T;
+            return GetComponent(entity, type, ref cache) as T;
         }
 
         internal static void RemoveComponent<T>(UUID entity) where T : Component
@@ -80,6 +157,7 @@ namespace Crowny
                 return;
             }
             EntityRemoveComponent(entity, type.FullName ?? type.Name);
+            InvalidateComponentCaches();
         }
 
         internal static void AddScriptComponent(UUID entity, Type type)
@@ -131,13 +209,6 @@ namespace Crowny
             }
         }
 
-        internal static UUID FromGuid(Guid value)
-        {
-            string text = value.ToString("N");
-            return new UUID(Convert.ToUInt32(text.Substring(0, 8), 16), Convert.ToUInt32(text.Substring(8, 8), 16),
-                            Convert.ToUInt32(text.Substring(16, 8), 16), Convert.ToUInt32(text.Substring(24, 8), 16));
-        }
-
         internal static Component ResolveRegisteredScriptComponent(UUID entity, Type type)
         {
             return scriptResolver?.Invoke(entity, type);
@@ -179,7 +250,7 @@ namespace Crowny
         private static UUID DecodeUuid(ManagedNativeUuid value)
         {
             byte* bytes = value.Bytes;
-            return new UUID(ReadBigEndian(bytes, 0), ReadBigEndian(bytes, 4), ReadBigEndian(bytes, 8), ReadBigEndian(bytes, 12));
+            return UUID.FromBytes(bytes);
         }
 
         private static string DecodeString(ManagedNativeStringView value)
@@ -242,11 +313,6 @@ namespace Crowny
                                new Vector4(values[4], values[5], values[6], values[7]),
                                new Vector4(values[8], values[9], values[10], values[11]),
                                new Vector4(values[12], values[13], values[14], values[15]));
-        }
-
-        private static uint ReadBigEndian(byte* value, int offset)
-        {
-            return (uint)value[offset] << 24 | (uint)value[offset + 1] << 16 | (uint)value[offset + 2] << 8 | value[offset + 3];
         }
 
         private static void WriteBigEndian(byte* output, int offset, uint value)

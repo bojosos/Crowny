@@ -88,7 +88,20 @@ TEST_CASE("Entity factory creates lights parented to the requested entity", "[Ed
 
 TEST_CASE("Entity factory primitives reference the shared built-in mesh without a renderer", "[Editor][EntityFactory][Assets]")
 {
-    AssetManager assetManager;
+    struct AssetManagerScope
+    {
+        bool Owned = !AssetManager::IsStartedUp();
+        AssetManagerScope()
+        {
+            if (Owned)
+                AssetManager::StartUp();
+        }
+        ~AssetManagerScope()
+        {
+            if (Owned)
+                AssetManager::Shutdown();
+        }
+    } assetManager;
     Ref<Scene> scene = CreateRef<Scene>(false);
     Entity parent = scene->CreateEntity("Parent");
 

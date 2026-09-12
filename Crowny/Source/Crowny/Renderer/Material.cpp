@@ -1,6 +1,9 @@
 #include "cwpch.h"
 
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/Constants.h"
 #include "Crowny/RenderAPI/UniformParams.h"
+#include "Crowny/Renderer/BuiltInShaderCatalog.h"
 #include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MaterialPreset.h"
@@ -17,8 +20,7 @@ namespace Crowny
         HashedString GetPropertyName(MaterialPropertyID name) { return HashedString(StringIDTable::GetString(name.Value)); }
 
         template <typename Name>
-        bool SetTextureForReflectedPasses(const Vector<Material::PassData>& passes, const Name& name,
-                                          const Ref<Texture>& texture)
+        bool SetTextureForReflectedPasses(const Vector<Material::PassData>& passes, const Name& name, const Ref<Texture>& texture)
         {
             bool assigned = false;
             for (const Material::PassData& pass : passes)
@@ -27,16 +29,17 @@ namespace Crowny
                     continue;
 
                 const Ref<UniformParamInfo>& paramInfo = pass.Pipeline->GetParamInfo();
-                const Ref<UniformDesc>& fragment = paramInfo ? paramInfo->GetUniformDesc(FRAGMENT_SHADER) : nullptr;
-                if (!fragment)
-                    continue;
-
-                const auto binding = fragment->Textures.find(name);
-                if (binding == fragment->Textures.end())
-                    continue;
-
-                pass.Uniforms->SetTexture(binding->second.Set, binding->second.Slot, texture);
-                assigned = true;
+                for (uint32_t stage = 0; paramInfo && stage < SHADER_COUNT; ++stage)
+                {
+                    const Ref<UniformDesc>& description = paramInfo->GetUniformDesc(static_cast<ShaderType>(stage));
+                    if (!description)
+                        continue;
+                    const auto binding = description->Textures.find(name);
+                    if (binding == description->Textures.end())
+                        continue;
+                    pass.Uniforms->SetTexture(binding->second.Set, binding->second.Slot, texture);
+                    assigned = true;
+                }
             }
             return assigned;
         }
@@ -46,8 +49,6 @@ namespace Crowny
     {
         if (m_Shader)
             ReloadParams();
-        else
-            CW_ENGINE_ERROR("Material created with null shader handle");
     }
 
     Ref<Material> Material::Create(const AssetHandle<Shader>& shader) { return CreateRef<Material>(shader); }
@@ -56,6 +57,46 @@ namespace Crowny
     {
         Ref<Material> material = Create(shader);
         material->ApplyStandardDefaults();
+        return material;
+    }
+
+    Ref<Material> Material::CreateDefault()
+    {
+        BuiltInShaderCatalog::EnsureRegistered();
+        AssetManager* manager = AssetManager::TryGet();
+        const AssetHandle<Shader> shader = manager ? manager->Load<Shader>(PBRIBL_SHADER_PATH) : AssetHandle<Shader>{};
+        if (!shader)
+        {
+            CW_ENGINE_ERROR("Cannot create a material because the built-in PBR shader is unavailable.");
+            return nullptr;
+        }
+        return CreatePBR(shader);
+    }
+
+    MaterialDomain Material::GetDomain() const
+    {
+        if (m_Shader)
+        {
+            const auto technique = m_Shader->GetTechnique(m_Variation);
+            if (technique)
+                for (const auto& tag : technique->GetTags())
+                    if (tag == "material_model=decal") return MaterialDomain::Decal;
+        }
+        return MaterialDomain::Surface;
+    }
+
+    Ref<Material> Material::CreateDecal()
+    {
+        BuiltInShaderCatalog::EnsureRegistered();
+        auto* manager = AssetManager::TryGet();
+        const auto shader = manager ? manager->Load<Shader>("Resources/Shaders/Decal.asset") : AssetHandle<Shader>{};
+        if (!shader) return nullptr;
+        auto material = Create(shader);
+        material->SetTexture("decalColorMap", Texture::WHITE);
+        material->SetTexture("decalNormalMap", Texture::NORMAL);
+        material->SetTexture("decalSurfaceMap", Texture::WHITE);
+        material->SetTexture("decalEmissionMap", Texture::WHITE);
+        material->SetTexture("decalMaskMap", Texture::WHITE);
         return material;
     }
 
@@ -80,6 +121,10 @@ namespace Crowny
         SetTexture("roughnessMap", Texture::WHITE);
         SetTexture("normalMap", Texture::NORMAL);
         SetTexture("aoMap", Texture::WHITE);
+        SetTexture("emissiveMap", Texture::WHITE);
+        SetColor("emissive", glm::vec4(0.0f));
+        SetFloat("emissiveIntensity", 1.0f);
+        SetFloat("alphaCutoff", 0.5f);
         SetColor("albedo", glm::vec4(1.0f));
         SetFloat("roughness", 0.5f);
         SetFloat("metalness", 0.0f);
@@ -188,6 +233,7 @@ namespace Crowny
             return;
         m_AlphaMode = alphaMode;
         m_HasAlphaModeOverride = true;
+        SetFloat("alphaMode", static_cast<float>(alphaMode));
         ++m_ParamVersion;
     }
 
@@ -206,6 +252,9 @@ namespace Crowny
         m_Passes.clear();
         m_Bindings.clear();
         m_TextureHandles.clear();
+        m_TextureDescriptors.clear();
+        for (auto& annotations : m_Annotations)
+            annotations.clear();
 
         if (!m_Shader)
             return;
@@ -237,6 +286,10 @@ namespace Crowny
             const Ref<UniformDesc>& paramDesc = uniformParamInfo->GetUniformDesc((ShaderType)i);
             if (!paramDesc)
                 continue;
+            for (const auto& [name, texture] : paramDesc->Textures)
+                m_TextureDescriptors.insert_or_assign(name, texture);
+            for (const auto& [name, annotation] : paramDesc->Annotations)
+                m_Annotations[i].insert_or_assign(name, annotation);
             for (const auto& [name, uniformBuffer] : paramDesc->Uniforms)
             {
                 for (uint32_t j = 0; j < uniformBuffer.Members.size(); j++)
@@ -251,6 +304,46 @@ namespace Crowny
                 pass.Uniforms->SetUniformBlockBuffer(name, pass.UniformBlocks[bufferID]);
             }
         }
+    }
+
+    Ref<Texture> Material::GetTexture(uint32_t set, uint32_t slot) const
+    {
+        for (const PassData& pass : m_Passes)
+        {
+            for (uint32_t stage = 0; stage < SHADER_COUNT; ++stage)
+            {
+                const Ref<UniformDesc>& description = pass.Pipeline->GetParamInfo()->GetUniformDesc(static_cast<ShaderType>(stage));
+                if (!description)
+                    continue;
+                for (const auto& [name, texture] : description->Textures)
+                {
+                    if (texture.Set == set && texture.Slot == slot)
+                    {
+                        const Ref<Texture> value = pass.Uniforms->GetTexture(set, slot);
+                        if (value)
+                            return value;
+                    }
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    uint32_t Material::GetBlockBindingSlot(const String& blockName) const
+    {
+        for (const PassData& pass : m_Passes)
+        {
+            for (uint32_t stage = 0; stage < SHADER_COUNT; ++stage)
+            {
+                const Ref<UniformDesc>& description = pass.Pipeline->GetParamInfo()->GetUniformDesc(static_cast<ShaderType>(stage));
+                if (!description)
+                    continue;
+                const auto block = description->Uniforms.find(blockName);
+                if (block != description->Uniforms.end())
+                    return block->second.Slot;
+            }
+        }
+        return 0;
     }
 
     void Material::FlushUniformBuffers()
@@ -462,8 +555,42 @@ namespace Crowny
         ++m_ParamVersion;
     }
 
+    void Material::OnDependentAssigned(const Ref<Asset>& dependent, const UUID& uuid)
+    {
+        if (!dependent || dependent->GetAssetType() != AssetType::Texture || uuid.Empty())
+            return;
+        for (const auto& [name, descriptor] : GetTextureDescriptors())
+        {
+            if (GetTexture(descriptor.Set, descriptor.Slot).get() == dependent.get())
+                SetTexture(name, static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(dependent, uuid)));
+        }
+    }
+
     void Material::SetTexture(const String& name, const AssetHandle<Texture>& texture)
     {
+        if (!texture.HasUUID())
+        {
+            Ref<Texture> fallback;
+            for (uint32_t stage = 0; stage < SHADER_COUNT; ++stage)
+            {
+                const auto& annotations = GetAnnotations(static_cast<ShaderType>(stage));
+                const auto annotation = annotations.find(name);
+                if (annotation != annotations.end() && annotation->second.HasDefault)
+                {
+                    const String& value = annotation->second.DefaultValueStr;
+                    if (value == "white")
+                        fallback = Texture::WHITE;
+                    else if (value == "black")
+                        fallback = Texture::BLACK;
+                    else if (value == "normal")
+                        fallback = Texture::NORMAL;
+                }
+            }
+            if (name == "normalMap" && MaterialRenderClassifier::Classify(*this).Model == MaterialModel::Standard)
+                fallback = Texture::NORMAL;
+            SetTexture(name, fallback);
+            return;
+        }
         m_TextureHandles[name] = texture;
         if (!SetTextureForReflectedPasses(m_Passes, name, texture.GetInternalPtr()))
             CW_ENGINE_WARN("Texture with name {} does not exist in any fragment shader pass", name);
@@ -472,6 +599,7 @@ namespace Crowny
 
     void Material::SetTexture(const String& name, const Ref<Texture>& texture)
     {
+        m_TextureHandles.erase(name);
         if (!SetTextureForReflectedPasses(m_Passes, name, texture))
             CW_ENGINE_WARN("Texture with name {} does not exist in any fragment shader pass", name);
         ++m_ParamVersion;
@@ -479,6 +607,7 @@ namespace Crowny
 
     void Material::SetTexture(HashedString name, const Ref<Texture>& texture)
     {
+        m_TextureHandles.erase(String(name.GetView()));
         if (!SetTextureForReflectedPasses(m_Passes, name, texture))
             CW_ENGINE_WARN("Texture with name {} does not exist in any fragment shader pass", name.GetView());
         ++m_ParamVersion;
@@ -488,50 +617,39 @@ namespace Crowny
 
     void Material::ApplyDefaults()
     {
-        // Collect annotations from all shader stages
-        for (uint32_t i = 0; i < SHADER_COUNT; i++)
+        for (const PassData& pass : m_Passes)
         {
-            const Ref<UniformDesc>& desc = m_Passes.empty() ? nullptr : m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc((ShaderType)i);
-            if (!desc)
-                continue;
-
-            // Apply data param defaults from annotations
-            for (const auto& [blockName, block] : desc->Uniforms)
+            for (uint32_t stage = 0; stage < SHADER_COUNT; ++stage)
             {
-                const StringID blockID(blockName);
-                for (const auto& member : block.Members)
+                const Ref<UniformDesc>& description = pass.Pipeline->GetParamInfo()->GetUniformDesc(static_cast<ShaderType>(stage));
+                if (!description)
+                    continue;
+                for (const auto& [blockName, block] : description->Uniforms)
                 {
-                    if (!member.DefaultValue.empty())
+                    const auto uniformBlock = pass.UniformBlocks.find(StringID(blockName));
+                    if (uniformBlock == pass.UniformBlocks.end())
+                        continue;
+                    for (const auto& member : block.Members)
                     {
-                        for (const auto& pass : m_Passes)
-                        {
-                            const auto blockIt = pass.UniformBlocks.find(blockID);
-                            if (blockIt != pass.UniformBlocks.end())
-                                blockIt->second->Write(member.Offset, member.DefaultValue.data(), (uint32_t)member.DefaultValue.size());
-                        }
+                        if (!member.DefaultValue.empty())
+                            uniformBlock->second->Write(member.Offset, member.DefaultValue.data(), static_cast<uint32_t>(member.DefaultValue.size()));
                     }
                 }
-            }
-
-            // Apply texture defaults from annotations
-            for (const auto& [texName, texDesc] : desc->Textures)
-            {
-                auto annoIt = desc->Annotations.find(texName);
-                if (annoIt == desc->Annotations.end() || !annoIt->second.HasDefault)
-                    continue;
-
-                const String& defStr = annoIt->second.DefaultValueStr;
-                Ref<Texture> defaultTex;
-                if (defStr == "white")
-                    defaultTex = Texture::WHITE;
-                else if (defStr == "black")
-                    defaultTex = Texture::BLACK;
-                // Add more builtin texture names as needed
-
-                if (defaultTex)
+                for (const auto& [name, texture] : description->Textures)
                 {
-                    for (const auto& pass : m_Passes)
-                        pass.Uniforms->SetTexture(FRAGMENT_SHADER, texName, defaultTex);
+                    const auto annotation = description->Annotations.find(name);
+                    if (annotation == description->Annotations.end() || !annotation->second.HasDefault)
+                        continue;
+                    Ref<Texture> value;
+                    const String& defaultName = annotation->second.DefaultValueStr;
+                    if (defaultName == "white")
+                        value = Texture::WHITE;
+                    else if (defaultName == "black")
+                        value = Texture::BLACK;
+                    else if (defaultName == "normal")
+                        value = Texture::NORMAL;
+                    if (value)
+                        pass.Uniforms->SetTexture(texture.Set, texture.Slot, value);
                 }
             }
         }
@@ -579,10 +697,7 @@ namespace Crowny
 
     // --- MaterialTextureHandle ---
 
-    void MaterialTextureHandle::Set(const AssetHandle<Texture>& tex)
-    {
-        m_Material->SetTexture(m_Name, tex);
-    }
+    void MaterialTextureHandle::Set(const AssetHandle<Texture>& tex) { m_Material->SetTexture(m_Name, tex); }
 
     void MaterialTextureHandle::Set(const Ref<Texture>& tex) { m_Material->SetTexture(m_Name, tex); }
 

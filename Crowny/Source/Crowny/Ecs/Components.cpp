@@ -136,10 +136,7 @@ namespace Crowny
             Player->Seek(m_PlaybackTime);
     }
 
-    float AnimationComponent::GetTime() const
-    {
-        return Player ? Player->GetTime() : m_PlaybackTime;
-    }
+    float AnimationComponent::GetTime() const { return Player ? Player->GetTime() : m_PlaybackTime; }
 
     void AnimationComponent::SetNormalizedTime(float normalizedTime)
     {
@@ -687,8 +684,8 @@ namespace Crowny
     {
         if (state.Identity != m_Identity)
         {
-            CW_ENGINE_WARN("Cannot apply state for '{}:{}' to script '{}:{}'.", state.Identity.Assembly, state.Identity.GetFullName(), m_Identity.Assembly,
-                           m_Identity.GetFullName());
+            CW_ENGINE_WARN("Cannot apply state for '{}:{}' to script '{}:{}'.", state.Identity.Assembly, state.Identity.GetFullName(),
+                           m_Identity.Assembly, m_Identity.GetFullName());
             return false;
         }
         m_State = std::move(state);
@@ -1038,6 +1035,43 @@ namespace Crowny
     void CapsuleCollider3DComponent::SetHeight(float height, Entity entity)
     {
         m_Height = std::max(height, m_Radius * 2.0f);
+        if (entity)
+            entity.GetScene()->RecreatePhysics3DShapes(entity);
+    }
+
+    MeshCollider3DComponent::MeshCollider3DComponent(const MeshCollider3DComponent& other)
+      : Collider3D(other), m_Mesh(other.m_Mesh), m_Convex(other.m_Convex)
+    {
+    }
+
+    MeshCollider3DComponent& MeshCollider3DComponent::operator=(const MeshCollider3DComponent& other)
+    {
+        if (this != &other)
+        {
+            Collider3D::operator=(other);
+            m_Mesh = other.m_Mesh;
+            m_Convex = other.m_Convex;
+            RuntimeSkipLogged = false;
+        }
+        return *this;
+    }
+
+    void MeshCollider3DComponent::SetMesh(const AssetHandle<Mesh>& mesh, Entity entity)
+    {
+        if (m_Mesh.GetUUID() == mesh.GetUUID() && m_Mesh.IsLoaded() == mesh.IsLoaded())
+            return;
+        m_Mesh = mesh;
+        RuntimeSkipLogged = false;
+        if (entity)
+            entity.GetScene()->RecreatePhysics3DShapes(entity);
+    }
+
+    void MeshCollider3DComponent::SetConvex(bool convex, Entity entity)
+    {
+        if (m_Convex == convex)
+            return;
+        m_Convex = convex;
+        RuntimeSkipLogged = false;
         if (entity)
             entity.GetScene()->RecreatePhysics3DShapes(entity);
     }

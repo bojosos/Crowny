@@ -210,6 +210,16 @@ namespace Crowny
                 return {};
             shape.Shape->setUserPointer(reinterpret_cast<void*>(handle.Value));
             bodyRecord->Compound->addChildShape(ToBullet(desc.LocalPosition, desc.LocalRotation), shape.Shape.get());
+            if (desc.Type == PhysicsShapeType3D::ConvexHull || desc.Type == PhysicsShapeType3D::TriangleMesh)
+            {
+                // btConvexHullShape and btTriangleMesh own copies of the geometry; the description copies are dead weight.
+                // Heights stay: btHeightfieldTerrainShape keeps a pointer into Desc.Heights for its lifetime.
+                shape.HullVolume = desc.Type == PhysicsShapeType3D::ConvexHull ? BoundsVolume(desc.Vertices) : 0.0f;
+                shape.Desc.Vertices.clear();
+                shape.Desc.Vertices.shrink_to_fit();
+                shape.Desc.Indices.clear();
+                shape.Desc.Indices.shrink_to_fit();
+            }
             m_Shapes.emplace(handle, std::move(shape));
             UpdateBodyMassAndFlags(*bodyRecord);
             return handle;
@@ -562,6 +572,8 @@ namespace Crowny
             PhysicsShape3DDesc Desc;
             Scope<btTriangleMesh> TriangleMesh;
             Scope<btCollisionShape> Shape;
+            // Bounding-box volume captured before the hull points are released; used for auto-mass.
+            float HullVolume = 0.0f;
         };
 
         struct ContactRecord
@@ -602,13 +614,13 @@ namespace Crowny
             {
                 if (s_ActiveBackend->m_PreviousContactAddedCallback && s_ActiveBackend->m_PreviousContactAddedCallback != &ContactAdded)
                     return s_ActiveBackend->m_PreviousContactAddedCallback(point, firstWrapper, firstPart, firstIndex, secondWrapper, secondPart,
-                                                                          secondIndex);
+                                                                           secondIndex);
                 return false;
             }
-            point.m_combinedFriction = CombinePhysicsMaterialValue(first->Friction, first->FrictionCombine, second->Friction,
-                                                                   second->FrictionCombine);
-            point.m_combinedRestitution = CombinePhysicsMaterialValue(first->Restitution, first->RestitutionCombine, second->Restitution,
-                                                                      second->RestitutionCombine);
+            point.m_combinedFriction =
+              CombinePhysicsMaterialValue(first->Friction, first->FrictionCombine, second->Friction, second->FrictionCombine);
+            point.m_combinedRestitution =
+              CombinePhysicsMaterialValue(first->Restitution, first->RestitutionCombine, second->Restitution, second->RestitutionCombine);
             return true;
         }
 
@@ -749,7 +761,7 @@ namespace Crowny
             {
                 if (shape.Body.Value != reinterpret_cast<uint64_t>(body.Body->getUserPointer()))
                     continue;
-                mass += EstimateMass(shape.Desc);
+                mass += EstimateMass(shape);
                 friction += shape.Desc.Material.Friction;
                 restitution += shape.Desc.Material.Restitution;
                 hasTrigger |= shape.Desc.IsTrigger;
@@ -781,11 +793,30 @@ namespace Crowny
             m_World->updateSingleAabb(body.Body.get());
         }
 
-        static float EstimateMass(const PhysicsShape3DDesc& desc)
+        static float BoundsVolume(const Vector<glm::vec3>& points)
         {
+            if (points.empty())
+                return 0.0f;
+            glm::vec3 minimum = points.front();
+            glm::vec3 maximum = points.front();
+            for (const glm::vec3& point : points)
+            {
+                minimum = glm::min(minimum, point);
+                maximum = glm::max(maximum, point);
+            }
+            const glm::vec3 extent = maximum - minimum;
+            return extent.x * extent.y * extent.z;
+        }
+
+        static float EstimateMass(const ShapeRecord& shape)
+        {
+            const PhysicsShape3DDesc& desc = shape.Desc;
             float volume = 1.0f;
             switch (desc.Type)
             {
+            case PhysicsShapeType3D::ConvexHull:
+                volume = shape.HullVolume > 0.0f ? shape.HullVolume : 1.0f;
+                break;
             case PhysicsShapeType3D::Box:
                 volume = 8.0f * desc.HalfExtents.x * desc.HalfExtents.y * desc.HalfExtents.z;
                 break;

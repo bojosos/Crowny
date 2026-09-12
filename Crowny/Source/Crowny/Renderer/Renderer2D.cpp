@@ -12,10 +12,13 @@
 #include "Crowny/RenderAPI/UniformParams.h"
 #include "Crowny/RenderAPI/VertexArray.h"
 #include "Crowny/Renderer/Camera.h"
+#include "Crowny/Renderer/DrawList2D.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/FontManager.h"
 #include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/ShaderVariation.h"
 #include "Crowny/Renderer/TextLayout.h"
+#include "Crowny/Renderer/TextLayoutCache.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
 #include "Crowny/Renderer/MSDFdata.h"
@@ -36,12 +39,14 @@ namespace Crowny
 
     struct VertexData
     {
-        glm::vec4 Position;
+        glm::vec4 AxisX;
+        glm::vec4 AxisY;
+        glm::vec4 Origin;
         glm::vec4 Color;
-        glm::vec2 Uv;
-        float Tid; // Why float?
-        int32_t ObjectID;
+        glm::vec4 UvRect;
+        glm::ivec4 Metadata;
     };
+    static_assert(sizeof(VertexData) == 96);
 
     struct CircleVertex
     {
@@ -86,6 +91,7 @@ namespace Crowny
         VertexData* QuadBuffer = nullptr;
         VertexData* QuadTmpBuffer = nullptr;
         Ref<Material> QuadMaterial;
+        Array<Ref<GraphicsPipeline>, 2> QuadPipelines;
 
         // Circles
         Ref<VertexBuffer> CircleVertexBuffer;
@@ -94,6 +100,7 @@ namespace Crowny
         CircleVertex* CircleBuffer = nullptr;    // TODO: Better naming for these like base and current
         CircleVertex* CircleTmpBuffer = nullptr; // TODO: Better naming for these like base and current
         Ref<Material> CircleMaterial;
+        Array<Ref<GraphicsPipeline>, 2> CirclePipelines;
 
         // Text
         Ref<VertexBuffer> TextVertexBuffer;
@@ -102,16 +109,19 @@ namespace Crowny
         TextVertex* TextBuffer = nullptr;
         TextVertex* TextTmpBuffer = nullptr;
         Ref<Material> TextMaterial;
+        Array<Ref<GraphicsPipeline>, 2> TextPipelines;
         TextLayoutScratch TextLayout;
 
         // Font atlas only texture
         Ref<Texture> FontAtlasTexture;
 
         // Global texture buffer
-        std::array<Ref<Texture>, 32> Textures;
-        std::array<String, 32> TextureUniformNames;
-        std::array<HashedString, 32> TextureUniformHashes;
+        std::array<Ref<Texture>, 8> Textures;
+        std::array<String, 8> TextureUniformNames;
+        std::array<HashedString, 8> TextureUniformHashes;
         uint32_t TextureIndex = 0;
+        Primitive2D ActivePrimitive = Primitive2D::Sprite;
+        bool ReverseDepth = false;
 
         // Camera axes used to turn world-space debug lines into camera-facing quads.
         glm::vec3 CameraForward{ 0.0f, 0.0f, -1.0f };
@@ -126,6 +136,31 @@ namespace Crowny
         s_Data->TextBuffer = s_Data->TextTmpBuffer;
         s_Data->TextIndexCount = 0;
         s_Data->TextVertexCount = 0;
+    }
+
+    static Array<Ref<GraphicsPipeline>, 2> Create2DPipelines(const AssetHandle<Shader>& shader)
+    {
+        Array<Ref<GraphicsPipeline>, 2> pipelines;
+        if (!shader)
+            return pipelines;
+        const auto& technique = shader->GetTechnique(ShaderVariation::EMPTY);
+        if (!technique || technique->GetRenderPasses().empty())
+            return pipelines;
+        for (uint32_t reverse = 0; reverse < pipelines.size(); ++reverse)
+        {
+            ShaderRenderPassDesc desc = technique->GetRenderPasses()[0]->GetPassDesc();
+            desc.DepthStencilState = CreateRef<DepthStencilStateDesc>();
+            desc.DepthStencilState->EnableDepthWrite = false;
+            desc.DepthStencilState->DepthCompareFunction = reverse ? CompareFunction::GREATER_EQUAL : CompareFunction::LESS_EQUAL;
+            desc.BlendState = CreateRef<BlendStateDesc>();
+            desc.BlendState->EnableBlending = true;
+            desc.BlendState->SrcBlend = desc.BlendState->SrcBlendAlpha = BlendFactor::One;
+            desc.BlendState->DstBlend = desc.BlendState->DstBlendAlpha = BlendFactor::InvSourceAlpha;
+            const auto pass = ShaderRenderPass::Create(desc);
+            pass->Compile();
+            pipelines[reverse] = pass->GetGraphicsPipeline();
+        }
+        return pipelines;
     }
 
     static void SetupQuadBuffers()
@@ -146,16 +181,20 @@ namespace Crowny
         }
 
         s_Data->QuadIndexBuffer = IndexBuffer::Create({ RENDERER_INDICES_SIZE, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, indices });
-        s_Data->QuadVertexBuffer = VertexBuffer::Create({ RENDERER_BUFFER_SIZE, BufferUsage::BU_DYNAMIC_DRAW });
-        const Ref<BufferLayout> layout =
-          CreateRef<BufferLayout>(BufferLayout{ BufferElement(ShaderDataType::Float4, "a_Position"), BufferElement(ShaderDataType::Float4, "a_Color"),
-                                                BufferElement(ShaderDataType::Float2, "a_Uvs"), BufferElement(ShaderDataType::Float, "a_Tid"),
-                                                BufferElement(ShaderDataType::Int, "a_ObjectId") });
+        s_Data->QuadVertexBuffer =
+          VertexBuffer::Create({ static_cast<uint32_t>(RENDERER_MAX_SPRITES * sizeof(VertexData)), BufferUsage::BU_DYNAMIC_DRAW });
+        const Ref<BufferLayout> layout = CreateRef<BufferLayout>(
+          BufferLayout{ BufferElement(ShaderDataType::Float4, "a_AxisX"), BufferElement(ShaderDataType::Float4, "a_AxisY"),
+                        BufferElement(ShaderDataType::Float4, "a_Origin"), BufferElement(ShaderDataType::Float4, "a_Color"),
+                        BufferElement(ShaderDataType::Float4, "a_UvRect"), BufferElement(ShaderDataType::Int4, "a_Metadata") });
+        for (BufferElement& element : *layout)
+            element.InstanceRate = 1;
         s_Data->QuadVertexBuffer->SetLayout(layout);
 
         const AssetHandle<Shader> shaderHandle = AssetManager::TryGet()->Load<Shader>(RENDERER2D_SHADER_PATH);
         s_Data->QuadMaterial = Material::Create(shaderHandle);
-        s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
+        s_Data->QuadPipelines = Create2DPipelines(shaderHandle);
+        s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES];
         delete[] indices;
     }
 
@@ -169,7 +208,7 @@ namespace Crowny
                                                                                { ShaderDataType::Float4, "a_Color" },
                                                                                { ShaderDataType::Float, "a_Thickness" },
                                                                                { ShaderDataType::Float, "a_Fade" },
-                                                                               { ShaderDataType::Int, "a_Id" } });
+                                                                               { ShaderDataType::Int, "a_EntityID" } });
         s_Data->CircleVertexBuffer->SetLayout(layout);
 
         const AssetHandle<Shader> shaderHandle = AssetManager::TryGet()->Load<Shader>("Resources/Shaders/Circle.asset");
@@ -177,6 +216,7 @@ namespace Crowny
         // AssetManager::TryGet()->Save(circleShader, "Resources/Shaders/Circle.asset");
         // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::TryGet()->CreateAssetHandle(circleShader));
         s_Data->CircleMaterial = Material::Create(shaderHandle);
+        s_Data->CirclePipelines = Create2DPipelines(shaderHandle);
     }
 
     static void SetupTextBuffers()
@@ -204,10 +244,13 @@ namespace Crowny
         // AssetManager::TryGet()->Save(textShader, "Resources/Shaders/Text.asset");
         // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::TryGet()->CreateAssetHandle(textShader));
         s_Data->TextMaterial = Material::Create(shaderHandle);
+        s_Data->TextPipelines = Create2DPipelines(shaderHandle);
     }
 
     void Renderer2D::Init()
     {
+        if (s_Data)
+            return;
         s_Data = new Renderer2DData();
         for (uint32_t i = 0; i < s_Data->TextureUniformNames.size(); i++)
         {
@@ -232,40 +275,28 @@ namespace Crowny
         s_Data->CameraUp = glm::normalize(glm::vec3(inverseView[1]));
     }
 
-    void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix) { SetView(camera.GetProjection(), viewMatrix); }
+    void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix) { Begin(camera.GetProjection(), viewMatrix); }
 
-    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view) { SetView(projection, view); }
+    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view, bool reverseDepth)
+    {
+        s_Data->ReverseDepth = reverseDepth;
+        SetView(projection, view);
+    }
 
     float Renderer2D::FindTexture(const Ref<Texture>& texture)
     {
-        if (!texture)
+        if (!texture || texture == s_Data->Textures[0])
             return 0;
-        // TODO: Again why float?
-        float textureSlot = 0.0f;
-
-        for (uint8_t i = 1; i <= s_Data->TextureIndex; i++)
+        for (uint32_t i = 1; i <= s_Data->TextureIndex; i++)
         {
             if (s_Data->Textures[i] == texture)
-            {
-                textureSlot = (float)(i + 1);
-                break;
-            }
+                return static_cast<float>(i);
         }
-
-        if (textureSlot == 0)
-        {
-            if (s_Data->TextureIndex == 32) // TODO: not 32, use the system properties.
-            {
-                End();
-                s_Data->QuadBuffer =
-                  (VertexData*)s_Data->QuadVertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4,
-                                                             GpuLockOptions::WRITE_DISCARD); // TODO: Begin or something instead of this
-            }
-            s_Data->TextureIndex = (s_Data->TextureIndex + 1) % 32;
-            s_Data->Textures[s_Data->TextureIndex] = texture;
-            textureSlot = (float)s_Data->TextureIndex;
-        }
-        return textureSlot;
+        if (s_Data->TextureIndex + 1 == s_Data->Textures.size())
+            End();
+        const uint32_t slot = ++s_Data->TextureIndex;
+        s_Data->Textures[slot] = texture;
+        return static_cast<float>(slot);
     }
 
     void Renderer2D::FillRect(const Rect2F& bounds, const glm::vec4& color, uint32_t entityId)
@@ -278,19 +309,18 @@ namespace Crowny
 
     void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId)
     {
+        if (s_Data->ActivePrimitive != Primitive2D::Sprite || s_Data->QuadVertexCount == RENDERER_MAX_SPRITES)
+            End();
+        s_Data->ActivePrimitive = Primitive2D::Sprite;
         const float ts = FindTexture(texture);
-
-        for (uint32_t i = 0; i < 4; i++)
-        {
-            s_Data->QuadBuffer->Position = transform * QuadVertices[i];
-            s_Data->QuadBuffer->Uv = QuadUv[i];
-            s_Data->QuadBuffer->Tid = ts;
-            s_Data->QuadBuffer->Color = color;
-            s_Data->QuadBuffer->ObjectID = entityId;
-            s_Data->QuadBuffer++;
-        }
-
-        s_Data->QuadVertexCount += 4;
+        VertexData& instance = *s_Data->QuadBuffer++;
+        instance.AxisX = transform[0];
+        instance.AxisY = transform[1];
+        instance.Origin = transform[3];
+        instance.Color = color;
+        instance.UvRect = { 0.0f, 0.0f, 1.0f, 1.0f };
+        instance.Metadata = { static_cast<int32_t>(ts), static_cast<int32_t>(entityId), 0, 0 };
+        ++s_Data->QuadVertexCount;
         s_Data->QuadIndexCount += 6;
     }
 
@@ -304,6 +334,11 @@ namespace Crowny
 
     void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade, int32_t entityId)
     {
+        // Circles share the quad index buffer, which also bounds their batch size.
+        if (s_Data->ActivePrimitive != Primitive2D::Circle ||
+            s_Data->CircleVertexCount + 4 > std::min(s_Data->MaxLineVertices, uint32_t(RENDERER_MAX_SPRITES * 4)))
+            End();
+        s_Data->ActivePrimitive = Primitive2D::Circle;
         for (uint32_t i = 0; i < 4; i++)
         {
             s_Data->CircleBuffer->WorldPosition = transform * QuadVertices[i];
@@ -369,15 +404,19 @@ namespace Crowny
         DrawLine(lineVertices[3], lineVertices[0], color, thickness);
     }
 
-    void Renderer2D::DrawString(const TextComponent& textComponent, const glm::mat4& transform, int32_t entityId)
+    void Renderer2D::DrawString(const TextComponent& textComponent, const glm::mat4& transform, int32_t entityId, const OwnedTextLayout* ownedLayout)
     {
-        AssetHandle<Font> font = textComponent.Font;
-        if (!font)
-            font = FontManager::GetDefaultFont();
+        const AssetHandle<Font> fontAsset =
+          ownedLayout ? AssetHandle<Font>() : (textComponent.Font ? textComponent.Font : FontManager::GetDefaultFont());
+        const Font* font = ownedLayout ? ownedLayout->GetPrimaryFont() : (fontAsset ? fontAsset.GetInternalPtr().get() : nullptr);
         if (!font || !font->IsValid() || textComponent.Text.empty())
             return;
 
-        const TextLayoutResult layout = TextLayout::Build(textComponent, *font, s_Data->TextLayout);
+        if (s_Data->ActivePrimitive != Primitive2D::Glyph)
+            End();
+        s_Data->ActivePrimitive = Primitive2D::Glyph;
+
+        const TextLayoutResult layout = ownedLayout ? ownedLayout->View() : TextLayout::Build(textComponent, *font, s_Data->TextLayout);
         if (layout.LineCount == 0)
             return;
 
@@ -477,7 +516,7 @@ namespace Crowny
             if (layoutGlyph.Glyph == nullptr)
                 return;
 
-            const Font* sourceFont = layoutGlyph.SourceFont != nullptr ? layoutGlyph.SourceFont : font.Get();
+            const Font* sourceFont = layoutGlyph.SourceFont != nullptr ? layoutGlyph.SourceFont : font;
             if (sourceFont == nullptr || !selectFontAtlas(*sourceFont))
                 return;
 
@@ -530,6 +569,8 @@ namespace Crowny
         s_Data->QuadBuffer = s_Data->QuadTmpBuffer;
         s_Data->QuadIndexCount = 0;
         s_Data->QuadVertexCount = 0;
+        for (uint32_t i = 1; i <= s_Data->TextureIndex; ++i)
+            s_Data->Textures[i].Reset();
         s_Data->TextureIndex = 0;
 
         s_Data->CircleBuffer = s_Data->CircleTmpBuffer;
@@ -544,9 +585,9 @@ namespace Crowny
         ZoneScopedN("FlushQuads");
         if (s_Data->QuadIndexCount > 0)
         {
-            RenderAPI::TryGet()->SetGraphicsPipeline(s_Data->QuadMaterial->GetGraphicsPipeline());
+            RenderAPI::TryGet()->SetGraphicsPipeline(s_Data->QuadPipelines[s_Data->ReverseDepth]);
             RenderAPI::TryGet()->SetVertexLayout(s_Data->QuadVertexBuffer->GetLayout());
-            for (uint32_t i = 0; i < 8; i++)
+            for (uint32_t i = 0; i < s_Data->Textures.size(); i++)
             {
                 if (s_Data->Textures[i])
                     s_Data->QuadMaterial->SetTexture(s_Data->TextureUniformHashes[i], s_Data->Textures[i]);
@@ -558,7 +599,7 @@ namespace Crowny
             RenderAPI::TryGet()->SetVertexBuffers(0, &s_Data->QuadVertexBuffer, 1);
             RenderAPI::TryGet()->SetIndexBuffer(s_Data->QuadIndexBuffer);
             s_Data->QuadVertexBuffer->WriteData(0, s_Data->QuadVertexCount * sizeof(VertexData), s_Data->QuadTmpBuffer, BWT_DISCARD);
-            RenderAPI::TryGet()->DrawIndexed(0, s_Data->QuadIndexCount, 0, s_Data->QuadVertexCount);
+            RenderAPI::TryGet()->Draw(0, 6, s_Data->QuadVertexCount);
         }
     }
 
@@ -567,11 +608,12 @@ namespace Crowny
         if (s_Data->CircleIndexCount > 0)
         {
             // This will flush buffers
-            RenderAPI::TryGet()->SetGraphicsPipeline(s_Data->CircleMaterial->GetGraphicsPipeline());
+            RenderAPI::TryGet()->SetGraphicsPipeline(s_Data->CirclePipelines[s_Data->ReverseDepth]);
             RenderAPI::TryGet()->SetVertexLayout(s_Data->CircleVertexBuffer->GetLayout());
             RenderAPI::TryGet()->SetUniforms(s_Data->CircleMaterial->GetUniformParams());
 
             RenderAPI::TryGet()->SetVertexBuffers(0, &s_Data->CircleVertexBuffer, 1);
+            RenderAPI::TryGet()->SetIndexBuffer(s_Data->QuadIndexBuffer);
             s_Data->CircleVertexBuffer->WriteData(0, s_Data->CircleVertexCount * sizeof(CircleVertex), s_Data->CircleTmpBuffer, BWT_DISCARD);
             RenderAPI::TryGet()->DrawIndexed(0, s_Data->CircleIndexCount, 0, s_Data->CircleVertexCount);
         }
@@ -582,9 +624,10 @@ namespace Crowny
         ZoneScopedN("FlushText");
         if (s_Data->TextIndexCount > 0)
         {
+            RenderAPI::TryGet()->SetDrawMode(DrawMode::TRIANGLE_LIST);
             s_Data->TextMaterial->SetTexture("u_FontAtlas"_hstr, s_Data->FontAtlasTexture);
 
-            RenderAPI::TryGet()->SetGraphicsPipeline(s_Data->TextMaterial->GetGraphicsPipeline());
+            RenderAPI::TryGet()->SetGraphicsPipeline(s_Data->TextPipelines[s_Data->ReverseDepth]);
             RenderAPI::TryGet()->SetVertexLayout(s_Data->TextVertexBuffer->GetLayout());
             RenderAPI::TryGet()->SetUniforms(s_Data->TextMaterial->GetUniformParams());
 
@@ -599,6 +642,7 @@ namespace Crowny
     void Renderer2D::Flush()
     {
         ZoneScopedN("Renderer2D::Flush");
+        RenderAPI::TryGet()->SetDrawMode(DrawMode::TRIANGLE_LIST);
         FlushQuads();
         FlushCircles();
         FlushText();

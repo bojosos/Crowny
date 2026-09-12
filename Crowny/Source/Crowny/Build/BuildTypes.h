@@ -88,6 +88,8 @@ namespace Crowny
     bool TryParseCompatibilityPolicy(StringView value, CompatibilityPolicy& output);
 
     bool IsSafeRelativeBuildPath(const Path& path);
+    // Use only for file I/O after validating paths; preserves long Windows staging paths.
+    Path BuildFileIoPath(const Path& path);
     String NormalizePortableBuildPath(const Path& path);
     String SanitizeArtifactName(StringView value);
 } // namespace Crowny

@@ -4,12 +4,14 @@
 #include "Crowny/Renderer/EditorCamera.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
 
+#include "Editor/EditorLaunchOptions.h"
 #include "Editor/UndoRedo.h"
 
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/ManagedReload.h"
 
 #include <chrono>
+#include <future>
 
 namespace Crowny
 {
@@ -33,7 +35,7 @@ namespace Crowny
     class EditorLayer : public Layer
     {
     public:
-        EditorLayer();
+        explicit EditorLayer(EditorLaunchOptions launchOptions = {});
         virtual ~EditorLayer();
 
         virtual void OnAttach() override;
@@ -45,7 +47,6 @@ namespace Crowny
 
         bool OnKeyPressed(KeyPressedEvent& e);
         bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
-        bool OnViewportEvent(Event& event);
 
         bool RebuildAssemblies();
         void BuildGame();
@@ -54,8 +55,8 @@ namespace Crowny
         void OpenScene();
         void OpenScene(const UUID& sceneId);
         void OpenScene(const Path& filepath);
-        void SaveActiveScene();
-        void SaveActiveSceneAs();
+        bool SaveActiveScene();
+        bool SaveActiveSceneAs();
         void AddRecentScene(const UUID& sceneId);
 
     private:
@@ -75,6 +76,7 @@ namespace Crowny
         void SaveProjectSettings();
         void ApplyEditorSettings();
         void FinishDeferredStartup();
+        void CaptureLaunchRender();
 
         void UI_ProjectManager();
         void UI_Header();
@@ -83,6 +85,7 @@ namespace Crowny
         void UI_Physics2DSettings();
         void UI_TimeSettings();
         void UI_BuildGame();
+        void StartPlayerBuild();
         void UI_CommandPalette();
         void UI_Notifications();
         void UI_ScriptInfo();
@@ -139,6 +142,10 @@ namespace Crowny
         bool m_DeferredStartupPending = true;
         uint32_t m_StartupFrameCount = 0;
         Path m_PendingProjectPath;
+        EditorLaunchOptions m_LaunchOptions;
+        bool m_LaunchScenePending = false;
+        bool m_LaunchPlayPending = false;
+        uint32_t m_LaunchRenderFrames = 0;
 
         // Viewport settings
         bool m_WireframeMode = false;
@@ -182,13 +189,17 @@ namespace Crowny
         BuildStatus m_BuildStatus = BuildStatus::Ready;
         float m_BuildProgress = 0.0f;
         String m_BuildResult;
+        Path m_BuildProjectRoot;
+        Path m_BuiltGamePath;
+        std::future<std::pair<bool, String>> m_PlayerBuild;
+        std::shared_ptr<std::atomic<bool>> m_BuildCancellation;
 
         struct Notification
         {
             uint32_t Id = 0;
             String Message;
             NotificationKind Kind = NotificationKind::Info;
-            float SecondsLeft = 0.0f; // Counts down while the card is not hovered; the card fades out at the end.
+            float SecondsLeft = 0.0f; // Counts down even while hovered; the card fades out at the end.
         };
         Vector<Notification> m_Notifications;
         uint32_t m_NextNotificationId = 1;

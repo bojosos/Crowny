@@ -49,7 +49,7 @@ def build_parser():
 
     build_parser = subparsers.add_parser("build", help="Build engine targets.")
     build_parser.add_argument(
-        "target_pos", nargs="?", default=None, choices=[None, "Engine", "Editor", "Tests", "RenderTests", "All"]
+        "target_pos", nargs="?", default=None, choices=[None, "Engine", "Editor", "Player", "Tests", "RenderTests", "All"]
     )
     build_parser.add_argument("--target", dest="target_flag", default=None)
     build_parser.add_argument("--configuration", default="Release", type=_configuration)
@@ -58,6 +58,10 @@ def build_parser():
     build_parser.add_argument("--simd", default="avx2", type=_simd)
     build_parser.add_argument("--clean", action="store_true")
     build_parser.add_argument("--profile", action="store_true")
+    build_parser.add_argument(
+        "--skip-editor-resources", action="store_true",
+        help="Skip editor resource cooking and packing for headless CI; still build native and managed targets.",
+    )
     build_parser.add_argument("--compiler-cache", default="None", choices=["None", "Sccache"])
     build_parser.add_argument(
         "--inner-loop",
@@ -98,7 +102,7 @@ def build_parser():
     measure_parser.add_argument(
         "--scenario", action="append", default=None, choices=list(_MEASURE_SCENARIOS)
     )
-    measure_parser.add_argument("--target", default="Tests", choices=["Engine", "Editor", "Tests", "RenderTests", "All"])
+    measure_parser.add_argument("--target", default="Tests", choices=["Engine", "Editor", "Player", "Tests", "RenderTests", "All"])
     measure_parser.add_argument("--configuration", default="Release", type=_configuration)
     measure_parser.add_argument("--sanitizer", default="None", type=_sanitizer)
     measure_parser.add_argument("--jobs", default=0, type=int)
@@ -178,6 +182,7 @@ def main(argv=None):
                 compiler_cache=args.compiler_cache,
                 simd=args.simd,
                 inner_loop=args.inner_loop,
+                skip_editor_resources=args.skip_editor_resources,
             )
             return 0
 

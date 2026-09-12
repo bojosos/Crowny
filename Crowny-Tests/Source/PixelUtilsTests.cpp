@@ -1,4 +1,5 @@
 #include "Crowny/Utils/PixelUtils.h"
+#include "basis_universal/encoder/basisu_enc.h"
 #include <array>
 #include <cmath>
 #include <cstring>
@@ -9,6 +10,54 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 using namespace Crowny;
+
+TEST_CASE("RGBA mip filtering matches the reference resampler", "[PixelUtils][Mip]")
+{
+    const std::pair<TextureMipFilter, const char*> filters[] = { { TextureMipFilter::Box, "box" },
+                                                                 { TextureMipFilter::Triangle, "tent" },
+                                                                 { TextureMipFilter::Mitchell, "mitchell" },
+                                                                 { TextureMipFilter::Lanczos4, "lanczos4" },
+                                                                 { TextureMipFilter::Kaiser, "kaiser" } };
+    for (const auto& dimensions : { glm::uvec2(17, 31), glm::uvec2(64, 64), glm::uvec2(1, 15), glm::uvec2(9, 1) })
+    {
+        const auto source = PixelData::Create(dimensions.x, dimensions.y, 1, TextureFormat::RGBA32F);
+        basisu::imagef reference(dimensions.x, dimensions.y);
+        for (uint32_t y = 0; y < dimensions.y; ++y)
+            for (uint32_t x = 0; x < dimensions.x; ++x)
+            {
+                const glm::vec4 value((x * 17 + y * 13) % 97 / 31.0f - 1.0f, (x * 11 + y * 7) % 83 / 37.0f, (x * 5 + y * 3) % 73 / 29.0f,
+                                      (x * 19 + y * 23) % 67 / 67.0f);
+                REQUIRE(source->TrySetColorAt(x, y, 0, value));
+                reference(x, y).set(value.r, value.g, value.b, value.a);
+            }
+        for (const auto& [filter, filterName] : filters)
+            for (bool wrap : { false, true })
+            {
+                TextureMipGenerationOptions options;
+                options.Mode = TextureMipMode::Data;
+                options.Filter = filter;
+                options.Wrap = wrap;
+                Vector<Ref<PixelData>> actual;
+                REQUIRE(PixelUtils::GenerateMipChain(*source, options, actual));
+                for (size_t mip = 1; mip < actual.size(); ++mip)
+                {
+                    basisu::imagef expected(actual[mip]->GetWidth(), actual[mip]->GetHeight());
+                    REQUIRE(basisu::image_resample(reference, expected, filterName, 1.0f, wrap, 0, 4));
+                    float maximumError = 0.0f;
+                    for (uint32_t y = 0; y < expected.get_height(); ++y)
+                        for (uint32_t x = 0; x < expected.get_width(); ++x)
+                        {
+                            glm::vec4 value;
+                            REQUIRE(actual[mip]->TryGetColorAt(x, y, 0, value));
+                            for (uint32_t component = 0; component < 4; ++component)
+                                maximumError = std::max(maximumError, std::abs(value[component] - expected(x, y)[component]));
+                        }
+                    CAPTURE(dimensions.x, dimensions.y, filterName, wrap, mip, maximumError);
+                    CHECK(maximumError <= 1e-5f);
+                }
+            }
+    }
+}
 
 TEST_CASE("PixelData::Basic", "[PixelUtils]")
 {

@@ -57,10 +57,12 @@ namespace Crowny
     static constexpr uint32_t SHADER_FORMAT_VERSION = 6;
     // Version 3 persists the optional explicit alpha rendering mode. Version 4
     // migrates the legacy toon hull thickness to its independent silhouette width.
-    static constexpr uint32_t MATERIAL_FORMAT_VERSION = 4;
+    static constexpr uint32_t MATERIAL_FORMAT_VERSION = 6;
     // Version 3 adds conventional LOD and meshlet metadata. Version 2 remains
     // readable and is represented as a single legacy LOD.
-    static constexpr uint32_t MESH_FORMAT_VERSION = 4;
+    // Version 5 stores the UUID of the cooked PhysicsMesh dependent.
+    static constexpr uint32_t MESH_FORMAT_VERSION = 5;
+    static constexpr uint32_t PHYSICS_MESH_FORMAT_VERSION = 1;
     static constexpr uint32_t ANIMATION_CLIP_FORMAT_VERSION = 1;
     // Version 2 removes duplicate glyph storage and persists the tab width.
     // Version 3 persists complete layout metrics and the MSDF pixel range.
@@ -87,6 +89,10 @@ namespace Crowny
 
         virtual AssetType GetAssetType() const { return AssetType::None; }
         static AssetType GetStaticType() { return AssetType::None; }
+
+        // Called before saving an import batch, after each dependent receives its stable UUID.
+        // Primary and dependent assets can retain references to other assets from the same import.
+        virtual void OnDependentAssigned(const Ref<Asset>& /*dependent*/, const UUID& /*uuid*/) {}
 
         // Source tracking — used by editor to detect stale assets that need reimport.
         void SetSourceTimestamp(int64_t timestamp) { m_SourceTimestamp = timestamp; }

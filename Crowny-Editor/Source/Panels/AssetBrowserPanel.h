@@ -29,7 +29,8 @@ namespace Crowny
         ComputeShader,
         PhysicsMaterial2D,
         PhysicsMaterial3D,
-        NodeGraph
+        NodeGraph,
+        DecalMaterial
     };
 
     enum class FileSortingMode
@@ -134,11 +135,14 @@ namespace Crowny
         UnorderedSet<Path, HashPath> m_SelectionSet;
         uint32_t m_SelectionStartIndex = (uint32_t)-1;
         uint32_t m_SelectionEndIndex = 0;
+        bool m_RevealSelection = false;
         size_t m_LastCurrentDirectory = 0;
 
         DirectoryEntry* m_CurrentDirectoryEntry = nullptr;
         Path m_CurrentDirectoryPath;
         AssetBrowserFolderFingerprint m_FolderFingerprint;
+        size_t m_LastCompletedImports = 0;
+        bool m_WasImporting = false;
         ImVec2 m_ContentRectMin{ 0.0f, 0.0f };
         ImVec2 m_ContentRectMax{ 0.0f, 0.0f };
         bool m_ContentRectValid = false;
@@ -156,6 +160,7 @@ namespace Crowny
         float m_ThumbnailSize = DEFAULT_ASSET_THUMBNAIL_SIZE;
 
         Path m_RenamingPath;
+        bool m_RenameNeedsFocus = false;
         String m_RenamingText;
         AssetBrowserOperationQueue m_DeferredOperations;
         bool m_SearchFieldActive = false;

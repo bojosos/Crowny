@@ -6,10 +6,12 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Build/ManagedBuild.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Input/InputMapSerialization.h"
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/StringUtils.h"
+#include "Crowny/Common/Version.h"
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/ImGui/ImGuiMenu.h"
 #include "Crowny/Physics/Physics2D.h"
@@ -28,9 +30,9 @@
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AudioMixerPanel.h"
-#include "Panels/EntityInspector.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/EditorPanelRegistry.h"
+#include "Panels/EntityInspector.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
@@ -43,9 +45,9 @@
 #include "Editor/ColliderOverlay.h"
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
-#include "Editor/Settings/EditorSettingsPersistence.h"
 #include "Editor/EditorScenePersistence.h"
 #include "Editor/ProjectLibrary.h"
+#include "Editor/Settings/EditorSettingsPersistence.h"
 #include "Serialization/ProjectSettingsSerializer.h"
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
@@ -53,6 +55,7 @@
 #include "Crowny/Renderer/Font.h"
 
 #include "Build/BuildManager.h"
+#include "Build/BuildSceneSelection.h"
 #include "Editor/Script/CodeEditor.h"
 #include "Editor/Script/ManagedProjectDependencies.h"
 #include "Editor/Script/ScriptProjectGenerator.h"
@@ -244,68 +247,18 @@ namespace Crowny
             return result;
         }
 
-        // Strips every trailing ".cwscene" (a file that ended up with a doubled extension collapses to its base name).
-        Path StripSceneExtensions(const Path& path)
+        Vector<BuildSceneOption> CollectBuildSceneOptions(const Vector<UUID>& sceneIds, const Path& assetFolder)
         {
-            Path result = path;
-            while (HasSceneExtension(result))
-                result.replace_extension();
-            return result;
-        }
-
-        String ScenePathKey(const Path& path)
-        {
-            String key = StripSceneExtensions(path.lexically_normal()).generic_string();
-            StringUtils::ToLower(key);
-            return key;
-        }
-
-        struct BuildSceneOption
-        {
-            UUID Id;
-            Path SourcePath;
-            String DisplayName;
-        };
-
-        // One entry per scene file: asset registry rows that resolve to the same file (ignoring doubled ".cwscene"
-        // extensions and case) are merged, preferring the id that is already selected as the main scene.
-        Vector<BuildSceneOption> CollectBuildSceneOptions(const Vector<UUID>& sceneIds, const UUID& preferredId, const Path& assetFolder)
-        {
-            Vector<BuildSceneOption> options;
-            UnorderedMap<String, size_t> optionByKey;
-            for (const UUID& sceneId : sceneIds)
+            Vector<BuildSceneOption> scenes;
+            for (const UUID& id : sceneIds)
             {
-                const Path sourcePath = ProjectLibrary::Get().UuidToPath(sceneId);
-                if (sourcePath.empty())
-                    continue;
-                const String key = ScenePathKey(sourcePath);
-                const auto existing = optionByKey.find(key);
-                if (existing != optionByKey.end())
-                {
-                    if (sceneId == preferredId)
-                    {
-                        options[existing->second].Id = sceneId;
-                        options[existing->second].SourcePath = sourcePath;
-                    }
-                    continue;
-                }
-
-                Path displayPath = StripSceneExtensions(sourcePath.lexically_normal());
-                if (!assetFolder.empty())
-                {
-                    const Path relative = displayPath.lexically_relative(assetFolder.lexically_normal());
-                    if (!relative.empty() && relative.native().rfind(Path("..").native(), 0) != 0)
-                        displayPath = relative;
-                }
-                String displayName = displayPath.generic_string();
-                if (displayName.empty())
-                    displayName = ProjectLibrary::Get().GetAssetName(sceneId);
-                optionByKey.emplace(key, options.size());
-                options.push_back({ sceneId, sourcePath, std::move(displayName) });
+                Path path;
+                UUID currentId;
+                if (ProjectLibrary::Get().TryGetSourcePath(id, AssetType::Scene, path) &&
+                    ProjectLibrary::Get().TryGetAssetId(path, AssetType::Scene, currentId) && currentId == id)
+                    scenes.push_back({ id, path });
             }
-            std::sort(options.begin(), options.end(),
-                      [](const BuildSceneOption& lhs, const BuildSceneOption& rhs) { return lhs.DisplayName < rhs.DisplayName; });
-            return options;
+            return MakeBuildSceneOptions(std::move(scenes), assetFolder);
         }
     } // namespace
 
@@ -386,6 +339,10 @@ namespace Crowny
 
         if (m_AutoLoadLastProject)
             m_PendingProjectPath = SelectStartupProject(*editorSettings, [](const Path& path) { return fs::is_directory(path); });
+        if (!m_LaunchOptions.Project.empty())
+            m_PendingProjectPath = m_LaunchOptions.Project;
+        m_LaunchScenePending = !m_LaunchOptions.Scene.empty();
+        m_LaunchPlayPending = m_LaunchOptions.Play;
     }
 
     void EditorLayer::FinishDeferredStartup()
@@ -408,6 +365,10 @@ namespace Crowny
             SetProjectSettings();
             m_AssetBrowser->Initialize();
             m_PendingProjectPath.clear();
+            // Files that appeared while the editor was closed have no metadata yet and the file watcher only reports
+            // changes made from now on; scan the asset folder once so they import in the background like dropped files.
+            if (ProjectLibrary::IsStartedUp() && fs::exists(ProjectLibrary::Get().GetAssetFolder()))
+                ProjectLibrary::Get().RefreshAsync(ProjectLibrary::Get().GetAssetFolder());
         }
 
         CodeEditorManager::StartUp();
@@ -428,22 +389,151 @@ namespace Crowny
     void EditorLayer::BuildGame()
     {
         m_ShowBuildWindow = true;
+        if (m_PlayerBuild.valid() || !BuildManager::IsStartedUp())
+            return;
         m_BuildStatus = BuildStatus::Ready;
         m_BuildProgress = 0.0f;
         m_BuildResult.clear();
+        m_BuildProjectRoot = Editor::Get().GetProjectPath();
+        const auto settings = Editor::Get().GetProjectSettings();
+        BuildManager::Get().SetActivePlatformInfo(PlatformType::Windows);
+        const auto info = BuildManager::Get().GetActivePlatformInfo();
+        info->MainScene = settings->GameStartupScene;
+        info->Debug = settings->GameBuildDevelopment;
+        info->OutputDirectory =
+          settings->GameBuildOutput.empty()
+            ? m_BuildProjectRoot.parent_path() / (m_BuildProjectRoot.filename().string() + "-Build") / "Windows"
+            : (settings->GameBuildOutput.is_absolute() ? settings->GameBuildOutput : m_BuildProjectRoot / settings->GameBuildOutput);
+    }
 
-        if (!BuildManager::IsStartedUp())
+    void EditorLayer::StartPlayerBuild()
+    {
+        if (m_PlayerBuild.valid())
             return;
-
-        const Ref<PlatformInfo> info = BuildManager::Get().GetActivePlatformInfo();
-        if (info && info->OutputDirectory.empty())
-            info->OutputDirectory = Editor::Get().GetProjectPath() / "Build" / BuildManager::Get().GetPlatformName(info->Type);
+        try
+        {
+            EditorBuildInputs inputs;
+            inputs.ProjectRoot = Editor::Get().GetProjectPath();
+            Path startupScene;
+            if (!ProjectLibrary::Get().TryGetSourcePath(BuildManager::Get().GetActivePlatformInfo()->MainScene, AssetType::Scene, startupScene))
+                throw std::runtime_error("Choose a saved startup scene.");
+            const auto startup = YAML::LoadFile(startupScene.string());
+            bool hasCamera = false;
+            if (const auto entities = startup["Entities"]; entities && entities.IsSequence())
+                for (const auto& entity : entities)
+                    hasCamera = hasCamera || entity["CameraComponent"].IsDefined();
+            if (!hasCamera)
+                throw std::runtime_error("Add a Camera component to the startup scene and save it before building.");
+            inputs.Game.ProductName = Editor::Get().GetProjectName();
+            inputs.Game.ArtifactName = SanitizeArtifactName(inputs.Game.ProductName);
+            inputs.HasGameSettings = true;
+            inputs.Content = ProjectLibrary::Get().GetBuildContentDatabase();
+            const Path runtimeSettings = inputs.ProjectRoot / "Internal/Build/Game.yaml";
+            fs::create_directories(runtimeSettings.parent_path());
+            YAML::Emitter runtime;
+            runtime << YAML::BeginMap;
+            SerializeInputMap(Editor::Get().GetProjectSettings()->InputActions, runtime);
+            runtime << YAML::EndMap;
+            String settingsError;
+            if (!FileSystem::WriteTextFileAtomic(runtimeSettings, runtime.c_str(), &settingsError))
+                throw std::runtime_error(settingsError);
+            inputs.Content.Assets.push_back({ UUID("ffffffff-ffff-ffff-ffff-000000000001"),
+                                              "Settings/Game.yaml",
+                                              runtimeSettings.lexically_relative(inputs.ProjectRoot),
+                                              {},
+                                              "Settings",
+                                              {} });
+            inputs.HasContentDatabase = true;
+            const auto& description = Application::Get().GetApplicationDesc();
+            inputs.Managed.Sources = CollectGameScriptFiles();
+            inputs.Toolchain =
+              LocateManagedToolchain(description.Script.Backend == ManagedBackendPreset::Mono ? description.Script.RuntimeRoot : Path());
+#ifdef CW_PLATFORM_WIN32
+            wchar_t executable[32768];
+            const DWORD length = GetModuleFileNameW(nullptr, executable, 32768);
+            inputs.TemplateRoot = Path(std::wstring(executable, length)).parent_path().parent_path() / "PlayerTemplate";
+#endif
+            if (!fs::is_regular_file(inputs.TemplateRoot / "Game.exe"))
+                inputs.TemplateRoot = inputs.TemplateRoot.parent_path().parent_path() / "Release-windows-x86_64/PlayerTemplate";
+            if (!fs::is_regular_file(inputs.TemplateRoot / "Game.exe"))
+                throw std::runtime_error(
+                  "Player runtime is missing. Run Scripts\\crowny.bat build Editor --configuration Release, then restart the editor.");
+            inputs.Managed.References = { inputs.TemplateRoot / "Managed/CrownySharp.dll" };
+            ManagedProjectDependencyRequest dependencies;
+            dependencies.ProjectRoot = inputs.ProjectRoot;
+            dependencies.DeclaredAssemblies = Editor::Get().GetProjectSettings()->ManagedAssemblyReferences;
+            dependencies.SearchDirectories = { inputs.TemplateRoot / "Managed" };
+            dependencies.FrameworkDirectories = { inputs.Toolchain.ReferenceDirectory };
+            dependencies.ExcludedAssemblies = inputs.Managed.References;
+            dependencies.ReservedAssemblyNames = { CROWNY_ASSEMBLY };
+            const auto resolved = ResolveManagedProjectDependencies(dependencies);
+            if (!resolved.Succeeded())
+                throw std::runtime_error(resolved.Diagnostics.front().Message);
+            for (const auto& dependency : resolved.Assemblies)
+                inputs.Managed.References.push_back(dependency.Filepath);
+            inputs.EngineVersion = CROWNY_VERSION_STRING;
+            inputs.MonoVersion = "6.12";
+            inputs.Template.EngineVersion = inputs.EngineVersion;
+            inputs.Template.Platform = BuildPlatform::WindowsX64;
+            inputs.Template.Configuration =
+              BuildManager::Get().GetActivePlatformInfo()->Debug ? BuildConfiguration::Development : BuildConfiguration::Shipping;
+            inputs.Template.Renderers = { RendererBackend::Vulkan, RendererBackend::OpenGL };
+            const auto info = BuildManager::Get().GetActivePlatformInfo();
+            m_BuiltGamePath = (info->OutputDirectory.is_absolute() ? info->OutputDirectory : inputs.ProjectRoot / info->OutputDirectory) / "Game.exe";
+            m_BuildStatus = BuildStatus::Running;
+            m_BuildProgress = 0.1f;
+            m_BuildResult = "Compiling scripts and packaging the standalone game...";
+            // Snapshot all editor-owned data before leaving the main thread.
+            PlatformInfo platform = *info;
+            if (platform.OutputDirectory.is_relative())
+                platform.OutputDirectory = inputs.ProjectRoot / platform.OutputDirectory;
+            m_BuildCancellation = std::make_shared<std::atomic<bool>>(false);
+            m_PlayerBuild = std::async(
+              std::launch::async, [inputs = std::move(inputs), platform, cancellation = m_BuildCancellation]() mutable -> std::pair<bool, String> {
+                  try
+                  {
+                      if (const String error =
+                            PlayerTemplateStore::CreateManifest(inputs.TemplateRoot, inputs.Template, { "Game.exe" }, inputs.Template);
+                          !error.empty())
+                          return { false, error };
+                      inputs.HasTemplate = true;
+                      BuildManager manager;
+                      *manager.GetActivePlatformInfo() = platform;
+                      const auto report = manager.ExecuteActiveBuild(inputs, [cancellation] { return cancellation->load(); });
+                      String message;
+                      for (const auto& issue : report.Diagnostics.Issues)
+                          message += issue.Message + (issue.Subject.empty() ? "" : " (" + issue.Subject + ")") + "\n";
+                      if (report.Succeeded())
+                          message = "Standalone game built at " + report.Pipeline.OutputDirectory.string();
+                      return { report.Succeeded(), message };
+                  }
+                  catch (const std::exception& error)
+                  {
+                      return { false, error.what() };
+                  }
+              });
+        }
+        catch (const std::exception& error)
+        {
+            m_BuildStatus = BuildStatus::Failed;
+            m_BuildResult = error.what();
+        }
     }
 
     void EditorLayer::UI_BuildGame()
     {
+        if (m_PlayerBuild.valid() && m_PlayerBuild.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        {
+            auto [success, message] = m_PlayerBuild.get();
+            m_BuildStatus = success ? BuildStatus::Succeeded : BuildStatus::Failed;
+            m_BuildProgress = 1.0f;
+            m_BuildResult = std::move(message);
+            AddNotification(success ? "Standalone game built." : "Game build failed.", success ? NotificationKind::Success : NotificationKind::Error);
+        }
         if (!m_ShowBuildWindow)
             return;
+        if (m_BuildProjectRoot != Editor::Get().GetProjectPath() && !m_PlayerBuild.valid())
+            BuildGame();
 
         ImGui::SetNextWindowSize(ImVec2(620.0f, 560.0f), ImGuiCond_FirstUseEver);
         if (!ImGui::Begin("Build game", &m_ShowBuildWindow))
@@ -452,28 +542,35 @@ namespace Crowny
             return;
         }
 
-        if (!BuildManager::IsStartedUp())
+        if (!BuildManager::IsStartedUp() || !Editor::Get().IsProjectLoaded())
         {
-            ImGui::TextDisabled("Build tools are still starting.");
+            ImGui::TextDisabled("Open a project to build a game.");
             ImGui::End();
             return;
         }
 
+        if (m_PlayerBuild.valid() && m_BuildProjectRoot != Editor::Get().GetProjectPath())
+        {
+            ImGui::TextWrapped("Building %s. Reopen Build game after it finishes to configure this project.",
+                               m_BuildProjectRoot.filename().string().c_str());
+            ImGui::End();
+            return;
+        }
         BuildManager& buildManager = BuildManager::Get();
         Ref<PlatformInfo> platformInfo = buildManager.GetActivePlatformInfo();
-        const Vector<PlatformType>& platforms = buildManager.GetAvailablePlatforms();
-        const Vector<BuildSceneOption> sceneOptions = CollectBuildSceneOptions(
-          ProjectLibrary::Get().GetAllAssets(AssetType::Scene), platformInfo ? platformInfo->MainScene : UUID::EMPTY,
-          ProjectLibrary::Get().GetAssetFolder());
+        const Vector<PlatformType> platforms = { PlatformType::Windows };
+        const Vector<BuildSceneOption> sceneOptions =
+          CollectBuildSceneOptions(ProjectLibrary::Get().GetAllAssets(AssetType::Scene), ProjectLibrary::Get().GetAssetFolder());
         const auto findSceneOption = [&sceneOptions](const UUID& sceneId) {
-            return std::find_if(sceneOptions.begin(), sceneOptions.end(), [&sceneId](const BuildSceneOption& option) { return option.Id == sceneId; });
+            return std::find_if(sceneOptions.begin(), sceneOptions.end(),
+                                [&sceneId](const BuildSceneOption& option) { return option.Id == sceneId; });
         };
-        Vector<Ref<FileEntry>> includedAssets = ProjectLibrary::Get().GetAssetsForBuild();
 
         ImGui::TextUnformatted("Build setup");
-        ImGui::TextDisabled("Configure the player target and compile the project's game scripts.");
+        ImGui::TextDisabled("Build a standalone Windows game with its content and runtime included.");
         ImGui::Spacing();
 
+        ImGui::BeginDisabled(m_PlayerBuild.valid());
         if (ImGui::BeginTable("##BuildSettings", 2,
                               ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX))
         {
@@ -496,8 +593,9 @@ namespace Crowny
                         buildManager.SetActivePlatformInfo(platform);
                         platformInfo = buildManager.GetActivePlatformInfo();
                         if (platformInfo->OutputDirectory.empty())
-                            platformInfo->OutputDirectory =
-                              Editor::Get().GetProjectPath() / "Build" / buildManager.GetPlatformName(platformInfo->Type);
+                            platformInfo->OutputDirectory = Editor::Get().GetProjectPath().parent_path() /
+                                                            (Editor::Get().GetProjectName() + "-Build") /
+                                                            buildManager.GetPlatformName(platformInfo->Type);
                         m_BuildStatus = BuildStatus::Ready;
                         m_BuildResult.clear();
                     }
@@ -515,7 +613,7 @@ namespace Crowny
             String outputPath = platformInfo ? platformInfo->OutputDirectory.string() : String();
             const float browseWidth = ImGui::CalcTextSize("Browse").x + ImGui::GetStyle().FramePadding.x * 2.0f;
             ImGui::SetNextItemWidth(std::max(80.0f, ImGui::GetContentRegionAvail().x - browseWidth - ImGui::GetStyle().ItemSpacing.x));
-            if (ImGui::InputTextWithHint("##BuildOutput", "Choose an output folder", &outputPath) && platformInfo)
+            if (ImGui::InputTextWithHint("##BuildOutput", "Choose a folder outside the project", &outputPath) && platformInfo)
                 platformInfo->OutputDirectory = outputPath;
             ImGui::SameLine();
             if (ImGui::Button("Browse"))
@@ -538,7 +636,7 @@ namespace Crowny
             {
                 const auto selectedOption = findSceneOption(platformInfo->MainScene);
                 selectedSceneName =
-                  selectedOption != sceneOptions.end() ? selectedOption->DisplayName : ProjectLibrary::Get().GetAssetName(platformInfo->MainScene);
+                  selectedOption != sceneOptions.end() ? selectedOption->DisplayName : "Missing scene: " + platformInfo->MainScene.ToString();
                 if (!selectedSceneName.empty())
                     scenePreview = selectedSceneName.c_str();
             }
@@ -550,14 +648,10 @@ namespace Crowny
                 for (const BuildSceneOption& option : sceneOptions)
                 {
                     const bool selected = platformInfo && option.Id == platformInfo->MainScene;
-                    ImGui::PushID(option.DisplayName.c_str());
+                    ImGui::PushID(option.Id.ToString().c_str());
                     if (ImGui::Selectable(option.DisplayName.c_str(), selected) && platformInfo && !selected)
                     {
                         platformInfo->MainScene = option.Id;
-                        // Only touches the scene's .meta file when the scene is not part of the build yet; re-selecting
-                        // an already included scene does not write anything.
-                        ProjectLibrary::Get().SetIncludeInBuild(option.SourcePath, true);
-                        includedAssets = ProjectLibrary::Get().GetAssetsForBuild();
                     }
                     ImGui::PopID();
                     if (ImGui::IsItemHovered())
@@ -574,28 +668,40 @@ namespace Crowny
             ImGui::TextUnformatted("Configuration");
             ImGui::TableSetColumnIndex(1);
             if (platformInfo)
-                ImGui::Checkbox("Debug symbols", &platformInfo->Debug);
+                ImGui::Checkbox("Script debug symbols", &platformInfo->Debug);
 
             ImGui::EndTable();
         }
 
-        ImGui::Spacing();
-        if (ImGui::CollapsingHeader(fmt::format("Included assets ({0})", includedAssets.size()).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+        const auto activeScene = SceneManager::Get().GetActiveScene();
+        const bool canSave = activeScene && CanSaveEditorScene(SceneManager::Get().GetExecutionState());
+        ImGui::BeginDisabled(!canSave);
+        if (ImGui::Button("Save and use current scene"))
         {
-            const float assetListHeight = std::min(130.0f, ImGui::GetTextLineHeightWithSpacing() * (includedAssets.size() + 1.0f));
-            ImGui::BeginChild("##IncludedAssets", ImVec2(0.0f, std::max(46.0f, assetListHeight)), true);
-            if (includedAssets.empty())
-                ImGui::TextDisabled("Mark assets as included from the asset browser or choose a main scene.");
-            for (const Ref<FileEntry>& asset : includedAssets)
+            if (SaveActiveScene())
             {
-                ImGui::TextUnformatted(asset->ElementName.c_str());
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("%s", asset->Filepath.string().c_str());
+                UUID id;
+                if (ProjectLibrary::Get().TryGetAssetId(activeScene->GetFilepath(), AssetType::Scene, id))
+                    platformInfo->MainScene = id;
             }
-            ImGui::EndChild();
         }
+        ImGui::EndDisabled();
+        ImGui::TextWrapped("Build uses scenes saved on disk. Use the button above to save and select the open scene.");
+        ImGui::TextWrapped("All imported project assets and scenes are included, including assets loaded by scripts.");
+        const auto settings = Editor::Get().GetProjectSettings();
+        const Path relativeOutput = platformInfo->OutputDirectory.lexically_relative(Editor::Get().GetProjectPath());
+        const Path savedOutput = !relativeOutput.empty() && IsSafeRelativeBuildPath(relativeOutput) ? relativeOutput : platformInfo->OutputDirectory;
+        if (settings->GameStartupScene != platformInfo->MainScene || settings->GameBuildOutput != savedOutput ||
+            settings->GameBuildDevelopment != platformInfo->Debug)
+        {
+            settings->GameStartupScene = platformInfo->MainScene;
+            settings->GameBuildOutput = savedOutput;
+            settings->GameBuildDevelopment = platformInfo->Debug;
+            Editor::Get().SaveProjectSettings();
+        }
+        ImGui::EndDisabled();
 
-        EditorBuildValidation validation = buildManager.ValidateActiveBuild((uint32_t)includedAssets.size());
+        EditorBuildValidation validation = buildManager.ValidateActiveBuild(1);
         if (platformInfo && !platformInfo->MainScene.Empty() && findSceneOption(platformInfo->MainScene) == sceneOptions.end())
             validation.Errors.push_back("The selected main scene no longer exists.");
         if (!validation.Errors.empty() || !validation.Warnings.empty())
@@ -621,8 +727,9 @@ namespace Crowny
             ImGui::ProgressBar(m_BuildProgress, ImVec2(-FLT_MIN, 0.0f));
             if (!m_BuildResult.empty())
             {
-                const ImVec4 statusColor =
-                  m_BuildStatus == BuildStatus::Succeeded ? ImVec4(0.35f, 0.82f, 0.48f, 1.0f) : ImVec4(0.95f, 0.35f, 0.32f, 1.0f);
+                const ImVec4 statusColor = m_BuildStatus == BuildStatus::Succeeded ? ImVec4(0.35f, 0.82f, 0.48f, 1.0f)
+                                           : m_BuildStatus == BuildStatus::Running ? ImGui::GetStyleColorVec4(ImGuiCol_Text)
+                                                                                   : ImVec4(0.95f, 0.35f, 0.32f, 1.0f);
                 ImGui::PushStyleColor(ImGuiCol_Text, statusColor);
                 ImGui::TextWrapped("%s", m_BuildResult.c_str());
                 ImGui::PopStyleColor();
@@ -630,27 +737,31 @@ namespace Crowny
         }
 
         ImGui::Spacing();
-        const bool canBuild = validation.IsValid() && m_BuildStatus != BuildStatus::Running && !ProjectLibrary::Get().IsImporting();
+        const bool canBuild = validation.IsValid() && m_BuildStatus != BuildStatus::Running && !ProjectLibrary::Get().IsImporting() &&
+                              CanSaveEditorScene(SceneManager::Get().GetExecutionState());
         ImGui::BeginDisabled(!canBuild);
-        if (ImGui::Button("Build scripts", ImVec2(-FLT_MIN, 0.0f)))
+        if (ImGui::Button("Build game", ImVec2(-FLT_MIN, 0.0f)))
         {
-            m_BuildStatus = BuildStatus::Running;
-            m_BuildProgress = 0.15f;
-            m_BuildResult = "Saving project and compiling game scripts...";
-
-            SaveActiveScene();
             Editor::Get().SaveProject();
-            m_BuildProgress = 0.45f;
-            const bool built = RebuildAssemblies();
-            m_BuildProgress = 1.0f;
-            m_BuildStatus = built ? BuildStatus::Succeeded : BuildStatus::Failed;
-            m_BuildResult = built ? "Game scripts built. Runtime packaging is not available, so no player was created."
-                                  : "Game script compilation failed. Check the console for compiler output.";
-            AddNotification(built ? "Game scripts built." : "Game script build failed.", built ? NotificationKind::Success : NotificationKind::Error);
+            StartPlayerBuild();
         }
         ImGui::EndDisabled();
         if (!canBuild && ProjectLibrary::Get().IsImporting())
-            UI::SetTooltip("Wait for asset import to finish.");
+            ImGui::TextDisabled("Wait for asset import to finish.");
+        if (!CanSaveEditorScene(SceneManager::Get().GetExecutionState()))
+            ImGui::TextDisabled("Stop Play or Simulate before building.");
+
+        if (m_PlayerBuild.valid() && ImGui::Button("Cancel build"))
+            m_BuildCancellation->store(true);
+
+        if (m_BuildStatus == BuildStatus::Succeeded && fs::is_regular_file(m_BuiltGamePath))
+        {
+            if (ImGui::Button("Run game"))
+                PlatformUtils::OpenExternally(m_BuiltGamePath);
+            ImGui::SameLine();
+            if (ImGui::Button("Open build folder"))
+                PlatformUtils::ShowInExplorer(m_BuiltGamePath);
+        }
 
         ImGui::End();
     }
@@ -936,64 +1047,77 @@ namespace Crowny
         AddRecentScene(sceneId);
     }
 
-    void EditorLayer::SaveActiveSceneAs()
+    bool EditorLayer::SaveActiveSceneAs()
     {
         SceneManager* sceneManager = SceneManager::TryGet();
         if (sceneManager == nullptr || !CanSaveEditorScene(sceneManager->GetExecutionState()))
         {
             AddNotification("Stop Play or Simulate before saving the scene.");
-            return;
+            return false;
         }
 
         Vector<Path> outPaths;
         if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene", ProjectLibrary::Get().GetAssetFolder(),
-                                       { Editor::GetSceneDialogFilter() }))
+                                       { Editor::GetSceneDialogFilter() }) &&
+            !outPaths.empty())
         {
             const Path path = EnsureSceneExtension(outPaths[0]).lexically_normal();
             if (!AssetFileSystemScanner::IsPathWithin(ProjectLibrary::Get().GetAssetFolder(), path))
             {
                 AddNotification("Scenes must be saved inside the project Assets folder.", NotificationKind::Error);
-                return;
+                return false;
             }
             const auto& scene = SceneManager::TryGet()->GetActiveScene();
             if (!scene)
-                return;
+                return false;
             scene->SetImGuiLayout(Application::TryGet()->GetImGuiLayer()->SaveLayout());
             SceneSerializer serializer(scene);
-            serializer.Serialize(path);
+            if (!serializer.Serialize(path))
+            {
+                AddNotification("Could not save the scene. See the console for details.", NotificationKind::Error);
+                return false;
+            }
             if (!SynchronizeActiveSceneAsset(scene))
-                return;
+                return false;
             const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + SceneManager::TryGet()->GetActiveScene()->GetName();
             Application::TryGet()->GetWindow().SetTitle(title);
             AddNotification(fmt::format("Saved {0}.", path.filename().string()), NotificationKind::Success);
+            return true;
         }
+        return false;
     }
 
-    void EditorLayer::SaveActiveScene()
+    bool EditorLayer::SaveActiveScene()
     {
         SceneManager* sceneManager = SceneManager::TryGet();
         if (sceneManager == nullptr || !CanSaveEditorScene(sceneManager->GetExecutionState()))
         {
             AddNotification("Stop Play or Simulate before saving the scene.");
-            return;
+            return false;
         }
 
         const auto& scene = sceneManager->GetActiveScene();
         if (!scene)
-            return;
+            return false;
         if (scene->GetFilepath().empty())
-            SaveActiveSceneAs();
+            return SaveActiveSceneAs();
         else
         {
             scene->SetImGuiLayout(Application::TryGet()->GetImGuiLayer()->SaveLayout());
             SceneSerializer serializer(scene);
-            serializer.Serialize(scene->GetFilepath());
+            if (!serializer.Serialize(scene->GetFilepath()))
+            {
+                AddNotification("Could not save the scene. See the console for details.", NotificationKind::Error);
+                return false;
+            }
             if (!SynchronizeActiveSceneAsset(scene))
-                return;
+                return false;
             const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + scene->GetName();
             Application::TryGet()->GetWindow().SetTitle(title);
             AddNotification(fmt::format("Saved {0}.", scene->GetFilepath().filename().string()), NotificationKind::Success);
+            return true;
         }
+        return false;
     }
 
     bool EditorLayer::SynchronizeActiveSceneAsset(const Ref<Scene>& scene)

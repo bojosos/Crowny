@@ -3,6 +3,7 @@ namespace Crowny
     public class Entity : ScriptObject
     {
         internal UUID m_ManagedUuid;
+        internal ManagedRuntimeContext.ComponentCache m_ComponentCache;
 
         /// <summary>The name of the entity.</summary>
         public string name
@@ -26,7 +27,7 @@ namespace Crowny
         }
 
         /// <summary>The transform component of the entity.</summary>
-        public Transform transform => GetComponent<Transform>();
+        public Transform transform => ManagedRuntimeContext.GetTransform(m_ManagedUuid, ref m_ComponentCache);
 
         /// <summary>Searches for an entity by its name.</summary>
         public static Entity FindByName(string name)
@@ -38,7 +39,7 @@ namespace Crowny
         /// <summary>Retrieves a native or managed script component.</summary>
         public T GetComponent<T>() where T : Component
         {
-            return ManagedRuntimeContext.GetComponent<T>(m_ManagedUuid);
+            return ManagedRuntimeContext.GetComponent<T>(m_ManagedUuid, ref m_ComponentCache);
         }
 
         /// <summary>Returns whether the entity has a component.</summary>
@@ -50,7 +51,7 @@ namespace Crowny
         /// <summary>Adds a component to the entity.</summary>
         public T AddComponent<T>() where T : Component
         {
-            return ManagedRuntimeContext.AddComponent<T>(m_ManagedUuid);
+            return ManagedRuntimeContext.AddComponent<T>(m_ManagedUuid, ref m_ComponentCache);
         }
 
         /// <summary>Removes a component from the entity.</summary>
@@ -63,6 +64,7 @@ namespace Crowny
         public void Destroy()
         {
             ManagedRuntimeContext.DestroyEntity(uuid);
+            ManagedRuntimeContext.InvalidateComponentCaches();
         }
 
         /// <summary>Instantiates a prefab into the active scene at its saved transform.</summary>

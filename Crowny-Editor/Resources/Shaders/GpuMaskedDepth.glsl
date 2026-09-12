@@ -4,6 +4,7 @@
 #pragma depth_compare greater_equal
 #pragma variation CW_DEPTH_ANIMATED
 #pragma variation CW_DEPTH_OBJECT_ID_ONLY
+#pragma variation CW_DEPTH_COATING
 #type vertex
 #version 450
 
@@ -27,6 +28,11 @@ layout(location = 1) in vec3 cw_PreviousPosition;
 #endif
 layout(location = 4) in vec2 cw_TexCoord0;
 layout(location = 5) in vec4 cw_Color;
+#ifdef CW_DEPTH_COATING
+layout(location = 6) in vec3 cw_Normal;
+layout(location = 6) out vec3 cwDecalWorldPosition;
+layout(location = 7) out vec3 cwDecalGeometricNormal;
+#endif
 layout(set = 0, binding = 0) uniform CwDepthView
 {
     mat4 viewProjection;
@@ -64,6 +70,11 @@ void main()
     cwUv = cw_TexCoord0;
     cwMaterialIndex = visibleInstance.y;
     cwVertexAlpha = cw_Color.a;
+#ifdef CW_DEPTH_COATING
+    cwDecalWorldPosition = currentWorldPosition;
+    mat3 linearTransform = transpose(mat3(instance.currentRow0.xyz, instance.currentRow1.xyz, instance.currentRow2.xyz));
+    cwDecalGeometricNormal = normalize(transpose(inverse(linearTransform)) * cw_Normal);
+#endif
 #ifdef CW_DEPTH_OBJECT_ID_ONLY
     cwObjectId = instance.draw.w;
 #else
@@ -126,13 +137,29 @@ layout(std430, set = 1, binding = 0) readonly buffer CwMaterialTable
     CwMaterialRecord materials[];
 };
 layout(set = 1, binding = 1) uniform sampler2D cwTextures[];
+#ifdef CW_DEPTH_COATING
+layout(location = 6) in vec3 cwDecalWorldPosition;
+layout(location = 7) in vec3 cwDecalGeometricNormal;
+#include "CrownyDecals.glslinc"
+#endif
 
 void main()
 {
     CwMaterialRecord material = materials[cwMaterialIndex];
     float alpha = texture(cwTextures[nonuniformEXT(material.textureIndices0.x)], cwUv).a * material.baseColor.a * cwVertexAlpha;
+#ifdef CW_DEPTH_COATING
+    vec3 dx = dFdx(cwDecalWorldPosition), dy = dFdy(cwDecalWorldPosition);
+    float originalAlpha = alpha;
+    vec3 color = vec3(0), emission = vec3(0), normal = normalize(cwDecalGeometricNormal);
+    float roughness = 0.5, metallic = 0.0, ao = 1.0;
+    cwApplyDecals(cwObjectId, (~(material.textureIndices1.z >> 8u) & 128u), cwDecalWorldPosition, normal, dx, dy,
+                  length(cwDecalGrid.cameraPosition.xyz - cwDecalWorldPosition), 1.0,
+                  color, normal, roughness, metallic, ao, emission, alpha);
+    if (!cwDecalCoatingCore(originalAlpha, alpha)) discard;
+#else
     if (alpha < material.emissiveAlphaCutoff.w)
         discard;
+#endif
 
 #ifdef CW_DEPTH_OBJECT_ID_ONLY
     cwDepthObjectId = int(cwObjectId);

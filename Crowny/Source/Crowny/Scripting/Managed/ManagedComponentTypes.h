@@ -18,6 +18,8 @@
     X("Crowny.BoxCollider3D", BoxCollider3DComponent, ScriptBoxCollider3D)                                                                           \
     X("Crowny.SphereCollider3D", SphereCollider3DComponent, ScriptSphereCollider3D)                                                                  \
     X("Crowny.CapsuleCollider3D", CapsuleCollider3DComponent, ScriptCapsuleCollider3D)                                                               \
+    X("Crowny.MeshCollider3D", MeshCollider3DComponent, ScriptMeshCollider3D)                                                                        \
     X("Crowny.SpriteRendererComponent", SpriteRendererComponent, ScriptSpriteRenderer)                                                               \
     X("Crowny.MeshRenderer", MeshRendererComponent, ScriptMeshComponent)                                                                             \
-    X("Crowny.Text", TextComponent, ScriptText)
+    X("Crowny.Text", TextComponent, ScriptText) \
+    X("Crowny.DecalComponent", DecalComponent, ScriptDecal)

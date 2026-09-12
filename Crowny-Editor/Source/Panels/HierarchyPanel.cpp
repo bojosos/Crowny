@@ -181,8 +181,7 @@ namespace Crowny
     {
         if (!m_PendingSelection)
             return;
-        if (m_Selection.Select(m_PendingSelection, m_PendingSelectionMode, m_VisibleEntities))
-            NotifySelectionChanged();
+        SelectEntity(m_PendingSelection, m_PendingSelectionMode);
         m_PendingSelection = {};
     }
 
@@ -386,6 +385,18 @@ namespace Crowny
             ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("Decal"))
+        {
+            if (ImGui::MenuItem("Box"))
+                CreateEntityFromFactory(parent, [](const Ref<Scene>& scene, Entity target) {
+                    return EntityFactory::CreateDecal(scene, target, DecalProjection::Box);
+                });
+            if (ImGui::MenuItem("Cylinder"))
+                CreateEntityFromFactory(parent, [](const Ref<Scene>& scene, Entity target) {
+                    return EntityFactory::CreateDecal(scene, target, DecalProjection::Cylinder);
+                });
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Light"))
         {
             constexpr LightType lights[] = { LightType::Directional, LightType::Point, LightType::Spot };
@@ -682,7 +693,9 @@ namespace Crowny
             NotifySelectionChanged();
 
         Entity selectedEntity = m_Selection.GetPrimary();
-        if (m_Focused && selectedEntity && !ImGui::GetIO().WantCaptureKeyboard)
+        // Keyboard navigation captures input too; only active widgets and popups should block panel shortcuts.
+        if (m_Focused && selectedEntity && !m_Renaming && !ImGui::GetIO().WantTextInput && !ImGui::IsAnyItemActive() &&
+            !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
         {
             const bool ctrl = Input::IsKeyPressed(Key::LeftControl) || Input::IsKeyPressed(Key::RightControl);
 

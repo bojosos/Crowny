@@ -20,8 +20,11 @@ static void RunCrownyApplication()
         __try
         {
             Crowny::CreateApplication();
-            Crowny::Application::TryGet()->Run();
-            Crowny::Application::Shutdown();
+            if (Crowny::Application::TryGet())
+            {
+                Crowny::Application::TryGet()->Run();
+                Crowny::Application::Shutdown();
+            }
         }
         __except (Crowny::CrashHandler::Get().ReportCrash(GetExceptionInformation()))
         {
@@ -31,13 +34,19 @@ static void RunCrownyApplication()
     else
     {
         Crowny::CreateApplication();
-        Crowny::Application::TryGet()->Run();
-        Crowny::Application::Shutdown();
+        if (Crowny::Application::TryGet())
+        {
+            Crowny::Application::TryGet()->Run();
+            Crowny::Application::Shutdown();
+        }
     }
 #else
     Crowny::CreateApplication();
-    Crowny::Application::TryGet()->Run();
-    Crowny::Application::Shutdown();
+    if (Crowny::Application::TryGet())
+    {
+        Crowny::Application::TryGet()->Run();
+        Crowny::Application::Shutdown();
+    }
 #endif
 }
 
@@ -52,5 +61,5 @@ int main(int argc, char** argv)
     const bool leakedMemory = memoryLeakCheck.Finish();
     Crowny::CrashHandler::Shutdown();
 
-    return leakedMemory ? 2 : 0;
+    return leakedMemory ? 2 : Crowny::Application::GetExitCode();
 }

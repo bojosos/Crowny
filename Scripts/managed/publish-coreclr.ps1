@@ -26,18 +26,22 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
-. (Join-Path $repositoryRoot "Scripts\windows-build-common.ps1")
 $interopManifestPath = Join-Path $repositoryRoot "Scripts\managed\managed-interop.json"
 $abiVersion = [uint32](Get-Content -LiteralPath $interopManifestPath -Raw | ConvertFrom-Json).abiVersion
 $repositoryDotNetName = if ($env:OS -eq "Windows_NT") { "dotnet.exe" } else { "dotnet" }
-$repositoryDotNetRoot = Get-CrownyDependencyPath -RepositoryRoot $repositoryRoot `
-    -RelativePath "dotnet" -ReadyRelativePath "dotnet\$repositoryDotNetName"
+$dependencyQuery = "import sys; from pathlib import Path; sys.path.insert(0, str(Path(sys.argv[1]) / 'Tools')); from crowny import env; print(env.dependency_path('dotnet', 'dotnet/' + sys.argv[2], Path(sys.argv[1])))"
+$repositoryDotNetRoot = & python -c $dependencyQuery $repositoryRoot $repositoryDotNetName
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not resolve the Crowny .NET dependency root."
+}
 $repositoryDotNet = Join-Path $repositoryDotNetRoot $repositoryDotNetName
 $runtimeRootWasDefaulted = [string]::IsNullOrWhiteSpace($RuntimeRoot)
 if ([string]::IsNullOrWhiteSpace($DotNetExecutable)) {
     if (-not (Test-Path -LiteralPath $repositoryDotNet -PathType Leaf)) {
-        $dependencyRoot = Split-Path -Parent $repositoryDotNetRoot
-        & (Join-Path $repositoryRoot "Scripts\setup-dotnet.ps1") -DependencyRoot $dependencyRoot
+        & python (Join-Path $repositoryRoot "Tools\crowny") --root $repositoryRoot deps dotnet --install-dir $repositoryDotNetRoot
+        if ($LASTEXITCODE -ne 0) {
+            throw "Crowny .NET dependency setup failed with exit code $LASTEXITCODE."
+        }
     }
     $DotNetExecutable = $repositoryDotNet
 }

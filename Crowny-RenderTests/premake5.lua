@@ -14,21 +14,25 @@ project "Crowny-RenderTests"
     {
         "Source/**.h",
         "Source/**.cpp",
+        "%{wks.location}/Crowny-Editor/Source/Editor/PreviewRenderer.cpp",
     }
 
     includedirs
     {
         "Source",
         "%{wks.location}/Crowny/Source",
+        "%{wks.location}/Crowny-Editor/Source",
         "%{IncludeDir.glm}",
         "%{IncludeDir.vulkan}",
         "%{IncludeDir.vulkanvma}",
         "%{IncludeDir.spdlog}",
         "%{IncludeDir.mono}",
         "%{IncludeDir.imgui}",
+        "%{IncludeDir.ImGuizmo}",
         "%{IncludeDir.stb_image}",
         "%{IncludeDir.entt}",
         "%{IncludeDir.cereal}",
+        "%{wks.location}/Crowny/Dependencies/rapidjson/include",
         "%{IncludeDir.yamlcpp}",
         "%{IncludeDir.FastNoiseLite}",
         "%{wks.location}/Crowny/Dependencies/openal-soft/include",

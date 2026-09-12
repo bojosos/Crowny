@@ -105,12 +105,17 @@ namespace Crowny
     class RenderCapabilities
     {
     public:
+        static constexpr uint32_t BindlessTextureLimit = 4096;
+        uint32_t GetBindlessTextureCapacity() const;
+
         String RenderAPIName;
         Crowny::DriverVersion DriverVersion;
         String DeviceName;
         GPUVendor DeviceVendor = GPU_UNKNOWN;
         uint16_t NumTextureUnitsPerStage[SHADER_COUNT] = { 0 };
         uint16_t NumCombinedTextureUnits = 0;
+        uint32_t MaxTexture2DSize = 0;
+        uint32_t MaxTextureArrayLayers = 0;
         uint16_t NumGpuParamBlockBuffersPerStage[SHADER_COUNT]{ 0 };
         uint16_t NumCombinedParamBlockBuffers = 0;
         uint16_t NumLoadStoreTextureUnitsPerStage[SHADER_COUNT]{ 0 };

@@ -9,8 +9,7 @@
 
 namespace Crowny
 {
-    ScriptEntityBehaviour::ScriptEntityBehaviour(MonoObject* instance, Entity entity, const ManagedScript& script)
-      : ScriptObject(instance)
+    ScriptEntityBehaviour::ScriptEntityBehaviour(MonoObject* instance, Entity entity, const ManagedScript& script) : ScriptObject(instance)
     {
         m_Entity = entity;
         const ScriptTypeIdentity& identity = script.GetTypeIdentity();
@@ -19,7 +18,7 @@ namespace Crowny
         m_TypeName = identity.TypeName;
         m_ScriptInstanceId = script.InstanceId;
         m_GCHandle = MonoUtils::NewGCHandle(instance, false);
-        if (!MonoObjectIdentity::SetComponentEntity(instance, entity.GetUuid()))
+        if (!MonoObjectIdentity::SetComponentEntity(GetManagedInstance(), entity.GetUuid()))
             CW_ENGINE_ERROR("Could not bind the managed script entity identity.");
     }
 
@@ -33,9 +32,9 @@ namespace Crowny
             instance = currentClass->CreateInstance(construct);
 
         m_GCHandle = MonoUtils::NewGCHandle(instance, false);
-        if (!MonoObjectIdentity::SetComponentEntity(instance, m_Entity.GetUuid()))
+        if (!MonoObjectIdentity::SetComponentEntity(GetManagedInstance(), m_Entity.GetUuid()))
             CW_ENGINE_ERROR("Could not restore the managed script entity identity.");
-        return instance;
+        return GetManagedInstance();
     }
 
     void ScriptEntityBehaviour::ClearManagedInstance() { FreeManagedInstance(); }

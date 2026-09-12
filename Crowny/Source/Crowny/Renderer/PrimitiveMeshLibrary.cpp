@@ -32,9 +32,29 @@ namespace Crowny
             return infos;
         }
 
+        // Fixed identifiers for the paired collision geometry; same rule, never change these.
+        const Array<UUID, PRIMITIVE_COUNT>& GetPhysicsMeshUuids()
+        {
+            static const Array<UUID, PRIMITIVE_COUNT> uuids = { {
+              UUID(0x6b75d1a0u, 0x4c1e4a10u, 0x9f2e1001u, 0x43726f77u),
+              UUID(0x6b75d1a0u, 0x4c1e4a10u, 0x9f2e1002u, 0x43726f77u),
+              UUID(0x6b75d1a0u, 0x4c1e4a10u, 0x9f2e1003u, 0x43726f77u),
+              UUID(0x6b75d1a0u, 0x4c1e4a10u, 0x9f2e1004u, 0x43726f77u),
+              UUID(0x6b75d1a0u, 0x4c1e4a10u, 0x9f2e1005u, 0x43726f77u),
+              UUID(0x6b75d1a0u, 0x4c1e4a10u, 0x9f2e1006u, 0x43726f77u),
+            } };
+            return uuids;
+        }
+
         Array<AssetHandle<Mesh>, PRIMITIVE_COUNT>& GetCache()
         {
             static Array<AssetHandle<Mesh>, PRIMITIVE_COUNT> cache;
+            return cache;
+        }
+
+        Array<AssetHandle<PhysicsMesh>, PRIMITIVE_COUNT>& GetPhysicsCache()
+        {
+            static Array<AssetHandle<PhysicsMesh>, PRIMITIVE_COUNT> cache;
             return cache;
         }
 
@@ -96,6 +116,9 @@ namespace Crowny
         if (assetManager == nullptr)
             return {}; // Handles are minted by the AssetManager; without one there is nothing to reference.
 
+        // Collision geometry needs no GPU, so it is registered even when the render mesh cannot be created yet.
+        GetPhysicsMesh(type);
+
         // Reuse whatever the AssetManager already knows about (a previous registration that is still alive,
         // or an unloaded placeholder created while deserializing a scene before the library was registered).
         AssetHandle<Asset> existing = assetManager->GetAssetHandle(uuid);
@@ -117,9 +140,54 @@ namespace Crowny
         if (mesh == nullptr)
             return static_asset_cast<Mesh>(existing);
         mesh->SetName(GetName(type));
+        mesh->SetCollisionMeshUuid(GetPhysicsMeshUuid(type));
 
         // Fills the existing placeholder (if any) so components loaded earlier start rendering.
         return static_asset_cast<Mesh>(assetManager->CreateAssetHandle(mesh, uuid));
+    }
+
+    const UUID& PrimitiveMeshLibrary::GetPhysicsMeshUuid(PrimitiveMeshType type)
+    {
+        return IsValidType(type) ? GetPhysicsMeshUuids()[static_cast<size_t>(type)] : UUID::EMPTY;
+    }
+
+    AssetHandle<PhysicsMesh> PrimitiveMeshLibrary::GetPhysicsMesh(PrimitiveMeshType type)
+    {
+        if (!IsValidType(type))
+            return {};
+        AssetManager* assetManager = AssetManager::TryGet();
+        if (assetManager == nullptr)
+            return {};
+
+        const UUID& uuid = GetPhysicsMeshUuid(type);
+        AssetHandle<PhysicsMesh>& cached = GetPhysicsCache()[static_cast<size_t>(type)];
+        // Same rule as GetCache(): only trust the entry while the AssetManager still tracks it.
+        if (!cached.IsLoaded() || !assetManager->GetAssetHandle(uuid).IsLoaded())
+        {
+            cached = {};
+            AssetHandle<Asset> existing = assetManager->GetAssetHandle(uuid);
+            if (existing.IsLoaded())
+                cached = static_asset_cast<PhysicsMesh>(existing);
+            else
+            {
+                const Ref<MeshData> data = CreateData(type);
+                if (data == nullptr)
+                    return {};
+                const Vector<SubMesh> subMeshes = { SubMesh(0, data->GetIndexCount(), DrawMode::TRIANGLE_LIST) };
+                Ref<PhysicsMesh> physicsMesh = PhysicsMesh::Build(*data, subMeshes);
+                if (physicsMesh == nullptr)
+                {
+                    CW_ENGINE_ERROR("Failed to cook collision geometry for the {0} primitive", GetName(type));
+                    return {};
+                }
+                physicsMesh->SetName(String(GetName(type)) + " Collision");
+                // Fills a placeholder created by a scene that referenced the UUID before the library ran.
+                cached = static_asset_cast<PhysicsMesh>(assetManager->CreateAssetHandle(physicsMesh, uuid));
+            }
+        }
+        // Cheap map assignment; re-registering also repairs the table after PhysicsMeshResolver::Clear().
+        PhysicsMeshResolver::Register(GetUuid(type), cached);
+        return cached;
     }
 
     AssetHandle<Mesh> PrimitiveMeshLibrary::GetMesh(PrimitiveMeshType type)
@@ -138,7 +206,14 @@ namespace Crowny
 
     void PrimitiveMeshLibrary::EnsureRegistered()
     {
-        if (AssetManager::TryGet() == nullptr || !RenderAPI::IsStartedUp())
+        if (AssetManager::TryGet() == nullptr)
+            return;
+        for (uint32_t index = 0; index < PRIMITIVE_COUNT; index++)
+        {
+            if (!GetPhysicsCache()[index].IsLoaded())
+                GetPhysicsMesh(static_cast<PrimitiveMeshType>(index));
+        }
+        if (!RenderAPI::IsStartedUp())
             return;
         for (uint32_t index = 0; index < PRIMITIVE_COUNT; index++)
         {
@@ -152,5 +227,9 @@ namespace Crowny
     {
         for (AssetHandle<Mesh>& handle : GetCache())
             handle = {};
+        for (AssetHandle<PhysicsMesh>& handle : GetPhysicsCache())
+            handle = {};
+        for (uint32_t index = 0; index < PRIMITIVE_COUNT; index++)
+            PhysicsMeshResolver::Unregister(GetUuid(static_cast<PrimitiveMeshType>(index)));
     }
 } // namespace Crowny

@@ -4,7 +4,7 @@ Crowny exposes one backend-neutral `ManagedScriptComponent`, `ManagedScript`, an
 own their runtime instances, callbacks, loading, and reload mechanics behind `ManagedScripting`; neither runtime object
 leaks into scene data or editor code. Mono remains the editor default during the transition. CoreCLR is an opt-in desktop
 preset until the remaining editor workflow, debugging, and operational gates pass. Public engine calls use the same
-generated 519-function contract on both backends.
+generated 533-function contract on both backends.
 
 ## Desktop CoreCLR package
 
@@ -43,6 +43,25 @@ A reload captures every live script through the runtime-neutral state model, unl
 and validates the replacement catalog, retains exact-name fields with compatible kinds, recreates instances, and restores state. If replacement
 fails, the adapter reloads the previous program and restores the same snapshots. If rollback also fails, it clears the
 invalid runtime state and reports both failures.
+
+Scene script handles are checked against the runtime before reuse. When shutdown or failed rollback invalidates a
+handle, the scene clears that handle and its Awake flag while retaining saved script state. Recreating the occurrence
+assigns a fresh handle and runs its lifecycle again.
+
+CoreCLR host callbacks carry revocable registry tokens. Calls through an old host table fail after shutdown without
+dereferencing the former backend. Native operations run on the backend's owning thread; worker threads may queue
+diagnostics and asset releases. Mono resolves script targets through their GC handles for each call and uses temporary
+roots across managed construction and collision payload allocation.
+
+CrownySharp caches native component wrappers on the managed entity or component that requested them. Repeated
+`transform.position` reads reuse the wrapper and pass its entity ID directly. Optional component lookups still check
+native presence; managed removal, transport reset, and scene replacement invalidate caches. Managed script instances
+always go through the runtime resolver. CoreCLR indexes those instances by entity and returns the first live matching
+script in attachment order, including derived scripts requested through a base type.
+
+Generated CoreCLR host calls use `delegate* unmanaged[Cdecl]`; Mono builds retain marshaled delegates. Both paths use
+the same ABI table and clear cached callbacks when the transport resets. CoreCLR diagnostics use an explicit JSON
+writer, preserving the existing message and stack fields without reflection over anonymous objects.
 
 The shared C# codec emits recursive kind and declared-type metadata for fields, object members, collection elements, and
 dictionary entries. Assembly-qualified nested type names use `Outer+Inner`. Missing scripts retain their complete state
@@ -85,21 +104,22 @@ Lifecycle rules:
 
 ## Compatibility policy
 
-- Gameplay source is recompiled for the selected backend. Scene files must be regenerated as format 11. Script and member
+- Gameplay source is recompiled for the selected backend. Scene files must be regenerated as format 12. Script and member
   identities are exact; renames require updating or regenerating affected scene data. The managed
   component keeps its numeric scene ID, while its YAML name and payload intentionally changed.
 - The CoreCLR catalog supports public fields and properties, or non-public members marked `[SerializeField]`. It excludes
   static, indexed, `[DontSerializeField]`, and unsupported member types.
 - Script callbacks use exact signatures. A same-named overload does not become a lifecycle or collision callback.
 - CoreCLR is not the editor default while inspector workflows, debugging, and the full shared contract suite remain
-  incomplete. Public engine-call binding parity is enforced statically for both backends.
-- Browser builds use the dedicated .NET WebAssembly interpreter or AOT presets. Native AOT remains an evidence-gated,
-  closed-world desktop player option. Neither preset is a substitute for the CoreCLR editor host.
+  incomplete. The binding checker verifies declared names and adapter boundaries; runtime tests must still verify
+  marshalling, lifecycle behavior, and failures on both backends.
+- .NET WebAssembly and Native AOT presets describe planned targets. Generated linker roots do not establish trimming
+  or AOT compatibility, and Web build targets are unavailable. These presets do not replace the CoreCLR editor host.
 - Crowny makes no named-console support claim without vendor SDK, runtime, licensing, and certification evidence.
 
 ## Required verification
 
 Before promoting CoreCLR to the editor default, run the generated-ABI check, managed publishes, native contract tests,
-format-11 scene round trips, missing-script retention, repeated unload checks, exception-stack checks, inspector edits,
+format-12 scene round trips, missing-script retention, repeated unload checks, exception-stack checks, inspector edits,
 lifecycle and collision ordering, public binding marshalling, and private-runtime package launch. Record startup, callback,
 allocation, reload, memory, build-time, and artifact-size measurements against Mono.

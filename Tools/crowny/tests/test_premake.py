@@ -1,6 +1,10 @@
 import _bootstrap  # noqa: F401
 
 import unittest
+from contextlib import nullcontext
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from crowny import env, premake
 
@@ -28,6 +32,22 @@ class ProjectFingerprintTests(unittest.TestCase):
         flags = premake.premake_flags("SSE4.1")
         self.assertIn("--with-nodes", flags)
         self.assertIn("--simd=sse4.1", flags)
+
+    def test_finished_generation_does_not_wait_for_active_build_readers(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Crowny.sln").touch()
+            with (
+                patch.object(premake.env, "configure_default_environment"),
+                patch.object(premake, "project_fingerprint", return_value="current"),
+                patch.object(premake.stamps, "fingerprint_matches", side_effect=[False, True]),
+                patch.object(premake.locks, "exclusive_lock", return_value=nullcontext()),
+                patch.object(premake.locks, "project_write_lock", side_effect=AssertionError("An active build still holds a reader lock")) as write_lock,
+                patch.object(premake.cmd, "run_checked") as generate,
+            ):
+                premake.ensure_projects(root)
+            write_lock.assert_not_called()
+            generate.assert_not_called()
 
 
 if __name__ == "__main__":

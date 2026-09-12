@@ -188,6 +188,8 @@ layout(location = 1) out int cwMaterialId;
 layout(location = 2) out int cwObjectId;
 #endif
 
+#include "CrownyDecals.glslinc"
+
 vec3 sampleNormal(CwMaterialRecord material, vec3 geometricNormal)
 {
     vec3 tangentNormal = texture(cwTextures[nonuniformEXT(material.textureIndices0.y)], inputData.uv).xyz * 2.0 - 1.0;
@@ -262,6 +264,8 @@ void writeFragment(vec3 color, float alpha, uint alphaMode)
 void main()
 {
     CwMaterialRecord material = materials[inputData.materialIndex];
+    vec3 decalDx = dFdx(inputData.worldPosition);
+    vec3 decalDy = dFdy(inputData.worldPosition);
     vec4 baseSample = texture(cwTextures[nonuniformEXT(material.textureIndices0.x)], inputData.uv);
     vec4 baseColor = baseSample * material.baseColor * inputData.color;
     uint alphaMode = (material.textureIndices1.w >> 8u) & 0xffu;
@@ -284,6 +288,21 @@ void main()
     float preExposure = cwView.cameraPositionPreExposure.w;
     vec3 emissive = texture(cwTextures[nonuniformEXT(material.textureIndices1.x)], inputData.uv).rgb *
                     material.emissiveAlphaCutoff.rgb * preExposure;
+    float receiverOpacity = baseColor.a;
+    cwApplyDecals(inputData.objectId, ~(material.textureIndices1.z >> 8u) & 255u, surface.position, normalize(inputData.normal), decalDx, decalDy,
+                  length(cwView.cameraPositionPreExposure.xyz - surface.position), preExposure,
+                  surface.baseColor, surface.normal, surface.roughness, surface.metallic, surface.ambientOcclusion, emissive, baseColor.a);
+    if (alphaMode >= 2u)
+    {
+        bool core = cwDecalCoatingCore(receiverOpacity, baseColor.a);
+        if (cwDecalConstants.counts.w == 1u)
+        {
+            if (!core) discard;
+            baseColor.a = 1.0;
+            alphaMode = 0u;
+        }
+        else if (cwDecalConstants.counts.w == 2u && core) discard;
+    }
     if (model == 1u)
     {
         vec3 unlit = surface.baseColor * preExposure + emissive;

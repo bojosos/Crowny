@@ -27,5 +27,6 @@ namespace Crowny
         static GLenum TextureTargetToOpenGL(TextureShape shape, uint32_t samples = 1);
         static OpenGLTextureFormat TextureFormatToOpenGL(TextureFormat format, bool sRGB);
         static uint32_t FlattenBinding(uint32_t set, uint32_t slot) { return set * 16 + slot; }
+        static String StorageBlockName(uint32_t set, uint32_t slot);
     };
 } // namespace Crowny

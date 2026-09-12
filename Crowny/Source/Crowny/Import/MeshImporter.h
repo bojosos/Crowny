@@ -8,6 +8,7 @@ namespace Crowny
 {
 
     class Material;
+    class Prefab;
 
     struct MeshImportedBone
     {
@@ -42,6 +43,9 @@ namespace Crowny
 
         /** Parses a mesh source without creating GPU assets. When parsing fails and `outError` is set, it receives the reader's message. */
         static MeshImportResult Parse(const Path& path, const MeshImportOptions& importOptions, String* outError = nullptr);
+
+        // Parse source hierarchy and scene components without allocating GPU assets.
+        static Ref<Prefab> ParsePrefab(const Path& path, const MeshImportOptions& importOptions);
 
         virtual Ref<ImportOptions> CreateImportOptions() const override;
     };

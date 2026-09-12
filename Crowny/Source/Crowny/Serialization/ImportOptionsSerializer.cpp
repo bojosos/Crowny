@@ -52,8 +52,10 @@ namespace Crowny
             SerializeEnumYAML(out, "Format", textureImportOptions->Format);
             SerializeEnumYAML(out, "Shape", textureImportOptions->Shape);
             SerializeEnumYAML(out, "DiskFormat", textureImportOptions->DiskFormat);
+            SerializeValueYAML(out, "UASTCEffort", textureImportOptions->UASTCEffort);
 
             SerializeValueYAML(out, "AutoFormat", textureImportOptions->AutomaticFormat);
+            SerializeValueYAML(out, "GenerateEnvironmentMap", textureImportOptions->GenerateEnvironmentMap);
             SerializeValueYAML(out, "CpuCached", textureImportOptions->CpuCached);
             SerializeValueYAML(out, "GenerateMips", textureImportOptions->GenerateMips);
             SerializeValueYAML(out, "MaxMip", textureImportOptions->MaxMip);
@@ -95,12 +97,18 @@ namespace Crowny
             SerializeValueYAML(out, "ImportBones", meshImportOptions->ImportBones);
             SerializeValueYAML(out, "ImportRootMotion", meshImportOptions->ImportRootMotion);
             SerializeValueYAML(out, "ImportMaterials", meshImportOptions->ImportMaterials);
+            SerializeValueYAML(out, "FastTextureCompression", meshImportOptions->FastTextureCompression);
+            SerializeValueYAML(out, "GeneratePrefab", meshImportOptions->GeneratePrefab);
+            SerializeValueYAML(out, "ImportLights", meshImportOptions->ImportLights);
+            SerializeValueYAML(out, "ImportCameras", meshImportOptions->ImportCameras);
             SerializeValueYAML(out, "ImportVertexColors", meshImportOptions->ImportVertexColors);
             SerializeValueYAML(out, "FlipUVs", meshImportOptions->FlipUVs);
             SerializeValueYAML(out, "FlipWindingOrder", meshImportOptions->FlipWindingOrder);
             SerializeValueYAML(out, "GenerateMeshlets", meshImportOptions->GenerateMeshlets);
             SerializeValueYAML(out, "GenerateLods", meshImportOptions->GenerateLods);
             SerializeValueYAML(out, "LodCount", meshImportOptions->LodCount);
+            SerializeValueYAML(out, "GenerateCollision", meshImportOptions->GenerateCollision);
+            SerializeValueYAML(out, "CollisionMaxConvexPoints", meshImportOptions->CollisionMaxConvexPoints);
 
             out << YAML::Key << "AnimationClips" << YAML::Value << YAML::BeginSeq;
             for (const ExtraAnimationClipInfo& clip : meshImportOptions->AnimationInfo)
@@ -185,6 +193,13 @@ namespace Crowny
             DeserializeEnumYAML(textureImportOptionsNode, "DiskFormat", textureImportOptions->DiskFormat, TextureDiskFormat::UASTC,
                                 "Texture disk format \'{}\' in metadata file is invalid.", 0, static_cast<int32_t>(TextureDiskFormat::Count));
             DeserializeValueYAML(textureImportOptionsNode, "AutoFormat", textureImportOptions->AutomaticFormat, true);
+            DeserializeValueYAML(textureImportOptionsNode, "UASTCEffort", textureImportOptions->UASTCEffort, 2u);
+            if (textureImportOptions->UASTCEffort > 4)
+            {
+                CW_ENGINE_WARN("Invalid UASTC effort in texture metadata. Using effort 2.");
+                textureImportOptions->UASTCEffort = 2;
+            }
+            DeserializeValueYAML(textureImportOptionsNode, "GenerateEnvironmentMap", textureImportOptions->GenerateEnvironmentMap, false);
             DeserializeValueYAML(textureImportOptionsNode, "GenerateMips", textureImportOptions->GenerateMips, true);
             DeserializeValueYAML(textureImportOptionsNode, "CpuCached", textureImportOptions->CpuCached, false);
             DeserializeValueYAML(textureImportOptionsNode, "sRGB", textureImportOptions->SRGB, true);
@@ -305,6 +320,10 @@ namespace Crowny
             DeserializeValueYAML(meshImportOptionsNode, "ImportBones", meshImportOptions->ImportBones, false);
             DeserializeValueYAML(meshImportOptionsNode, "ImportRootMotion", meshImportOptions->ImportRootMotion, false);
             DeserializeValueYAML(meshImportOptionsNode, "ImportMaterials", meshImportOptions->ImportMaterials, true);
+            DeserializeValueYAML(meshImportOptionsNode, "FastTextureCompression", meshImportOptions->FastTextureCompression, true);
+            DeserializeValueYAML(meshImportOptionsNode, "GeneratePrefab", meshImportOptions->GeneratePrefab, false);
+            DeserializeValueYAML(meshImportOptionsNode, "ImportLights", meshImportOptions->ImportLights, true);
+            DeserializeValueYAML(meshImportOptionsNode, "ImportCameras", meshImportOptions->ImportCameras, true);
             DeserializeValueYAML(meshImportOptionsNode, "ImportVertexColors", meshImportOptions->ImportVertexColors, true);
             DeserializeValueYAML(meshImportOptionsNode, "FlipUVs", meshImportOptions->FlipUVs, false);
             DeserializeValueYAML(meshImportOptionsNode, "FlipWindingOrder", meshImportOptions->FlipWindingOrder, false);
@@ -312,6 +331,9 @@ namespace Crowny
             DeserializeValueYAML(meshImportOptionsNode, "GenerateLods", meshImportOptions->GenerateLods, true);
             DeserializeValueYAML(meshImportOptionsNode, "LodCount", meshImportOptions->LodCount, 4u);
             meshImportOptions->LodCount = std::clamp(meshImportOptions->LodCount, 1u, 16u);
+            DeserializeValueYAML(meshImportOptionsNode, "GenerateCollision", meshImportOptions->GenerateCollision, true);
+            DeserializeValueYAML(meshImportOptionsNode, "CollisionMaxConvexPoints", meshImportOptions->CollisionMaxConvexPoints, 255u);
+            meshImportOptions->CollisionMaxConvexPoints = std::clamp(meshImportOptions->CollisionMaxConvexPoints, 8u, 4096u);
 
             const YAML::Node animationClips = meshImportOptionsNode["AnimationClips"];
             if (animationClips && animationClips.IsSequence())

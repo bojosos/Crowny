@@ -2,6 +2,7 @@
 
 #include "Crowny/Scene/Prefab.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Scene/Scene.h"
@@ -66,6 +67,36 @@ namespace Crowny
 
         for (const auto& child : sourceEntity.GetChildren())
             CaptureEntityRecursive(source, child, dest, &newNode);
+    }
+
+    void Prefab::OnDependentAssigned(const Ref<Asset>& dependent, const UUID& uuid)
+    {
+        if (!m_PrefabScene || !dependent || uuid.Empty())
+            return;
+        const auto type = dependent->GetAssetType();
+        if (type != AssetType::Mesh && type != AssetType::Material)
+            return;
+        auto view = m_PrefabScene->GetAllEntitiesWith<MeshRendererComponent>();
+        for (auto entity : view)
+        {
+            auto& renderer = view.get<MeshRendererComponent>(entity);
+            if (renderer.MeshHandle.GetInternalPtr() == dependent)
+                renderer.MeshHandle = static_asset_cast<Mesh>(AssetManager::Get().CreateAssetHandle(dependent, uuid));
+            if (type == AssetType::Material)
+                for (auto& material : renderer.Materials)
+                    if (material.GetInternalPtr() == dependent)
+                        material = static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(dependent, uuid));
+        }
+        if (type == AssetType::Material)
+        {
+            auto decals = m_PrefabScene->GetAllEntitiesWith<DecalComponent>();
+            for (auto entity : decals)
+            {
+                auto& material = decals.get<DecalComponent>(entity).Material;
+                if (material.GetInternalPtr() == dependent)
+                    material = static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(dependent, uuid));
+            }
+        }
     }
 
     Entity Prefab::GetRootEntity() const

@@ -134,8 +134,8 @@ namespace Crowny
             {
                 const PhysicsMaterialData firstMaterial = GetMaterial(contact->GetFixtureA());
                 const PhysicsMaterialData secondMaterial = GetMaterial(contact->GetFixtureB());
-                contact->SetFriction(CombinePhysicsMaterialValue(firstMaterial.Friction, firstMaterial.FrictionCombine,
-                                                                 secondMaterial.Friction, secondMaterial.FrictionCombine));
+                contact->SetFriction(CombinePhysicsMaterialValue(firstMaterial.Friction, firstMaterial.FrictionCombine, secondMaterial.Friction,
+                                                                 secondMaterial.FrictionCombine));
                 contact->SetRestitution(CombinePhysicsMaterialValue(firstMaterial.Restitution, firstMaterial.RestitutionCombine,
                                                                     secondMaterial.Restitution, secondMaterial.RestitutionCombine));
                 contact->SetRestitutionThreshold(std::min(firstMaterial.RestitutionThreshold, secondMaterial.RestitutionThreshold));
@@ -228,7 +228,7 @@ namespace Crowny
             static std::pair<uint64_t, uint64_t> ContactKey(const ContactEvent& event)
             {
                 return event.Contact.ShapeA < event.Contact.ShapeB ? std::pair(event.Contact.ShapeA, event.Contact.ShapeB)
-                                                                  : std::pair(event.Contact.ShapeB, event.Contact.ShapeA);
+                                                                   : std::pair(event.Contact.ShapeB, event.Contact.ShapeA);
             }
 
             static void NormalizeEvents(Vector<ContactEvent>& input, Vector<ContactEvent>& output)
@@ -284,7 +284,6 @@ namespace Crowny
                 if (!receiver || !other || !receiver.HasComponent<ManagedScriptComponent>())
                     return;
 
-                auto& scripts = receiver.GetComponent<ManagedScriptComponent>().Scripts;
                 ScriptEvent scriptEvent;
                 scriptEvent.OtherEntity = other.GetUuid();
                 if (event.Contact.IsTrigger)
@@ -295,8 +294,7 @@ namespace Crowny
                         scriptEvent.Kind = ScriptEventKind::TriggerStay2D;
                     else
                         scriptEvent.Kind = ScriptEventKind::TriggerExit2D;
-                    for (auto& script : scripts)
-                        ScriptRuntime::Dispatch(script, scriptEvent);
+                    ScriptRuntime::Dispatch(receiver, scriptEvent);
                     return;
                 }
 
@@ -312,8 +310,7 @@ namespace Crowny
                 scriptEvent.Contacts.reserve(collision.Points.size());
                 for (const glm::vec2& point : collision.Points)
                     scriptEvent.Contacts.push_back({ glm::vec3(point, 0.0f) });
-                for (auto& script : scripts)
-                    ScriptRuntime::Dispatch(script, scriptEvent);
+                ScriptRuntime::Dispatch(receiver, scriptEvent);
             }
 
             static void Dispatch(const ContactEvent& event)
@@ -424,8 +421,7 @@ namespace Crowny
                     body->SetAngularVelocity(angularDistance / fixedTimestep);
                 });
 
-                m_World->Step(fixedTimestep, static_cast<int32_t>(settings.VelocityIterations),
-                              static_cast<int32_t>(settings.PositionIterations));
+                m_World->Step(fixedTimestep, static_cast<int32_t>(settings.VelocityIterations), static_cast<int32_t>(settings.PositionIterations));
                 EnforcePositionConstraints(scene);
                 m_ContactListener->QueueTriggerStayEvents();
                 m_ContactListener->Dispatch();

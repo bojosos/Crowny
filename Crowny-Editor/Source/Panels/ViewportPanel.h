@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Editor/BoxCollider2DBoundsTransaction.h"
+#include "Editor/DecalBoundsInteraction.h"
+#include "Editor/SceneGizmos.h"
+#include "Editor/ViewportAssetDrop.h"
 #include "Editor/ViewportTransformInteraction.h"
 #include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
@@ -15,6 +18,7 @@
 #include <ImGuizmo.h>
 
 #include <functional>
+#include <optional>
 #include <utility>
 
 namespace Crowny
@@ -30,25 +34,6 @@ namespace Crowny
         Bounds = 4
     };
 
-    class ImGuiViewportSceneDraggedEvent : public Event
-    {
-    public:
-        const FileEntry* GetFileEntry() const { return m_FileEntry; }
-        const glm::vec2& GetScreenPosition() const { return m_ScreenPosition; }
-
-        EVENT_CLASS_CATEGORY(EventCategoryImGui);
-        EVENT_CLASS_TYPE(ImGuiViewportSceneDragged);
-
-        ImGuiViewportSceneDraggedEvent(const FileEntry* fileEntry, const glm::vec2& screenPosition)
-          : m_ScreenPosition(screenPosition), m_FileEntry(fileEntry)
-        {
-        }
-
-    private:
-        glm::vec2 m_ScreenPosition;
-        const FileEntry* m_FileEntry;
-    };
-
     /// Read/write access to the render-overlay state owned by the editor layer so the viewport's
     /// top-right toolbar and the Settings > Viewport checkboxes always agree.
     struct ViewportRenderOverlayBinding
@@ -57,6 +42,8 @@ namespace Crowny
         std::function<void(bool)> SetWireframe;
         std::function<bool()> IsShowingStatistics;
         std::function<void(bool)> SetShowStatistics;
+        std::function<uint32_t()> GetDecalDebugView;
+        std::function<void(uint32_t)> SetDecalDebugView;
     };
 
     class ViewportPanel : public ImGuiPanel
@@ -70,7 +57,11 @@ namespace Crowny
         virtual void Render() override;
         const glm::vec2& GetViewportSize() const { return m_ViewportSize; }
         const glm::vec4& GetViewportBounds() const { return m_ViewportBounds; }
-        void SetEventCallback(const EventCallbackFn& onclicked);
+        void SetDropActions(ViewportAssetDrop::Actions actions, std::function<Entity(const glm::vec2&)> pickEntity)
+        {
+            m_AssetDrops.SetActions(std::move(actions));
+            m_PickDropEntity = std::move(pickEntity);
+        }
         void SetEditorRenderTarget(const Ref<RenderTexture>& rt);
         void SetShowStatistics(bool show) { m_ShowStatistics = show; }
         void SetRenderOverlayBinding(ViewportRenderOverlayBinding binding) { m_RenderOverlayBinding = std::move(binding); }
@@ -78,7 +69,7 @@ namespace Crowny
         /// Handles files dropped from the OS shell. Returns true when the drop landed on the viewport image and
         /// was consumed (the files are imported into the project and, once imported, placed in the scene).
         bool OnWindowFileDrop(WindowFileDropEvent& fileDrop);
-        size_t GetPendingDropSpawnCount() const { return m_PendingDropSpawns.size(); }
+        size_t GetPendingDropSpawnCount() const { return m_AssetDrops.GetPendingCount(); }
 
         void SetGizmoMode(GizmoEditMode gizmoMode) { m_GizmoMode = gizmoMode; }
         void SetGizmoLocalMode(bool local) { m_LocalMode = local; }
@@ -97,23 +88,17 @@ namespace Crowny
         void DisableGizmo() { m_GizmoMode = GizmoEditMode::None; }
         void EnableGizmo() { m_GizmoMode = GizmoEditMode::Translate; }
 
-        bool IsMouseOverGizmo() const { return ImGuizmo::IsOver(); }
+        bool IsMouseOverGizmo() const { return ImGuizmo::IsOver() || m_DecalBounds.IsUsing() || m_DecalHovered; }
         bool IsMouseOverHud() const { return m_MouseOverHud; }
+        const SceneGizmoSettings& GetSceneGizmoSettings() const { return m_SceneGizmos; }
 
     private:
-        struct PendingDropSpawn
-        {
-            Path AssetPath;
-            glm::vec2 ScreenPosition;
-            double QueuedAt = 0.0;
-        };
-
         void DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity primary, const Vector<Entity>& selectedEntities);
         void DrawRenderOverlayToolbar(const ImVec2& imageMin, const ImVec2& imageMax);
         void DrawRenderStatistics(const ImVec2& imageMin, const ImVec2& imageMax, float top);
         bool IsShowingStatistics() const;
-        void ProcessPendingDropSpawns();
-        void QueueDropSpawn(const Path& assetPath, const glm::vec2& screenPosition);
+        void SubmitDrop(const Path& path, const glm::vec2& screenPosition);
+        std::optional<glm::vec3> GetDropPosition(const glm::vec2& screenPosition) const;
         const Vector<Entity>& RefreshSelectionScratch(Entity primary);
         void EndTransformInteraction();
         void CancelTransformInteraction();
@@ -124,8 +109,10 @@ namespace Crowny
         bool m_SnapEnabled = false;
         bool m_ShowStatistics = true;
         bool m_MouseOverHud = false;
+        SceneGizmoSettings m_SceneGizmos;
         Ref<RenderTexture> m_RenderTarget;
-        EventCallbackFn OnEvent;
+        ViewportAssetDrop m_AssetDrops = CreateProjectViewportAssetDrop();
+        std::function<Entity(const glm::vec2&)> m_PickDropEntity;
         GizmoEditMode m_GizmoMode = GizmoEditMode::Translate;
         glm::vec2 m_ViewportSize = { 1.0f, 1.0f };
         glm::vec4 m_ViewportBounds;
@@ -136,9 +123,10 @@ namespace Crowny
         Vector<Entity> m_SelectedEntitiesScratch;
         ViewportTransformInteraction m_TransformInteraction;
         BoxCollider2DBoundsTransaction m_ColliderBoundsTransaction;
+        DecalBoundsInteraction m_DecalBounds;
+        bool m_DecalHovered = false;
         bool m_GizmoWasUsing = false;
         ViewportRenderOverlayBinding m_RenderOverlayBinding;
-        Vector<PendingDropSpawn> m_PendingDropSpawns;
         float m_TopRightOverlayBottom = 0.0f;
     };
 

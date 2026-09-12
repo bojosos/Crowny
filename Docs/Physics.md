@@ -44,10 +44,18 @@ Scene format 6 stores persistent and unresolved materials as UUIDs. Transient ma
 
 - Bullet applies material and sensor response at body level, so mixed trigger/solid children are approximated. Its current ray and sweep adapters return the closest hit.
 - Jolt does not currently map connected-body collision overrides or automatic break-force and break-torque handling. Bullet reduces the two break thresholds to one impulse threshold.
-- Triangle meshes and height fields are restricted to static bodies where required by the selected SDK. Box2D exposes 16 collision category bits even though Crowny retains 32 layer slots for compatibility.
+- Triangle meshes and height fields are restricted to static bodies by every SDK (Jolt's `MeshShape` must be static, Bullet and Box3D reject them). The scene enforces this before the backend sees the shape. Box2D exposes 16 collision category bits even though Crowny retains 32 layer slots for compatibility.
 - Character controllers, vehicles, and soft bodies remain backend extensions until a useful common contract exists; unsupported capability bits are not advertised.
-- Scenes support rigid bodies plus box, sphere, and capsule colliders. Their settings are available in the editor, persist through YAML and binary serialization, and are exposed to C# through `Rigidbody3D`, `Collider3D`, and `Physics3D`. Scripts can implement `OnCollisionEnter/Stay/Exit(Collision3D)` and `OnTriggerEnter/Stay/Exit(Entity)`.
-- Convex, mesh, height-field, and compound shapes, constraints, controllers, vehicles, and soft bodies remain native API features. Add scene components only after defining serialization and backend-neutral editor behavior for them.
+- Scenes support rigid bodies plus box, sphere, capsule, and mesh colliders. Their settings are available in the editor, persist through YAML and binary serialization, and are exposed to C# through `Rigidbody3D`, `Collider3D`, `MeshCollider3D`, and `Physics3D`. Scripts can implement `OnCollisionEnter/Stay/Exit(Collision3D)` and `OnTriggerEnter/Stay/Exit(Entity)`.
+- Height-field and compound shapes, constraints, controllers, vehicles, and soft bodies remain native API features. Add scene components only after defining serialization and backend-neutral editor behavior for them.
+
+## Mesh colliders
+
+`MeshCollider3D` follows the Unity model: one component that references a `Mesh` asset and a `Convex` flag. Convex builds a single hull (capped at 255 points, the Box3D/Jolt/PhysX limit) and works on any body type. Non-convex uses the exact triangle mesh and only attaches to Static bodies; other combinations are skipped with one logged warning and an inspector note. World scale is baked into the vertices, including mirrored (negative) scales, which flip the triangle winding.
+
+Collision geometry is cooked at import. `MeshImporter` emits a `PhysicsMesh` dependent (`<file> Collision`) next to each imported mesh when the `Generate Collision` import option is on (default), containing welded positions, a degenerate-free triangle list, and a decimated hull point cloud (`Convex Point Limit`). The `Mesh` asset stores the dependent's UUID (mesh format 5) through `Asset::OnDependentAssigned`, so no editor code knows about the relationship. At runtime `PhysicsMeshResolver` finds geometry in this order: an explicit registration (built-in primitives, tests), the cooked dependent, or a transient build from a `CpuCached` mesh (procedural and script-created meshes). Meshes imported before this change have no collision data until they are reimported. The editor pre-fills the mesh from the entity's Mesh Renderer when the component is added; an empty field never falls back at runtime.
+
+The collider overlay draws the cooked wireframe (source edges also for convex colliders, which is an approximation of the hull) and falls back to the bounds box for very dense meshes. Box3D cannot use triangle meshes as sweep or overlap query shapes; queries against mesh bodies work on every backend.
 - Box3D is pre-1.0 and its API can change. The exact pin isolates Crowny from that churn.
 
 No fork is currently required. Create one only if Crowny needs unreleased fixes, long-lived API compatibility patches, or changes upstream will not accept; keep build-system compatibility patches in the bootstrap scripts.

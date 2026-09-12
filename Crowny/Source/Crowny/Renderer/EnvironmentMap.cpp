@@ -40,23 +40,44 @@ namespace Crowny
 
     EnvironmentMap::EnvironmentMap(const Path& hdrPath) : EnvironmentMap(hdrPath, Settings{}) {}
 
-    EnvironmentMap::EnvironmentMap(const Path& hdrPath, const Settings& settings) : m_Settings(settings)
-    {
-        CreateCubeMesh();
-        GenerateFromHDR(hdrPath);
-        GeneratePrefilteredCube();
-        GenerateIrradianceCube();
+    EnvironmentMap::EnvironmentMap(const Path& hdrPath, const Settings& settings) : m_Settings(settings), m_PendingSource(hdrPath) { Init(); }
 
-        // Release temporary generation resources
+    Ref<EnvironmentMap> EnvironmentMap::CreateDeferred(const Path& hdrPath)
+    {
+        const Ref<EnvironmentMap> environment = CreateRef<EnvironmentMap>();
+        environment->m_PendingSource = hdrPath;
+        environment->m_Settings.CubemapResolution = 256;
+        environment->m_Settings.IrradianceResolution = 16;
+        environment->m_Settings.PrefilteredResolution = 128;
+        environment->m_Settings.PrefilterSamples = 128;
+        return environment;
+    }
+
+    void EnvironmentMap::Init()
+    {
+        if (m_PendingSource.empty())
+            return;
+        CreateCubeMesh();
+        GenerateFromHDR(m_PendingSource);
+        if (m_EnvironmentCubemap)
+        {
+            GeneratePrefilteredCube();
+            GenerateIrradianceCube();
+        }
+        // Cooking immediately reads these render targets back. Submit their graphics
+        // writes before readback uses a transfer command buffer on Vulkan.
+        RenderAPI::Get().SetRenderTarget(nullptr);
+        RenderAPI::Get().SubmitCommandBuffer(nullptr);
         m_CubeVbo = nullptr;
         m_CubeIbo = nullptr;
+        m_PendingSource.clear();
     }
 
     void EnvironmentMap::CreateCubeMesh()
     {
         const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "inPos" } });
-        m_CubeVbo = VertexBuffer::Create({sizeof(s_CubeVertices), BufferUsage::BU_STATIC_DRAW, s_CubeVertices});
-        m_CubeIbo = IndexBuffer::Create({36, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, s_CubeIndices});
+        m_CubeVbo = VertexBuffer::Create({ sizeof(s_CubeVertices), BufferUsage::BU_STATIC_DRAW, s_CubeVertices });
+        m_CubeIbo = IndexBuffer::Create({ 36, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, s_CubeIndices });
         m_CubeVbo->SetLayout(layout);
     }
 
@@ -102,7 +123,7 @@ namespace Crowny
         cubeProps.Faces = 6;
         cubeProps.Shape = TextureShape::TEXTURE_CUBE;
         cubeProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
-        cubeProps.Format = TextureFormat::RGBA16F;
+        cubeProps.Format = TextureFormat::RGBA32F;
         cubeProps.DebugName = "EnvMap/Cubemap";
         m_EnvironmentCubemap = Texture::Create(cubeProps);
 
@@ -196,7 +217,9 @@ namespace Crowny
         TextureDesc tProps;
         tProps.Width = res;
         tProps.Height = res;
-        tProps.Format = TextureFormat::RGBA16F;
+        // Keep the HDR reflection chain in full precision. Bright source pixels
+        // must remain finite through filtering and shader mip interpolation.
+        tProps.Format = TextureFormat::RGBA32F;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         tProps.MipLevels = numMips;
         tProps.Faces = 6;
@@ -258,12 +281,9 @@ namespace Crowny
             {
                 const float u = (static_cast<float>(x) + 0.5f * static_cast<float>(step)) / static_cast<float>(width);
                 const float longitude = (u - 0.5f) * glm::two_pi<float>();
-                const glm::vec3 direction(std::cos(longitude) * cosLatitude, sinLatitude,
-                                          std::sin(longitude) * cosLatitude);
-                const uint64_t pixel = (static_cast<uint64_t>(std::min(y, height - 1u)) * width +
-                                        std::min(x, width - 1u)) * 4u;
-                const glm::vec3 radiance = glm::max(glm::vec3(pixels[pixel], pixels[pixel + 1u], pixels[pixel + 2u]),
-                                                    glm::vec3(0.0f));
+                const glm::vec3 direction(std::cos(longitude) * cosLatitude, sinLatitude, std::sin(longitude) * cosLatitude);
+                const uint64_t pixel = (static_cast<uint64_t>(std::min(y, height - 1u)) * width + std::min(x, width - 1u)) * 4u;
+                const glm::vec3 radiance = glm::max(glm::vec3(pixels[pixel], pixels[pixel + 1u], pixels[pixel + 2u]), glm::vec3(0.0f));
                 const std::array<float, 9> basis = {
                     0.282095f,
                     0.488603f * direction.y,
@@ -280,8 +300,7 @@ namespace Crowny
             }
         }
 
-        const std::array<float, 3> convolution = { glm::pi<float>(), 2.0f * glm::pi<float>() / 3.0f,
-                                                    glm::pi<float>() / 4.0f };
+        const std::array<float, 3> convolution = { glm::pi<float>(), 2.0f * glm::pi<float>() / 3.0f, glm::pi<float>() / 4.0f };
         for (uint32_t coefficient = 0; coefficient < coefficients.size(); coefficient++)
         {
             const uint32_t band = coefficient == 0 ? 0u : coefficient < 4 ? 1u : 2u;

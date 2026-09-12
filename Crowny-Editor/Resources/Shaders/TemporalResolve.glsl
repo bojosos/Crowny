@@ -9,6 +9,7 @@ layout(set = 0, binding = 0) uniform CwTemporalConstants
     uvec2 resolution;
     uint historyValid;
     float feedback;
+    vec4 decalInvalidation;
 } cwTemporal;
 layout(set = 0, binding = 1) uniform sampler2D cwCurrentColor;
 layout(set = 0, binding = 2) uniform sampler2D cwSceneDepth;
@@ -41,6 +42,9 @@ void main()
     vec2 historyUv = uv - velocity;
     bool usableHistory = cwTemporal.historyValid != 0u && all(greaterThanEqual(historyUv, vec2(0.0))) &&
                          all(lessThanEqual(historyUv, vec2(1.0))) && texelFetch(cwSceneDepth, pixel, 0).r > 0.0;
+    bool changedDecal = all(greaterThanEqual(uv, cwTemporal.decalInvalidation.xy)) && all(lessThanEqual(uv, cwTemporal.decalInvalidation.zw));
+    changedDecal = changedDecal || (all(greaterThanEqual(historyUv, cwTemporal.decalInvalidation.xy)) && all(lessThanEqual(historyUv, cwTemporal.decalInvalidation.zw)));
+    usableHistory = usableHistory && !changedDecal;
     vec3 history = texture(cwHistory, historyUv).rgb;
     history = clamp(history, minimumColor, maximumColor);
     float motionRejection = clamp(length(velocity) * float(max(cwTemporal.resolution.x, cwTemporal.resolution.y)), 0.0, 1.0);

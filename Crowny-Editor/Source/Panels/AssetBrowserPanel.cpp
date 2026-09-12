@@ -2,6 +2,7 @@
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AssetBrowserSelection.h"
+#include "Panels/AssetBrowserSorting.h"
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
@@ -46,6 +47,8 @@ namespace Crowny
             return "New Folder";
         case AssetBrowserItem::Material:
             return "New Material.cwmat";
+        case AssetBrowserItem::DecalMaterial:
+            return "New Decal Material.cwmat";
         case AssetBrowserItem::Prefab:
             return "New Prefab.cwprefab";
         case AssetBrowserItem::Shader:
@@ -87,6 +90,8 @@ namespace Crowny
         case AssetType::PhysicsMaterial2D:
         case AssetType::PhysicsMaterial:
             return "Physics material";
+        case AssetType::PhysicsMesh:
+            return "Physics mesh";
         case AssetType::PlainText:
             return "Text";
         case AssetType::Font:
@@ -114,6 +119,17 @@ namespace Crowny
             return "Folder";
         const FileEntry* fileEntry = static_cast<FileEntry*>(entry.get());
         return fileEntry->Metadata ? GetAssetTypeName(fileEntry->Metadata->Type) : "File";
+    }
+
+    static String GetEntryDisplayName(const Ref<LibraryEntry>& entry)
+    {
+        if (entry->Type == LibraryEntryType::File)
+        {
+            const FileEntry* fileEntry = static_cast<FileEntry*>(entry.get());
+            if (fileEntry->Metadata && fileEntry->Metadata->Type != AssetType::None)
+                return entry->Filepath.stem().string();
+        }
+        return entry->ElementName;
     }
 
     static String FormatFileSize(uint32_t bytes)
@@ -144,12 +160,24 @@ namespace Crowny
     static void DrawGridEntryName(const char* name, float width)
     {
         const ImVec2 position = ImGui::GetCursorScreenPos();
-        const ImVec2 textSize = ImGui::CalcTextSize(name);
-        const float textX = textSize.x < width ? position.x + (width - textSize.x) * 0.5f : position.x;
-        const ImVec2 textMin(textX, position.y);
-        const ImVec2 textMax(position.x + width, position.y + ImGui::GetTextLineHeight());
-        ImGui::RenderTextEllipsis(ImGui::GetWindowDrawList(), textMin, textMax, textMax.x, name, nullptr, &textSize);
-        ImGui::Dummy(ImVec2(width, ImGui::GetTextLineHeight()));
+        const float lineHeight = ImGui::GetTextLineHeight();
+        const char* end = name + strlen(name);
+        const char* line = name;
+        for (int row = 0; row < 2 && line < end; row++)
+        {
+            const char* lineEnd = row == 0 ? ImGui::GetFont()->CalcWordWrapPosition(ImGui::GetFontSize(), line, end, width) : end;
+            if (lineEnd == line)
+                lineEnd = line + ImTextCountUtf8BytesFromChar(line, end);
+            const ImVec2 textSize = ImGui::CalcTextSize(line, lineEnd);
+            const float textX = position.x + std::max(0.0f, (width - textSize.x) * 0.5f);
+            const ImVec2 textMin(textX, position.y + row * lineHeight);
+            const ImVec2 textMax(position.x + width, textMin.y + lineHeight);
+            ImGui::RenderTextEllipsis(ImGui::GetWindowDrawList(), textMin, textMax, textMax.x, line, lineEnd, &textSize);
+            line = lineEnd;
+            while (line < end && (*line == ' ' || *line == '\n' || *line == '\r'))
+                line++;
+        }
+        ImGui::Dummy(ImVec2(width, lineHeight * 2.0f));
     }
 
     static void DrawAssetTooltip(const Path& path, const AssetPreviewResult* preview)
@@ -327,7 +355,23 @@ namespace Crowny
             m_CurrentDirectoryEntry = resolved;
             RecalculateDirectoryEntries();
         }
-        if (ComputeFolderFingerprint() != m_FolderFingerprint)
+        else
+        {
+            // A refresh can rebuild ancestors while the current folder keeps its address; the breadcrumb list caches
+            // raw pointers along the parent chain, so re-derive it whenever the live chain differs.
+            Vector<DirectoryEntry*> chain;
+            for (DirectoryEntry* entry = resolved; entry != nullptr; entry = entry->Parent)
+                chain.push_back(entry);
+            std::reverse(chain.begin(), chain.end());
+            if (chain != m_DirectoryPathEntries)
+                m_DirectoryPathEntries = std::move(chain);
+        }
+        const bool importing = ProjectLibrary::Get().IsImporting();
+        const size_t completedImports = ProjectLibrary::Get().GetImportProgress().CompletedFiles;
+        const bool importChanged = importing != m_WasImporting || completedImports != m_LastCompletedImports;
+        m_WasImporting = importing;
+        m_LastCompletedImports = completedImports;
+        if (importChanged || ComputeFolderFingerprint() != m_FolderFingerprint)
             UpdateDisplayList();
     }
 
@@ -567,9 +611,6 @@ namespace Crowny
             if (importing)
                 ImGui::EndDisabled();
             UI::SetTooltip(importing ? "An import is already running" : "Rescan this folder");
-
-            if (importing)
-                UpdateDisplayList(); // Show newly imported assets as they complete
         };
 
         DirectoryEntry* requestedDirectory = nullptr;
@@ -780,6 +821,7 @@ namespace Crowny
                 return;
             m_RenamingPath = entry->Filepath; // TODO: Use hash instead of path
             m_RenamingText = m_RenamingPath.filename().string();
+            m_RenameNeedsFocus = true;
         }
 
         if (Input::IsKeyDown(Key::Enter) && !m_SelectionSet.empty() && m_SelectionStartIndex < displayList.size())
@@ -839,6 +881,10 @@ namespace Crowny
         }
 
         // Keyboard navigation
+        const bool revealSelection =
+          m_SelectionSet.empty()
+            ? Input::IsKeyUp(Key::Left) || Input::IsKeyUp(Key::Right) || Input::IsKeyUp(Key::Up) || Input::IsKeyUp(Key::Down)
+            : Input::IsKeyDown(Key::Left) || Input::IsKeyDown(Key::Right) || Input::IsKeyDown(Key::Up) || Input::IsKeyDown(Key::Down);
         if (m_SelectionSet.empty()) // Select from unselected state
         {
             if (Input::IsKeyUp(Key::Left) || Input::IsKeyUp(Key::Up))
@@ -944,6 +990,7 @@ namespace Crowny
                     m_SelectionSet.insert(displayList[i]->Filepath);
             }
         }
+        m_RevealSelection |= revealSelection && !m_SelectionSet.empty();
     }
 
     void AssetBrowserPanel::ClearSelection()
@@ -951,6 +998,7 @@ namespace Crowny
         m_SelectionSet.clear();
         m_SelectionStartIndex = (uint32_t)-1;
         m_SelectionEndIndex = 0;
+        m_RevealSelection = false;
 
         m_SetSelectedPathCallback({});
     }
@@ -984,14 +1032,14 @@ namespace Crowny
 
     void AssetBrowserPanel::SortDisplayList(DisplayList& displayList) const
     {
+        if (m_FileSortingMode == FileSortingMode::SortByName)
+        {
+            SortAssetBrowserEntriesByName(displayList);
+            return;
+        }
+
         std::sort(displayList.begin(), displayList.end(), [this](const Ref<LibraryEntry>& l, const Ref<LibraryEntry>& r) {
-            if (m_FileSortingMode == FileSortingMode::SortByName)
-            {
-                if (l->Type == r->Type)
-                    return StringUtils::CaseInsensitiveCompare(l->ElementName, r->ElementName);
-                return (int32_t)l->Type < (int32_t)r->Type;
-            }
-            else if (m_FileSortingMode == FileSortingMode::SortByDate)
+            if (m_FileSortingMode == FileSortingMode::SortByDate)
                 return l->LastUpdateTime < r->LastUpdateTime;
             else if (m_FileSortingMode == FileSortingMode::SortBySize)
             {
@@ -1014,7 +1062,7 @@ namespace Crowny
         case AssetBrowserFilter::Materials:
             return { AssetType::Material, AssetType::PhysicsMaterial, AssetType::PhysicsMaterial2D };
         case AssetBrowserFilter::Models:
-            return { AssetType::Mesh, AssetType::MeshSource, AssetType::AnimationClip };
+            return { AssetType::Mesh, AssetType::MeshSource, AssetType::AnimationClip, AssetType::PhysicsMesh };
         case AssetBrowserFilter::Audio:
             return { AssetType::AudioClip, AssetType::AudioMixer };
         case AssetBrowserFilter::Code:
@@ -1045,7 +1093,7 @@ namespace Crowny
         return displayList;
     }
 
-    // Currently the search is performed again. Since we kinda know the changes this might not be necessary.
+    // Rebuild the cached results only when the query, filters, or library contents change.
     void AssetBrowserPanel::UpdateDisplayList(const std::optional<Path>& preferredStartPath, const std::optional<Path>& preferredEndPath)
     {
         if (m_CurrentDirectoryEntry == nullptr)
@@ -1153,6 +1201,8 @@ namespace Crowny
         }
 
         UpdateDisplayList(preferredSelection, preferredSelection);
+        if (preferredSelection)
+            m_SetSelectedPathCallback(*preferredSelection);
     }
 
     void AssetBrowserPanel::HandleOpen(LibraryEntry* entry)
@@ -1172,7 +1222,7 @@ namespace Crowny
 
     void AssetBrowserPanel::DrawFiles()
     {
-        const float cellSize = m_ThumbnailSize + m_Padding;
+        const float cellSize = std::max(120.0f, m_ThumbnailSize + 16.0f) + m_Padding + ImGui::GetStyle().CellPadding.x * 2.0f;
         const float panelWidth = ImGui::GetContentRegionAvail().x;
         m_ColumnCount = (int)(panelWidth / cellSize);
         if (m_ColumnCount < 1)
@@ -1225,6 +1275,9 @@ namespace Crowny
         if (ImGui::IsWindowFocused() && (m_RenamingPath.empty() || m_RenamingPath != m_CurrentDirectoryEntry->Filepath))
             HandleKeyboardNavigation();
 
+        const bool revealSelection = std::exchange(m_RevealSelection, false) && !m_SelectionSet.empty();
+        const bool revealRename = m_RenameNeedsFocus;
+
         if (m_View == AssetBrowserView::List)
         {
             const ImGuiTableFlags listFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable |
@@ -1242,7 +1295,7 @@ namespace Crowny
             const float rowHeight = ImGui::GetFrameHeight() + 4.0f;
             ImGuiListClipper clipper;
             clipper.Begin(static_cast<int>(displayList.size()), rowHeight);
-            if (!m_SelectionSet.empty() && m_SelectionEndIndex < displayList.size())
+            if (revealSelection && m_SelectionEndIndex < displayList.size())
                 clipper.IncludeItemByIndex(static_cast<int>(m_SelectionEndIndex));
             const uint32_t renamingIndex = FindDisplayIndex(m_RenamingPath);
             if (renamingIndex < displayList.size())
@@ -1254,6 +1307,7 @@ namespace Crowny
                 {
                     const Ref<LibraryEntry>& entry = displayList[entryIdx];
                     const Path& path = entry->Filepath;
+                    const String displayName = GetEntryDisplayName(entry);
                     const AssetBrowserItemId itemId = MakeAssetBrowserItemId(path);
                     ImGui::PushID(static_cast<int>(itemId.UpperBits));
                     ImGui::PushID(static_cast<int>(itemId.LowerBits));
@@ -1314,7 +1368,7 @@ namespace Crowny
                         UIUtils::SetAssetPayload(entry.get());
                         ImGui::Image(texture, ImVec2(32.0f, 32.0f), { 0, 1 }, { 1, 0 });
                         ImGui::SameLine();
-                        ImGui::TextUnformatted(entry->ElementName.c_str());
+                        ImGui::TextUnformatted(displayName.c_str());
                         ImGui::EndDragDropSource();
                     }
 
@@ -1339,7 +1393,7 @@ namespace Crowny
                         ImGui::EndPopup();
                     }
 
-                    if (entryIdx == m_SelectionEndIndex)
+                    if ((revealSelection && entryIdx == m_SelectionEndIndex) || (revealRename && entryIdx == renamingIndex))
                         ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
                     hovered |= rowHovered;
 
@@ -1359,17 +1413,21 @@ namespace Crowny
                             m_RenamingText.clear();
                         };
                         ImGui::SetNextItemWidth(std::max(80.0f, ImGui::GetColumnWidth() - iconSize - 24.0f));
-                        ImGui::SetKeyboardFocusHere();
+                        if (m_RenameNeedsFocus)
+                        {
+                            ImGui::SetKeyboardFocusHere();
+                            m_RenameNeedsFocus = false;
+                        }
                         if (ImGui::InputText("##RenameAssetList", &m_RenamingText,
                                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
                             completeRename();
-                        else if (ImGui::IsItemDeactivatedAfterEdit())
+                        else if (ImGui::IsItemDeactivated())
                             completeRename();
                         if (Input::IsKeyPressed(Key::Escape))
                             completeRename();
                     }
                     else
-                        ImGui::TextUnformatted(entry->ElementName.c_str());
+                        ImGui::TextUnformatted(displayName.c_str());
 
                     ImGui::TableSetColumnIndex(1);
                     ImGui::TextDisabled("%s", GetEntryTypeName(entry));
@@ -1395,18 +1453,17 @@ namespace Crowny
             return;
         }
 
-        const ImGuiTableFlags tableFlags =
-          ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoBordersInBody;
+        const ImGuiTableFlags tableFlags = ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoBordersInBody;
         if (!ImGui::BeginTable("##assetGrid", m_ColumnCount, tableFlags))
             return;
 
         const uint32_t columnCount = static_cast<uint32_t>(m_ColumnCount);
         const uint32_t rowCount = GetAssetBrowserRowCount(static_cast<uint32_t>(displayList.size()), columnCount);
-        const float gridRowHeight =
-          m_ThumbnailSize + ImGui::GetStyle().FramePadding.y * 2.0f + ImGui::GetStyle().ItemSpacing.y + ImGui::GetTextLineHeight() + m_Padding;
+        const float gridRowHeight = m_ThumbnailSize + 16.0f + ImGui::GetStyle().ItemSpacing.y + ImGui::GetTextLineHeight() * 2.0f +
+                                    ImGui::GetStyle().CellPadding.y * 2.0f + m_Padding;
         ImGuiListClipper clipper;
         clipper.Begin(static_cast<int>(rowCount), gridRowHeight);
-        if (!m_SelectionSet.empty() && m_SelectionEndIndex < displayList.size())
+        if (revealSelection && m_SelectionEndIndex < displayList.size())
             clipper.IncludeItemByIndex(static_cast<int>(GetAssetBrowserItemRow(m_SelectionEndIndex, columnCount)));
         const uint32_t renamingIndex = FindDisplayIndex(m_RenamingPath);
         if (renamingIndex < displayList.size())
@@ -1423,6 +1480,7 @@ namespace Crowny
                     ImGui::TableSetColumnIndex(static_cast<int>(entryIdx % columnCount));
                     const Ref<LibraryEntry>& entry = displayList[entryIdx];
                     const Path& path = entry->Filepath;
+                    const String displayName = GetEntryDisplayName(entry);
 
                     const AssetBrowserItemId itemId = MakeAssetBrowserItemId(path);
                     ImGui::PushID(static_cast<int>(itemId.UpperBits));
@@ -1431,9 +1489,6 @@ namespace Crowny
                     auto iterFind = m_SelectionSet.find(entry->Filepath); // Show selected files
                     const bool selected = iterFind != m_SelectionSet.end();
 
-                    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-                    if (!selected)
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
                     ImTextureID tid;
                     const AssetPreviewResult* preview = nullptr;
                     if (entry->Type == LibraryEntryType::Directory)
@@ -1446,12 +1501,31 @@ namespace Crowny
                                 : m_FileIcon;
                     }
 
-                    // Thumbnail
+                    // One hit target and background for the thumbnail, label, and padding.
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + m_Padding * 0.5f);
                     ImGui::BeginGroup();
-                    ImGui::ImageButton("##thumb", tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
-                    ImGui::SetNextItemWidth(m_ThumbnailSize);
+                    const ImVec2 cardMin = ImGui::GetCursorScreenPos();
+                    const float cardWidth = std::max(1.0f, ImGui::GetContentRegionAvail().x - m_Padding * 0.5f);
+                    const float cardHeight = gridRowHeight - ImGui::GetStyle().CellPadding.y * 2.0f - m_Padding;
+                    const ImVec2 cardMax(cardMin.x + cardWidth, cardMin.y + cardHeight);
+                    if (m_RenamingPath == path)
+                        ImGui::Dummy(ImVec2(cardWidth, cardHeight));
+                    else
+                        ImGui::InvisibleButton("##thumb", ImVec2(cardWidth, cardHeight));
+                    const bool cardHovered = ImGui::IsItemHovered();
+                    ImVec4 accent = ImGui::ColorConvertU32ToFloat4(UI::Colors::Accent);
+                    accent.w = selected ? 0.20f : 0.08f;
+                    if (selected || cardHovered)
+                        ImGui::GetWindowDrawList()->AddRectFilled(cardMin, cardMax, ImGui::GetColorU32(accent), 3.0f);
+                    const float iconSize = std::min(m_ThumbnailSize, std::max(1.0f, cardWidth - 16.0f));
+                    const ImVec2 iconMin(cardMin.x + (cardWidth - iconSize) * 0.5f, cardMin.y + 8.0f);
+                    ImGui::GetWindowDrawList()->AddImage(tid, iconMin, ImVec2(iconMin.x + iconSize, iconMin.y + iconSize), ImVec2(0, 1),
+                                                         ImVec2(1, 0));
+                    ImGui::SetCursorScreenPos(ImVec2(cardMin.x + 4.0f, cardMin.y + 8.0f + m_ThumbnailSize + ImGui::GetStyle().ItemSpacing.y));
+                    const float labelWidth = std::max(1.0f, cardWidth - 8.0f);
+                    ImGui::SetNextItemWidth(labelWidth);
                     if (m_RenamingPath.empty() || m_RenamingPath != path) // File icon
-                        DrawGridEntryName(entry->ElementName.c_str(), m_ThumbnailSize);
+                        DrawGridEntryName(displayName.c_str(), labelWidth);
                     else // This file is being renamed
                     {
                         auto completeRename = [&]() {
@@ -1466,30 +1540,35 @@ namespace Crowny
                         };
                         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
 
-                        ImGui::SetKeyboardFocusHere();
+                        if (m_RenameNeedsFocus)
+                        {
+                            ImGui::SetKeyboardFocusHere();
+                            m_RenameNeedsFocus = false;
+                        }
                         if (ImGui::InputText("##RenameFile", &m_RenamingText,
                                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
                             completeRename();
                         ImGui::PopStyleVar();
 
-                        if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) && !ImGui::IsItemClicked())
+                        if (ImGui::IsItemDeactivated())
                             completeRename();
 
                         if (Input::IsKeyPressed(Key::Escape))
                             completeRename();
                     }
 
+                    ImGui::SetCursorScreenPos(cardMin);
+                    ImGui::Dummy(ImVec2(cardWidth, cardHeight));
                     ImGui::EndGroup();
 
                     // Selected card: 1px amber accent border around the card group.
                     if (selected)
                     {
-                        const ImVec2 cardMin = ImGui::GetItemRectMin();
-                        const ImVec2 cardMax = ImGui::GetItemRectMax();
-                        ImGui::GetWindowDrawList()->AddRect(cardMin, cardMax, UI::Colors::Accent, 3.0f, 0, 1.0f);
+                        ImGui::GetWindowDrawList()->AddRect(ImVec2(cardMin.x + 1.0f, cardMin.y + 1.0f), ImVec2(cardMax.x - 1.0f, cardMax.y - 1.0f),
+                                                            UI::Colors::Accent, 3.0f, 0, entryIdx == m_SelectionEndIndex ? 2.0f : 1.0f);
                     }
 
-                    if (entryIdx == m_SelectionEndIndex)
+                    if ((revealSelection && entryIdx == m_SelectionEndIndex) || (revealRename && entryIdx == renamingIndex))
                         ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
                     hovered |= ImGui::IsItemHovered();
                     DrawAssetTooltip(path, preview);
@@ -1498,12 +1577,12 @@ namespace Crowny
                         UIUtils::SetAssetPayload(entry.get());
                         ImGui::ImageButton("##thumb", tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
                         ImGui::SetNextItemWidth(m_ThumbnailSize);
-                        float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
+                        float textWidth = ImGui::CalcTextSize(displayName.c_str()).x;
                         if (m_ThumbnailSize >= textWidth)
                             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + m_ThumbnailSize * 0.5f - textWidth * 0.5f);
 
                         ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + m_ThumbnailSize);
-                        ImGui::Text("%s", entry->ElementName.c_str());
+                        ImGui::Text("%s", displayName.c_str());
                         ImGui::PopTextWrapPos();
 
                         ImGui::EndDragDropSource();
@@ -1519,10 +1598,6 @@ namespace Crowny
                             ImGui::EndDragDropTarget();
                         }
                     }
-
-                    if (!selected)
-                        ImGui::PopStyleColor();
-                    ImGui::PopStyleColor();
 
                     const bool shouldOpen = ImGui::IsItemHovered() && m_RenamingText.empty() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
@@ -1638,7 +1713,8 @@ namespace Crowny
                         hasChildren = true;
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf);
 
-                if (m_CurrentDirectoryEntry->ElementNameHash == cur->ElementNameHash && m_CurrentDirectoryEntry->Filepath == cur->Filepath)
+                if (m_CurrentDirectoryEntry != nullptr && m_CurrentDirectoryEntry->ElementNameHash == cur->ElementNameHash &&
+                    m_CurrentDirectoryEntry->Filepath == cur->Filepath)
                     flags |= ImGuiTreeNodeFlags_Selected;
 
                 if (dirEntryIdx != -1 && dirEntryIdx < m_DirectoryPathEntries.size() &&
@@ -1722,6 +1798,8 @@ namespace Crowny
             ImGui::Separator();
             if (ImGui::MenuItem("Material"))
                 CreateNew(AssetBrowserItem::Material);
+            if (ImGui::MenuItem("Decal Material"))
+                CreateNew(AssetBrowserItem::DecalMaterial);
             if (ImGui::MenuItem("Shader"))
                 CreateNew(AssetBrowserItem::Shader);
             if (ImGui::MenuItem("Compute Shader"))
@@ -1761,6 +1839,7 @@ namespace Crowny
             if (entry)
                 m_RenamingPath = entry->Filepath;
             m_RenamingText = m_RenamingPath.filename().string();
+            m_RenameNeedsFocus = true;
         }
 
         if (entry == nullptr)
@@ -1821,9 +1900,11 @@ namespace Crowny
             ProjectLibrary::Get().CreateEntry(CreateRef<PhysicsMaterial3D>(), newEntryPath);
             break;
         }
+        case AssetBrowserItem::DecalMaterial:
         case AssetBrowserItem::Material: {
-            AssetHandle<Shader> shader = AssetManager::TryGet()->Load<Shader>(UNLIT_SHADER_PATH);
-            Ref<Material> material = Material::CreateUnlit(shader);
+            Ref<Material> material = itemType == AssetBrowserItem::DecalMaterial ? Material::CreateDecal() : Material::CreateDefault();
+            if (!material)
+                return;
             ProjectLibrary::Get().CreateEntry(material, newEntryPath);
             break;
         }
@@ -1848,8 +1929,15 @@ namespace Crowny
         {
             m_RenamingPath = newEntry->Filepath;
             m_RenamingText = newEntryPath.filename().string();
+            m_RenameNeedsFocus = true;
+            m_SelectionSet.clear();
+            m_SelectionSet.insert(newEntry->Filepath);
         }
-        UpdateDisplayList();
+        UpdateDisplayList(newEntryPath, newEntryPath);
+        if (newEntry)
+        {
+            m_SetSelectedPathCallback(newEntry->Type == LibraryEntryType::File ? newEntry->Filepath : Path{});
+        }
     }
 
     void AssetBrowserPanel::RecalculateDirectoryEntries()

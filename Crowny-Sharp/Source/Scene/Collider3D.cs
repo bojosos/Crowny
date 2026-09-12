@@ -211,4 +211,23 @@ namespace Crowny
         public float height { get { return Height; } set { Height = value; } }
 
     }
+
+    /// <summary>A collider shaped by a mesh asset. Convex hulls work on any body; triangle meshes require a static body.</summary>
+    public sealed class MeshCollider3D : Collider3D
+    {
+        /// <summary>The mesh asset that defines the collision shape.</summary>
+        public Mesh Mesh
+        {
+            get { return ManagedRuntimeContext.CreateAsset<Mesh>(ManagedRuntimeContext.MeshCollider3DGetMesh(EntityId)); }
+            set { ManagedRuntimeContext.MeshCollider3DSetMesh(EntityId, value != null ? value.uuid : UUID.Empty); }
+        }
+
+        /// <summary>Whether the mesh is cooked as a convex hull instead of a triangle mesh.</summary>
+        public bool Convex
+        {
+            get { return ManagedRuntimeContext.MeshCollider3DGetConvex(EntityId); }
+            set { ManagedRuntimeContext.MeshCollider3DSetConvex(EntityId, value); }
+        }
+
+    }
 }

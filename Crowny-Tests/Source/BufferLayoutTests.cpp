@@ -1,8 +1,41 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Crowny/RenderAPI/Buffer.h"
+#include "Crowny/Serialization/CerealDataStreamArchive.h"
 
 using namespace Crowny;
+
+TEST_CASE("Deserialized buffer layouts get distinct runtime cache identities", "[Renderer][BufferLayout][Serialization]")
+{
+    const auto loadWithSharedSavedId = [](const BufferLayout& source, BufferLayout& restored) {
+        auto stream = CreateRef<MemoryDataStream>(256);
+        {
+            BinaryDataStreamOutputArchive output(stream);
+            output(source);
+        }
+        // Independent import processes can assign the same ID to different layouts.
+        const uint32_t savedId = 42;
+        stream->Seek(0);
+        stream->Write(&savedId, sizeof(savedId));
+        stream->Seek(0);
+        BinaryDataStreamInputArchive input(stream);
+        input(restored);
+    };
+    BufferLayout positions{ { ShaderDataType::Float3, "position" } };
+    BufferLayout positionsAndNormals{ { ShaderDataType::Float3, "position" }, { ShaderDataType::Float3, "normal" } };
+    BufferLayout first;
+    BufferLayout second;
+    loadWithSharedSavedId(positions, first);
+    loadWithSharedSavedId(positionsAndNormals, second);
+    CHECK(first.GetId() != second.GetId());
+    CHECK(first.GetStride() == 3 * sizeof(float));
+    CHECK(second.GetStride() == 6 * sizeof(float));
+    const uint32_t previousId = first.GetId();
+    loadWithSharedSavedId(positionsAndNormals, first);
+    CHECK(first.GetId() != previousId);
+    CHECK(first.GetId() != second.GetId());
+    CHECK(first.GetStride() == 6 * sizeof(float));
+}
 
 TEST_CASE("Buffer layouts calculate independent stream strides", "[Renderer][BufferLayout]")
 {

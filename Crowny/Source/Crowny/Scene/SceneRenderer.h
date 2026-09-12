@@ -4,6 +4,7 @@
 #include "Crowny/Renderer/RenderHistoryReleaseSink.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
 #include "Crowny/Renderer/RenderWorld.h"
+#include "Crowny/Renderer/TextLayoutCache.h"
 #include "Crowny/Scene/Scene.h"
 
 namespace Crowny
@@ -24,8 +25,14 @@ namespace Crowny
         uint32_t GraphicsPasses = 0;
         uint32_t ComputePasses = 0;
         uint32_t TransferPasses = 0;
+        uint32_t SubmittedSprites2D = 0;
+        uint32_t VisibleSprites2D = 0;
+        uint32_t SpriteBatches2D = 0;
+        uint64_t UploadedBytes2D = 0;
+        DecalRenderStats Decals;
         uint32_t Barriers = 0;
         double RenderGraphCpuTimeMs = 0.0;
+        bool FrameRendered = false;
         bool RenderGraphSucceeded = false;
     };
 
@@ -33,8 +40,7 @@ namespace Crowny
     {
     public:
         // An injected sink must outlive this renderer. A null sink uses the active render thread.
-        SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget,
-                      RenderHistoryReleaseSink* historyReleaseSink = nullptr);
+        SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget, RenderHistoryReleaseSink* historyReleaseSink = nullptr);
         ~SceneRenderer();
 
         void Init();
@@ -69,6 +75,7 @@ namespace Crowny
         void ExtractSnapshotWithHistory(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform, uint64_t historyNamespace,
                                         bool drawGrid) const;
         static void RenderLegacySnapshot(const RenderSnapshot& snapshot);
+        static void Render2DOnlySnapshot(const RenderSnapshot& snapshot);
         static void RenderLegacyOverlays(const RenderSnapshot& snapshot);
         static void ReleaseRenderThreadHistory(uint64_t historyNamespace);
         void DispatchHistoryReleases();
@@ -192,6 +199,17 @@ namespace Crowny
         Ref<CommandBuffer> m_CommandBuffer;
         RenderHistoryReleaseSink* m_HistoryReleaseSink = nullptr;
         mutable RenderWorld m_RenderWorld;
+        mutable RenderWorld2D m_RenderWorld2D;
+        std::shared_ptr<const uint8_t> m_World2DLifetime = std::make_shared<uint8_t>(0);
+        struct TrackedSprite2D
+        {
+            RenderHandle2D Handle;
+            uint64_t LastSeenEpoch = 0;
+        };
+        mutable UnorderedMap<uint64_t, TrackedSprite2D> m_TrackedSprites2D;
+        mutable Vector<RenderChange2D> m_RenderWorld2DChangeScratch;
+        mutable RenderOrder2D m_RenderOrder2D;
+        mutable TextLayoutCache m_TextLayoutCache;
         mutable RenderLightWorld m_RenderLightWorld;
         mutable UnorderedMap<uint64_t, TrackedRenderInstance> m_TrackedRenderInstances;
         mutable Vector<RenderWorldChange> m_RenderWorldChangeScratch;

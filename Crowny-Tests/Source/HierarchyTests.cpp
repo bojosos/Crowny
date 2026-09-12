@@ -1,13 +1,49 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Scene/Prefab.h"
+#include "Crowny/Scene/PrefabSync.h"
 #include "Crowny/Scene/Scene.h"
 
 using namespace Crowny;
 using namespace Crowny::Literals;
+
+TEST_CASE("Prefab sync propagates mesh collider settings unless overridden", "[Ecs][Prefab][Physics]")
+{
+    AssetManager assets;
+    const UUID prefabMeshUuid = UuidGenerator::Generate();
+    const UUID instanceMeshUuid = UuidGenerator::Generate();
+
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity prefab = scene->CreateEntity("Prefab");
+    auto& prefabCollider = prefab.AddComponent<MeshCollider3DComponent>();
+    prefabCollider.SetMesh(static_asset_cast<Mesh>(assets.GetAssetHandle(prefabMeshUuid)), prefab);
+    prefabCollider.SetConvex(true, prefab);
+    prefabCollider.SetIsTrigger(true);
+
+    Entity instance = scene->CreateEntity("Instance");
+    auto& instanceCollider = instance.AddComponent<MeshCollider3DComponent>();
+    instanceCollider.SetMesh(static_asset_cast<Mesh>(assets.GetAssetHandle(instanceMeshUuid)), instance);
+    instanceCollider.SetConvex(false, instance);
+
+    PrefabComponent pc;
+    PrefabSync::SyncEntity(instance, prefab, pc);
+    CHECK(instanceCollider.GetMesh().GetUUID() == prefabMeshUuid);
+    CHECK(instanceCollider.IsConvex());
+    CHECK(instanceCollider.IsTrigger());
+
+    instanceCollider.SetMesh(static_asset_cast<Mesh>(assets.GetAssetHandle(instanceMeshUuid)), instance);
+    instanceCollider.SetConvex(false, instance);
+    pc.MarkOverridden("Mesh Collider 3D.Mesh");
+    pc.MarkOverridden("Mesh Collider 3D.Convex");
+    PrefabSync::SyncEntity(instance, prefab, pc);
+    CHECK(instanceCollider.GetMesh().GetUUID() == instanceMeshUuid);
+    CHECK_FALSE(instanceCollider.IsConvex());
+}
 
 TEST_CASE("Prefab override paths support allocation-free lookup", "[Ecs][Prefab]")
 {
@@ -532,8 +568,7 @@ TEST_CASE("Bulk hierarchy preserve-children destroy rejects nested selections at
     REQUIRE(grandChild.SetParent(child));
     const Array<Entity, 2> selected{ parent, child };
 
-    const HierarchyMutationResult result =
-        scene->DestroyEntities(selected, HierarchyDestroyMode::PreserveChildren);
+    const HierarchyMutationResult result = scene->DestroyEntities(selected, HierarchyDestroyMode::PreserveChildren);
 
     CHECK_FALSE(result.Succeeded);
     CHECK(parent.IsValid());
@@ -570,8 +605,7 @@ TEST_CASE("Bulk hierarchy preserve-children destroy promotes multiple sibling gr
     REQUIRE(thirdChild.SetParent(secondRemoved));
     const Array<Entity, 2> selected{ secondRemoved, firstRemoved };
 
-    const HierarchyMutationResult result =
-        scene->DestroyEntities(selected, HierarchyDestroyMode::PreserveChildren);
+    const HierarchyMutationResult result = scene->DestroyEntities(selected, HierarchyDestroyMode::PreserveChildren);
 
     REQUIRE(result.Succeeded);
     CHECK(result.Stats.RootEntityCount == 2u);
@@ -667,8 +701,8 @@ TEST_CASE("Bulk hierarchy destroy rebuilds one parent vector linearly", "[Ecs][H
     bool orderAndIndicesCorrect = true;
     for (uint32_t index = 0; index < parent.GetChildCount(); index++)
     {
-        orderAndIndicesCorrect = parent.GetChild(index) == children[index * 2u + 1u] &&
-                                 parent.GetChild(index).GetSiblingIndex() == index && orderAndIndicesCorrect;
+        orderAndIndicesCorrect =
+          parent.GetChild(index) == children[index * 2u + 1u] && parent.GetChild(index).GetSiblingIndex() == index && orderAndIndicesCorrect;
     }
     CHECK(orderAndIndicesCorrect);
 }

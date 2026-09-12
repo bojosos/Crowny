@@ -251,7 +251,7 @@ namespace Crowny
                         else
                         {
                             const String model = Lower(tokens[1]);
-                            if (model != "standard" && model != "unlit" && model != "toon" && model != "custom")
+                            if (model != "standard" && model != "unlit" && model != "toon" && model != "custom" && model != "decal")
                                 AddError(result, path, lineNumber,
                                          "Unknown material model '" + tokens[1] + "'. Expected standard, unlit, toon, or custom.");
                             else

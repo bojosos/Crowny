@@ -17,7 +17,12 @@ Scripts\crowny.bat test --sanitizer Address --process-isolated
 
 # Explicit full-editor sanitizer build
 Scripts\crowny.bat build Editor --sanitizer Address
+
+# Compile all targets and managed assemblies on a CI runner without a GPU
+Scripts\crowny.bat build All --skip-editor-resources
 ```
+
+`--skip-editor-resources` skips cooking and staging editor resources, which can launch the editor and require a Vulkan device. Use it for compile/test jobs on headless runners. Local editor builds should keep the default resource step.
 
 `-Jobs` controls MSVC translation-unit parallelism. The scripts deliberately keep MSBuild project parallelism at one, preventing the compiler count from multiplying across projects. Auto mode uses eight workers for the first build on this 12-thread machine and leaves four available for a concurrent build. Pass `-Jobs 12` when one build should wait for and use the complete compiler budget.
 

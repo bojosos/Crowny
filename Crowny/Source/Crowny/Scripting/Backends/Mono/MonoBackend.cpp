@@ -152,6 +152,18 @@ namespace Crowny
             return ManagedOperationResult::Failure(std::move(code), std::move(message), ManagedBackendId::Mono);
         }
 
+        ManagedOperationResult ExceptionFailure(MonoObject* exception, String code, const ScriptTypeIdentity& script = {}, const UUID& entity = {})
+        {
+            ManagedDiagnostic diagnostic = MonoUtils::DescribeException(exception);
+            diagnostic.Code = std::move(code);
+            diagnostic.Script = script;
+            diagnostic.Entity = entity;
+            ManagedOperationResult result;
+            result.Succeeded = false;
+            result.Diagnostics.push_back(std::move(diagnostic));
+            return result;
+        }
+
         class MonoBackend final : public ManagedBackend
         {
         public:
@@ -170,6 +182,7 @@ namespace Crowny
                     MonoManager::StartUp(paths.LibraryDirectory, paths.EtcDirectory, config.EnableDebugging ? MONO_DEBUG_PORT : 0);
                     m_OwnsMono = true;
                 }
+                MonoUtils::DrainDiagnostics();
                 m_Config = config;
                 m_HostApi = {};
                 m_CaptureManagedCatalog = nullptr;
@@ -194,6 +207,14 @@ namespace Crowny
                 m_Catalog = {};
                 m_CurrentProgram = {};
                 m_ProgramLoaded = false;
+                if (g_MonoHostApi == &m_HostApi && MonoManager::IsStartedUp())
+                {
+                    MonoAssembly* engine = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+                    MonoClass* context = engine != nullptr && engine->IsLoaded() ? engine->GetClass(CROWNY_NS, "ManagedRuntimeContext") : nullptr;
+                    MonoMethod* clear = context != nullptr ? context->GetMethod("ClearNativeHostApi", 0) : nullptr;
+                    if (clear != nullptr)
+                        clear->Invoke(nullptr, nullptr);
+                }
                 ReleaseManagedHostBindings(this);
                 if (g_MonoHostApi == &m_HostApi)
                     g_MonoHostApi = nullptr;
@@ -416,13 +437,21 @@ namespace Crowny
                 instance.Entity = request.Entity;
                 instance.RuntimeInstanceId = runtimeInstanceId;
                 instance.Identity = identity;
-                if (!instance.Runtime.Bind(behaviour->GetManagedInstance(), scriptClass))
+                if (!instance.Runtime.Bind(runtimeInstanceId, scriptClass))
                 {
                     rollbackCreate();
                     return { Failure("managed.mono.runtime_bind_failed", "Mono could not bind the managed script callbacks."), 0 };
                 }
                 void* preparationParameters[1] = { instance.Runtime.GetInstance() };
-                MonoString* preparationError = reinterpret_cast<MonoString*>(m_PrepareManagedScript->Invoke(nullptr, preparationParameters));
+                MonoObject* exception = nullptr;
+                MonoString* preparationError =
+                  reinterpret_cast<MonoString*>(m_PrepareManagedScript->Invoke(nullptr, preparationParameters, &exception));
+                if (exception != nullptr)
+                {
+                    ManagedOperationResult failed = ExceptionFailure(exception, "managed.mono.prepare_failed", identity, request.Entity);
+                    rollbackCreate();
+                    return { std::move(failed), 0 };
+                }
                 if (preparationError != nullptr)
                 {
                     const String message = MonoUtils::FromMonoString(preparationError);
@@ -469,8 +498,11 @@ namespace Crowny
                     return StaleHandle();
                 Entity self = ResolveEntity(instance->second.Entity);
                 Entity other = ResolveEntity(event.OtherEntity);
-                instance->second.Runtime.Dispatch(self, other, event);
-                return ManagedOperationResult::Success();
+                const ScriptTypeIdentity identity = instance->second.Identity;
+                const UUID entity = instance->second.Entity;
+                MonoObject* exception = instance->second.Runtime.Dispatch(self, other, event);
+                return exception != nullptr ? ExceptionFailure(exception, "managed.mono.callback_failed", identity, entity)
+                                            : ManagedOperationResult::Success();
             }
 
             ManagedBackendStateResult CaptureState(uint64_t handle) override
@@ -484,12 +516,16 @@ namespace Crowny
                     return { StaleHandle(), {} };
                 if (m_CaptureManagedState == nullptr)
                     return { Failure("managed.mono.state_bridge_missing", "CrownySharp does not expose the shared managed state codec."), {} };
+                const ScriptTypeIdentity identity = script->GetTypeIdentity();
                 void* parameters[1] = { managedInstance };
-                MonoString* encoded = reinterpret_cast<MonoString*>(m_CaptureManagedState->Invoke(nullptr, parameters));
+                MonoObject* exception = nullptr;
+                MonoString* encoded = reinterpret_cast<MonoString*>(m_CaptureManagedState->Invoke(nullptr, parameters, &exception));
+                if (exception != nullptr)
+                    return { ExceptionFailure(exception, "managed.mono.state_capture_failed"), {} };
                 if (encoded == nullptr)
                     return { Failure("managed.mono.state_capture_failed", "The shared managed state codec could not capture the Mono script."), {} };
                 ScriptState state;
-                const ScriptTypeSchema* schema = m_Catalog.FindType(script->GetTypeIdentity());
+                const ScriptTypeSchema* schema = m_Catalog.FindType(identity);
                 ManagedOperationResult parsed = ParseManagedStateJson(MonoUtils::FromMonoString(encoded), state, ManagedBackendId::Mono, schema);
                 if (!parsed.Succeeded)
                     return { std::move(parsed), {} };
@@ -512,18 +548,21 @@ namespace Crowny
                 return ApplyState(instance->second, normalized.State);
             }
 
-            ScriptInvocationResult InvokeButton(uint64_t handle, uint64_t methodId,
-                                                const Vector<ScriptValue>& arguments) override
+            ScriptInvocationResult InvokeButton(uint64_t handle, uint64_t methodId, const Vector<ScriptValue>& arguments) override
             {
                 const auto instance = m_Instances.find(handle);
                 if (instance == m_Instances.end() || instance->second.Runtime.GetInstance() == nullptr)
                     return { StaleHandle(), false, {} };
                 if (m_InvokeManagedButton == nullptr)
-                    return { Failure("managed.mono.button_bridge_missing",
-                                     "CrownySharp does not expose the shared inspector button invoker."), false, {} };
+                    return { Failure("managed.mono.button_bridge_missing", "CrownySharp does not expose the shared inspector button invoker."),
+                             false,
+                             {} };
                 MonoString* encodedArguments = MonoUtils::ToMonoString(WriteManagedArgumentsJson(arguments));
                 void* parameters[3] = { instance->second.Runtime.GetInstance(), &methodId, encodedArguments };
-                MonoString* encodedResult = reinterpret_cast<MonoString*>(m_InvokeManagedButton->Invoke(nullptr, parameters));
+                MonoObject* exception = nullptr;
+                MonoString* encodedResult = reinterpret_cast<MonoString*>(m_InvokeManagedButton->Invoke(nullptr, parameters, &exception));
+                if (exception != nullptr)
+                    return { ExceptionFailure(exception, "managed.mono.button_failed"), false, {} };
                 if (encodedResult == nullptr)
                     return { Failure("managed.mono.button_failed", "The shared inspector button invocation failed."), false, {} };
                 return ParseManagedInvocationResultJson(MonoUtils::FromMonoString(encodedResult), ManagedBackendId::Mono);
@@ -535,7 +574,7 @@ namespace Crowny
                     ScriptObjectManager::Get().Update();
                 if (ScriptSceneObjectManager::IsStartedUp())
                     ScriptSceneManager::DispatchPendingEvents();
-                return {};
+                return MonoUtils::DrainDiagnostics();
             }
 
             void NotifyEntityDestroyed(const Entity& entity) override
@@ -696,7 +735,7 @@ namespace Crowny
                     MonoClass* scriptClass = MonoManager::Get().FindClass(identity.Assembly, identity.Namespace, identity.TypeName);
                     ScriptEntityBehaviour* behaviour = ScriptSceneObjectManager::Get().GetManagedScriptComponent(instance->second.RuntimeInstanceId);
                     if (scriptClass == nullptr || behaviour == nullptr ||
-                        !instance->second.Runtime.Bind(behaviour->GetManagedInstance(), scriptClass))
+                        !instance->second.Runtime.Bind(instance->second.RuntimeInstanceId, scriptClass))
                         return Failure("managed.mono.reload_bind_failed", "Mono could not rebind a managed script after assembly reload.");
                     instance->second.Identity = identity;
                     ManagedOperationResult applied = ApplyState(instance->second, normalized.State);
@@ -716,7 +755,10 @@ namespace Crowny
                     return Failure("managed.mono.state_bridge_missing", "CrownySharp does not expose the shared managed state codec.");
                 MonoString* encoded = MonoUtils::ToMonoString(WriteManagedStateJson(state));
                 void* parameters[2] = { instance.Runtime.GetInstance(), encoded };
-                MonoString* error = reinterpret_cast<MonoString*>(m_TryApplyManagedState->Invoke(nullptr, parameters));
+                MonoObject* exception = nullptr;
+                MonoString* error = reinterpret_cast<MonoString*>(m_TryApplyManagedState->Invoke(nullptr, parameters, &exception));
+                if (exception != nullptr)
+                    return ExceptionFailure(exception, "managed.mono.state_apply_failed");
                 if (error != nullptr)
                     return Failure("managed.mono.state_apply_failed", MonoUtils::FromMonoString(error));
                 return ManagedOperationResult::Success();
@@ -735,7 +777,10 @@ namespace Crowny
                     return Failure("managed.mono.catalog_bridge_missing", "CrownySharp does not expose the shared script catalog codec.");
                 MonoString* assemblyName = MonoUtils::ToMonoString(GAME_ASSEMBLY);
                 void* parameters[1] = { assemblyName };
-                MonoString* encoded = reinterpret_cast<MonoString*>(m_CaptureManagedCatalog->Invoke(nullptr, parameters));
+                MonoObject* exception = nullptr;
+                MonoString* encoded = reinterpret_cast<MonoString*>(m_CaptureManagedCatalog->Invoke(nullptr, parameters, &exception));
+                if (exception != nullptr)
+                    return ExceptionFailure(exception, "managed.mono.catalog_capture_failed");
                 if (encoded == nullptr)
                     return Failure("managed.mono.catalog_capture_failed", "The shared script catalog codec could not inspect the Mono program.");
                 return ParseManagedCatalogJson(MonoUtils::FromMonoString(encoded), catalog, ManagedBackendId::Mono);

@@ -3,8 +3,8 @@
 #include "Crowny/Utils/ShaderCompiler.h"
 
 #include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Hash.h"
+#include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Renderer/ShaderVariation.h"
 
@@ -102,13 +102,11 @@ namespace Crowny
                 CW_ENGINE_WARN("{}", message);
         }
 
-        bool ValidateCustomForwardDepthContract(const Path& path, const ParsedShaderSource& source,
-                                                Vector<ShaderDiagnostic>& diagnostics)
+        bool ValidateCustomForwardDepthContract(const Path& path, const ParsedShaderSource& source, Vector<ShaderDiagnostic>& diagnostics)
         {
-            const bool customForwardOnly = std::any_of(source.GlobalPragmas.begin(), source.GlobalPragmas.end(),
-                                                       [](const ShaderPragma& pragma) {
-                                                           return pragma.Name == "material_model" && pragma.Value == "custom";
-                                                       });
+            const bool customForwardOnly = std::any_of(source.GlobalPragmas.begin(), source.GlobalPragmas.end(), [](const ShaderPragma& pragma) {
+                return pragma.Name == "material_model" && pragma.Value == "custom";
+            });
             if (!customForwardOnly)
                 return true;
 
@@ -121,10 +119,12 @@ namespace Crowny
                                             (pragma.Name == "depth_compare" && pragma.Value == "greater_equal");
                     if ((pragma.Name == "depth_read" || pragma.Name == "depth_write" || pragma.Name == "depth_compare") && !compatible)
                     {
-                        diagnostics.push_back(
-                          { ShaderDiagnosticSeverity::Error, path, pragma.Line, {},
-                            "Custom forward-only materials require #pragma depth_read true, #pragma depth_write false, and "
-                            "#pragma depth_compare greater_equal for Crowny's reverse-Z depth prepass." });
+                        diagnostics.push_back({ ShaderDiagnosticSeverity::Error,
+                                                path,
+                                                pragma.Line,
+                                                {},
+                                                "Custom forward-only materials require #pragma depth_read true, #pragma depth_write false, and "
+                                                "#pragma depth_compare greater_equal for Crowny's reverse-Z depth prepass." });
                         valid = false;
                     }
                 }
@@ -135,15 +135,14 @@ namespace Crowny
             return valid;
         }
 
-        bool ExpandShaderIncludes(const Path& path, StringView source, String& output,
-                                  Vector<ShaderDiagnostic>& diagnostics, Vector<Path>& dependencies,
-                                  UnorderedSet<String>& dependencyKeys, Vector<String>& includeStack, uint32_t depth)
+        bool ExpandShaderIncludes(const Path& path, StringView source, String& output, Vector<ShaderDiagnostic>& diagnostics,
+                                  Vector<Path>& dependencies, UnorderedSet<String>& dependencyKeys, Vector<String>& includeStack, uint32_t depth)
         {
             constexpr uint32_t MAX_INCLUDE_DEPTH = 32;
             if (depth > MAX_INCLUDE_DEPTH)
             {
-                diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, 0, {},
-                                        "Shader include depth exceeds " + std::to_string(MAX_INCLUDE_DEPTH) + "." });
+                diagnostics.push_back(
+                  { ShaderDiagnosticSeverity::Error, path, 0, {}, "Shader include depth exceeds " + std::to_string(MAX_INCLUDE_DEPTH) + "." });
                 return false;
             }
 
@@ -151,8 +150,8 @@ namespace Crowny
             const String pathKey = ComparableShaderPath(normalizedPath);
             if (std::find(includeStack.begin(), includeStack.end(), pathKey) != includeStack.end())
             {
-                diagnostics.push_back({ ShaderDiagnosticSeverity::Error, normalizedPath, 0, {},
-                                        "Shader include cycle detected at '" + normalizedPath.string() + "'." });
+                diagnostics.push_back(
+                  { ShaderDiagnosticSeverity::Error, normalizedPath, 0, {}, "Shader include cycle detected at '" + normalizedPath.string() + "'." });
                 return false;
             }
             includeStack.push_back(pathKey);
@@ -177,7 +176,10 @@ namespace Crowny
                 const Ref<DataStream> includeStream = FileSystem::OpenFile(includePath);
                 if (includeStream == nullptr)
                 {
-                    diagnostics.push_back({ ShaderDiagnosticSeverity::Error, normalizedPath, lineNumber, {},
+                    diagnostics.push_back({ ShaderDiagnosticSeverity::Error,
+                                            normalizedPath,
+                                            lineNumber,
+                                            {},
                                             "Cannot open shader include '" + includePath.string() + "'." });
                     succeeded = false;
                     continue;
@@ -189,8 +191,8 @@ namespace Crowny
                 if (dependencyKeys.insert(dependencyKey).second)
                     dependencies.push_back(includePath);
                 output += "#line 1\n";
-                succeeded &= ExpandShaderIncludes(includePath, includeSource, output, diagnostics, dependencies, dependencyKeys,
-                                                  includeStack, depth + 1u);
+                succeeded &=
+                  ExpandShaderIncludes(includePath, includeSource, output, diagnostics, dependencies, dependencyKeys, includeStack, depth + 1u);
                 output += "#line " + std::to_string(lineNumber + 1u) + "\n";
             }
 
@@ -207,15 +209,12 @@ namespace Crowny
 
     bool ShaderCompileResult::Succeeded() const
     {
-        return !Description.Techniques.empty() &&
-               std::none_of(Diagnostics.begin(), Diagnostics.end(),
-                            [](const ShaderDiagnostic& diagnostic) { return diagnostic.Severity == ShaderDiagnosticSeverity::Error; });
+        return !Description.Techniques.empty() && std::none_of(Diagnostics.begin(), Diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
+            return diagnostic.Severity == ShaderDiagnosticSeverity::Error;
+        });
     }
 
-    uint64_t ShaderCompiler::HashSource(StringView source)
-    {
-        return Hashing::CityHash64(source);
-    }
+    uint64_t ShaderCompiler::HashSource(StringView source) { return Hashing::CityHash64(source); }
 
     ShaderPreprocessResult ShaderCompiler::PreprocessIncludes(const Path& path, StringView source)
     {
@@ -543,11 +542,16 @@ namespace Crowny
         auto parseFactor = [&](const String& token, BlendFactor& output) {
             const String value = lower(token);
             static const UnorderedMap<String, BlendFactor> FACTORS = {
-                { "one", BlendFactor::One },           { "zero", BlendFactor::Zero },
-                { "dstrgb", BlendFactor::DestColor }, { "srcrgb", BlendFactor::SourceColor },
-                { "dstirgb", BlendFactor::InvDestColor }, { "srcirgb", BlendFactor::InvSourceColor },
-                { "dsta", BlendFactor::DestAlpha },   { "srca", BlendFactor::SourceAlpha },
-                { "dstia", BlendFactor::InvDestAlpha }, { "srcia", BlendFactor::InvSourceAlpha },
+                { "one", BlendFactor::One },
+                { "zero", BlendFactor::Zero },
+                { "dstrgb", BlendFactor::DestColor },
+                { "srcrgb", BlendFactor::SourceColor },
+                { "dstirgb", BlendFactor::InvDestColor },
+                { "srcirgb", BlendFactor::InvSourceColor },
+                { "dsta", BlendFactor::DestAlpha },
+                { "srca", BlendFactor::SourceAlpha },
+                { "dstia", BlendFactor::InvDestAlpha },
+                { "srcia", BlendFactor::InvSourceAlpha },
             };
             const auto iter = FACTORS.find(value);
             if (iter == FACTORS.end())
@@ -576,15 +580,12 @@ namespace Crowny
             const std::regex assignmentRegex("\\b" + String(name) + R"(\s*=)", std::regex::icase);
             if (!std::regex_search(body, assignmentRegex))
                 return;
-            const std::regex equationRegex("\\b" + String(name) +
-                                             R"(\s*=\s*\{\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*\}\s*;)",
-                                           std::regex::icase);
+            const std::regex equationRegex("\\b" + String(name) + R"(\s*=\s*\{\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*\}\s*;)", std::regex::icase);
             std::smatch equation;
             if (!std::regex_search(body, equation, equationRegex) || !parseFactor(equation[1].str(), source) ||
-                !parseFactor(equation[2].str(), destination) ||
-                !parseOperation(equation[3].str(), operation))
-                diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, line, {},
-                                        "Invalid " + String(name) + " blend equation in blend_state." });
+                !parseFactor(equation[2].str(), destination) || !parseOperation(equation[3].str(), operation))
+                diagnostics.push_back(
+                  { ShaderDiagnosticSeverity::Error, path, line, {}, "Invalid " + String(name) + " blend equation in blend_state." });
         };
         parseEquation("color", result->SrcBlend, result->DstBlend, result->BlendOp);
         parseEquation("alpha", result->SrcBlendAlpha, result->DstBlendAlpha, result->BlendOpAlpha);
@@ -719,9 +720,8 @@ namespace Crowny
         return result;
     }
 
-    Ref<BinaryShaderData> ShaderCompiler::CompileStage(const Path& path, const String& source, ShaderType shaderType,
-                                                       ShaderLanguage inputLanguage, ShaderLanguageFlags outputLanguages,
-                                                       const UnorderedMap<String, String>& defines,
+    Ref<BinaryShaderData> ShaderCompiler::CompileStage(const Path& path, const String& source, ShaderType shaderType, ShaderLanguage inputLanguage,
+                                                       ShaderLanguageFlags outputLanguages, const UnorderedMap<String, String>& defines,
                                                        Vector<ShaderDiagnostic>& diagnostics)
     {
         ZoneScopedN("ShaderCompiler::CompileStage");
@@ -754,7 +754,7 @@ namespace Crowny
         }
 
         options.SetTargetEnvironment(shaderc_target_env_vulkan,
-                                      shaderc_env_version_vulkan_1_3); // TODO: Better versioning
+                                     shaderc_env_version_vulkan_1_3); // TODO: Better versioning
         // SPIR-V 1.6 lowers GLSL discard to OpDemoteToHelperInvocation. That instruction
         // cannot be translated to desktop OpenGL GLSL by SPIRV-Cross, while SPIR-V 1.5
         // retains OpKill and remains valid for the Vulkan 1.3 backend.
@@ -765,8 +765,8 @@ namespace Crowny
         const char* hlslEntryPoints[SHADER_COUNT] = { "vsmain", "fsmain", "gsmain", "dsmain", "hsmain", "csmain", "raygen", "hit", "miss" };
         const char* entryPoint = inputLanguage == ShaderLanguage::HLSL ? hlslEntryPoints[shaderType] : "main";
         const String sourceName = path.empty() ? ShaderTypeToString(shaderType) : path.generic_string();
-        shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType),
-                                                                         sourceName.c_str(), entryPoint, options);
+        shaderc::SpvCompilationResult module =
+          compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType), sourceName.c_str(), entryPoint, options);
         if (module.GetCompilationStatus() != shaderc_compilation_status_success)
         {
             diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, 0, ShaderTypeToString(shaderType), module.GetErrorMessage() });
@@ -836,34 +836,29 @@ namespace Crowny
                         if (floats.size() >= 1)
                             std::memcpy(member.DefaultValue.data(), &floats[0], sizeof(float));
                         break;
-                    case ShaderDataType::Float2:
-                    {
+                    case ShaderDataType::Float2: {
                         glm::vec2 v(floats.size() >= 1 ? floats[0] : 0.0f, floats.size() >= 2 ? floats[1] : 0.0f);
                         std::memcpy(member.DefaultValue.data(), &v, sizeof(v));
                         break;
                     }
-                    case ShaderDataType::Float3:
-                    {
+                    case ShaderDataType::Float3: {
                         glm::vec3 v(floats.size() >= 1 ? floats[0] : 0.0f, floats.size() >= 2 ? floats[1] : 0.0f,
                                     floats.size() >= 3 ? floats[2] : 0.0f);
                         std::memcpy(member.DefaultValue.data(), &v, sizeof(v));
                         break;
                     }
-                    case ShaderDataType::Float4:
-                    {
+                    case ShaderDataType::Float4: {
                         glm::vec4 v(floats.size() >= 1 ? floats[0] : 0.0f, floats.size() >= 2 ? floats[1] : 0.0f,
                                     floats.size() >= 3 ? floats[2] : 0.0f, floats.size() >= 4 ? floats[3] : 0.0f);
                         std::memcpy(member.DefaultValue.data(), &v, sizeof(v));
                         break;
                     }
-                    case ShaderDataType::Int:
-                    {
+                    case ShaderDataType::Int: {
                         int32_t iv = floats.size() >= 1 ? (int32_t)floats[0] : 0;
                         std::memcpy(member.DefaultValue.data(), &iv, sizeof(iv));
                         break;
                     }
-                    case ShaderDataType::Bool:
-                    {
+                    case ShaderDataType::Bool: {
                         int32_t bv = (floats.size() >= 1 && floats[0] != 0.0f) ? 1 : 0;
                         std::memcpy(member.DefaultValue.data(), &bv, sizeof(bv));
                         break;
@@ -887,16 +882,14 @@ namespace Crowny
 
     Vector<Ref<ShaderRenderPass>> ShaderCompiler::CompilePasses(const Path& path, const ParsedShaderSource& parsedSource,
                                                                 ShaderLanguage inputLanguage, ShaderLanguageFlags shaderLanguage,
-                                                                const UnorderedMap<String, String>& defines,
-                                                                const Ref<BlendStateDesc>& blendState,
+                                                                const UnorderedMap<String, String>& defines, const Ref<BlendStateDesc>& blendState,
                                                                 Vector<ShaderDiagnostic>& diagnostics)
     {
         Vector<Ref<ShaderRenderPass>> renderPasses;
         renderPasses.reserve(parsedSource.Passes.size());
-        const bool customForwardOnly = std::any_of(parsedSource.GlobalPragmas.begin(), parsedSource.GlobalPragmas.end(),
-                                                   [](const ShaderPragma& pragma) {
-                                                       return pragma.Name == "material_model" && pragma.Value == "custom";
-                                                   });
+        const bool customForwardOnly =
+          std::any_of(parsedSource.GlobalPragmas.begin(), parsedSource.GlobalPragmas.end(),
+                      [](const ShaderPragma& pragma) { return pragma.Name == "material_model" && pragma.Value == "custom"; });
         for (const ShaderSourcePass& sourcePass : parsedSource.Passes)
         {
             ShaderRenderPassDesc passDesc;
@@ -954,17 +947,15 @@ namespace Crowny
         return std::move(result.Description);
     }
 
-    ShaderCompileResult ShaderCompiler::CompileWithDiagnostics(const Path& path, const String& rawSource,
-                                                                ShaderLanguageFlags shaderLanguage,
-                                                                const UnorderedMap<String, String>& defines)
+    ShaderCompileResult ShaderCompiler::CompileWithDiagnostics(const Path& path, const String& rawSource, ShaderLanguageFlags shaderLanguage,
+                                                               const UnorderedMap<String, String>& defines)
     {
         ZoneScopedN("ShaderCompiler::Compile");
         ShaderCompileResult result;
         for (const auto& [name, _] : defines)
         {
             if (!ShaderSourceParser::IsIdentifier(name))
-                result.Diagnostics.push_back(
-                  { ShaderDiagnosticSeverity::Error, path, 0, {}, "Invalid preprocessor define name '" + name + "'." });
+                result.Diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, 0, {}, "Invalid preprocessor define name '" + name + "'." });
         }
 
         ShaderPreprocessResult preprocessed = PreprocessIncludes(path, rawSource);
@@ -979,9 +970,9 @@ namespace Crowny
         const Ref<BlendStateDesc> blendState = ParseBlendState(path, source, result.Diagnostics);
         ParsedShaderSource parsedSource = ShaderSourceParser::Parse(path, source);
         result.Diagnostics.insert(result.Diagnostics.end(), parsedSource.Diagnostics.begin(), parsedSource.Diagnostics.end());
-        if (!parsedSource.Succeeded() ||
-            std::any_of(result.Diagnostics.begin(), result.Diagnostics.end(),
-                        [](const ShaderDiagnostic& diagnostic) { return diagnostic.Severity == ShaderDiagnosticSeverity::Error; }))
+        if (!parsedSource.Succeeded() || std::any_of(result.Diagnostics.begin(), result.Diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
+                return diagnostic.Severity == ShaderDiagnosticSeverity::Error;
+            }))
             return result;
         if (!ValidateCustomForwardDepthContract(path, parsedSource, result.Diagnostics))
             return result;
@@ -1023,15 +1014,26 @@ namespace Crowny
                 }
             }
 
-            Vector<Ref<ShaderRenderPass>> renderPasses = CompilePasses(path, parsedSource, inputLanguage, shaderLanguage, mergedDefines,
-                                                                       blendState, result.Diagnostics);
+            Vector<Ref<ShaderRenderPass>> renderPasses =
+              CompilePasses(path, parsedSource, inputLanguage, shaderLanguage, mergedDefines, blendState, result.Diagnostics);
             if (renderPasses.size() == parsedSource.Passes.size())
                 result.Description.Techniques.push_back(ShaderTechnique::Create(techniqueTags, variation, renderPasses));
         }
         if (!result.Succeeded())
             result.Description.Techniques.clear();
         return result;
+    }
 
+    void ShaderCompiler::RestoreVertexLayout(BinaryShaderData& shader)
+    {
+        if (shader.Type != VERTEX_SHADER || shader.Data.empty())
+            return;
+        // Older cooked layouts omit locations. SPIR-V retains the exact inputs;
+        // preserve the serialized uniform annotations while restoring that layout.
+        auto reflected = CreateRef<BinaryShaderData>();
+        reflected->Type = shader.Type;
+        Reflect(shader.Data, reflected);
+        shader.VertexLayout = std::move(reflected->VertexLayout);
     }
 
     void ShaderCompiler::Reflect(const Vector<uint8_t>& shaderBinaryData, Ref<BinaryShaderData>& outData)
@@ -1201,8 +1203,7 @@ namespace Crowny
     }
 
     void ShaderCompiler::EvaluatePragmaDirectives(const Vector<ShaderPragma>& globalPragmas, const Vector<ShaderPragma>& passPragmas,
-                                                   ShaderRenderPassDesc& shaderPassDesc, Vector<ShaderDiagnostic>& diagnostics,
-                                                   const Path& path)
+                                                  ShaderRenderPassDesc& shaderPassDesc, Vector<ShaderDiagnostic>& diagnostics, const Path& path)
     {
         auto addError = [&](const ShaderPragma& pragma, const String& message) {
             diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, pragma.Line, {}, message });
@@ -1281,6 +1282,5 @@ namespace Crowny
         for (const ShaderPragma& pragma : passPragmas)
             apply(pragma);
     }
-
 
 } // namespace Crowny

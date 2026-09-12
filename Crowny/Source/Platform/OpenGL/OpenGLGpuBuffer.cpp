@@ -13,7 +13,7 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(size > 0, "Cannot create an empty OpenGL GPU buffer");
         GLint previous = 0;
-        const GLenum bindingQuery = target == GL_UNIFORM_BUFFER ? GL_UNIFORM_BUFFER_BINDING
+        const GLenum bindingQuery = target == GL_UNIFORM_BUFFER          ? GL_UNIFORM_BUFFER_BINDING
                                     : target == GL_SHADER_STORAGE_BUFFER ? GL_SHADER_STORAGE_BUFFER_BINDING
                                                                          : GL_ARRAY_BUFFER_BINDING;
         glGetIntegerv(bindingQuery, &previous);
@@ -68,8 +68,8 @@ namespace Crowny
 
     OpenGLGenericGpuBuffer::OpenGLGenericGpuBuffer(uint32_t elementCount, uint32_t elementSize, GpuBufferType type, GpuBufferFormat format,
                                                    BufferUsage usage)
-      : m_Buffer(GLAD_GL_VERSION_4_3 ? GL_SHADER_STORAGE_BUFFER : GL_ARRAY_BUFFER, elementCount * elementSize, usage),
-        m_Size(elementCount * elementSize), m_Type(type), m_Format(format)
+      : GenericGpuBuffer(elementCount * elementSize, usage),
+        m_Buffer(GLAD_GL_VERSION_4_3 ? GL_SHADER_STORAGE_BUFFER : GL_ARRAY_BUFFER, elementCount * elementSize, usage), m_Type(type), m_Format(format)
     {
         if (!GLAD_GL_VERSION_4_3)
             CW_ENGINE_WARN("Generic OpenGL GPU buffers require OpenGL 4.3 before they can be bound to shaders");

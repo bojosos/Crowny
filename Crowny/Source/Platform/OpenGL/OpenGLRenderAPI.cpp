@@ -2,9 +2,12 @@
 
 #include "Platform/OpenGL/OpenGLRenderAPI.h"
 
-#include "Platform/OpenGL/OpenGLIndexBuffer.h"
+#include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Utils/PixelUtils.h"
+
 #include "Platform/OpenGL/OpenGLCommandBuffer.h"
 #include "Platform/OpenGL/OpenGLGpuBuffer.h"
+#include "Platform/OpenGL/OpenGLIndexBuffer.h"
 #include "Platform/OpenGL/OpenGLPipeline.h"
 #include "Platform/OpenGL/OpenGLRenderTexture.h"
 #include "Platform/OpenGL/OpenGLRenderWindow.h"
@@ -58,37 +61,46 @@ namespace Crowny
             case ShaderDataType::Int:
             case ShaderDataType::Int2:
             case ShaderDataType::Int3:
-            case ShaderDataType::Int4: return GL_INT;
+            case ShaderDataType::Int4:
+                return GL_INT;
             case ShaderDataType::SByte:
             case ShaderDataType::SByte2:
             case ShaderDataType::SByte3:
-            case ShaderDataType::SByte4: return GL_BYTE;
+            case ShaderDataType::SByte4:
+                return GL_BYTE;
             case ShaderDataType::UByte4:
-            case ShaderDataType::Color: return GL_UNSIGNED_BYTE;
-            default: return GL_FLOAT;
+            case ShaderDataType::Color:
+                return GL_UNSIGNED_BYTE;
+            default:
+                return GL_FLOAT;
             }
         }
 
         bool IsIntegerAttribute(ShaderDataType type)
         {
-            return type == ShaderDataType::Bool || type == ShaderDataType::Int || type == ShaderDataType::Int2 ||
-                   type == ShaderDataType::Int3 || type == ShaderDataType::Int4;
+            return type == ShaderDataType::Bool || type == ShaderDataType::Int || type == ShaderDataType::Int2 || type == ShaderDataType::Int3 ||
+                   type == ShaderDataType::Int4;
         }
 
         uint32_t AttributeComponentCount(ShaderDataType type)
         {
             if (type == ShaderDataType::Color)
                 return 4;
-            return type == ShaderDataType::Mat3 ? 3 : type == ShaderDataType::Mat4 ? 4 : BufferElement(type, VertexAttribute::None).GetComponentCount();
+            return type == ShaderDataType::Mat3   ? 3
+                   : type == ShaderDataType::Mat4 ? 4
+                                                  : BufferElement(type, VertexAttribute::None).GetComponentCount();
         }
 
         GLenum PolygonModeToOpenGL(PolygonMode mode)
         {
             switch (mode)
             {
-            case PolygonMode::Wireframe: return GL_LINE;
-            case PolygonMode::Points: return GL_POINT;
-            case PolygonMode::Solid: return GL_FILL;
+            case PolygonMode::Wireframe:
+                return GL_LINE;
+            case PolygonMode::Points:
+                return GL_POINT;
+            case PolygonMode::Solid:
+                return GL_FILL;
             }
             return GL_FILL;
         }
@@ -132,6 +144,10 @@ namespace Crowny
         m_Capabilities.NumTextureUnitsPerStage[VERTEX_SHADER] = static_cast<uint16_t>(std::max(value, 0));
         glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &value);
         m_Capabilities.NumCombinedTextureUnits = static_cast<uint16_t>(std::max(value, 0));
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &value);
+        m_Capabilities.MaxTexture2DSize = static_cast<uint32_t>(std::max(value, 0));
+        glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &value);
+        m_Capabilities.MaxTextureArrayLayers = static_cast<uint32_t>(std::max(value, 0));
         glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &value);
         m_Capabilities.NumMultiRenderTargets = static_cast<uint16_t>(std::max(value, 0));
         glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &value);
@@ -144,13 +160,16 @@ namespace Crowny
         if (GLAD_GL_VERSION_4_2)
             m_Capabilities.SetCapability(CW_LOAD_STORE);
         if (GLAD_GL_VERSION_4_3)
+        {
             m_Capabilities.SetCapability(CW_COMPUTE_SHADER);
-        if (SupportsCompressedFormat(COMPRESSED_RGB_S3TC_DXT1) &&
-            SupportsCompressedFormat(COMPRESSED_RGBA_S3TC_DXT5) &&
+            GLint64 storageRange = 0;
+            glGetInteger64v(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &storageRange);
+            m_Capabilities.MaxStorageBufferRange = static_cast<uint64_t>(std::max(storageRange, GLint64(0)));
+        }
+        if (SupportsCompressedFormat(COMPRESSED_RGB_S3TC_DXT1) && SupportsCompressedFormat(COMPRESSED_RGBA_S3TC_DXT5) &&
             SupportsCompressedFormat(GL_COMPRESSED_RED_RGTC1) && SupportsCompressedFormat(GL_COMPRESSED_RG_RGTC2))
             m_Capabilities.SetCapability(CW_TEXTURE_COMPRESSION_BC);
-        if (SupportsCompressedFormat(COMPRESSED_RGBA_BPTC_UNORM) &&
-            SupportsCompressedFormat(COMPRESSED_SRGB_ALPHA_BPTC_UNORM))
+        if (SupportsCompressedFormat(COMPRESSED_RGBA_BPTC_UNORM) && SupportsCompressedFormat(COMPRESSED_SRGB_ALPHA_BPTC_UNORM))
             m_Capabilities.SetCapability(CW_TEXTURE_COMPRESSION_BPTC);
         if (SupportsCompressedFormat(GL_COMPRESSED_RGB8_ETC2) && SupportsCompressedFormat(GL_COMPRESSED_RGBA8_ETC2_EAC) &&
             SupportsCompressedFormat(GL_COMPRESSED_R11_EAC) && SupportsCompressedFormat(GL_COMPRESSED_RG11_EAC))
@@ -204,6 +223,7 @@ namespace Crowny
         m_ComputePipeline = nullptr;
         glUseProgram(pipeline ? static_cast<OpenGLGraphicsPipeline*>(pipeline.get())->GetProgram() : 0);
         ApplyPipelineState();
+        ConfigureVertexArray();
     }
 
     void OpenGLRenderAPI::SetRayTracingPipeline(CW_MAYBE_UNUSED const Ref<RayTracingPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
@@ -233,8 +253,7 @@ namespace Crowny
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer ? static_cast<OpenGLIndexBuffer*>(buffer.get())->GetRendererID() : 0);
     }
 
-    void OpenGLRenderAPI::SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t bufferCount,
-                                           const Ref<CommandBuffer>& commandBuffer)
+    void OpenGLRenderAPI::SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t bufferCount, const Ref<CommandBuffer>& commandBuffer)
     {
         RequireImmediate(commandBuffer);
         CW_ENGINE_ASSERT(bufferCount == 0 || buffers != nullptr, "OpenGL vertex buffer array is null");
@@ -261,14 +280,36 @@ namespace Crowny
             glDisableVertexAttribArray(location);
         m_EnabledAttributeCount = 0;
 
+        const Ref<ShaderStage> vertexShader =
+          m_GraphicsPipeline ? static_cast<OpenGLGraphicsPipeline*>(m_GraphicsPipeline.get())->GetDesc().VertexShader : nullptr;
+        const Ref<BufferLayout> shaderLayout = vertexShader ? vertexShader->GetBufferLayout() : nullptr;
+        const BufferLayout& inputs = shaderLayout ? *shaderLayout : *m_VertexLayout;
         uint32_t nextLocation = 0;
-        for (const BufferElement& element : *m_VertexLayout)
+        for (const BufferElement& input : inputs)
         {
+            uint32_t location = input.Location == UINT32_MAX ? nextLocation : input.Location;
+            if (input.Location == UINT32_MAX && shaderLayout)
+            {
+                if (input.Attribute == VertexAttribute::TexCoord0)
+                    location = 4;
+                else if (input.Attribute == VertexAttribute::Color)
+                    location = 5;
+            }
+            const auto found = std::find_if(m_VertexLayout->begin(), m_VertexLayout->end(), [&](const BufferElement& candidate) {
+                return input.Attribute != VertexAttribute::None ? candidate.Attribute == input.Attribute : candidate.Name == input.Name;
+            });
+            if (found == m_VertexLayout->end())
+            {
+                const float value = input.Attribute == VertexAttribute::Color ? 1.0f : 0.0f;
+                glVertexAttrib4f(location, value, value, value, 1.0f);
+                nextLocation = std::max(nextLocation, location + 1);
+                continue;
+            }
+            const BufferElement& element = *found;
             const uint32_t stream = std::min<uint32_t>(element.StreamIdx, static_cast<uint32_t>(m_VertexBuffers.size() - 1));
             const Ref<VertexBuffer>& buffer = m_VertexBuffers[stream];
             CW_ENGINE_ASSERT(buffer != nullptr, "OpenGL vertex layout references an unset stream");
             glBindBuffer(GL_ARRAY_BUFFER, static_cast<OpenGLVertexBuffer*>(buffer.get())->GetRendererID());
-            const uint32_t location = element.Location == UINT32_MAX ? nextLocation : element.Location;
             const uint32_t columns = element.Type == ShaderDataType::Mat3 ? 3 : element.Type == ShaderDataType::Mat4 ? 4 : 1;
             const uint32_t components = AttributeComponentCount(element.Type);
             for (uint32_t column = 0; column < columns; ++column)
@@ -336,14 +377,77 @@ namespace Crowny
             glClearStencil(stencil);
             mask |= GL_STENCIL_BUFFER_BIT;
         }
+        const Ref<OpenGLRenderTexture> target = DynamicRefCast<OpenGLRenderTexture>(m_RenderTarget);
+        auto clearColorAttachment = [&](uint32_t index) {
+            const Ref<Texture> texture = target ? target->GetColorTexture(index) : nullptr;
+            if (target && !texture)
+                return;
+            if (texture && texture->GetFormat() == TextureFormat::R32I)
+            {
+                // Integer attachments require a typed clear. Preserve the clear
+                // value's bit representation, matching Vulkan's VkClearColorValue.
+                const glm::ivec4 integerColor = glm::floatBitsToInt(color);
+                if (m_Capabilities.DeviceVendor == GPU_INTEL)
+                {
+                    // Iris Xe 32.0.101.7085 can resurrect an earlier integer fast
+                    // clear after a partial draw. Two disjoint scissored clears
+                    // avoid that path without a GPU wait or a texture readback.
+                    const GLboolean scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
+                    GLint oldScissor[4];
+                    glGetIntegerv(GL_SCISSOR_BOX, oldScissor);
+                    const auto& properties = target->GetProperties();
+                    const GLint width = static_cast<GLint>(properties.Width);
+                    const GLint height = static_cast<GLint>(properties.Height);
+                    const GLint left = scissorEnabled ? std::clamp(oldScissor[0], 0, width) : 0;
+                    const GLint bottom = scissorEnabled ? std::clamp(oldScissor[1], 0, height) : 0;
+                    const GLint right =
+                      scissorEnabled ? static_cast<GLint>(std::clamp<int64_t>(int64_t(oldScissor[0]) + oldScissor[2], left, width)) : width;
+                    const GLint top =
+                      scissorEnabled ? static_cast<GLint>(std::clamp<int64_t>(int64_t(oldScissor[1]) + oldScissor[3], bottom, height)) : height;
+                    glEnable(GL_SCISSOR_TEST);
+                    if (right - left > 1)
+                    {
+                        const GLint middle = left + (right - left) / 2;
+                        glScissor(left, bottom, middle - left, top - bottom);
+                        glClearBufferiv(GL_COLOR, index, &integerColor[0]);
+                        glScissor(middle, bottom, right - middle, top - bottom);
+                    }
+                    else if (top - bottom > 1)
+                    {
+                        const GLint middle = bottom + (top - bottom) / 2;
+                        glScissor(left, bottom, right - left, middle - bottom);
+                        glClearBufferiv(GL_COLOR, index, &integerColor[0]);
+                        glScissor(left, middle, right - left, top - middle);
+                    }
+                    else
+                        glScissor(left, bottom, right - left, top - bottom);
+                    glClearBufferiv(GL_COLOR, index, &integerColor[0]);
+                    glScissor(oldScissor[0], oldScissor[1], oldScissor[2], oldScissor[3]);
+                    if (!scissorEnabled)
+                        glDisable(GL_SCISSOR_TEST);
+                }
+                else
+                    glClearBufferiv(GL_COLOR, index, &integerColor[0]);
+            }
+            else
+                glClearBufferfv(GL_COLOR, index, &color[0]);
+        };
         if (targetMask == 0xFF)
+        {
+            if (target && (buffers & FBT_COLOR) != 0)
+            {
+                for (uint32_t index = 0; index < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; ++index)
+                    clearColorAttachment(index);
+                mask &= ~GL_COLOR_BUFFER_BIT;
+            }
             glClear(mask);
+        }
         else
         {
             if ((buffers & FBT_COLOR) != 0)
                 for (uint32_t index = 0; index < 8; ++index)
                     if ((targetMask & (1U << index)) != 0)
-                        glClearBufferfv(GL_COLOR, index, &color[0]);
+                        clearColorAttachment(index);
             if ((buffers & FBT_DEPTH) != 0 && (buffers & FBT_STENCIL) != 0)
                 glClearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
             else if ((buffers & FBT_DEPTH) != 0)
@@ -386,8 +490,8 @@ namespace Crowny
             glDrawElementsInstancedBaseVertex(OpenGLUtils::DrawModeToOpenGL(m_DrawMode), indexCount, indexType,
                                               reinterpret_cast<const void*>(byteOffset), instanceCount, vertexOffset);
         else
-            glDrawElementsBaseVertex(OpenGLUtils::DrawModeToOpenGL(m_DrawMode), indexCount, indexType,
-                                     reinterpret_cast<const void*>(byteOffset), vertexOffset);
+            glDrawElementsBaseVertex(OpenGLUtils::DrawModeToOpenGL(m_DrawMode), indexCount, indexType, reinterpret_cast<const void*>(byteOffset),
+                                     vertexOffset);
         RecordDraw(m_DrawMode, indexCount, instanceCount);
     }
 
@@ -397,13 +501,12 @@ namespace Crowny
         RequireImmediate(commandBuffer);
         CW_ENGINE_ASSERT(argumentBuffer != nullptr, "OpenGL indirect draw requires an argument buffer");
         CW_ENGINE_ASSERT(m_IndexBuffer != nullptr, "OpenGL indirect indexed draw requires an index buffer");
-        CW_ENGINE_ASSERT(stride >= sizeof(DrawIndexedIndirectCommand) && (stride & 3u) == 0,
-                         "OpenGL indirect draw stride is invalid");
+        CW_ENGINE_ASSERT(stride >= sizeof(DrawIndexedIndirectCommand) && (stride & 3u) == 0, "OpenGL indirect draw stride is invalid");
         if (argumentBuffer == nullptr || m_IndexBuffer == nullptr || drawCount == 0)
             return;
 
-        const uint64_t requiredSize = static_cast<uint64_t>(argumentOffset) + static_cast<uint64_t>(drawCount - 1u) * stride +
-                                      sizeof(DrawIndexedIndirectCommand);
+        const uint64_t requiredSize =
+          static_cast<uint64_t>(argumentOffset) + static_cast<uint64_t>(drawCount - 1u) * stride + sizeof(DrawIndexedIndirectCommand);
         CW_ENGINE_ASSERT(requiredSize <= argumentBuffer->GetBufferSize(), "OpenGL indirect draw range exceeds its argument buffer");
         if (requiredSize > argumentBuffer->GetBufferSize())
             return;
@@ -438,8 +541,7 @@ namespace Crowny
             }
             else
             {
-                glDrawElementsInstancedBaseVertex(mode, indirect.IndexCount, indexType, indexOffset, indirect.InstanceCount,
-                                                  indirect.VertexOffset);
+                glDrawElementsInstancedBaseVertex(mode, indirect.IndexCount, indexType, indexOffset, indirect.InstanceCount, indirect.VertexOffset);
             }
         }
         RecordIndirectDraw(drawCount);
@@ -463,8 +565,8 @@ namespace Crowny
             glBindBuffer(GL_PARAMETER_BUFFER, static_cast<OpenGLGenericGpuBuffer*>(countBuffer.get())->GetRendererID());
             const GLenum indexType = m_IndexBuffer->GetIndexType() == IndexType::Index_16 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
             glMultiDrawElementsIndirectCount(OpenGLUtils::DrawModeToOpenGL(m_DrawMode), indexType,
-                                             reinterpret_cast<const void*>(static_cast<uintptr_t>(argumentOffset)), countOffset,
-                                             maxDrawCount, stride);
+                                             reinterpret_cast<const void*>(static_cast<uintptr_t>(argumentOffset)), countOffset, maxDrawCount,
+                                             stride);
             RecordIndirectDraw(0); // The GPU count buffer is deliberately not read back for statistics.
             return;
         }
@@ -604,9 +706,14 @@ namespace Crowny
         {
             glEnable(GL_BLEND);
             glBlendFuncSeparate(OpenGLUtils::BlendFactorToOpenGL(blend->SrcBlend), OpenGLUtils::BlendFactorToOpenGL(blend->DstBlend),
-                                OpenGLUtils::BlendFactorToOpenGL(blend->SrcBlendAlpha),
-                                OpenGLUtils::BlendFactorToOpenGL(blend->DstBlendAlpha));
+                                OpenGLUtils::BlendFactorToOpenGL(blend->SrcBlendAlpha), OpenGLUtils::BlendFactorToOpenGL(blend->DstBlendAlpha));
             glBlendEquationSeparate(OpenGLUtils::BlendFunctionToOpenGL(blend->BlendOp), OpenGLUtils::BlendFunctionToOpenGL(blend->BlendOpAlpha));
+            const Ref<OpenGLRenderTexture> target = DynamicRefCast<OpenGLRenderTexture>(m_RenderTarget);
+            if (target)
+                for (uint32_t index = 0; index < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; ++index)
+                    if (const Ref<Texture> color = target->GetColorTexture(index);
+                        color && PixelUtils::IsIntegerFormat(color->GetFormat()) && !PixelUtils::IsNormalizedFormat(color->GetFormat()))
+                        glDisablei(GL_BLEND, index);
         }
         else
             glDisable(GL_BLEND);

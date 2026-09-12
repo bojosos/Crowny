@@ -102,7 +102,7 @@ void main()
 {
     vec3 worldPos = vec3(mvp.model * vec4(cw_Position, 1.0));
     vs_out.worldPos = worldPos;
-    vs_out.normal = mat3(mvp.model) * cw_Normal;
+    vs_out.normal = transpose(inverse(mat3(mvp.model))) * cw_Normal;
     vs_out.uv = cw_TexCoord0;
     vs_out.color = cw_Color;
     gl_Position = mvp.viewProjection * vec4(worldPos, 1.0);
@@ -209,9 +209,13 @@ vec3 Uncharted2Tonemap(vec3 x)
     return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
 }
 
+#define CW_DECAL_COMPATIBILITY
+#include "CrownyDecals.glslinc"
+layout(set = 2, binding = 6) uniform cw_DecalDraw { uvec4 receiver; } cwDecalDraw;
+
 void main()
 {
-    outEntity = 0;
+    outEntity = int(cwDecalDraw.receiver.x);
 
     vec3 N = normalize(fs_in.normal);
     vec3 L = normalize(-scene.lightDir.xyz);
@@ -219,6 +223,10 @@ void main()
     vec3 H = normalize(V + L);
 
     vec3 albedo = texture(albedoMap, fs_in.uv).rgb * toon.tint.rgb * fs_in.color.rgb;
+    vec3 emission = vec3(0);
+    float roughness = 0.5, metallic = 0.0, ao = 1.0, opacity = 1.0;
+    cwApplyDecals(cwDecalDraw.receiver.x, cwDecalDraw.receiver.y, fs_in.worldPos, N, dFdx(fs_in.worldPos), dFdy(fs_in.worldPos),
+                  length(scene.camPos - fs_in.worldPos), 1.0, albedo, N, roughness, metallic, ao, emission, opacity);
 
     // Cel-shaded diffuse
     float NdotL = dot(N, L);
@@ -241,7 +249,8 @@ void main()
     float rim = rimIntensity * rimMask;
 
     // Combine
-    vec3 color = diffuse + vec3(specular) + vec3(rim) * albedo;
+    vec3 color = (diffuse + specular * toonStyle.toonSpecularColor.rgb * toonStyle.toonSpecularStrength +
+                  rim * albedo * toonStyle.toonRimColor.rgb * toonStyle.toonRimStrength) * ao + emission;
 
     // Tone mapping
     color = Uncharted2Tonemap(color * scene.exposure);

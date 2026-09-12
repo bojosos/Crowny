@@ -24,8 +24,10 @@ namespace Crowny
         Entity GetRootEntity() const;
         const UUID& GetRootEntityUuid() const { return m_RootEntityUuid; }
         void SetRootEntityUuid(const UUID& uuid) { m_RootEntityUuid = uuid; }
+        void OnDependentAssigned(const Ref<Asset>& dependent, const UUID& uuid) override;
 
     private:
+        CW_SERIALIZABLE(Prefab);
         void CaptureEntityRecursive(Scene& source, Entity sourceEntity, Scene& dest, Entity* destParent);
 
         Ref<Scene> m_PrefabScene;

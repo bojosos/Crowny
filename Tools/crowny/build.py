@@ -3,6 +3,7 @@ import os
 import shutil
 import sys
 import time
+from contextlib import ExitStack
 from pathlib import Path
 
 from . import cmd, env, locks, log, msbuild, premake
@@ -10,11 +11,21 @@ from .msbuild import build as run_msbuild
 
 SOLUTION_TARGETS = {
     "Engine": ["Crowny"],
-    "Editor": ["Crowny-Editor"],
+    "Editor": ["Crowny-Editor", "Crowny-Player"],
+    "Player": ["Crowny-Player"],
     "Tests": ["Crowny-Tests"],
     "RenderTests": ["Crowny-RenderTests"],
-    "All": ["Crowny", "Crowny-Editor", "Crowny-Builder", "Crowny-Tests", "Crowny-RenderTests"],
+    "All": ["Crowny", "Crowny-Editor", "Crowny-Builder", "Crowny-Player", "Crowny-Tests", "Crowny-RenderTests"],
 }
+
+# "All" builds in two MSBuild invocations: the engine first (pulling in every
+# dependency project), then the five applications with project reference
+# building disabled. A single multi-target invocation makes MSBuild re-evaluate
+# the freshly rebuilt Crowny project once per application (its reference
+# chain), which cost ~45s per re-check on a clean build. Overlapping the
+# applications across build nodes was measured and is not worth the
+# oversubscription cost on typical hardware.
+ALL_FOLLOW_UP_TARGETS = ["Crowny-Editor", "Crowny-Builder", "Crowny-Player", "Crowny-Tests", "Crowny-RenderTests"]
 
 TARGETS = tuple(SOLUTION_TARGETS)
 COMPILER_CACHES = ("None", "Sccache")
@@ -80,6 +91,7 @@ def build(
     compiler_cache="None",
     simd="avx2",
     inner_loop=False,
+    skip_editor_resources=False,
 ):
     root = root or env.repo_root()
     validate_target(target)
@@ -108,14 +120,14 @@ def build(
     lock_identity = f"{os.getpid()}|{','.join(output_configs)}"
     original_marker = os.environ.get("CROWNY_OUTPUT_WRITE_LOCK")
     owns_output_lock = original_marker != lock_identity
-    acquired_locks = []
+    acquired_locks = ExitStack()
     profile_root = None
 
     try:
         if owns_output_lock:
             for output_config in output_configs:
-                acquired_locks.append(
-                    locks.output_write_lock(root, output_config).__enter__()
+                acquired_locks.enter_context(
+                    locks.output_write_lock(root, output_config)
                 )
             os.environ["CROWNY_OUTPUT_WRITE_LOCK"] = lock_identity
 
@@ -152,21 +164,39 @@ def build(
             )
             if sys.platform == "win32":
                 started = time.time()
-                result = run_msbuild(
-                    msbuild.find_msbuild(root),
-                    root / "Crowny.sln",
-                    SOLUTION_TARGETS[target],
-                    workspace_config,
-                    effective_jobs,
-                    clean=clean,
-                    binlog_path=binlog_path,
-                    sccache=using_sccache,
-                    scripts_dir=root / "Scripts",
-                    collect_profile=profile,
-                    build_project_references=not inner_loop,
-                )
+
+                def invoke(targets, **kwargs):
+                    options = dict(
+                        build_project_references=not inner_loop,
+                        nodes=1,
+                    )
+                    options.update(kwargs)
+                    return run_msbuild(
+                        msbuild.find_msbuild(root),
+                        root / "Crowny.sln",
+                        targets,
+                        workspace_config,
+                        effective_jobs,
+                        clean=clean,
+                        binlog_path=binlog_path,
+                        sccache=using_sccache,
+                        scripts_dir=root / "Scripts",
+                        collect_profile=profile,
+                        **options,
+                    )
+
+                if target == "All":
+                    results = [invoke(["Crowny"])]
+                    results.append(
+                        invoke(ALL_FOLLOW_UP_TARGETS, build_project_references=False)
+                    )
+                else:
+                    results = [invoke(SOLUTION_TARGETS[target])]
+
                 metrics["phases"]["nativeBuildSeconds"] = round(time.time() - started, 3)
-                metrics["peakCompilerWorkingSetBytes"] = result["peak_compiler_working_set_bytes"]
+                metrics["peakCompilerWorkingSetBytes"] = max(
+                    result["peak_compiler_working_set_bytes"] for result in results
+                )
             else:
                 _build_posix(root, target, configuration, effective_jobs, clean, metrics)
 
@@ -178,14 +208,19 @@ def build(
                 if not original_buster:
                     os.environ.pop("SCCACHE_C_CUSTOM_CACHE_BUSTER", None)
 
-            if target in ("Editor", "All"):
+            if target in ("Editor", "Player", "All"):
                 started = time.time()
                 managed.ensure(root, configuration)
                 metrics["phases"]["managedBuildSeconds"] = round(time.time() - started, 3)
 
-                started = time.time()
-                resources.update(root, configuration, sanitizer)
-                metrics["phases"]["editorResourcesSeconds"] = round(time.time() - started, 3)
+                if not skip_editor_resources:
+                    started = time.time()
+                    resources.update(root, configuration, sanitizer)
+                    metrics["phases"]["editorResourcesSeconds"] = round(time.time() - started, 3)
+
+            if target in ("Editor", "Player", "All"):
+                from . import player
+                player.stage_template(root, configuration, workspace_config)
 
         metrics["totalSeconds"] = round(time.time() - overall_started, 3)
         metrics["completedUtc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -208,7 +243,6 @@ def build(
             os.environ["CROWNY_OUTPUT_WRITE_LOCK"] = original_marker or ""
             if not original_marker:
                 os.environ.pop("CROWNY_OUTPUT_WRITE_LOCK", None)
-            for lock in reversed(acquired_locks):
-                lock.release()
+            acquired_locks.close()
 
     return metrics

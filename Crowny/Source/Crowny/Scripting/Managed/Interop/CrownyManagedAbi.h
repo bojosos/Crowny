@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 19u
+#define CW_MANAGED_ABI_VERSION 20u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -425,6 +425,15 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_sortin
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_type_fn)(void* context, cw_managed_uuid entity, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_get_float_fn)(void* context, cw_managed_uuid entity, uint32_t field, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_set_float_fn)(void* context, cw_managed_uuid entity, uint32_t field, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_get_int_fn)(void* context, cw_managed_uuid entity, uint32_t field, int32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_set_int_fn)(void* context, cw_managed_uuid entity, uint32_t field, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_get_vector_fn)(void* context, cw_managed_uuid entity, uint32_t field, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_set_vector_fn)(void* context, cw_managed_uuid entity, uint32_t field, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_get_reference_fn)(void* context, cw_managed_uuid entity, uint32_t field, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_set_reference_fn)(void* context, cw_managed_uuid entity, uint32_t field, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_decal_lifetime_fn)(void* context, cw_managed_uuid entity, uint8_t restart);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_type_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_get_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_light_set_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
@@ -571,6 +580,10 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capsule_collider3d_get_rad
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capsule_collider3d_set_radius_fn)(void* context, cw_managed_uuid entity, float value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capsule_collider3d_get_height_fn)(void* context, cw_managed_uuid entity, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_capsule_collider3d_set_height_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_collider3d_get_mesh_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_collider3d_set_mesh_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_collider3d_get_convex_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_mesh_collider3d_set_convex_fn)(void* context, cw_managed_uuid entity, uint8_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_body_type_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_set_body_type_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_rigidbody3d_get_mass_fn)(void* context, cw_managed_uuid entity, float* result);
@@ -961,6 +974,15 @@ typedef struct cw_managed_host_api
     cw_managed_sprite_renderer_get_order_in_layer_fn sprite_renderer_get_order_in_layer;
     cw_managed_sprite_renderer_set_order_in_layer_fn sprite_renderer_set_order_in_layer;
     cw_managed_light_get_type_fn light_get_type;
+    cw_managed_decal_get_float_fn decal_get_float;
+    cw_managed_decal_set_float_fn decal_set_float;
+    cw_managed_decal_get_int_fn decal_get_int;
+    cw_managed_decal_set_int_fn decal_set_int;
+    cw_managed_decal_get_vector_fn decal_get_vector;
+    cw_managed_decal_set_vector_fn decal_set_vector;
+    cw_managed_decal_get_reference_fn decal_get_reference;
+    cw_managed_decal_set_reference_fn decal_set_reference;
+    cw_managed_decal_lifetime_fn decal_lifetime;
     cw_managed_light_set_type_fn light_set_type;
     cw_managed_light_get_color_fn light_get_color;
     cw_managed_light_set_color_fn light_set_color;
@@ -1107,6 +1129,10 @@ typedef struct cw_managed_host_api
     cw_managed_capsule_collider3d_set_radius_fn capsule_collider3d_set_radius;
     cw_managed_capsule_collider3d_get_height_fn capsule_collider3d_get_height;
     cw_managed_capsule_collider3d_set_height_fn capsule_collider3d_set_height;
+    cw_managed_mesh_collider3d_get_mesh_fn mesh_collider3d_get_mesh;
+    cw_managed_mesh_collider3d_set_mesh_fn mesh_collider3d_set_mesh;
+    cw_managed_mesh_collider3d_get_convex_fn mesh_collider3d_get_convex;
+    cw_managed_mesh_collider3d_set_convex_fn mesh_collider3d_set_convex;
     cw_managed_rigidbody3d_get_body_type_fn rigidbody3d_get_body_type;
     cw_managed_rigidbody3d_set_body_type_fn rigidbody3d_set_body_type;
     cw_managed_rigidbody3d_get_mass_fn rigidbody3d_get_mass;
@@ -1493,6 +1519,15 @@ typedef struct cw_managed_host_api
     X(SpriteRendererGetOrderInLayer, sprite_renderer_get_order_in_layer) \
     X(SpriteRendererSetOrderInLayer, sprite_renderer_set_order_in_layer) \
     X(LightGetType, light_get_type) \
+    X(DecalGetFloat, decal_get_float) \
+    X(DecalSetFloat, decal_set_float) \
+    X(DecalGetInt, decal_get_int) \
+    X(DecalSetInt, decal_set_int) \
+    X(DecalGetVector, decal_get_vector) \
+    X(DecalSetVector, decal_set_vector) \
+    X(DecalGetReference, decal_get_reference) \
+    X(DecalSetReference, decal_set_reference) \
+    X(DecalLifetime, decal_lifetime) \
     X(LightSetType, light_set_type) \
     X(LightGetColor, light_get_color) \
     X(LightSetColor, light_set_color) \
@@ -1639,6 +1674,10 @@ typedef struct cw_managed_host_api
     X(CapsuleCollider3DSetRadius, capsule_collider3d_set_radius) \
     X(CapsuleCollider3DGetHeight, capsule_collider3d_get_height) \
     X(CapsuleCollider3DSetHeight, capsule_collider3d_set_height) \
+    X(MeshCollider3DGetMesh, mesh_collider3d_get_mesh) \
+    X(MeshCollider3DSetMesh, mesh_collider3d_set_mesh) \
+    X(MeshCollider3DGetConvex, mesh_collider3d_get_convex) \
+    X(MeshCollider3DSetConvex, mesh_collider3d_set_convex) \
     X(Rigidbody3DGetBodyType, rigidbody3d_get_body_type) \
     X(Rigidbody3DSetBodyType, rigidbody3d_set_body_type) \
     X(Rigidbody3DGetMass, rigidbody3d_get_mass) \

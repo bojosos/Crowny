@@ -47,6 +47,8 @@ int main(int argc, char** argv)
     applicationDesc.WorkingDirectory = Crowny::fs::current_path();
     applicationDesc.BuiltInResourcePackPath = applicationDesc.WorkingDirectory / "Crowny-Editor/Resources/Builtin.cwpack";
     applicationDesc.InternalDirectory = "Crowny-RenderTests/Internal";
+    if (!options.BenchmarkImport.empty())
+        applicationDesc.InternalDirectory = options.Artifacts.parent_path() / "import-runtime/Assets";
     applicationDesc.DeferRuntimeServices = true;
     applicationDesc.Window.Title = "Crowny Render Tests";
     applicationDesc.Window.Width = 64u;

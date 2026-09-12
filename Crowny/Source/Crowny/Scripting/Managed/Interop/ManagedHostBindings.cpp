@@ -4,8 +4,8 @@
 #include "Crowny/Scripting/Managed/Interop/ManagedHostBindings.h"
 #include "Crowny/Scripting/Managed/ManagedComponentTypes.h"
 
-#include "Crowny/Application/Application.h"
 #include "Crowny/Animation/AnimationClip.h"
+#include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioBus.h"
 #include "Crowny/Audio/AudioClip.h"
@@ -56,27 +56,13 @@ namespace Crowny
         cw_managed_uuid ToAbiUuid(const UUID& uuid)
         {
             cw_managed_uuid result{};
-            const String text = uuid.ToString();
-            uint32_t output = 0;
-            uint8_t high = 0;
-            bool haveHigh = false;
-            for (const char character : text)
+            for (size_t index = 0; index < 4; ++index)
             {
-                if (character == '-')
-                    continue;
-                const uint8_t value = character >= '0' && character <= '9'   ? static_cast<uint8_t>(character - '0')
-                                      : character >= 'a' && character <= 'f' ? static_cast<uint8_t>(character - 'a' + 10)
-                                                                             : static_cast<uint8_t>(character - 'A' + 10);
-                if (!haveHigh)
-                {
-                    high = value;
-                    haveHigh = true;
-                }
-                else if (output < 16)
-                {
-                    result.bytes[output++] = static_cast<uint8_t>((high << 4u) | value);
-                    haveHigh = false;
-                }
+                const uint32_t word = uuid.Word(index);
+                result.bytes[index * 4] = static_cast<uint8_t>(word >> 24u);
+                result.bytes[index * 4 + 1] = static_cast<uint8_t>(word >> 16u);
+                result.bytes[index * 4 + 2] = static_cast<uint8_t>(word >> 8u);
+                result.bytes[index * 4 + 3] = static_cast<uint8_t>(word);
             }
             return result;
         }
@@ -176,6 +162,8 @@ namespace Crowny
                 return &entity.GetComponent<SphereCollider3DComponent>();
             if (entity.HasComponent<CapsuleCollider3DComponent>())
                 return &entity.GetComponent<CapsuleCollider3DComponent>();
+            if (entity.HasComponent<MeshCollider3DComponent>())
+                return &entity.GetComponent<MeshCollider3DComponent>();
             return nullptr;
         }
 
@@ -306,33 +294,26 @@ namespace Crowny
             });
         }
 
-        cw_managed_status CW_MANAGED_CALL AddScriptComponent(void* context, cw_managed_uuid entityId,
-                                                             cw_managed_string_view assemblyName,
-                                                             cw_managed_string_view namespaceName,
-                                                             cw_managed_string_view typeName)
+        cw_managed_status CW_MANAGED_CALL AddScriptComponent(void* context, cw_managed_uuid entityId, cw_managed_string_view assemblyName,
+                                                             cw_managed_string_view namespaceName, cw_managed_string_view typeName)
         {
             return Execute(context, [&]() {
-                if ((assemblyName.data == nullptr && assemblyName.length != 0) ||
-                    (namespaceName.data == nullptr && namespaceName.length != 0) ||
+                if ((assemblyName.data == nullptr && assemblyName.length != 0) || (namespaceName.data == nullptr && namespaceName.length != 0) ||
                     (typeName.data == nullptr && typeName.length != 0))
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 const Entity entity = ResolveEntity(entityId);
                 if (!entity)
                     return CW_MANAGED_STATUS_STALE_HANDLE;
                 const ScriptTypeIdentity identity{ Decode(assemblyName), Decode(namespaceName), Decode(typeName) };
-                return entity.GetScene()->AddScriptComponent(entity, identity) ? CW_MANAGED_STATUS_OK
-                                                                               : CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                return entity.GetScene()->AddScriptComponent(entity, identity) ? CW_MANAGED_STATUS_OK : CW_MANAGED_STATUS_INVALID_ARGUMENT;
             });
         }
 
-        cw_managed_status CW_MANAGED_CALL RemoveScriptComponent(void* context, cw_managed_uuid entityId,
-                                                                cw_managed_string_view assemblyName,
-                                                                cw_managed_string_view namespaceName,
-                                                                cw_managed_string_view typeName)
+        cw_managed_status CW_MANAGED_CALL RemoveScriptComponent(void* context, cw_managed_uuid entityId, cw_managed_string_view assemblyName,
+                                                                cw_managed_string_view namespaceName, cw_managed_string_view typeName)
         {
             return Execute(context, [&]() {
-                if ((assemblyName.data == nullptr && assemblyName.length != 0) ||
-                    (namespaceName.data == nullptr && namespaceName.length != 0) ||
+                if ((assemblyName.data == nullptr && assemblyName.length != 0) || (namespaceName.data == nullptr && namespaceName.length != 0) ||
                     (typeName.data == nullptr && typeName.length != 0))
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 const Entity entity = ResolveEntity(entityId);
@@ -658,8 +639,7 @@ namespace Crowny
                     height = static_cast<float>(scene->GetViewportHeight());
                 }
                 // Runtime scenes without an explicit viewport render into the window framebuffer.
-                if ((width <= 0.0f || height <= 0.0f) && Application::TryGet() != nullptr &&
-                    !Application::TryGet()->GetApplicationDesc().Headless)
+                if ((width <= 0.0f || height <= 0.0f) && Application::TryGet() != nullptr && !Application::TryGet()->GetApplicationDesc().Headless)
                 {
                     const Window& window = Application::TryGet()->GetWindow();
                     width = static_cast<float>(window.GetFramebufferWidth());
@@ -1299,6 +1279,54 @@ namespace Crowny
         CW_COLLIDER3D_SCALAR_PROPERTY(CapsuleCollider3DGetRadius, CapsuleCollider3DSetRadius, CapsuleCollider3DComponent, GetRadius, SetRadius)
         CW_COLLIDER3D_SCALAR_PROPERTY(CapsuleCollider3DGetHeight, CapsuleCollider3DSetHeight, CapsuleCollider3DComponent, GetHeight, SetHeight)
 #undef CW_COLLIDER3D_SCALAR_PROPERTY
+
+        cw_managed_status CW_MANAGED_CALL MeshCollider3DGetMesh(void* context, cw_managed_uuid entityId, cw_managed_uuid* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                MeshCollider3DComponent* collider = ResolveComponent<MeshCollider3DComponent>(entityId);
+                if (collider == nullptr)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                *result = ToAbiUuid(collider->GetMesh().GetUUID());
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL MeshCollider3DSetMesh(void* context, cw_managed_uuid entityId, cw_managed_uuid value)
+        {
+            return Execute(context, [&]() {
+                const Entity entity = ResolveEntity(entityId);
+                if (!entity || !entity.HasComponent<MeshCollider3DComponent>())
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                entity.GetComponent<MeshCollider3DComponent>().SetMesh(ResolveAsset<Mesh>(value), entity);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL MeshCollider3DGetConvex(void* context, cw_managed_uuid entityId, uint8_t* result)
+        {
+            return Execute(context, [&]() {
+                if (result == nullptr)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                MeshCollider3DComponent* collider = ResolveComponent<MeshCollider3DComponent>(entityId);
+                if (collider == nullptr)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                *result = collider->IsConvex() ? 1 : 0;
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        cw_managed_status CW_MANAGED_CALL MeshCollider3DSetConvex(void* context, cw_managed_uuid entityId, uint8_t value)
+        {
+            return Execute(context, [&]() {
+                const Entity entity = ResolveEntity(entityId);
+                if (!entity || !entity.HasComponent<MeshCollider3DComponent>())
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                entity.GetComponent<MeshCollider3DComponent>().SetConvex(value != 0, entity);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
 
 #define CW_RIGIDBODY3D_GET(functionName, resultType, expression)                                                                                     \
     cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, resultType* result)                                      \
@@ -4005,6 +4033,154 @@ namespace Crowny
                 if (component == nullptr)
                     return CW_MANAGED_STATUS_STALE_HANDLE;
                 component->SetMaterial(index, ResolveAsset<Material>(materialId));
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+
+        float* DecalFloat(DecalComponent& d, uint32_t field)
+        {
+            switch (field)
+            {
+            case 0: return &d.BottomRadius;
+            case 1: return &d.TopRadius;
+            case 2: return &d.Height;
+            case 3: return &d.ShellThickness;
+            case 4: return &d.Arc;
+            case 5: return &d.SeamRotation;
+            case 6: return &d.Opacity;
+            case 7: return &d.UVRotation;
+            case 8: return &d.EdgeFeather;
+            case 9: return &d.DepthFeather;
+            case 10: return &d.AngleFadeStart;
+            case 11: return &d.AngleFadeEnd;
+            case 12: return &d.DistanceFadeStart;
+            case 13: return &d.DistanceFadeEnd;
+            case 14: return &d.FadeIn;
+            case 15: return &d.Lifetime;
+            case 16: return &d.FadeOut;
+            default: return nullptr;
+            }
+        }
+
+        cw_managed_status CW_MANAGED_CALL DecalGetFloat(void* context, cw_managed_uuid entity, uint32_t field, float* result)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                const float* value = DecalFloat(*d, field);
+                if (!result || !value) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = *value;
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+        cw_managed_status CW_MANAGED_CALL DecalSetFloat(void* context, cw_managed_uuid entity, uint32_t field, float value)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                float* target = DecalFloat(*d, field);
+                if (!target || !std::isfinite(value)) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *target = value;
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+        cw_managed_status CW_MANAGED_CALL DecalGetInt(void* context, cw_managed_uuid entity, uint32_t field, int32_t* result)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!result) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                switch (field)
+                {
+                case 0: *result = static_cast<int32_t>(d->Projection); break;
+                case 1: *result = static_cast<int32_t>(d->TargetMode); break;
+                case 2: *result = d->SortOrder; break;
+                case 3: *result = static_cast<int32_t>(d->ReceiverLayers); break;
+                case 4: *result = d->Enabled; break;
+                case 5: *result = d->PreserveTexelDensity; break;
+                case 6: *result = d->DestroyOwnerOnExpiry; break;
+                default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                }
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+        cw_managed_status CW_MANAGED_CALL DecalSetInt(void* context, cw_managed_uuid entity, uint32_t field, int32_t value)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                switch (field)
+                {
+                case 0: if (value < 0 || value > 1) return CW_MANAGED_STATUS_INVALID_ARGUMENT; d->Projection = static_cast<DecalProjection>(value); break;
+                case 1: if (value < 0 || value > 2) return CW_MANAGED_STATUS_INVALID_ARGUMENT; d->TargetMode = static_cast<DecalTargetMode>(value); break;
+                case 2: d->SortOrder = value; break;
+                case 3: d->ReceiverLayers = static_cast<uint32_t>(value); break;
+                case 4: d->Enabled = value != 0; break;
+                case 5: d->PreserveTexelDensity = value != 0; break;
+                case 6: d->DestroyOwnerOnExpiry = value != 0; break;
+                default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                }
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+        cw_managed_status CW_MANAGED_CALL DecalGetVector(void* context, cw_managed_uuid entity, uint32_t field, cw_managed_vec4* result)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!result || field > 3) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                glm::vec4 v = field == 0 ? d->Tint : field == 1 ? glm::vec4(d->Offset, 0) : field == 2 ? glm::vec4(d->Size, 0) : glm::vec4(d->UVScale, d->UVOffset);
+                *result = { v.x, v.y, v.z, v.w };
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+        cw_managed_status CW_MANAGED_CALL DecalSetVector(void* context, cw_managed_uuid entity, uint32_t field, const cw_managed_vec4* value)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!value || field > 3 || !std::isfinite(value->x) || !std::isfinite(value->y) || !std::isfinite(value->z) || !std::isfinite(value->w))
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                glm::vec4 v(value->x, value->y, value->z, value->w);
+                if (field == 0) d->Tint = v;
+                else if (field == 1) d->Offset = glm::vec3(v);
+                else if (field == 2) d->Size = glm::vec3(v);
+                else { d->UVScale = glm::vec2(v); d->UVOffset = { v.z, v.w }; }
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+        cw_managed_status CW_MANAGED_CALL DecalGetReference(void* context, cw_managed_uuid entity, uint32_t field, cw_managed_uuid* result)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!result || field > 1) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                *result = ToAbiUuid(field == 0 ? d->Material.GetUUID() : d->Target);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+        cw_managed_status CW_MANAGED_CALL DecalSetReference(void* context, cw_managed_uuid entity, uint32_t field, cw_managed_uuid value)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (field > 1) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                if (field == 0)
+                {
+                    auto material = ResolveAsset<Material>(value);
+                    if (material && material->GetDomain() != MaterialDomain::Decal) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                    d->Material = material;
+                }
+                else d->Target = FromAbiUuid(value);
+                return CW_MANAGED_STATUS_OK;
+            });
+        }
+        cw_managed_status CW_MANAGED_CALL DecalLifetime(void* context, cw_managed_uuid entity, uint8_t restart)
+        {
+            return Execute(context, [&]() {
+                auto* d = ResolveComponent<DecalComponent>(entity);
+                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (restart) d->RestartLifetime(); else d->StopLifetime();
                 return CW_MANAGED_STATUS_OK;
             });
         }

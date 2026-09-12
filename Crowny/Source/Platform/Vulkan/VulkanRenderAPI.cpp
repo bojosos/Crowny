@@ -423,13 +423,12 @@ namespace Crowny
                                               uint32_t stride, const Ref<CommandBuffer>& commandBuffer)
     {
         CW_ENGINE_ASSERT(argumentBuffer != nullptr, "Vulkan indirect draw requires an argument buffer");
-        CW_ENGINE_ASSERT(stride >= sizeof(DrawIndexedIndirectCommand) && (stride & 3u) == 0,
-                         "Vulkan indirect draw stride is invalid");
+        CW_ENGINE_ASSERT(stride >= sizeof(DrawIndexedIndirectCommand) && (stride & 3u) == 0, "Vulkan indirect draw stride is invalid");
         if (argumentBuffer == nullptr || drawCount == 0)
             return;
 
-        const uint64_t requiredSize = static_cast<uint64_t>(argumentOffset) + static_cast<uint64_t>(drawCount - 1u) * stride +
-                                      sizeof(DrawIndexedIndirectCommand);
+        const uint64_t requiredSize =
+          static_cast<uint64_t>(argumentOffset) + static_cast<uint64_t>(drawCount - 1u) * stride + sizeof(DrawIndexedIndirectCommand);
         CW_ENGINE_ASSERT(requiredSize <= argumentBuffer->GetBufferSize(), "Vulkan indirect draw range exceeds its argument buffer");
         if (requiredSize > argumentBuffer->GetBufferSize())
             return;
@@ -446,21 +445,21 @@ namespace Crowny
         CW_ENGINE_ASSERT(argumentBuffer != nullptr && countBuffer != nullptr, "Vulkan indirect count draw requires two buffers");
         if (argumentBuffer == nullptr || countBuffer == nullptr || maxDrawCount == 0)
             return;
-        CW_ENGINE_ASSERT(countOffset + sizeof(uint32_t) <= countBuffer->GetBufferSize(),
-                         "Vulkan indirect draw count range exceeds its buffer");
+        CW_ENGINE_ASSERT(countOffset + sizeof(uint32_t) <= countBuffer->GetBufferSize(), "Vulkan indirect draw count range exceeds its buffer");
         if (countOffset + sizeof(uint32_t) > countBuffer->GetBufferSize())
             return;
 
-        const uint64_t requiredSize = static_cast<uint64_t>(argumentOffset) + static_cast<uint64_t>(maxDrawCount - 1u) * stride +
-                                      sizeof(DrawIndexedIndirectCommand);
+        const uint64_t requiredSize =
+          static_cast<uint64_t>(argumentOffset) + static_cast<uint64_t>(maxDrawCount - 1u) * stride + sizeof(DrawIndexedIndirectCommand);
         CW_ENGINE_ASSERT(requiredSize <= argumentBuffer->GetBufferSize(), "Vulkan indirect draw range exceeds its argument buffer");
         if (requiredSize > argumentBuffer->GetBufferSize())
             return;
 
         VulkanGenericGpuBuffer* arguments = static_cast<VulkanGenericGpuBuffer*>(argumentBuffer.get());
         VulkanGenericGpuBuffer* count = static_cast<VulkanGenericGpuBuffer*>(countBuffer.get());
-        GetCB(commandBuffer)->GetInternal()->DrawIndexedIndirectCount(arguments->GetBuffer(), argumentOffset, count->GetBuffer(), countOffset,
-                                                                      maxDrawCount, stride);
+        GetCB(commandBuffer)
+          ->GetInternal()
+          ->DrawIndexedIndirectCount(arguments->GetBuffer(), argumentOffset, count->GetBuffer(), countOffset, maxDrawCount, stride);
         RecordIndirectDraw(0); // The GPU count buffer is deliberately not read back for statistics.
     }
 
@@ -623,7 +622,19 @@ namespace Crowny
             caps.NumMultiRenderTargets = devLimits.maxColorAttachments;
             caps.MaxDrawIndirectCount = devLimits.maxDrawIndirectCount;
             caps.MaxStorageBufferRange = devLimits.maxStorageBufferRange;
-            caps.MaxBindlessSampledImages = devLimits.maxDescriptorSetSampledImages;
+            VkPhysicalDeviceDescriptorIndexingProperties indexingProperties{};
+            const bool updateAfterBindTextures =
+              optionalFeatures.DescriptorIndexing && optionalFeatures.NonUniformTextureIndexing && optionalFeatures.UpdateAfterBind;
+            if (updateAfterBindTextures)
+            {
+                indexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
+                VkPhysicalDeviceProperties2 properties{};
+                properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+                properties.pNext = &indexingProperties;
+                vkGetPhysicalDeviceProperties2(device->GetPhysicalDevice(), &properties);
+            }
+            caps.MaxBindlessSampledImages =
+              VulkanUtils::GetBindlessTextureCapacity(devLimits, updateAfterBindTextures ? &indexingProperties : nullptr);
 
             if (optionalFeatures.MultiDrawIndirect)
                 caps.SetCapability(CW_MULTI_DRAW_INDIRECT);
@@ -651,6 +662,8 @@ namespace Crowny
                 caps.SetCapability(CW_DEDICATED_TRANSFER_QUEUE);
 
             caps.NumTextureUnitsPerStage[FRAGMENT_SHADER] = devLimits.maxPerStageDescriptorSampledImages;
+            caps.MaxTexture2DSize = devLimits.maxImageDimension2D;
+            caps.MaxTextureArrayLayers = devLimits.maxImageArrayLayers;
             caps.NumTextureUnitsPerStage[VERTEX_SHADER] = devLimits.maxPerStageDescriptorSampledImages;
             caps.NumTextureUnitsPerStage[COMPUTE_SHADER] = devLimits.maxPerStageDescriptorSampledImages;
 

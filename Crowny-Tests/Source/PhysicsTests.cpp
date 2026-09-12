@@ -1,12 +1,16 @@
-#include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "Crowny/Application/Application.h"
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics2DBackend.h"
 #include "Crowny/Physics/Physics3D.h"
+#include "Crowny/Physics/PhysicsMesh.h"
+#include "Crowny/Renderer/Mesh.h"
+#include "Crowny/Renderer/MeshFactory.h"
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 
@@ -74,7 +78,7 @@ namespace
     struct Physics3DStateRestore
     {
         explicit Physics3DStateRestore(Physics3D& physics)
-            : Physics(physics), OriginalBackend(physics.GetBackend()), OriginalSettings(physics.GetSettings())
+          : Physics(physics), OriginalBackend(physics.GetBackend()), OriginalSettings(physics.GetSettings())
         {
         }
 
@@ -245,9 +249,7 @@ TEST_CASE("Runtime and physics simulation consume one shared frame plan", "[Phys
                   ScriptRuntime::OnUpdate(scene, frameDelta);
               }
           },
-          [&](float interpolationAlpha, Timestep extrapolationTime) {
-              scene->SynchronizePhysicsTransforms(interpolationAlpha, extrapolationTime);
-          });
+          [&](float interpolationAlpha, Timestep extrapolationTime) { scene->SynchronizePhysicsTransforms(interpolationAlpha, extrapolationTime); });
 
         CHECK(variableUpdates == 1);
         CHECK(Physics2D::Get().GetPosition(body).x == Catch::Approx(0.04f).margin(0.0001f));
@@ -662,12 +664,21 @@ TEST_CASE("Active 3D components survive AddOrReplace on every backend", "[Physic
             auto& capsule = body.AddComponent<CapsuleCollider3DComponent>();
             capsule.SetRadius(0.5f, body);
             capsule.SetHeight(2.5f, body);
+            const UUID meshUuid = UuidGenerator::Generate();
+            const AssetHandle<PhysicsMesh> collision =
+              CreateRuntimePhysicsMesh(*AssetManager::TryGet(), PhysicsMesh::Build(*MeshFactory::CreateCubeData(1.0f), {}));
+            REQUIRE(collision);
+            PhysicsMeshResolver::Register(meshUuid, collision);
+            auto& meshCollider = body.AddComponent<MeshCollider3DComponent>();
+            meshCollider.SetMesh(static_asset_cast<Mesh>(AssetManager::TryGet()->GetAssetHandle(meshUuid)), body);
+            meshCollider.SetConvex(true, body);
 
             scene->OnSimulationStart();
             REQUIRE(rigidbody.RuntimeBody);
             REQUIRE(box.RuntimeShape);
             REQUIRE(sphere.RuntimeShape);
             REQUIRE(capsule.RuntimeShape);
+            REQUIRE(meshCollider.RuntimeShape);
 
             rigidbody.SetLinearVelocity({ 2.0f, -1.0f, 3.0f });
             rigidbody.SetAngularVelocity({ 0.25f, 0.5f, 0.75f });
@@ -731,11 +742,190 @@ TEST_CASE("Active 3D components survive AddOrReplace on every backend", "[Physic
             CHECK(replacedCapsule.GetRadius() == 0.9f);
             CHECK(replacedCapsule.GetHeight() == 3.5f);
 
+            MeshCollider3DComponent meshSettings = meshCollider;
+            meshSettings.SetIsTrigger(true);
+            const uint64_t meshInstanceId = meshCollider.InstanceId;
+            auto& replacedMesh = body.AddOrReplaceComponent<MeshCollider3DComponent>(meshSettings);
+            CHECK(replacedMesh.InstanceId == meshInstanceId);
+            REQUIRE(replacedMesh.RuntimeShape);
+            CHECK(replacedMesh.IsConvex());
+            CHECK(replacedMesh.IsTrigger());
+            CHECK(replacedMesh.GetMesh().GetUUID() == meshUuid);
+
             scene->OnSimulationEnd();
             CHECK_FALSE(static_cast<bool>(replacedBody.RuntimeBody));
             CHECK_FALSE(static_cast<bool>(replacedBox.RuntimeShape));
             CHECK_FALSE(static_cast<bool>(replacedSphere.RuntimeShape));
             CHECK_FALSE(static_cast<bool>(replacedCapsule.RuntimeShape));
+            CHECK_FALSE(static_cast<bool>(replacedMesh.RuntimeShape));
+            PhysicsMeshResolver::Unregister(meshUuid);
         }
     }
+}
+
+TEST_CASE("3D backends implement convex hull and triangle mesh shapes", "[Physics][Physics3D][Mesh]")
+{
+    for (const BackendCase& backendCase : BackendCases)
+    {
+        DYNAMIC_SECTION(backendCase.Name)
+        {
+            Scope<Physics3DBackend> backend = CreateBackend(backendCase.Type);
+            if (!backend)
+                SKIP("Selected backend is not compiled into this build");
+            REQUIRE(HasCapability(backend->GetCapabilities(), Physics3DCapability::ConvexShapes));
+            REQUIRE(HasCapability(backend->GetCapabilities(), Physics3DCapability::TriangleMeshes));
+
+            Vector<PhysicsContactEvent3D> contacts;
+            Physics3DSettings settings;
+            settings.Backend = backendCase.Type;
+            settings.Gravity = glm::vec3(0.0f, -9.81f, 0.0f);
+            REQUIRE(backend->Initialize(settings, [&](const PhysicsContactEvent3D& event) { contacts.push_back(event); }));
+
+            PhysicsBody3DDesc floorDesc;
+            floorDesc.Type = PhysicsBodyType3D::Static;
+            const PhysicsBody3DHandle floor = backend->CreateBody(floorDesc);
+            REQUIRE(floor);
+
+            PhysicsShape3DDesc meshDesc;
+            meshDesc.Type = PhysicsShapeType3D::TriangleMesh;
+            meshDesc.Vertices = { { -4.0f, 0.0f, -4.0f }, { 4.0f, 0.0f, -4.0f }, { 4.0f, 0.0f, 4.0f }, { -4.0f, 0.0f, 4.0f } };
+            meshDesc.Indices = { 0, 2, 1, 0, 3, 2 };
+            meshDesc.UserData = 31;
+            const PhysicsShape3DHandle meshShape = backend->AddShape(floor, meshDesc);
+            REQUIRE(meshShape);
+
+            PhysicsBody3DDesc ballDesc;
+            ballDesc.Type = PhysicsBodyType3D::Dynamic;
+            ballDesc.Position = { 0.0f, 3.0f, 0.0f };
+            ballDesc.AllowSleep = false;
+            const PhysicsBody3DHandle ball = backend->CreateBody(ballDesc);
+            REQUIRE(ball);
+
+            PhysicsShape3DDesc hullDesc;
+            hullDesc.Type = PhysicsShapeType3D::ConvexHull;
+            for (float x : { -0.5f, 0.5f })
+                for (float y : { -0.5f, 0.5f })
+                    for (float z : { -0.5f, 0.5f })
+                        hullDesc.Vertices.emplace_back(x, y, z);
+            hullDesc.UserData = 32;
+            const PhysicsShape3DHandle hullShape = backend->AddShape(ball, hullDesc);
+            REQUIRE(hullShape);
+
+            // Triangle meshes are static-only on every SDK, and hulls need a volume.
+            CHECK_FALSE(backend->AddShape(ball, meshDesc));
+            PhysicsShape3DDesc flatHull;
+            flatHull.Type = PhysicsShapeType3D::ConvexHull;
+            flatHull.Vertices = { { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } };
+            CHECK_FALSE(backend->AddShape(ball, flatHull));
+
+            const Vector<PhysicsQueryHit3D> rayHits = backend->Raycast({ 2.0f, 5.0f, 2.0f }, { 0.0f, -1.0f, 0.0f }, 10.0f, {});
+            REQUIRE_FALSE(rayHits.empty());
+            CHECK(rayHits.front().Shape == meshShape);
+            CHECK(rayHits.front().Point.y == Catch::Approx(0.0f).margin(0.01f));
+
+            for (int step = 0; step < 240; step++)
+                backend->Step(1.0f / 60.0f, 4);
+
+            glm::vec3 position;
+            glm::quat rotation;
+            backend->GetBodyTransform(ball, position, rotation);
+            CHECK(position.y > 0.3f);
+            CHECK(position.y < 0.8f);
+            CHECK_FALSE(contacts.empty());
+            const bool touched = std::any_of(contacts.begin(), contacts.end(), [&](const PhysicsContactEvent3D& event) {
+                return (event.ShapeA == meshShape && event.ShapeB == hullShape) || (event.ShapeA == hullShape && event.ShapeB == meshShape);
+            });
+            CHECK(touched);
+
+            backend->DestroyBody(ball);
+            backend->DestroyBody(floor);
+            backend->Shutdown();
+        }
+    }
+}
+
+TEST_CASE("Mesh colliders build backend shapes from cooked physics meshes", "[Physics][Physics3D][Ecs][Mesh]")
+{
+    EnsureHeadlessRuntime();
+    Physics3D& physics = Physics3D::Get();
+    [[maybe_unused]] Physics3DStateRestore restorePhysics(physics);
+    Physics3DSettings settings = physics.GetSettings();
+    settings.Gravity = glm::vec3(0.0f, -9.81f, 0.0f);
+    settings.Substeps = 4;
+
+    const UUID meshUuid = UuidGenerator::Generate();
+    const Ref<MeshData> cubeData = MeshFactory::CreateCubeData(1.0f);
+    REQUIRE(cubeData != nullptr);
+    const AssetHandle<PhysicsMesh> collision = CreateRuntimePhysicsMesh(
+      *AssetManager::TryGet(), PhysicsMesh::Build(*cubeData, { SubMesh(0, cubeData->GetIndexCount(), DrawMode::TRIANGLE_LIST) }));
+    REQUIRE(collision);
+    PhysicsMeshResolver::Register(meshUuid, collision);
+    const AssetHandle<Mesh> meshHandle = static_asset_cast<Mesh>(AssetManager::TryGet()->GetAssetHandle(meshUuid));
+    REQUIRE(meshHandle.HasUUID());
+
+    for (const BackendCase& backendCase : BackendCases)
+    {
+        DYNAMIC_SECTION(backendCase.Name)
+        {
+            if (!Physics3D::IsBackendCompiled(backendCase.Type))
+                SKIP("Selected backend is not compiled into this build");
+            settings.Backend = backendCase.Type;
+            REQUIRE(physics.SetBackend(backendCase.Type));
+            physics.SetSettings(settings);
+
+            Ref<Scene> scene = CreateRef<Scene>(false);
+            Entity floor = scene->CreateEntity("Mesh floor");
+            floor.SetScale({ 10.0f, 1.0f, 10.0f });
+            auto& floorBody = floor.AddComponent<Rigidbody3DComponent>();
+            floorBody.SetBodyType(PhysicsBodyType3D::Static, floor);
+            auto& floorCollider = floor.AddComponent<MeshCollider3DComponent>();
+            floorCollider.SetMesh(meshHandle, floor);
+            floorCollider.SetConvex(false, floor);
+
+            Entity ball = scene->CreateEntity("Convex ball");
+            ball.SetPosition({ 0.0f, 3.0f, 0.0f });
+            auto& ballBody = ball.AddComponent<Rigidbody3DComponent>();
+            ballBody.SetBodyType(PhysicsBodyType3D::Dynamic, ball);
+            ballBody.SetAllowSleep(false, ball);
+            auto& ballCollider = ball.AddComponent<MeshCollider3DComponent>();
+            ballCollider.SetMesh(meshHandle, ball);
+            ballCollider.SetConvex(true, ball);
+
+            Entity unassigned = scene->CreateEntity("No mesh");
+            auto& unassignedCollider = unassigned.AddComponent<MeshCollider3DComponent>();
+
+            scene->OnSimulationStart();
+            REQUIRE(floorBody.RuntimeBody);
+            REQUIRE(floorCollider.RuntimeShape);
+            REQUIRE(ballBody.RuntimeBody);
+            REQUIRE(ballCollider.RuntimeShape);
+            CHECK_FALSE(static_cast<bool>(unassignedCollider.RuntimeShape));
+
+            for (int step = 0; step < 240; step++)
+                scene->OnFixedUpdate(Timestep(1.0f / 60.0f));
+
+            glm::vec3 position;
+            glm::quat rotation;
+            physics.GetBodyTransform(ballBody.RuntimeBody, position, rotation);
+            // Floor top is at y = 0.5 (unit cube scaled to height 1), the hull half extent is 0.5.
+            CHECK(position.y > 0.7f);
+            CHECK(position.y < 1.4f);
+
+            // A triangle mesh on a non-static body is skipped rather than handed to the backend.
+            floorBody.SetBodyType(PhysicsBodyType3D::Dynamic, floor);
+            CHECK(floorBody.RuntimeBody);
+            CHECK_FALSE(static_cast<bool>(floorCollider.RuntimeShape));
+            floorCollider.SetConvex(true, floor);
+            CHECK(floorCollider.RuntimeShape);
+            floorCollider.SetConvex(false, floor);
+            CHECK_FALSE(static_cast<bool>(floorCollider.RuntimeShape));
+            floorBody.SetBodyType(PhysicsBodyType3D::Static, floor);
+            CHECK(floorCollider.RuntimeShape);
+
+            scene->OnSimulationEnd();
+            CHECK_FALSE(static_cast<bool>(floorCollider.RuntimeShape));
+            CHECK_FALSE(static_cast<bool>(ballCollider.RuntimeShape));
+        }
+    }
+    PhysicsMeshResolver::Unregister(meshUuid);
 }

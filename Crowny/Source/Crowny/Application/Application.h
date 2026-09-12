@@ -69,7 +69,9 @@ namespace Crowny
         EngineRuntime& GetRuntime();
         const EngineRuntime& GetRuntime() const;
         bool IsMultiThreaded() const { return m_RenderThread != nullptr; }
-        void Exit();
+        void Exit(int exitCode = 0);
+        static int GetExitCode() { return s_ExitCode; }
+        static void SetExitCode(int exitCode) { s_ExitCode = exitCode; }
         const ApplicationDesc& GetApplicationDesc() const { return m_ApplicationDesc; }
         const Path& GetWorkingDirectory() const { return m_ApplicationDesc.WorkingDirectory; }
         const Path& GetInternalDirectory() const { return m_ApplicationDesc.InternalDirectory; }
@@ -93,6 +95,7 @@ namespace Crowny
         Vector<Ref<RenderWindow>> m_Windows;
         Ref<TimeSettings> m_TimeSettings;
         bool m_Running = true;
+        inline static int s_ExitCode = 0;
         bool m_Minimized = false;
         double m_LastFrameTime = 0.0;
         Time m_Time;

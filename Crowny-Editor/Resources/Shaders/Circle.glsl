@@ -69,6 +69,8 @@ void main()
     // Set output color
     o_Color = Input.Color;
 	o_Color.a *= circle;
+    if (o_Color.a <= 0.0) discard;
+    o_Color.rgb *= o_Color.a;
 
 	o_EntityID = v_EntityID;
 }

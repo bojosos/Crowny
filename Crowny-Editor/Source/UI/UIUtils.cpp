@@ -11,6 +11,7 @@
 
 #include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 
 namespace Crowny
@@ -172,7 +173,7 @@ namespace Crowny
             const float clearSize = inputMax.y - inputMin.y;
             const ImVec2 clearMin(inputMax.x - clearSize, inputMin.y);
             const ImVec2 clearMax(inputMax.x, inputMax.y);
-            const bool clearHovered = ImGui::IsMouseHoveringRect(clearMin, clearMax);
+            const bool clearHovered = ImGui::IsItemHovered() && ImGui::IsMouseHoveringRect(clearMin, clearMax);
             const ImU32 clearColor = ImGui::GetColorU32(clearHovered ? ImGuiCol_Text : ImGuiCol_TextDisabled);
             const float inset = clearSize * 0.34f;
             drawList->AddLine(clearMin + ImVec2(inset, inset), clearMax - ImVec2(inset, inset), clearColor, 1.5f);
@@ -184,6 +185,9 @@ namespace Crowny
                 if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
                 {
                     searchString.clear();
+                    // Active inputs keep their own text buffer and otherwise restore the old query next frame.
+                    if (ImGuiInputTextState* state = ImGui::GetInputTextState(ImGui::GetItemID()))
+                        state->ReloadUserBufAndMoveToEnd();
                     modified = true;
                 }
             }

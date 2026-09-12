@@ -666,7 +666,7 @@ namespace Crowny
                     return validation;
                 const Path staged = root / file.RelativePath;
                 if (!IsSafeRelativeBuildPath(file.RelativePath) || !IsWithin(root, staged) || TraversesLinkOrReparsePoint(root, staged) ||
-                    !fs::is_regular_file(staged))
+                    !fs::is_regular_file(BuildFileIoPath(staged)))
                 {
                     validation.Error("pipeline.template.output_unsafe",
                                      "A template file is missing, escapes the output, or traverses a link/reparse point.",
@@ -1512,7 +1512,9 @@ namespace Crowny
                     managed.ProjectRoot = snapshot.ProjectRoot;
                 Path managedScratch;
                 String scratchError;
-                if (!CreateOwnedSiblingDirectory(workingRoot / "ManagedBuild", "pipeline", managedScratch, scratchError))
+                // The managed compiler requires its output to stay inside its project root.
+                // Reserve a unique child there and remove only that owned directory afterwards.
+                if (!CreateOwnedSiblingDirectory(managed.ProjectRoot / "ManagedBuild", "pipeline", managedScratch, scratchError))
                 {
                     BuildValidation compileValidation;
                     compileValidation.Error("pipeline.managed.staging_failed", "Cannot create managed staging directory: " + scratchError,
@@ -1521,7 +1523,8 @@ namespace Crowny
                     return report;
                 }
                 managedCleanup.TakeOwnership(managedScratch);
-                managed.OutputAssembly = managedScratch / "Game.dll";
+                // Scene script identities use GameAssembly, regardless of the staged filename.
+                managed.OutputAssembly = managedScratch / "GameAssembly.dll";
                 managed.Configuration = snapshot.Target.Configuration;
                 managed.Cancellation = cancelled;
                 managed.Symbols.insert(managed.Symbols.end(), snapshot.Profile.Symbols.begin(), snapshot.Profile.Symbols.end());
@@ -1541,6 +1544,13 @@ namespace Crowny
                 BuildValidation compileValidation;
                 for (const ManagedBuildDiagnostic& diagnostic : compiled.Diagnostics)
                     compileValidation.Error(diagnostic.Code, diagnostic.Message, diagnostic.Subject.string());
+                if (!compiled.Succeeded())
+                {
+                    if (!compiled.StandardOutput.empty())
+                        compileValidation.Error("pipeline.managed.stdout", compiled.StandardOutput);
+                    if (!compiled.StandardError.empty())
+                        compileValidation.Error("pipeline.managed.stderr", compiled.StandardError);
+                }
                 if (!compiled.Succeeded() && compileValidation.IsValid())
                     compileValidation.Error("pipeline.managed.failed", "Managed compilation failed without a diagnostic.",
                                             managed.OutputAssembly.string());

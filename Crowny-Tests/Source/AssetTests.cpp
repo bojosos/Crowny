@@ -8,6 +8,7 @@
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Serialization/AssetManifestSerializer.h"
 #include "Crowny/Serialization/PhysicsMaterial2DSerializer.h"
+#include "Crowny/Utils/ShaderCompiler.h"
 #include "cwpch.h"
 
 using namespace Crowny;
@@ -19,6 +20,50 @@ public:
     virtual AssetType GetAssetType() const override { return AssetType::Mesh; } // Just use a dummy type
     static AssetType GetStaticType() { return AssetType::Mesh; }
 };
+
+TEST_CASE("Asset batch saves preserve loaded identities and reject conflicting paths", "[Assets][Serialization][Batch]")
+{
+    const Path root = fs::temp_directory_path() / ("crowny-save-batch-" + UuidGenerator::Generate().ToString());
+    struct Cleanup
+    {
+        Path Root;
+        ~Cleanup()
+        {
+            std::error_code error;
+            fs::remove_all(Root, error);
+        }
+    } cleanup{ root };
+    AssetManager manager;
+    auto manifest = CreateRef<AssetManifest>("batch");
+    manager.RegisterAssetManifest(manifest);
+    Vector<std::pair<Ref<Asset>, Path>> batch;
+    Vector<AssetHandle<PhysicsMaterial2D>> handles;
+    for (uint32_t index = 0; index < 33; ++index)
+    {
+        const UUID uuid = UuidGenerator::Generate();
+        const Path destination = root / (std::to_string(index) + ".asset");
+        manifest->RegisterAsset(uuid, destination);
+        handles.push_back(static_asset_cast<PhysicsMaterial2D>(manager.CreateAssetHandle(CreateRef<PhysicsMaterial2D>(), uuid)));
+        auto replacement = CreateRef<PhysicsMaterial2D>();
+        replacement->SetDensity(static_cast<float>(index + 2));
+        batch.emplace_back(replacement, destination);
+    }
+    REQUIRE(manager.SaveBatch(batch));
+    AssetManager reader;
+    for (size_t index = 0; index < batch.size(); ++index)
+    {
+        CHECK(handles[index].GetInternalPtr() == batch[index].first);
+        const auto loaded = reader.Load<PhysicsMaterial2D>(batch[index].second, false);
+        REQUIRE(loaded);
+        CHECK(loaded->GetDensity() == static_cast<float>(index + 2));
+    }
+    CHECK_FALSE(manager.SaveBatch({ batch[0], batch[0] }));
+    CHECK_FALSE(manager.SaveBatch({ { nullptr, root / "null.asset" } }));
+    fs::create_directories(root / "blocked.asset");
+    CHECK_FALSE(manager.SaveBatch({ { batch[0].first, root / "blocked.asset" }, { batch[1].first, root / "other.asset" } }));
+    CHECK(fs::is_directory(root / "blocked.asset"));
+    // SaveBatch has joined all writers before returning, so teardown is safe even on failure.
+}
 
 TEST_CASE("Asset Handling", "[Assets]")
 {
@@ -205,6 +250,45 @@ TEST_CASE("Physics material assets survive binary round trips", "[Assets][Physic
 
     fs::remove(material2DPath);
     fs::remove(material3DPath);
+}
+
+TEST_CASE("Cooked shaders restore sparse vertex locations from their bytecode", "[Assets][Shader][Serialization][decals]")
+{
+    const String source = R"(#lang glsl
+#type vertex
+#version 450
+layout(location = 0) in vec3 cw_Position;
+layout(location = 6) in vec3 cw_Normal;
+void main() { gl_Position = vec4(cw_Position + cw_Normal * 0.01, 1.0); }
+#type fragment
+#version 450
+layout(location = 0) out vec4 color;
+void main() { color = vec4(1); }
+)";
+    const auto compiled = ShaderCompiler::CompileWithDiagnostics("sparse-coating-inputs.glsl", source);
+    REQUIRE(compiled.Succeeded());
+    AssetManager manager;
+    const Path path = fs::temp_directory_path() / ("crowny-sparse-inputs-" + UuidGenerator::Generate().ToString() + ".asset");
+    struct Cleanup
+    {
+        Path File;
+        ~Cleanup()
+        {
+            std::error_code error;
+            fs::remove(File, error);
+        }
+    } cleanup{ path };
+    auto shader = Shader::Create(compiled.Description);
+    manager.Save(shader, path);
+    const auto loaded = manager.Load<Shader>(path, false);
+    REQUIRE(loaded);
+    const auto& vertex = loaded->GetTechniques()[0]->GetRenderPasses()[0]->GetPassDesc().VertexShader;
+    REQUIRE(vertex);
+    const auto& elements = vertex->VertexLayout.GetElements();
+    REQUIRE(elements.size() == 2);
+    CHECK(elements[0].Location == 0);
+    CHECK(elements[1].Attribute == VertexAttribute::Normal);
+    CHECK(elements[1].Location == 6);
 }
 
 TEST_CASE("Shader state descriptors survive asset round trips", "[Assets][Shader][Serialization]")

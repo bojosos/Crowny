@@ -168,7 +168,7 @@ namespace Crowny
 
     String ComputeFileSha256(const Path& path, BuildCancellationCheck cancellation)
     {
-        std::ifstream stream(path, std::ios::binary);
+        std::ifstream stream(BuildFileIoPath(path), std::ios::binary);
         if (!stream)
             return {};
         mbedtls_sha256_context context;

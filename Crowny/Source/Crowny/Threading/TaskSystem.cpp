@@ -595,6 +595,9 @@ namespace Crowny
                 Lock lock(task->m_StateMutex);
                 if (task->m_Status.load(std::memory_order_acquire) != TaskStatus::Queued)
                 {
+                    // The queue may hold the last reference to this canceled task.
+                    // Release its mutex before destroying the task that owns it.
+                    lock.unlock();
                     task = nullptr;
                     continue;
                 }

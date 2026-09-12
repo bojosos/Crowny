@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/RenderAPI/RenderCapabilities.h"
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
@@ -8,8 +9,7 @@
 namespace Crowny
 {
 
-    VulkanLayoutKey::VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags,
-                                     uint32_t numBindings)
+    VulkanLayoutKey::VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags, uint32_t numBindings)
       : NumBindings(numBindings), Bindings(bindings), BindingFlags(const_cast<VkDescriptorBindingFlags*>(bindingFlags))
     {
     }
@@ -100,7 +100,7 @@ namespace Crowny
     }
 
     VulkanDescriptorLayout* VulkanDescriptorManager::GetLayout(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings,
-                                                                const VkDescriptorBindingFlags* bindingFlags)
+                                                               const VkDescriptorBindingFlags* bindingFlags)
     {
         VulkanLayoutKey key(bindings, bindingFlags, numBindings);
 
@@ -182,7 +182,7 @@ namespace Crowny
 
     VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice& device, bool updateAfterBind) : m_Device(device)
     {
-        const uint32_t sampledImageCapacity = updateAfterBind ? 8192u : s_MaxSampledImages;
+        const uint32_t sampledImageCapacity = std::max(s_MaxSampledImages, 2u * RenderCapabilities::BindlessTextureLimit);
         VkDescriptorPoolSize poolSizes[8];
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         poolSizes[0].descriptorCount = sampledImageCapacity;
@@ -214,8 +214,8 @@ namespace Crowny
         VkDescriptorPoolCreateInfo poolCreateInfo;
         poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolCreateInfo.pNext = nullptr;
-        poolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT |
-                               (updateAfterBind ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0u);
+        poolCreateInfo.flags =
+          VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | (updateAfterBind ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0u);
         poolCreateInfo.maxSets = s_MaxSets;
         poolCreateInfo.poolSizeCount = sizeof(poolSizes) / sizeof(poolSizes[0]);
         poolCreateInfo.pPoolSizes = poolSizes;
@@ -243,6 +243,39 @@ namespace Crowny
         for (uint32_t i = 0; i < count; i++)
             entries[i].dstSet = m_Set;
         vkUpdateDescriptorSets(m_Device, count, entries, 0, nullptr);
+    }
+
+    void VulkanDescriptorSet::AppendImageWrites(const VkWriteDescriptorSet& binding, Vector<VkDescriptorImageInfo>& previous,
+                                                Vector<VkWriteDescriptorSet>& writes)
+    {
+        const uint32_t oldCount = static_cast<uint32_t>(previous.size());
+        previous.resize(binding.descriptorCount);
+        uint32_t index = 0;
+        auto changed = [&](uint32_t element) {
+            const VkDescriptorImageInfo& current = binding.pImageInfo[element];
+            const VkDescriptorImageInfo& old = previous[element];
+            return element >= oldCount || current.sampler != old.sampler || current.imageView != old.imageView ||
+                   current.imageLayout != old.imageLayout;
+        };
+        while (index < binding.descriptorCount)
+        {
+            if (!changed(index))
+            {
+                index++;
+                continue;
+            }
+            const uint32_t first = index;
+            do
+            {
+                previous[index] = binding.pImageInfo[index];
+                index++;
+            } while (index < binding.descriptorCount && changed(index));
+            VkWriteDescriptorSet write = binding;
+            write.dstArrayElement += first;
+            write.descriptorCount = index - first;
+            write.pImageInfo += first;
+            writes.push_back(write);
+        }
     }
 
     VulkanDescriptorLayout::VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings,

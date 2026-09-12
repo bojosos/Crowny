@@ -10,7 +10,10 @@
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Audio/AudioMixer.h"
 #include "Crowny/ImGui/ImGuiVulkanTexture.h"
+#include "Crowny/Physics/PhysicsMesh.h"
 #include "Editor/EditorAssets.h"
+#include "Editor/EditorUtils.h"
+#include "Editor/ProjectLibrary.h"
 #include "UI/Properties.h"
 #include "UI/SelectionProperties.h"
 
@@ -81,7 +84,8 @@ namespace Crowny
             {
                 UI::Property("Field of View",
                              properties.Bind(
-                               "PerspectiveFOV", [](const CameraComponent& camera) { return glm::degrees(camera.Camera.GetPerspectiveVerticalFOV()); },
+                               "PerspectiveFOV",
+                               [](const CameraComponent& camera) { return glm::degrees(camera.Camera.GetPerspectiveVerticalFOV()); },
                                [](CameraComponent& camera, float value) {
                                    camera.Camera.SetPerspectiveVerticalFOV(glm::radians(std::clamp(value, 1.0f, 179.0f)));
                                }),
@@ -131,6 +135,87 @@ namespace Crowny
         UI::Property("MSAA", properties.Bind(
                                "MSAA", [](const CameraComponent& camera) { return camera.Camera.GetMSAA(); },
                                [](CameraComponent& camera, bool value) { camera.Camera.SetMSAA(value); }));
+    }
+
+    template <> void ComponentSelectionEditorWidget<DecalComponent>(Entity primary, const Vector<Entity>& entities)
+    {
+        const auto properties = InspectorSelection(entities, "Decal").Components<DecalComponent>();
+        const auto bind = [&](const char* name, auto member) {
+            using T = std::decay_t<decltype(std::declval<DecalComponent>().*member)>;
+            return properties.Bind(
+              name, [member](const DecalComponent& d) { return d.*member; }, [member](DecalComponent& d, const T& value) { d.*member = value; });
+        };
+        UI::Property("Enabled", bind("Enabled", &DecalComponent::Enabled));
+        UI::PropertyAsset<Material>("Material", properties.Bind("Material", &DecalComponent::Material));
+        AssetHandle<Texture> sourceTexture;
+        if (UIUtils::AssetReference<Texture>("Create material from texture", sourceTexture) && sourceTexture)
+        {
+            const auto material = Material::CreateDecal();
+            if (material)
+            {
+                material->SetTexture("decalColorMap", sourceTexture);
+                const Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / "Decal Material.cwmat");
+                ProjectLibrary::Get().CreateEntry(material, path);
+                ProjectLibrary::Get().Refresh(path);
+                const auto asset = ProjectLibrary::Get().Load(path);
+                if (asset)
+                    properties.Bind("Material", &DecalComponent::Material).Assign(static_asset_cast<Material>(asset));
+            }
+        }
+        UI::PropertyDropdown("Projection", { "Box", "Cylinder" }, bind("Projection", &DecalComponent::Projection));
+        UI::Property("Offset", bind("Offset", &DecalComponent::Offset), 0.01f);
+        if (primary.GetComponent<DecalComponent>().Projection == DecalProjection::Box)
+            UI::Property("Width / Height / Depth", bind("Size", &DecalComponent::Size), 0.01f, 0.001f, 10000.0f);
+        else
+        {
+            UI::Property("Bottom radius", bind("BottomRadius", &DecalComponent::BottomRadius), 0.01f, 0.001f, 10000.0f);
+            UI::Property("Top radius", bind("TopRadius", &DecalComponent::TopRadius), 0.01f, 0.001f, 10000.0f);
+            UI::Property("Height", bind("Height", &DecalComponent::Height), 0.01f, 0.001f, 10000.0f);
+            UI::Property("Shell thickness", bind("ShellThickness", &DecalComponent::ShellThickness), 0.01f, 0.001f, 10000.0f);
+            UI::Property("Wrap angle", bind("Arc", &DecalComponent::Arc), 1.0f, 0.1f, 360.0f);
+            UI::Property("Seam rotation", bind("SeamRotation", &DecalComponent::SeamRotation), 1.0f);
+        }
+        UI::PropertyColor("Tint", bind("Tint", &DecalComponent::Tint));
+        UI::Property("Opacity", bind("Opacity", &DecalComponent::Opacity), 0.01f, 0.0f, 1.0f);
+        UI::Property("UV scale", bind("UVScale", &DecalComponent::UVScale), 0.01f);
+        UI::Property("Flip U", properties.Bind(
+                                 "UVScale", [](const DecalComponent& d) { return std::signbit(d.UVScale.x); },
+                                 [](DecalComponent& d, bool flipped) { d.UVScale.x = std::copysign(d.UVScale.x, flipped ? -1.0f : 1.0f); }));
+        UI::Property("Flip V", properties.Bind(
+                                 "UVScale", [](const DecalComponent& d) { return std::signbit(d.UVScale.y); },
+                                 [](DecalComponent& d, bool flipped) { d.UVScale.y = std::copysign(d.UVScale.y, flipped ? -1.0f : 1.0f); }));
+        UI::Property("UV offset", bind("UVOffset", &DecalComponent::UVOffset), 0.01f);
+        UI::Property("UV rotation", bind("UVRotation", &DecalComponent::UVRotation), 1.0f);
+        UI::Property("Preserve texel density", bind("PreserveTexelDensity", &DecalComponent::PreserveTexelDensity));
+        UI::Property("Sort order", bind("SortOrder", &DecalComponent::SortOrder));
+        UI::Property("Receiver layers", bind("ReceiverLayers", &DecalComponent::ReceiverLayers));
+        UI::PropertyDropdown("Target mode", { "Matching layers", "Entity", "Entity subtree" }, bind("TargetMode", &DecalComponent::TargetMode));
+        UI::EditSelectionProperty(bind("Target", &DecalComponent::Target), [&](UUID& id) {
+            Entity target = primary.GetScene()->TryGetEntityFromUuid(id);
+            if (!UIUtils::EntityReference("Receiver target", target))
+                return false;
+            if (target && target.GetScene() != primary.GetScene())
+                return false;
+            id = target ? target.GetUuid() : UUID::EMPTY;
+            return true;
+        });
+        UI::Property("Edge feather", bind("EdgeFeather", &DecalComponent::EdgeFeather), 0.01f, 0.0f, 10000.0f);
+        UI::Property("Depth feather", bind("DepthFeather", &DecalComponent::DepthFeather), 0.01f, 0.0f, 10000.0f);
+        UI::Property("Angle fade start", bind("AngleFadeStart", &DecalComponent::AngleFadeStart), 1.0f, 0.0f, 180.0f);
+        UI::Property("Angle fade end", bind("AngleFadeEnd", &DecalComponent::AngleFadeEnd), 1.0f, 0.0f, 180.0f);
+        UI::Property("Distance fade start", bind("DistanceFadeStart", &DecalComponent::DistanceFadeStart), 1.0f, 0.0f, 100000.0f);
+        UI::Property("Distance fade end", bind("DistanceFadeEnd", &DecalComponent::DistanceFadeEnd), 1.0f, 0.0f, 100000.0f);
+        UI::Property("Fade in", bind("FadeIn", &DecalComponent::FadeIn), 0.1f, 0.0f, 100000.0f);
+        UI::Property("Lifetime", bind("Lifetime", &DecalComponent::Lifetime), 0.1f, 0.0f, 100000.0f);
+        UI::Property("Fade out", bind("FadeOut", &DecalComponent::FadeOut), 0.1f, 0.0f, 100000.0f);
+        UI::Property("Destroy owner on expiry", bind("DestroyOwnerOnExpiry", &DecalComponent::DestroyOwnerOnExpiry));
+        const auto& decal = primary.GetComponent<DecalComponent>();
+        if (!DecalMath::IsValid(decal, primary.GetComponent<TransformComponent>().GetWorldMatrix(primary.GetParent())))
+            ImGui::TextWrapped("Invalid decal dimensions or singular transform. This decal is not rendered.");
+        if (decal.Material && decal.Material->GetDomain() != MaterialDomain::Decal)
+            ImGui::TextWrapped("Assign a decal material. Surface materials cannot be projected.");
+        if (decal.TargetMode != DecalTargetMode::Layers && !primary.GetScene()->TryGetEntityFromUuid(decal.Target))
+            ImGui::TextWrapped("The receiver target is missing. This decal is inactive until a target is assigned.");
     }
 
     template <> void ComponentSelectionEditorWidget<LightComponent>(CW_MAYBE_UNUSED Entity primary, const Vector<Entity>& entities)
@@ -235,8 +320,8 @@ namespace Crowny
         {
             ImGui::Columns(1);
             ImGui::SetNextItemOpen(defaultOpen, ImGuiCond_Once);
-            const bool open = ImGui::TreeNodeEx(
-              label, ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_FramePadding);
+            const bool open =
+              ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_FramePadding);
             ImGui::Columns(2);
             return open;
         }
@@ -399,6 +484,8 @@ namespace Crowny
     {
         const auto properties = InspectorSelection(entities, "Mesh Filter").Components<MeshRendererComponent>();
         UI::PropertyAsset<Mesh>("Mesh", properties.Bind("Mesh", &MeshRendererComponent::MeshHandle));
+        UI::Property("Receive decals", properties.Bind("ReceiveDecals", &MeshRendererComponent::ReceiveDecals));
+        UI::Property("Decal layers", properties.Bind("DecalLayers", &MeshRendererComponent::DecalLayers));
 
         uint32_t commonSlots = UINT32_MAX;
         for (Entity entity : entities)
@@ -599,7 +686,53 @@ namespace Crowny
                      0.05f, 0.001f, 0.0f);
     }
 
-    template <> void ComponentSelectionEditorWidget<AudioListenerComponent>(CW_MAYBE_UNUSED Entity primary, CW_MAYBE_UNUSED const Vector<Entity>& entities)
+    template <> void ComponentSelectionEditorWidget<MeshCollider3DComponent>(Entity primary, const Vector<Entity>& entities)
+    {
+        DrawCollider3DProperties<MeshCollider3DComponent>(entities, "Mesh Collider 3D");
+        const auto properties = InspectorSelection(entities, "Mesh Collider 3D").Components<MeshCollider3DComponent>();
+        UI::PropertyAsset<Mesh>("Mesh", properties.Bind("Mesh", &MeshCollider3DComponent::GetMesh, &MeshCollider3DComponent::SetMesh));
+        UI::Property("Convex", properties.Bind("Convex", &MeshCollider3DComponent::IsConvex, &MeshCollider3DComponent::SetConvex));
+
+        if (entities.size() != 1u)
+            return;
+
+        const MeshCollider3DComponent& collider = primary.GetComponent<MeshCollider3DComponent>();
+        const char* meshNote = nullptr;
+        if (!collider.GetMesh().HasUUID())
+            meshNote = "No mesh assigned.";
+        else if (!PhysicsMeshResolver::CanResolve(collider.GetMesh()))
+            meshNote = "This mesh has no collision data. Reimport it with Generate Collision enabled.";
+
+        const char* bodyNote = nullptr;
+        if (!collider.IsConvex() && primary.HasComponent<Rigidbody3DComponent>() &&
+            primary.GetComponent<Rigidbody3DComponent>().GetBodyType() != PhysicsBodyType3D::Static)
+            bodyNote = "Triangle mesh colliders need a Static body. Enable Convex or change the body type.";
+
+        if (meshNote == nullptr && bodyNote == nullptr)
+            return;
+
+        constexpr ImVec4 warningColor(1.0f, 0.75f, 0.3f, 1.0f);
+        ImGui::Columns(1);
+        if (meshNote != nullptr)
+            ImGui::TextColored(warningColor, "%s", meshNote);
+        if (bodyNote != nullptr)
+            ImGui::TextColored(warningColor, "%s", bodyNote);
+        ImGui::Columns(2);
+    }
+
+    template <> SelectionComponentChange ComponentSelectionAddAction<MeshCollider3DComponent>(std::span<const Entity> entities)
+    {
+        return AddComponentToSelection<MeshCollider3DComponent>(entities, [](Entity entity, MeshCollider3DComponent& collider) {
+            if (!entity.HasComponent<MeshRendererComponent>())
+                return;
+            const AssetHandle<Mesh>& mesh = entity.GetComponent<MeshRendererComponent>().MeshHandle;
+            if (mesh.HasUUID())
+                collider.SetMesh(mesh, entity);
+        });
+    }
+
+    template <>
+    void ComponentSelectionEditorWidget<AudioListenerComponent>(CW_MAYBE_UNUSED Entity primary, CW_MAYBE_UNUSED const Vector<Entity>& entities)
     {
     }
 

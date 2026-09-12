@@ -38,7 +38,8 @@ namespace Crowny
     String Cryptography::HashBytesToString(uint8_t* data, uint32_t length)
     {
         String result;
-        for (uint32_t i = 0; i < 16; i++)
+        result.reserve(static_cast<size_t>(length) * 2);
+        for (uint32_t i = 0; i < length; i++)
         {
             result += "0123456789ABCDEF"[data[i] / 16];
             result += "0123456789ABCDEF"[data[i] % 16];

@@ -51,8 +51,7 @@ namespace Crowny
     public:
         static ShaderDesc Compile(const Path& path, const String& source, ShaderLanguageFlags language = ShaderLanguage::VKSL,
                                   const UnorderedMap<String, String>& defines = {});
-        static ShaderCompileResult CompileWithDiagnostics(const Path& path, const String& source,
-                                                          ShaderLanguageFlags language = ShaderLanguage::VKSL,
+        static ShaderCompileResult CompileWithDiagnostics(const Path& path, const String& source, ShaderLanguageFlags language = ShaderLanguage::VKSL,
                                                           const UnorderedMap<String, String>& defines = {});
         static ShaderPreprocessResult PreprocessIncludes(const Path& path, StringView source);
         static Ref<BlendStateDesc> PreparseBlendState(String& inOutShader);
@@ -61,6 +60,7 @@ namespace Crowny
         static void ClearCache();
         static ShaderCompilerCacheStats GetCacheStats();
         static uint64_t HashSource(StringView source);
+        static void RestoreVertexLayout(BinaryShaderData& shader);
 
     private:
         static Ref<BlendStateDesc> ParseBlendState(const Path& path, String& inOutShader, Vector<ShaderDiagnostic>& diagnostics);
@@ -71,9 +71,8 @@ namespace Crowny
         static void ParseAnnotations(const String& source, Ref<UniformDesc>& uniformDesc);
         static void EvaluatePragmaDirectives(const Vector<ShaderPragma>& globalPragmas, const Vector<ShaderPragma>& passPragmas,
                                              ShaderRenderPassDesc& shaderPassDesc, Vector<ShaderDiagnostic>& diagnostics, const Path& path);
-        static Vector<Ref<ShaderRenderPass>> CompilePasses(const Path& path, const ParsedShaderSource& parsedSource,
-                                                           ShaderLanguage inputLanguage, ShaderLanguageFlags shaderLanguage,
-                                                           const UnorderedMap<String, String>& defines,
+        static Vector<Ref<ShaderRenderPass>> CompilePasses(const Path& path, const ParsedShaderSource& parsedSource, ShaderLanguage inputLanguage,
+                                                           ShaderLanguageFlags shaderLanguage, const UnorderedMap<String, String>& defines,
                                                            const Ref<BlendStateDesc>& blendState, Vector<ShaderDiagnostic>& diagnostics);
     };
 

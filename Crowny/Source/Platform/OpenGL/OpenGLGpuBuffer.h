@@ -42,7 +42,6 @@ namespace Crowny
 
     private:
         OpenGLGpuBuffer m_Buffer;
-        uint32_t m_Size = 0;
         GpuBufferType m_Type = GpuBufferType::Standard;
         GpuBufferFormat m_Format = BF_UNKNOWN;
     };

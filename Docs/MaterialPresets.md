@@ -51,4 +51,18 @@ Any `.cwpreset` below the project's asset folder is imported as a `MaterialPrese
 
 ## Shader selection
 
-The same inspector section has a **Shader** picker that lists the engine's built-in surface shaders and every shader imported into the project. Built-in shaders get stable identifiers from `BuiltInShaderCatalog` (a name-based UUID derived from `Resources/Shaders/<Name>.asset`), so a material saved with a built-in shader resolves the same shader after the editor restarts. Internal engine shaders (compute, depth, post-process) are hidden unless "Show internal shaders" is enabled because the mesh renderer cannot draw materials that use them.
+The same inspector section has a **Shader** picker that lists the engine's built-in surface shaders and every shader imported into the project. Built-in shaders get stable identifiers from `BuiltInShaderCatalog` (a name-based UUID derived from `Resources/Shaders/<Name>.asset`), so a material saved with a built-in shader resolves the same shader after the editor restarts. Internal engine shaders (compute, depth, post-process) are hidden unless "Show internal shaders" is enabled because the mesh renderer cannot draw materials that use them. They remain disabled when shown.
+
+## Material editing
+
+Create > Material creates and selects a `.cwmat` using the built-in PBR shader. The inspector loads the imported asset through the project library, so edits affect the same material instance assigned to scene objects. Parameter and texture edits save automatically when the interaction finishes.
+
+Choose Toon, PBR, Unlit, or a supported project shader in the Shader picker. Switching shaders rebuilds the parameter controls and retains values with matching names and types, plus shared texture assignments. Texture fields support the asset picker and drag-and-drop; clearing a field restores its default texture.
+
+Drop a material onto a mesh in the viewport to replace all of that object's material slots. This also works for procedural meshes and supports undo/redo. Use the Mesh Renderer component inspector to change individual slots.
+
+Both `.cwmat` and `.mat` YAML sources retain their shader, values, and textures on reimport. Older binary `.mat` assets are still read; editing one saves it as YAML.
+
+The inspector preview renders the selected material on a sphere or cube. Drag over the preview to orbit, scroll to zoom, or use Reset view. The preview updates as parameters change. Surface, Toon shading, Emission, Transparency, Outline, and Textures are collapsible groups; empty groups are omitted. Search matches parameter names, and hovering a control explains its effect. Reset group restores the visible parameters in that group; right-click a control to reset just that parameter. Texture fields include thumbnails.
+
+While dragging a material over the viewport, the target mesh bounds are highlighted and its name is shown. Empty space is an invalid material target. New assets are selected before naming starts; leaving the rename field keeps the new asset selected, including after a rename changes its path.

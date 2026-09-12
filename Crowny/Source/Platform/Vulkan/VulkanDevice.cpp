@@ -1,5 +1,7 @@
 #include "cwpch.h"
 
+#include <bit>
+
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
 #include "Platform/Vulkan/VulkanGpuBufferManager.h"
 #include "Platform/Vulkan/VulkanQueue.h"
@@ -279,12 +281,9 @@ namespace Crowny
             enabledVulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
             enabledVulkan12Features.drawIndirectCount = supportedVulkan12Features.drawIndirectCount;
             enabledVulkan12Features.descriptorIndexing = supportedVulkan12Features.descriptorIndexing;
-            enabledVulkan12Features.shaderSampledImageArrayNonUniformIndexing =
-              supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing;
-            enabledVulkan12Features.shaderStorageBufferArrayNonUniformIndexing =
-              supportedVulkan12Features.shaderStorageBufferArrayNonUniformIndexing;
-            enabledVulkan12Features.shaderStorageImageArrayNonUniformIndexing =
-              supportedVulkan12Features.shaderStorageImageArrayNonUniformIndexing;
+            enabledVulkan12Features.shaderSampledImageArrayNonUniformIndexing = supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing;
+            enabledVulkan12Features.shaderStorageBufferArrayNonUniformIndexing = supportedVulkan12Features.shaderStorageBufferArrayNonUniformIndexing;
+            enabledVulkan12Features.shaderStorageImageArrayNonUniformIndexing = supportedVulkan12Features.shaderStorageImageArrayNonUniformIndexing;
             enabledVulkan12Features.descriptorBindingSampledImageUpdateAfterBind =
               supportedVulkan12Features.descriptorBindingSampledImageUpdateAfterBind;
             enabledVulkan12Features.descriptorBindingStorageImageUpdateAfterBind =
@@ -292,8 +291,7 @@ namespace Crowny
             enabledVulkan12Features.descriptorBindingStorageBufferUpdateAfterBind =
               supportedVulkan12Features.descriptorBindingStorageBufferUpdateAfterBind;
             enabledVulkan12Features.descriptorBindingPartiallyBound = supportedVulkan12Features.descriptorBindingPartiallyBound;
-            enabledVulkan12Features.descriptorBindingVariableDescriptorCount =
-              supportedVulkan12Features.descriptorBindingVariableDescriptorCount;
+            enabledVulkan12Features.descriptorBindingVariableDescriptorCount = supportedVulkan12Features.descriptorBindingVariableDescriptorCount;
             enabledVulkan12Features.runtimeDescriptorArray = supportedVulkan12Features.runtimeDescriptorArray;
             enabledVulkan12Features.timelineSemaphore = supportedVulkan12Features.timelineSemaphore;
             enabledVulkan12Features.bufferDeviceAddress = supportedVulkan12Features.bufferDeviceAddress;
@@ -479,19 +477,20 @@ namespace Crowny
             }
         }
 
-        delete m_DescriptorManager;
-        delete m_QueryPool;
+        // Command buffers retain uniform parameters and their descriptor sets,
+        // even after the GPU is idle. Release those references while the pools
+        // and resource manager that own the referenced handles are still alive.
         delete m_CommandBufferPool;
+        delete m_QueryPool;
+        delete m_DescriptorManager;
         delete m_ResourceManager;
 
-        for (uint32_t i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
+        for (const auto& [key, pool] : m_StagingPools)
         {
-            if (m_StagingPools[i] != VK_NULL_HANDLE)
-            {
-                vmaDestroyPool(m_Allocator, m_StagingPools[i]);
-                m_StagingPools[i] = VK_NULL_HANDLE;
-            }
+            if (pool != VK_NULL_HANDLE)
+                vmaDestroyPool(m_Allocator, pool);
         }
+        m_StagingPools.clear();
 
         // Store the pipeline data in a file.
         size_t dataSize = 0;
@@ -653,28 +652,29 @@ namespace Crowny
             VkMemoryRequirements requirements{};
             vkGetBufferMemoryRequirements(m_LogicalDevice, buffer, &requirements);
 
-            // Keep normal-size upload allocations in a retained block. In addition to
-            // reducing allocation churn, this avoids Intel drivers entering
-            // vkFreeMemory while a completed upload is being retired.
-            if (requirements.size <= STAGING_POOL_BLOCK_SIZE)
+            // Retain an upload block per memory type and size class. Large mesh uploads
+            // must use the same path as small uploads: freeing their dedicated memory
+            // while retiring a completed command buffer can stall Intel drivers.
+            uint32_t memoryTypeIndex = 0;
+            VkResult result = vmaFindMemoryTypeIndex(m_Allocator, requirements.memoryTypeBits, &allocCreateInfo, &memoryTypeIndex);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+            if (result == VK_SUCCESS)
             {
-                uint32_t memoryTypeIndex = 0;
-                VkResult result = vmaFindMemoryTypeIndex(m_Allocator, requirements.memoryTypeBits, &allocCreateInfo, &memoryTypeIndex);
-                CW_ENGINE_ASSERT(result == VK_SUCCESS);
-
-                if (result == VK_SUCCESS && m_StagingPools[memoryTypeIndex] == VK_NULL_HANDLE)
+                const VkDeviceSize blockSize = std::max(STAGING_POOL_BLOCK_SIZE, std::bit_ceil(requirements.size));
+                VmaPool& pool = m_StagingPools[{ memoryTypeIndex, blockSize }];
+                if (pool == VK_NULL_HANDLE)
                 {
                     VmaPoolCreateInfo poolCreateInfo{};
                     poolCreateInfo.memoryTypeIndex = memoryTypeIndex;
-                    poolCreateInfo.blockSize = STAGING_POOL_BLOCK_SIZE;
+                    poolCreateInfo.blockSize = blockSize;
                     poolCreateInfo.minBlockCount = 1;
 
-                    result = vmaCreatePool(m_Allocator, &poolCreateInfo, &m_StagingPools[memoryTypeIndex]);
+                    result = vmaCreatePool(m_Allocator, &poolCreateInfo, &pool);
                     CW_ENGINE_ASSERT(result == VK_SUCCESS);
                 }
 
                 if (result == VK_SUCCESS)
-                    allocCreateInfo.pool = m_StagingPools[memoryTypeIndex];
+                    allocCreateInfo.pool = pool;
             }
         }
 

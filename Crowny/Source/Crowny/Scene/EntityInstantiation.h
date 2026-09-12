@@ -15,15 +15,17 @@ namespace Crowny
 
         // World-space pose overrides applied to the instance root after the hierarchy is built.
         bool ApplyWorldPosition = false;
-        glm::vec3 WorldPosition{0.0f};
+        glm::vec3 WorldPosition{ 0.0f };
         bool ApplyWorldRotation = false;
-        glm::quat WorldRotation{1.0f, 0.0f, 0.0f, 0.0f};
+        glm::quat WorldRotation{ 1.0f, 0.0f, 0.0f, 0.0f };
     };
 
     /** Runtime entity instantiation, usable in play mode from scripts and the editor alike. */
     class EntityInstantiator
     {
     public:
+        /** Remaps references within a copied hierarchy after all destination UUIDs exist. */
+        static void RemapCopiedReferences(Entity source, Entity destination);
         /** Instantiates a prefab asset into the scene as a linked instance hierarchy and returns the instance root. */
         static Entity InstantiatePrefab(Scene& targetScene, const AssetHandle<Prefab>& prefab, const EntityInstantiateOptions& options = {});
 

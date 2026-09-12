@@ -11,10 +11,16 @@ namespace Sandbox
     public class LifecycleProbe : EntityBehaviour
     {
         private static int s_Sequence;
+        private static Entity s_Sink;
 
         public string log = "";
 
-        void Awake() { Append("Awake"); }
+        void Awake()
+        {
+            if (s_Sink == null)
+                s_Sink = Entity.FindByName("LifecycleProbeSink");
+            Append("Awake");
+        }
 
         void Start() { Append("Start"); }
 
@@ -27,9 +33,10 @@ namespace Sandbox
         void OnDestroy()
         {
             Append("OnDestroy");
-            Entity sink = Entity.FindByName("LifecycleProbeSink");
-            if (sink != null)
-                sink.name = sink.name + "|" + log;
+            // FindByName is an exact match, and the first OnDestroy already
+            // appends to the sink's name, so the sink is resolved once in Awake.
+            if (s_Sink != null)
+                s_Sink.name = s_Sink.name + "|" + log;
         }
 
         private void Append(string callback)

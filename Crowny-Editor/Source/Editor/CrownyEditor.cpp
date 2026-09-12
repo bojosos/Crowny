@@ -28,19 +28,17 @@ namespace Crowny
             return {};
         }
 
-        std::optional<RenderAPI::API> ParseRenderAPI(const Vector<String>& args)
+        std::optional<RenderAPI::API> ParseRenderAPI(const CommandLineArguments& args)
         {
-            for (size_t index = 1; index < args.size(); ++index)
+            for (const auto& option : args.GetOptions())
             {
                 String value;
-                if (args[index] == "--opengl")
+                if (option.Name == "--opengl")
                     value = "opengl";
-                else if (args[index] == "--vulkan")
+                else if (option.Name == "--vulkan")
                     value = "vulkan";
-                else if (args[index] == "--render-api" && index + 1 < args.size())
-                    value = args[++index];
-                else if (args[index].starts_with("--render-api="))
-                    value = args[index].substr(String("--render-api=").size());
+                else if (option.Name == "--render-api")
+                    value = option.Value.value_or("");
                 else
                     continue;
 
@@ -61,13 +59,15 @@ namespace Crowny
     class CrownyEditor : public Application
     {
     public:
-        CrownyEditor(const Crowny::ApplicationDesc& applicationDesc) : Application(applicationDesc) {}
+        CrownyEditor(const Crowny::ApplicationDesc& applicationDesc, EditorLaunchOptions options)
+          : Application(applicationDesc), m_LaunchOptions(std::move(options))
+        {
+        }
 
         virtual void OnPreRendererInit() override
         {
 #ifdef CW_DIST
-            const Vector<String>& args = CommandLineArgs::Get();
-            if (std::find(args.begin(), args.end(), "--cook-builtins") == args.end())
+            if (!CommandLineArgs::GetParsed().HasOption("--cook-builtins"))
                 return;
 #endif
             BuiltInShaderCompiler::CompileAll();
@@ -77,21 +77,58 @@ namespace Crowny
         virtual void OnStartUp() override
         {
             Application::OnStartUp();
-            const Vector<String>& args = CommandLineArgs::Get();
-            if (std::find(args.begin(), args.end(), "--cook-builtins") != args.end())
+            if (CommandLineArgs::GetParsed().HasOption("--cook-builtins"))
             {
                 ForwardRenderer::Init();
                 ForwardRenderer::Shutdown();
                 Exit();
                 return;
             }
-            PushLayer(new EditorLayer());
+            PushLayer(new EditorLayer(m_LaunchOptions));
         }
+
+    private:
+        EditorLaunchOptions m_LaunchOptions;
     };
 
     void CreateApplication()
     {
         const Vector<String>& args = CommandLineArgs::Get();
+        EditorLaunchOptions launchOptions;
+        String launchError;
+        if (!ParseEditorLaunchOptions(args, fs::current_path(), launchOptions, launchError))
+        {
+            std::fprintf(stderr, "%s\nUse --help for editor launch options.\n", launchError.c_str());
+            Application::SetExitCode(1);
+            return;
+        }
+        if (launchOptions.Help)
+        {
+            std::puts("Crowny Editor\n"
+                      "  --project <directory>     Open a project instead of the last project\n"
+                      "  --scene <path>            Open a scene, relative to the project root\n"
+                      "  --play                    Enter Play after scene loading\n"
+                      "  --render <output.bmp>     Capture the viewport without editor overlays\n"
+                      "  --width <1..8192>         Capture width (default 1280)\n"
+                      "  --height <1..8192>        Capture height (default 720)\n"
+                      "  --frames <1..1000000>     Frames before capture (default 3)\n"
+                      "  --scene-camera            Use the primary scene camera for capture\n"
+                      "  --quit                    Exit after capture\n"
+                      "  --render-api <vulkan|gl>  Select renderer; --vulkan / --opengl also work\n"
+                      "  --cook-builtins           Compile built-in assets and exit\n"
+                      "  --help, -h                Show this help without starting the renderer");
+            return;
+        }
+        if (!launchOptions.Project.empty() && !fs::is_directory(launchOptions.Project / "Assets"))
+            launchError = "Project must be a directory containing Assets: " + launchOptions.Project.string();
+        if (!launchOptions.Scene.empty() && !fs::is_regular_file(launchOptions.Scene))
+            launchError = "Scene file does not exist: " + launchOptions.Scene.string();
+        if (!launchError.empty())
+        {
+            std::fprintf(stderr, "%s\n", launchError.c_str());
+            Application::SetExitCode(1);
+            return;
+        }
         const Path executableDirectory = args.empty() ? fs::current_path() : fs::absolute(args.front()).parent_path();
         Path workingDirectory = FindRepositoryRoot(fs::current_path());
         if (workingDirectory.empty())
@@ -108,7 +145,7 @@ namespace Crowny
         applicationDesc.Window.Title = "Crowny Editor";
         applicationDesc.Window.StartMaximized = true;
         applicationDesc.Window.HideUntilSwap = true;
-        if (const std::optional<RenderAPI::API> renderAPI = ParseRenderAPI(args))
+        if (const std::optional<RenderAPI::API> renderAPI = ParseRenderAPI(CommandLineArgs::GetParsed()))
             applicationDesc.PreferredAPI = *renderAPI;
 #ifdef CW_DEBUG
         applicationDesc.Script.EnableDebugging = true;
@@ -141,6 +178,6 @@ namespace Crowny
         applicationDesc.GameAssemblyPath =
           fs::is_regular_file(generatedGameAssembly) ? generatedGameAssembly : workingDirectory / "Crowny-Sandbox/GameAssembly.dll";
 
-        Application::StartUp<CrownyEditor>(applicationDesc);
+        Application::StartUp<CrownyEditor>(applicationDesc, std::move(launchOptions));
     }
 } // namespace Crowny

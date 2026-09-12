@@ -10,6 +10,7 @@ PROJECT_DIRECTORIES = (
     "Crowny",
     "Crowny-Editor",
     "Crowny-Builder",
+    "Crowny-Player",
     "Crowny-RenderTests",
     "Crowny-Tests",
     "Crowny-Sharp",
@@ -107,7 +108,9 @@ def ensure_projects(root=None, simd="avx2", force=False):
         log.info("Generated projects are current.")
         return
 
-    with locks.exclusive_lock(root, "project-generation"), locks.project_write_lock(root):
+    with locks.exclusive_lock(root, "project-generation"):
+        # Another generator may have finished while this process was waiting.
+        # Recheck before requesting exclusive access from active build readers.
         fingerprint = project_fingerprint(root, simd)
         if (
             not force
@@ -116,17 +119,19 @@ def ensure_projects(root=None, simd="avx2", force=False):
         ):
             log.info("Generated projects are current.")
             return
-        log.info(f"Generating the {action} workspace...")
-        cmd.run_checked(
-            [find_premake(root), action] + premake_flags(simd),
-            cwd=root,
-        )
-        stamps.fingerprint_stamp(
-            stamp_name,
-            fingerprint,
-            root,
-            extra={
-                "generatedUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "command": f"premake5 {action} " + " ".join(premake_flags(simd)),
-            },
-        )
+        with locks.project_write_lock(root):
+            fingerprint = project_fingerprint(root, simd)
+            log.info(f"Generating the {action} workspace...")
+            cmd.run_checked(
+                [find_premake(root), action] + premake_flags(simd),
+                cwd=root,
+            )
+            stamps.fingerprint_stamp(
+                stamp_name,
+                fingerprint,
+                root,
+                extra={
+                    "generatedUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "command": f"premake5 {action} " + " ".join(premake_flags(simd)),
+                },
+            )

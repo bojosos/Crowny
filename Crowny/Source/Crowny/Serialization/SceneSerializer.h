@@ -17,11 +17,11 @@ namespace Crowny
     class SceneSerializer
     {
     public:
-        static constexpr uint32_t FORMAT_VERSION = 12;
+        static constexpr uint32_t FORMAT_VERSION = 14;
 
         SceneSerializer(const Ref<Scene>& scene);
 
-        void Serialize(const Path& filepath);
+        bool Serialize(const Path& filepath);
         void SerializeEntity(YAML::Emitter& out, Entity entity);
         void SerializeBinary(const Path& filepath);
 

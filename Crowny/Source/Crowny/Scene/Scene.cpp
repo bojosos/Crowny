@@ -1,5 +1,8 @@
 #include "cwpch.h"
 
+#include "Crowny/Scene/EntityInstantiation.h"
+
+#include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scene/ScriptRuntime.h"
@@ -10,6 +13,8 @@
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics3D.h"
+#include "Crowny/Physics/PhysicsMesh.h"
+#include "Crowny/Renderer/Mesh.h"
 
 #include <entt/entt.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -91,6 +96,7 @@ namespace Crowny
         m_Name = other.m_Name;
         m_ImGuiLayout = other.m_ImGuiLayout;
         m_Environment = other.m_Environment;
+        m_EnvironmentAsset = other.m_EnvironmentAsset;
         m_IsEditorScene = other.m_IsEditorScene;
         m_RootEntity = nullptr;
 
@@ -132,6 +138,7 @@ namespace Crowny
         m_Name = other.m_Name;
         m_ImGuiLayout = other.m_ImGuiLayout;
         m_Environment = other.m_Environment;
+        m_EnvironmentAsset = other.m_EnvironmentAsset;
         m_IsEditorScene = other.m_IsEditorScene;
 
         UnorderedMap<UUID, entt::entity> copyEntityMap;
@@ -177,6 +184,14 @@ namespace Crowny
         }
     }
 
+    void Scene::SetEnvironmentAsset(const AssetHandle<EnvironmentMap>& environment)
+    {
+        m_EnvironmentAsset = environment;
+        m_Environment = nullptr;
+    }
+
+    Ref<EnvironmentMap> Scene::GetEnvironment() const { return m_EnvironmentAsset.HasUUID() ? m_EnvironmentAsset.GetInternalPtr() : m_Environment; }
+
     void Scene::CreateRootEntity()
     {
         if (m_RootEntity)
@@ -215,6 +230,9 @@ namespace Crowny
         m_Registry.on_construct<CapsuleCollider3DComponent>().connect<&Scene::OnCapsuleCollider3DComponentConstruct>(this);
         m_Registry.on_update<CapsuleCollider3DComponent>().connect<&Scene::OnCapsuleCollider3DComponentUpdate>(this);
         m_Registry.on_destroy<CapsuleCollider3DComponent>().connect<&Scene::OnCapsuleCollider3DComponentDestroy>(this);
+        m_Registry.on_construct<MeshCollider3DComponent>().connect<&Scene::OnMeshCollider3DComponentConstruct>(this);
+        m_Registry.on_update<MeshCollider3DComponent>().connect<&Scene::OnMeshCollider3DComponentUpdate>(this);
+        m_Registry.on_destroy<MeshCollider3DComponent>().connect<&Scene::OnMeshCollider3DComponentDestroy>(this);
 
         m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentConstruct>(this);
         m_Registry.on_update<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentUpdate>(this);
@@ -283,6 +301,8 @@ namespace Crowny
         const Entity sourceParent = entity.GetParent();
         const uint32_t sourceSiblingIndex = entity.GetSiblingIndex();
         Entity newEntity = DuplicateEntityInternal(entity, includeChildren, sourceParent);
+        if (newEntity)
+            EntityInstantiator::RemapCopiedReferences(entity, newEntity);
         if (newEntity && sourceParent)
             newEntity.SetSiblingIndex(sourceSiblingIndex + 1);
         if (newEntity && m_RuntimeActive)
@@ -416,7 +436,8 @@ namespace Crowny
     static bool HasPhysics3DComponents(Entity entity)
     {
         return entity.HasComponent<Rigidbody3DComponent>() || entity.HasComponent<BoxCollider3DComponent>() ||
-               entity.HasComponent<SphereCollider3DComponent>() || entity.HasComponent<CapsuleCollider3DComponent>();
+               entity.HasComponent<SphereCollider3DComponent>() || entity.HasComponent<CapsuleCollider3DComponent>() ||
+               entity.HasComponent<MeshCollider3DComponent>();
     }
 
     bool Scene::BeginPhysics3D()
@@ -461,6 +482,8 @@ namespace Crowny
                 entity.GetComponent<SphereCollider3DComponent>().RuntimeShape = {};
             if (entity.HasComponent<CapsuleCollider3DComponent>())
                 entity.GetComponent<CapsuleCollider3DComponent>().RuntimeShape = {};
+            if (entity.HasComponent<MeshCollider3DComponent>())
+                entity.GetComponent<MeshCollider3DComponent>().RuntimeShape = {};
         }
         m_Physics3DBodies.clear();
         m_Physics3DEntities.clear();
@@ -524,6 +547,80 @@ namespace Crowny
         return body;
     }
 
+    template <typename MakeDesc>
+    static void CreateMeshCollider3DShape(Entity entity, PhysicsBody3DHandle body, const glm::vec3& worldScale, const glm::vec3& absoluteScale,
+                                          const MakeDesc& makeDesc)
+    {
+        auto& collider = entity.GetComponent<MeshCollider3DComponent>();
+        collider.RuntimeShape = {};
+        if (!collider.GetMesh().HasUUID())
+            return; // Nothing assigned yet; not worth a warning.
+
+        // Every skip is reported once per collider; the component setters reset the flag when the user changes something.
+        const auto skip = [&](const String& reason) {
+            if (!collider.RuntimeSkipLogged)
+                CW_ENGINE_WARN("{0}", reason);
+            collider.RuntimeSkipLogged = true;
+        };
+
+        String error;
+        const Ref<PhysicsMesh> geometry = PhysicsMeshResolver::Resolve(collider.GetMesh(), &error);
+        if (geometry == nullptr)
+        {
+            skip("Mesh collider on '" + entity.GetName() + "' has no collision geometry: " + error);
+            return;
+        }
+
+        const bool convex = collider.IsConvex();
+        const PhysicsBodyType3D bodyType =
+          entity.HasComponent<Rigidbody3DComponent>() ? entity.GetComponent<Rigidbody3DComponent>().GetBodyType() : PhysicsBodyType3D::Static;
+        if (!convex && bodyType != PhysicsBodyType3D::Static)
+        {
+            skip("Mesh collider on '" + entity.GetName() +
+                 "' uses a triangle mesh, which every physics backend restricts to Static bodies. Enable Convex or make the body static.");
+            return;
+        }
+        if (convex && !geometry->IsConvexCapable())
+        {
+            skip("Mesh collider on '" + entity.GetName() + "' cannot build a convex hull: the mesh needs at least 4 distinct points.");
+            return;
+        }
+        if (!convex && geometry->GetTriangleCount() == 0)
+        {
+            skip("Mesh collider on '" + entity.GetName() + "' has no triangles after cooking.");
+            return;
+        }
+
+        // A hull needs volume on every axis; a triangle mesh only degenerates when it collapses to a line or point (planes are fine).
+        const glm::vec3 extent = (geometry->GetBounds().GetMax() - geometry->GetBounds().GetMin()) * absoluteScale;
+        const glm::bvec3 flat = glm::lessThan(extent, glm::vec3(1.0e-5f));
+        const int flatAxes = static_cast<int>(flat.x) + static_cast<int>(flat.y) + static_cast<int>(flat.z);
+        if ((convex && flatAxes > 0) || (!convex && flatAxes > 1))
+        {
+            skip("Mesh collider on '" + entity.GetName() + "' is degenerate after scaling: the collision bounds are flat on " +
+                 std::to_string(flatAxes) + (flatAxes == 1 ? " axis." : " axes."));
+            return;
+        }
+
+        glm::vec3 signedScale = absoluteScale;
+        for (int axis = 0; axis < 3; ++axis)
+            if (worldScale[axis] < 0.0f)
+                signedScale[axis] = -signedScale[axis];
+
+        PhysicsShape3DDesc desc = makeDesc(collider, convex ? PhysicsShapeType3D::ConvexHull : PhysicsShapeType3D::TriangleMesh);
+        geometry->CopyScaled(signedScale, convex, desc.Vertices, desc.Indices);
+        collider.RuntimeShape = Physics3D::Get().AddShape(body, desc);
+        if (!collider.RuntimeShape)
+        {
+            // The backend already logged what it rejected; keep the once-per-collider rule for the summary line.
+            if (!collider.RuntimeSkipLogged)
+                CW_ENGINE_ERROR("The {0} backend rejected the mesh collider on '{1}'", Physics3D::Get().GetBackendName(), entity.GetName());
+            collider.RuntimeSkipLogged = true;
+            return;
+        }
+        collider.RuntimeSkipLogged = false;
+    }
+
     void Scene::CreatePhysics3DShapes(Entity entity, PhysicsBody3DHandle body)
     {
         if (!m_Physics3DActive || !entity || !body)
@@ -565,6 +662,8 @@ namespace Crowny
             desc.Height = std::max(collider.GetHeight() * absoluteScale.y, desc.Radius * 2.0f);
             collider.RuntimeShape = Physics3D::Get().AddShape(body, desc);
         }
+        if (entity.HasComponent<MeshCollider3DComponent>())
+            CreateMeshCollider3DShape(entity, body, worldScale, absoluteScale, makeDesc);
     }
 
     void Scene::DestroyPhysics3DShapes(Entity entity, PhysicsBody3DHandle body)
@@ -582,6 +681,8 @@ namespace Crowny
             removeShape(entity.GetComponent<SphereCollider3DComponent>());
         if (entity.HasComponent<CapsuleCollider3DComponent>())
             removeShape(entity.GetComponent<CapsuleCollider3DComponent>());
+        if (entity.HasComponent<MeshCollider3DComponent>())
+            removeShape(entity.GetComponent<MeshCollider3DComponent>());
     }
 
     void Scene::DestroyPhysics3DBody(entt::entity handle)
@@ -601,6 +702,8 @@ namespace Crowny
                 entity.GetComponent<SphereCollider3DComponent>().RuntimeShape = {};
             if (entity.HasComponent<CapsuleCollider3DComponent>())
                 entity.GetComponent<CapsuleCollider3DComponent>().RuntimeShape = {};
+            if (entity.HasComponent<MeshCollider3DComponent>())
+                entity.GetComponent<MeshCollider3DComponent>().RuntimeShape = {};
         }
         m_Physics3DEntities.erase(body);
         m_Physics3DScales.erase(handle);
@@ -696,7 +799,7 @@ namespace Crowny
         if (m_Physics3DActive)
         {
             DestroyPhysics3DBody(entity);
-            if (registry.any_of<BoxCollider3DComponent, SphereCollider3DComponent, CapsuleCollider3DComponent>(entity))
+            if (registry.any_of<BoxCollider3DComponent, SphereCollider3DComponent, CapsuleCollider3DComponent, MeshCollider3DComponent>(entity))
                 QueuePhysics3DRebuild(entity);
         }
     }
@@ -720,7 +823,8 @@ namespace Crowny
         if (m_Physics3DActive && body != m_Physics3DBodies.end() && collider.RuntimeShape)
             Physics3D::Get().RemoveShape(body->second, collider.RuntimeShape);
         collider.RuntimeShape = {};
-        if (m_Physics3DActive && !registry.any_of<Rigidbody3DComponent, SphereCollider3DComponent, CapsuleCollider3DComponent>(entity))
+        if (m_Physics3DActive &&
+            !registry.any_of<Rigidbody3DComponent, SphereCollider3DComponent, CapsuleCollider3DComponent, MeshCollider3DComponent>(entity))
             DestroyPhysics3DBody(entity);
     }
 
@@ -743,7 +847,8 @@ namespace Crowny
         if (m_Physics3DActive && body != m_Physics3DBodies.end() && collider.RuntimeShape)
             Physics3D::Get().RemoveShape(body->second, collider.RuntimeShape);
         collider.RuntimeShape = {};
-        if (m_Physics3DActive && !registry.any_of<Rigidbody3DComponent, BoxCollider3DComponent, CapsuleCollider3DComponent>(entity))
+        if (m_Physics3DActive &&
+            !registry.any_of<Rigidbody3DComponent, BoxCollider3DComponent, CapsuleCollider3DComponent, MeshCollider3DComponent>(entity))
             DestroyPhysics3DBody(entity);
     }
 
@@ -766,7 +871,32 @@ namespace Crowny
         if (m_Physics3DActive && body != m_Physics3DBodies.end() && collider.RuntimeShape)
             Physics3D::Get().RemoveShape(body->second, collider.RuntimeShape);
         collider.RuntimeShape = {};
-        if (m_Physics3DActive && !registry.any_of<Rigidbody3DComponent, BoxCollider3DComponent, SphereCollider3DComponent>(entity))
+        if (m_Physics3DActive &&
+            !registry.any_of<Rigidbody3DComponent, BoxCollider3DComponent, SphereCollider3DComponent, MeshCollider3DComponent>(entity))
+            DestroyPhysics3DBody(entity);
+    }
+
+    void Scene::OnMeshCollider3DComponentConstruct(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DShapes({ entity, this });
+    }
+
+    void Scene::OnMeshCollider3DComponentUpdate(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DShapes({ entity, this });
+    }
+
+    void Scene::OnMeshCollider3DComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        const auto body = m_Physics3DBodies.find(entity);
+        auto& collider = registry.get<MeshCollider3DComponent>(entity);
+        if (m_Physics3DActive && body != m_Physics3DBodies.end() && collider.RuntimeShape)
+            Physics3D::Get().RemoveShape(body->second, collider.RuntimeShape);
+        collider.RuntimeShape = {};
+        if (m_Physics3DActive &&
+            !registry.any_of<Rigidbody3DComponent, BoxCollider3DComponent, SphereCollider3DComponent, CapsuleCollider3DComponent>(entity))
             DestroyPhysics3DBody(entity);
     }
 
@@ -843,7 +973,6 @@ namespace Crowny
             if (!self.HasComponent<ManagedScriptComponent>())
                 return;
 
-            auto& scripts = self.GetComponent<ManagedScriptComponent>().Scripts;
             ScriptEvent scriptEvent;
             scriptEvent.OtherEntity = other.GetUuid();
             if (event.IsTrigger)
@@ -854,8 +983,7 @@ namespace Crowny
                     scriptEvent.Kind = ScriptEventKind::TriggerStay3D;
                 else
                     scriptEvent.Kind = ScriptEventKind::TriggerExit3D;
-                for (auto& script : scripts)
-                    ScriptRuntime::Dispatch(script, scriptEvent);
+                ScriptRuntime::Dispatch(self, scriptEvent);
                 return;
             }
 
@@ -867,10 +995,8 @@ namespace Crowny
                 scriptEvent.Kind = ScriptEventKind::CollisionExit3D;
             scriptEvent.Contacts.reserve(event.Points.size());
             for (const PhysicsContactPoint3D& point : event.Points)
-                scriptEvent.Contacts.push_back(
-                  { point.Point, reverseNormal ? -point.Normal : point.Normal, point.Separation, point.NormalImpulse });
-            for (auto& script : scripts)
-                ScriptRuntime::Dispatch(script, scriptEvent);
+                scriptEvent.Contacts.push_back({ point.Point, reverseNormal ? -point.Normal : point.Normal, point.Separation, point.NormalImpulse });
+            ScriptRuntime::Dispatch(self, scriptEvent);
         };
 
         dispatch(firstHandle, secondHandle, false);
@@ -1021,9 +1147,14 @@ namespace Crowny
           std::find_if(scripts.begin(), scripts.end(), [&](const ManagedScript& candidate) { return candidate.GetTypeIdentity() == identity; });
         if (script == scripts.end())
             return;
+        const uint64_t instanceId = script->InstanceId;
         ScriptRuntime::DestroyScript(entity, *script);
-        scripts.erase(script);
-        if (scripts.empty())
+        if (!entity || !entity.HasComponent<ManagedScriptComponent>())
+            return;
+        auto& currentScripts = entity.GetComponent<ManagedScriptComponent>().Scripts;
+        std::erase_if(currentScripts, [instanceId](const ManagedScript& candidate) { return candidate.InstanceId == instanceId; });
+        ScriptRuntime::NotifyComponentDestroyed(instanceId);
+        if (currentScripts.empty())
             entity.RemoveComponent<ManagedScriptComponent>();
     }
 
@@ -1035,6 +1166,7 @@ namespace Crowny
     void Scene::OnRuntimeStart()
     {
         m_RuntimeActive = true;
+        m_Registry.view<DecalComponent>().each([](DecalComponent& decal) { decal.Age = 0.0f; decal.LifetimeRunning = true; });
         if (Physics2D::TryGet() != nullptr)
         {
             Physics2D::TryGet()->BeginSimulation(this);
@@ -1047,9 +1179,7 @@ namespace Crowny
             uint32_t listenerCount = 0;
             for ([[maybe_unused]] entt::entity entity : listenerView)
                 ++listenerCount;
-            if (listenerCount == 0)
-                CW_ENGINE_WARN("No audio listener in scene");
-            else
+            if (listenerCount > 0)
             {
                 if (listenerCount > 1)
                     CW_ENGINE_WARN("Multiple audio listeners in scene; using the first enabled listener");
@@ -1076,10 +1206,7 @@ namespace Crowny
         BeginPhysics3D();
     }
 
-    void Scene::OnSimulationFixedUpdate(Timestep ts)
-    {
-        OnFixedUpdate(ts);
-    }
+    void Scene::OnSimulationFixedUpdate(Timestep ts) { OnFixedUpdate(ts); }
 
     void Scene::OnSimulationEnd()
     {
@@ -1156,6 +1283,22 @@ namespace Crowny
         if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
             Physics2D::TryGet()->Step(ts, this);
         StepPhysics3D(ts);
+        if (m_RuntimeActive || m_SimulationActive)
+        {
+            Vector<Entity> expired;
+            for (auto handle : m_Registry.view<DecalComponent>())
+            {
+                auto& decal = m_Registry.get<DecalComponent>(handle);
+                if (!decal.Enabled || !decal.LifetimeRunning) continue;
+                decal.Age += std::max(static_cast<float>(ts), 0.0f);
+                if (decal.Lifetime > 0.0f && decal.Age >= decal.Lifetime + std::max(decal.FadeOut, 0.0f))
+                {
+                    decal.Enabled = false;
+                    if (decal.DestroyOwnerOnExpiry) expired.emplace_back(handle, this);
+                }
+            }
+            for (Entity entity : expired) if (entity) DestroyEntity(entity);
+        }
     }
 
     void Scene::SynchronizePhysicsTransforms(float interpolationAlpha, Timestep extrapolationTime)
@@ -1252,11 +1395,18 @@ namespace Crowny
     void Scene::OnManagedScriptComponentDestroy(entt::registry& registry, entt::entity entity)
     {
         Entity e = { entity, this };
-        auto& msc = e.GetComponent<ManagedScriptComponent>();
-        for (auto& script : msc.Scripts)
+        Vector<uint64_t> instances;
+        for (const ManagedScript& script : e.GetComponent<ManagedScriptComponent>().Scripts)
+            instances.push_back(script.InstanceId);
+        for (uint64_t instanceId : instances)
         {
-            ScriptRuntime::DestroyScript(e, script);
-            ScriptRuntime::NotifyComponentDestroyed(script.InstanceId);
+            if (!e || !e.HasComponent<ManagedScriptComponent>())
+                break;
+            if (ManagedScript* script = e.GetComponent<ManagedScriptComponent>().FindScript(instanceId))
+            {
+                ScriptRuntime::DestroyScript(e, *script);
+                ScriptRuntime::NotifyComponentDestroyed(instanceId);
+            }
         }
     }
 

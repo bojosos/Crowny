@@ -215,7 +215,11 @@ namespace Crowny
         request.Profile.Targets = { request.Target };
         request.Content = inputs.Content;
         for (const ContentAssetRecord& asset : request.Content.Assets)
+        {
             request.Profile.ContentRoots.push_back({ ContentRootKind::Asset, {}, asset.Id });
+            if (asset.Type == "Scene" && asset.Id != info->MainScene)
+                request.Profile.SceneOrder.push_back(asset.Id);
+        }
         request.Managed = inputs.Managed;
         if (request.Managed.ProjectRoot.empty())
             request.Managed.ProjectRoot = inputs.ProjectRoot;

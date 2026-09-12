@@ -198,6 +198,29 @@ namespace Crowny
         return ImportAllInternal(filepath, std::move(importOptions), true);
     }
 
+    bool Importer::ResolveDependencies(const Vector<std::pair<Ref<Asset>, UUID>>& assignments)
+    {
+        UnorderedMap<const Asset*, size_t> lastAssignment;
+        Vector<Ref<Asset>> receivers;
+        for (size_t index = 0; index < assignments.size(); ++index)
+        {
+            const auto& [asset, uuid] = assignments[index];
+            if (!asset || uuid.Empty())
+                return false;
+            if (lastAssignment.insert_or_assign(asset.get(), index).second)
+                receivers.push_back(asset);
+        }
+        for (size_t index = 0; index < assignments.size(); ++index)
+        {
+            const auto& [dependent, uuid] = assignments[index];
+            if (lastAssignment.at(dependent.get()) != index)
+                continue;
+            for (const auto& receiver : receivers)
+                receiver->OnDependentAssigned(dependent, uuid);
+        }
+        return true;
+    }
+
     Vector<Ref<Asset>> Importer::ImportAllDeferred(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
         return ImportAllInternal(filepath, std::move(importOptions), false);

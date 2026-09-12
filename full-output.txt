@@ -1,0 +1,1450 @@
+Randomness seeded to: 2116316495
+0.041 s: Scene camera history survives component-pool relocation
+0.098 s: ParallelFor obeys its concurrency bound
+0.000 s: Oversized preview requests share the bounded cache entry
+0.063 s: Build pipeline rejects cooked inputs that traverse a symbolic link
+0.000 s: ManagedScript retains backend-neutral state without a runtime instance
+0.147 s: Shader includes expand relative files and reject cycles
+0.000 s: RenderGraph clears retained callbacks and compiler state after failures
+0.000 s: PixelData::Basic
+0.000 s: Asset browser item IDs distinguish duplicate basenames
+0.000 s: Weighted OIT draws are binned and instanced
+0.000 s: UTF8 replaces malformed sequences and keeps decoding
+0.001 s: Font import metadata sanitizes the MSDF pixel range
+0.012 s: Player template validation requires declared hashes
+0.000 s: Escape cancels a gizmo frame and blocks reacquisition until mouse release
+0.000 s: RenderWorld uses compact GPU instance records
+0.300 s: Build pipeline verifies backup move postconditions
+0.000 s: Hierarchy additive ranges preserve prior selections
+0.009 s: Metadata backups stay outside the asset index
+0.000 s: Recent projects stay unique newest-first and bounded
+[14:50:10] CROWNY: Material preset version 99 is newer than supported version 1
+[14:50:10] CROWNY: Material preset parameter 'x' has an unknown type 'Matrix'.
+[14:50:10] CROWNY: Material preset parameter 'x' has an invalid Float value: yaml-cpp: error at line 3, column 35: bad conversion
+0.002 s: Material presets round trip through YAML
+0.000 s: Asset browser selection chooses a visible fallback anchor
+0.117 s: Crowny Builder maps cancellation to a stable exit code
+0.000 s: 2D render order is stable across renderable types
+0.001 s: Managed JSON preserves conditional and value-changed inspector settings
+0.000 s: Font manager provides exact lookup and an optional default fallback
+0.396 s: Build pipeline rolls back when final directory publication fails
+0.011 s: Animation clips preserve all track types during asset round trips
+0.000 s: GPU draw-bin budget admits whole hot bins and leaves the rest for CPU fallback
+[14:50:11] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+[14:50:11] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+[14:50:11] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+0.022 s: Asset metadata save leaves the primary untouched when backup publication fails
+0.000 s: Hebrew combining marks extend their base
+0.000 s: Text layout applies Unicode extended grapheme rules beyond Latin marks
+0.000 s: ZWJ only joins a following extended pictograph
+0.000 s: Text layout applies Unicode extended grapheme rules beyond Latin marks
+0.000 s: Indic virama conjuncts remain indivisible
+0.000 s: Text layout applies Unicode extended grapheme rules beyond Latin marks
+0.000 s: signed 8-bit input becomes unsigned
+0.000 s: OpenAL PCM preparation selects the supported conversion path
+0.000 s: 16-bit input is uploaded without a copy
+0.000 s: OpenAL PCM preparation selects the supported conversion path
+0.000 s: 24-bit input uses float when supported
+0.000 s: OpenAL PCM preparation selects the supported conversion path
+0.000 s: 24-bit input falls back to 16-bit when float is unavailable
+0.000 s: OpenAL PCM preparation selects the supported conversion path
+0.000 s: PhysicsMesh rejects unusable input
+0.000 s: UUID::Comparison
+0.000 s: Component menu model distinguishes and searches fully qualified managed scripts
+0.001 s: Runtime scene changes preserve play mode and the original edit scene
+0.000 s: Failed asset saves wait for a later retry and retain other assets
+0.000 s: Reverse Z infinite projections retain precision without a far clip
+0.165 s: Build pipeline rejects an output that contains protected inputs
+0.536 s: Basis KTX2 texture arrays retain layer face and mip identity
+0.000 s: Signum
+0.000 s: Math::Utility
+0.000 s: Mod
+0.000 s: Math::Utility
+0.000 s: Intbound
+0.000 s: Math::Utility
+0.000 s: HashedString
+0.000 s: GPU geometry packing preserves meshlet indirect ranges
+0.000 s: Managed state preserves unsigned enum bits
+0.037 s: Build manager propagates cancellation and pipeline stage reports
+0.000 s: FromRGBA
+0.000 s: Color::Basic
+0.000 s: FromRGB
+0.024 s: Color::Basic
+0.000 s: FromHex
+0.000 s: Color::Basic
+0.000 s: Shader property IDs are cached and stable
+0.000 s: Animation components preserve requested playback across runtime recreation
+0.000 s: Weighted OIT uses a fixed group before strict transparency across render layers
+0.000 s: Required content cannot be excluded
+0.002 s: Build profiles map stable asset roots into content resolution
+0.840 s: Build fingerprint frames managed source and reference collections
+0.000 s: Higher priority contexts override names and consume active controls
+0.000 s: Editor camera normalizes invalid projection inputs
+0.000 s: 2D physics assignment preserves live runtime state
+0.054 s: Managed dependency resolution reports missing roots
+[14:50:12] CROWNY: Cannot apply state for 'Other.Assembly:Other.Namespace.OtherType' to script 'Missing.Assembly:Missing.Namespace.StateCarrier'.
+0.007 s: ManagedScript rejects state for a different type
+0.019 s: Physics material assets survive binary round trips
+0.000 s: Window state coalesces platform callback permutations
+0.000 s: Single ASCII
+0.000 s: UTF8::ConversionDetailed
+0.000 s: Single 3-byte char
+0.000 s: UTF8::ConversionDetailed
+0.000 s: Single 4-byte char (surrogate)
+0.000 s: UTF8::ConversionDetailed
+0.000 s: The full string
+0.000 s: UTF8::ConversionDetailed
+0.000 s: Console severity toggles distinguish enabled and disabled filters
+0.000 s: Text layout ellipsizes hidden lines and fits font size
+0.100 s: StringUtils search matching allocates nothing for long visible lists
+0.000 s: GPU draw generation batches material records sharing a template
+0.021 s: Mesh parser duplicates transformed morph deltas for scene instances
+0.000 s: PixelUtils::Conversion
+0.000 s: Shader import options preserve language and sorted defines
+0.001 s: Priority queues preserve FIFO order and an eight-four-one service cycle
+0.000 s: Time exposes callback-local delta without changing frame time
+0.000 s: Component transactions build after the final setter
+0.000 s: PhysicsMesh welds duplicate positions and drops degenerate triangles
+0.000 s: Adding a managed script to a selection preserves existing script lists and state
+0.210 s: Build pipeline restores the last good build when publication throws
+0.008 s: Build manifest loading is transactional and rejects invalid files
+0.006 s: Render pipeline rebuilds allocate nothing after warm-up
+0.000 s: Prefab override paths support allocation-free lookup
+0.001 s: Prefab instantiation creates a fresh linked hierarchy
+0.056 s: VS Code synchronization configures a CoreCLR workspace
+0.029 s: Content pack integers use deterministic little-endian bytes
+0.000 s: Build manifest validation rejects incompatible versions and unsafe paths
+0.000 s: Matrix decomposition removes shear before extracting rotation
+0.000 s: Push back within static capacity
+0.000 s: SmallVector::Basic
+0.000 s: Growth beyond static capacity
+0.000 s: SmallVector::Basic
+0.000 s: Initializer list
+0.000 s: SmallVector::Basic
+0.000 s: Mono binding metadata registration is idempotent
+0.000 s: 3D collider and rigidbody components can be added and removed without a running world
+0.000 s: Console view model reads allocate nothing after warm-up
+0.000 s: Managed inspector attributes are cached by settings type
+0.000 s: RenderCapabilities derives renderer tiers from required feature sets
+0.000 s: Input maps combine a normalized WASD composite
+[Crowny-Tests][Mono] initializing test logging
+[Crowny-Tests][Mono] resolving runtime paths
+[Crowny-Tests][Mono] starting runtime (lib=C:\Program Files\Mono\lib, etc=C:\Program Files\Mono\etc)
+[Crowny-Tests][Mono] runtime ready
+Unexpected SEH unhandled exception filter on disengage. The filter was restored, but might be rolled back unexpectedly.0.119 s: Mono UTF16 conversion preserves supplementary characters and embedded nulls
+0.000 s: Module::RestartAfterShutdown
+0.000 s: Console view model retains selected callstack labels
+0.000 s: Global editor settings take precedence over legacy worktree settings
+0.000 s: Prefab capture preserves its internal hierarchy
+0.000 s: Time drops excess fixed backlog after the configured step budget
+0.000 s: Deep copy keeps values and hierarchy, but not identities
+0.000 s: Entity instantiation deep-copies hierarchies with fresh identities
+0.000 s: A different parent keeps the source's world transform
+0.000 s: Entity instantiation deep-copies hierarchies with fresh identities
+0.000 s: The scene root cannot be instantiated
+0.000 s: Entity instantiation deep-copies hierarchies with fresh identities
+0.000 s: Duplicating an invalid source fails cleanly
+0.000 s: Entity instantiation deep-copies hierarchies with fresh identities
+0.043 s: Thread allocation snapshots isolate worker allocations
+0.000 s: Bindless table resolves missing and replaced resources
+0.000 s: Editor camera pose setters keep derived matrices coherent
+1.482 s: Basis KTX2 payloads retain mips and transcode to GPU blocks
+0.000 s: PixelData::PaddedViewDerivesSlicePitch
+0.000 s: Console uses its full height when no message is selected
+0.000 s: Font importer validates extensions and font signatures
+0.000 s: Reset component snapshots release retained resources
+0.000 s: Component snapshot finish and reset preserve redo state
+0.000 s: UUID::Hashing
+0.000 s: Crowny Builder reports a missing format value without throwing
+0.001 s: Bulk delete undo snapshots every sibling before mutation
+0.000 s: Font fallback chains resolve nested source font identities
+0.000 s: Managed inspector coalesces instantaneous changes from one frame
+0.024 s: Built-in pack contains current material shader assets
+0.056 s: Player template staging preserves the destination when a source hash changes
+0.000 s: MeshFactory safely normalizes large finite inputs
+0.000 s: PixelUtils::PackUnpack::RGBA32F
+0.453 s: Managed build plans are deterministic and content addressed
+0.000 s: Asset browser viewport keeps selection and rename rows in absolute coordinates
+0.000 s: Image loader preserves grayscale alpha semantics
+0.008 s: Font import options survive metadata round trip
+0.000 s: Default constructor creates empty UUID
+0.000 s: UUID::Basic
+0.000 s: Constructor with data parts
+0.000 s: UUID::Basic
+0.000 s: Constructor from string
+0.000 s: UUID::Basic
+0.000 s: Invalid string constructor results in empty UUID
+0.000 s: UUID::Basic
+0.000 s: Uppercase hex input
+0.000 s: UUID::Basic
+0.000 s: Round-trip: generated UUID survives string conversion
+0.000 s: UUID::Basic
+0.000 s: PixelData::RGBA32F ColorAt
+0.000 s: RGBA8
+0.000 s: PixelUtils::PackUnpack
+0.000 s: R8
+0.000 s: PixelUtils::PackUnpack
+0.000 s: Component menu model retains sorted catalogs and filtered results
+0.000 s: Image loader honors cancellation and reports corrupt data
+0.000 s: GPU scene rejects stale and invalid sparse updates
+0.000 s: Managed state preserves nested color usage settings
+0.000 s: An editor scene can adopt a new asset identity after Save As
+2.739 s: Masked depth shader compiles all animation and output-layout variants
+0.000 s: Built-in shader catalog classifies material shaders
+0.001 s: Transform selection axis reset undo restores values and prefab overrides as one action
+0.000 s: 3D physics assignment preserves live runtime state
+0.002 s: TaskSystem preserves the legacy task and group interface
+0.000 s: RenderWorld preserves forward-only LOD routing in packed instance flags
+0.000 s: Bulk hierarchy reparent preserves input order and world transforms
+0.000 s: Image loader recognizes common image signatures
+[14:50:18] CROWNY: Using Mono runtime at C:\Program Files\Mono
+[14:50:19] CROWNY: OpenAL EFX available: 4 auxiliary send(s), EAX reverb enabled.
+1.127 s: Active audio sources survive AddOrReplace without replaying
+0.000 s: Render light changes coalesce and handles are generational
+[14:50:19] CROWNY: Box requires positive finite dimensions.
+[14:50:19] CROWNY: Plane requires positive dimensions, a non-zero normal, and valid subdivisions.
+[14:50:19] CROWNY: Box requires positive finite dimensions.
+[14:50:19] CROWNY: Sphere requires a positive radius and valid tessellation.
+[14:50:19] CROWNY: Sphere requires 3 to 4096 segments, got 2.
+[14:50:19] CROWNY: Sphere requires a positive radius and valid tessellation.
+[14:50:19] CROWNY: Cylinder requires positive dimensions and valid tessellation.
+[14:50:19] CROWNY: Cone requires 3 to 4096 segments, got 2.
+[14:50:19] CROWNY: Cone requires positive dimensions and valid tessellation.
+[14:50:19] CROWNY: Capsule requires positive dimensions, height of at least two radii, and valid tessellation.
+[14:50:19] CROWNY: Plane requires positive dimensions, a non-zero normal, and valid subdivisions.
+[14:50:19] CROWNY: Plane requires positive dimensions, a non-zero normal, and valid subdivisions.
+0.001 s: MeshFactory rejects invalid dimensions
+0.000 s: Mesh deformer skins vertices using a reusable output mesh
+0.000 s: 2D batch-optimized ordering groups weighted particle pipelines within a layer
+0.000 s: Managed physics material factories create serializable runtime handles
+0.001 s: Auto rendering path favors integrated GPU bandwidth
+0.002 s: Changing scenes retires the old camera history namespace
+0.001 s: Managed JSON uses catalog kinds to preserve ambiguous values
+0.006 s: Entity factory creates lights parented to the requested entity
+0.000 s: Managed catalog preserves searchable inspector settings
+0.002 s: Managed project dependencies allow an empty declaration
+0.038 s: Player template validation rejects duplicate portable paths
+0.000 s: Undo transactions discard no-op and cancelled edits
+0.000 s: Managed catalog preserves field tooltips
+0.028 s: Timed worker waits do not execute an unbounded blocker
+0.000 s: Render pipeline honors camera path overrides
+0.000 s: Input context edits repair stable IDs before publication
+0.000 s: GpuTexturePool delays reuse and ignores debug names
+0.001 s: Mesh processing allocation grows with the total geometry across material groups
+[14:50:19] CROWNY: Cannot open file: "C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny_builtin_shader_4b11df8e-2ebd-4088-a73b-fb8cbf7ca8f8\\freshness.asset"
+[14:50:19] CROWNY: Compiling built-in shader: freshness.glsl
+[14:50:20] CROWNY: Compiling built-in shader: freshness.glsl
+[14:50:20] CROWNY: Cannot open file: "C:\\Users\\bo.ivanov\\AppData\\Local\\Temp\\crowny_builtin_shader_4b11df8e-2ebd-4088-a73b-fb8cbf7ca8f8\\color.glslinc"
+[14:50:20] CROWNY: Compiling built-in shader: freshness.glsl
+[14:50:20] CROWNY: Cannot open file: "C:\\Users\\bo.ivanov\\AppData\\Local\\Temp\\crowny_builtin_shader_4b11df8e-2ebd-4088-a73b-fb8cbf7ca8f8\\color.glslinc"
+[14:50:21] CROWNY: C:\Users\BOA53C~1.IVA\AppData\Local\Temp\crowny_builtin_shader_4b11df8e-2ebd-4088-a73b-fb8cbf7ca8f8\freshness.glsl: C:/Users/BOA53C~1.IVA/AppData/Local/Temp/crowny_builtin_shader_4b11df8e-2ebd-4088-a73b-fb8cbf7ca8f8/freshness.glsl:9: error: 'SharedColor' : no matching overloaded function found
+C:/Users/BOA53C~1.IVA/AppData/Local/Temp/crowny_builtin_shader_4b11df8e-2ebd-4088-a73b-fb8cbf7ca8f8/freshness.glsl:9: error: 'assign' :  cannot convert from ' const float' to 'layout( location=0) out highp 4-component vector of float'
+
+2.037 s: Built-in shader freshness follows transitive include content
+0.000 s: Duplicate pass and stage
+0.000 s: Shader source parser rejects malformed topology and directives
+0.000 s: Mixed pipeline kinds
+0.000 s: Shader source parser rejects malformed topology and directives
+0.000 s: Invalid identifier
+0.000 s: Shader source parser rejects malformed topology and directives
+[14:50:21] CROWNY: Dynamic font atlases are not supported. Disable DynamicFontAtlas before importing '"missing.ttf"'.
+0.000 s: Font importer rejects unsupported dynamic atlases before reading the source
+0.000 s: Managed catalog preserves path and multiline inspector settings
+0.003 s: Mesh processing creates bounded meshlets and conventional LODs
+0.842 s: Shader reflection preserves runtime descriptor arrays
+0.052 s: Managed assembly publishing replaces DLL and symbols
+0.011 s: Managed assembly inspection fails closed for non PE inputs
+0.000 s: Image loader probes raster metadata without decoding pixels
+0.003 s: Font fallback glyph lookup does not allocate after setup
+0.000 s: SmallVector::ComplexTypes
+0.000 s: Box2D implements the backend-neutral 2D contract
+0.000 s: PixelUtils::PackUnpack::RG8
+0.000 s: Hierarchy control toggles keep a stable range anchor
+0.000 s: Bulk hierarchy reparent rejects the whole batch before mutation
+0.036 s: OpenAL streaming scratch is allocation-free after its high-water mark
+[14:50:22] CROWNY: Importer returned an incomplete asset batch for '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny_import_scheduler_669398067470200\\incomplete.multiincomplete"'.
+0.006 s: Incomplete multi-output imports fail as one batch
+0.000 s: Managed assembly identities use CLI display form
+0.086 s: Content pack reader rejects truncated and out-of-range structures
+0.000 s: Reverse Z finite projections map near to one and far to zero
+0.000 s: Asset browser operations reject moves that cannot change the library
+0.001 s: Component edits resolve entities by UUID after entity restoration
+0.000 s: PixelUtils::Conversion::RGBA8toRGBA32F
+0.000 s: PixelUtils::GetBitDepths
+[14:50:22] CROWNY: Vertex layout is missing required shader input '' at location 0
+[14:50:22] CROWNY: Vertex input '' at location 0 has incompatible mesh type 16 and shader type 10
+[14:50:22] CROWNY: Vertex input '' uses location 16, exceeding the Vulkan limit of 15
+[14:50:22] CROWNY: Vertex layout uses 2 streams, exceeding the Vulkan binding limit of 1
+[14:50:22] CROWNY: Vertex input '' uses unavailable stream 1
+0.001 s: Vulkan vertex layouts own declarations and supply missing vertex color
+0.000 s: Popup label IDs own independent fixed storage
+0.000 s: PixelData::GetSize
+0.000 s: Mesh upload commands retain their inputs until the frame releases them
+0.000 s: PixelUtils::PackUnpack::RGB32F
+0.109 s: Content packs are byte-identical and support random access
+0.000 s: Recent project scenes stay unique newest-first and bounded
+0.000 s: Asset browser plans external imports into the browsed folder
+0.063 s: Shadow update scheduling reuses scratch storage after warm-up
+0.000 s: Box collider bounds drag creates one exact undo action
+0.000 s: IsPow2
+0.000 s: Bitwise Utilities
+0.000 s: Unorm/Uint Conversions
+0.000 s: Bitwise Utilities
+0.000 s: Snorm/Uint Conversions
+0.000 s: Bitwise Utilities
+0.000 s: Int Read/Write
+0.000 s: Bitwise Utilities
+0.000 s: Half Float Conversions
+0.000 s: Bitwise Utilities
+0.000 s: Partial overlap - middle
+0.000 s: VulkanUtils::CutVertical
+0.158 s: TaskSystem rejects dynamic mutual waits
+0.000 s: Physics materials use deterministic backend-neutral combine rules
+0.071 s: Crowny Builder rejects requests for a different engine binary
+0.000 s: Content databases reject unreferenced corruption
+0.000 s: Mesh upload results publish once across the thread handoff
+0.000 s: Console ignores remembered details height while no message is selected
+0.000 s: RenderGraph rebuild and compile reuse warm scratch storage
+0.000 s: Component menu model projects sorted component categories
+0.000 s: Returning a gizmo to its start restores transforms and override state
+0.000 s: Selected descendants are transformed once with their selected parent
+0.000 s: Meshlet normal cones follow meshoptimizer rejection math
+0.102 s: Managed build plans reject paths that escape the project
+0.025 s: Built-in shader catalog lists shader assets from a directory
+0.086 s: Bulk hierarchy destroy rebuilds one parent vector linearly
+0.141 s: Basis KTX2 preserves validated authored mip chains
+0.102 s: Image loader retains KTX2 source data for file import requests
+0.002 s: Path Normalization
+0.013 s: VirtualFileSystem
+0.007 s: Priority Overlays
+0.056 s: VirtualFileSystem
+0.043 s: Writing always uses highest priority mount
+0.057 s: VirtualFileSystem
+0.005 s: Deepest match wins
+0.017 s: VirtualFileSystem
+0.001 s: Unmount removes mount point
+0.051 s: VirtualFileSystem
+0.000 s: Non-existent virtual path returns false
+0.010 s: VirtualFileSystem
+0.002 s: Backslash normalization
+0.056 s: VirtualFileSystem
+0.000 s: StringUtils::Parsing
+0.000 s: RenderWorld keeps render-layer ordering outside the fixed GPU instance record
+0.000 s: StringID process-lifetime storage
+0.000 s: Viewport HUD status remains bounded for extreme Counts
+0.041 s: Content pack reader rejects duplicate and case-colliding paths
+0.000 s: Preview invalidation and clear release cache reservations
+0.000 s: Window registration requires an initialized backend
+0.000 s: GPU point shadow data keeps six cube faces
+0.023 s: C# solution writer preserves unchanged generated files
+0.000 s: GPU spot shadow data maps its atlas tile
+0.005 s: Scoped windows end after nested style guards unwind
+0.001 s: Cancellation reports whether work started and propagates through dependencies
+0.108 s: Image loader reports KTX2 array topology without decoding
+0.000 s: Render lights convert physical units into shader intensity
+0.000 s: Transform selection layout keeps a historical label column and usable axis inputs
+0.000 s: An empty font has safe metrics and glyph queries
+0.000 s: Directory moves remap selected descendants by path components
+0.000 s: StartUp initializes module and calls OnStartUp
+0.000 s: Module::StartUpShutdownLifecycle
+0.000 s: Shutdown tears down module and calls OnShutdown
+0.000 s: Module::StartUpShutdownLifecycle
+[14:50:24] CROWNY: Cannot save material '' without a destination path.
+[14:50:24] CROWNY: Failed to publish material '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny-material-write-failure"': Publishing the atomic-write temporary file failed with Windows error 5.
+[14:50:24] CROWNY: Material has invalid AlphaMode 'Sorted'
+[14:50:24] CROWNY: Material YAML version 999 is newer than supported version 3
+0.033 s: Materials can explicitly request and persist weighted OIT routing
+0.000 s: Window state storms publish once without allocations
+0.000 s: Mesh preview shading stays readable on every facet orientation
+0.000 s: Managed state preserves nested dictionary display settings
+0.000 s: Font fallback references discard empty and duplicate asset IDs
+0.000 s: Geometry evaluation cache follows semantic changes
+0.083 s: Legacy snapshot materials stay flat and allocation-free after warm-up
+0.000 s: Retained undo scopes freeze the first drag snapshot
+0.000 s: Shadow atlas allocations are stable and retire on the frame timeline
+0.000 s: RenderGraph keeps overlapping resources in separate allocations
+0.378 s: Default build pipeline writes and reads back real Crowny artifacts
+0.001 s: Primitive mesh library exposes stable, unique identifiers
+0.001 s: Box3D 0.1
+0.001 s: Active 3D components survive AddOrReplace on every backend
+0.026 s: Jolt 5.6
+0.026 s: Active 3D components survive AddOrReplace on every backend
+0.003 s: Bullet 3.25
+0.003 s: Active 3D components survive AddOrReplace on every backend
+0.000 s: PixelUtils::Conversion::OverlappingLayouts
+0.000 s: Render statistics count primitives for every topology
+0.000 s: PixelData::ColorAt
+0.001 s: Transform selection axis resets preserve other axes and invalidate descendants
+0.000 s: Nested functions
+0.000 s: ExpressionEvaluator::Functions
+0.000 s: RenderGraph execution emits final transitions after the last pass
+0.000 s: Failed deferred moves leave selection unchanged
+0.006 s: Missing physics material assets retain their references and use defaults
+0.249 s: missing journal preserves the unmatched backup
+0.249 s: Build pipeline never guesses recovery without a valid journal
+0.378 s: invalid journal identity preserves every possible backup
+0.379 s: Build pipeline never guesses recovery without a valid journal
+0.000 s: copy construction
+0.000 s: MemoryDataStream preserves its extent when copying and moving reserved storage
+0.000 s: copy assignment
+0.000 s: MemoryDataStream preserves its extent when copying and moving reserved storage
+0.000 s: move construction and assignment
+0.000 s: MemoryDataStream preserves its extent when copying and moving reserved storage
+0.000 s: borrowed storage cannot grow
+0.000 s: MemoryDataStream preserves its extent when copying and moving reserved storage
+0.022 s: Content pack payload hashes detect data corruption
+0.071 s: CancelPendingAndDrain cancels queued and cooperative running tasks
+0.000 s: Box2D advances exactly once by the supplied fixed tick
+0.000 s: Forward-only opaque draws remain outside standard opaque runs
+0.000 s: Transformed sphere bounds remain conservative under shear
+0.000 s: PhysicsMesh only cooks triangle-list sub-meshes
+0.000 s: Looping root motion remains continuous across clip boundaries
+0.000 s: Window-system shutdown waits for every native window
+0.003 s: Light binary serialization
+0.000 s: Scene snapshot extraction preserves the frame-context number
+0.000 s: Cached local shadows invalidate when either the light or caster revision changes
+0.041 s: Serialized-worker imports never overlap for one importer
+0.000 s: Static geometry heaps retire and reuse ranges safely
+0.000 s: GPU draw-bin layout invalidates only when keys or limits change
+0.000 s: RenderGraph aliases compatible non-overlapping transients
+0.003 s: Entity factory primitives reference the shared built-in mesh without a renderer
+0.000 s: GPU geometry table ranges coalesce adjacent retirements
+0.000 s: Hierarchy selection modifiers resolve without ImGui state
+0.000 s: Module::GetAfterStartUp
+0.019 s: Script path settings normalize separators and omitted extensions
+0.002 s: Active cameras do not age each other within one frame
+0.000 s: Multi-selection translation preserves relative transforms
+0.000 s: Directional shadow split calculation is bounded and monotonic
+0.000 s: Empty Layout
+0.000 s: BufferLayout
+0.000 s: Layout Calculation
+0.001 s: BufferLayout
+0.000 s: Add Element Dynamically
+0.000 s: BufferLayout
+0.000 s: Attribute Queries
+0.000 s: BufferLayout
+0.000 s: Iteration
+0.000 s: BufferLayout
+[14:50:25] CROWNY: Failed mesh asset loading: Mesh: "C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny_mesh_669400802710300.glb", Error: No suitable reader found for the file format of file "C:\Users\BOA53C~1.IVA\AppData\Local\Temp\crowny_mesh_669400802710300.glb".
+0.046 s: Mesh parser reports the reader error for unreadable sources
+0.000 s: Text layout overlays combining marks without adding advance
+0.023 s: Partially accepted worker lanes roll the batch back to failed imports
+0.001 s: Script path settings resolve dynamic parents and extensions
+0.001 s: Animation curves handle boundaries and interpolation
+0.000 s: Bulk hierarchy preserve-children destroy rejects nested selections atomically
+0.000 s: PixelUtils::Conversion::Padded3D
+0.184 s: Build pipeline contains throwing pack and cancellation callbacks
+0.000 s: Destroying an active box collider bounds transaction cancels it
+0.041 s: Atomic asset copy preserves its destination on failure
+0.000 s: Text layout wrapping modes handle oversized words
+0.000 s: PixelData::CheckedColorAccess
+0.000 s: Scene component codecs have stable complete registrations
+0.000 s: Text layout tabs advance to configurable tab stops
+0.000 s: Translation
+0.000 s: Local translation and rotation follow the primary axes
+0.000 s: Rotation
+0.000 s: Local translation and rotation follow the primary axes
+0.000 s: Split by comma
+0.000 s: StringUtils::SplitString
+0.000 s: Split by multi-character separator
+0.000 s: StringUtils::SplitString
+0.000 s: Split empty string
+0.000 s: StringUtils::SplitString
+0.000 s: GpuBufferPool delays whole-buffer reuse until in-flight frames retire
+0.005 s: Build pipeline rejects an output symlink alias of protected roots
+[14:50:25] CROWNY: Managed script 'Host.Managed:MissingBehaviour' on entity 338071ea-132a-4947-b2f6-f277c645f16f [managed.mono.program_not_loaded]: No Mono program is loaded.
+0.005 s: YAML
+0.005 s: Nested managed type identities round-trip through scene formats
+[14:50:25] CROWNY: Managed script 'Host.Managed:MissingBehaviour' on entity 7b14c039-71e2-4e72-ac47-a799cd01425a [managed.mono.program_not_loaded]: No Mono program is loaded.
+0.004 s: Binary
+0.004 s: Nested managed type identities round-trip through scene formats
+0.000 s: Component add and remove actions preserve component data
+0.049 s: Mesh parser preserves topology and combines different vertex layouts
+0.001 s: Asset browser folder fingerprints track listing changes
+0.004 s: Stable tag and mesh snapshot scopes allocate nothing after warm-up
+0.001 s: Render features add passes only at their insertion point
+0.000 s: Box3D 0.1
+0.001 s: 3D backends implement the common contract
+0.051 s: Jolt 5.6
+0.052 s: 3D backends implement the common contract
+0.003 s: Bullet 3.25
+0.009 s: 3D backends implement the common contract
+0.011 s: ParallelFor covers every index exactly once
+0.000 s: Uniform parameter binding queries reject sparse slots and wrong types
+0.000 s: Enum buttons select one ordinary enum value
+0.002 s: Node graph serialization preserves identity
+0.000 s: Legacy editor settings migrate only when global settings are absent
+0.020 s: ParallelFor stops assigning work after the first failure
+[14:50:25] CROWNY: No audio listener in scene
+0.001 s: Play and simulation restore the untouched edit scene
+0.010 s: Build manager reports missing project packaging inputs
+0.000 s: Text layout groups Hangul Jamo and spacing-mark graphemes
+0.303 s: Crowny Builder publishes a player build through BuildPipeline
+0.000 s: Project Hub layout does not grow with a large viewport
+0.000 s: pre-unload rejection keeps the current program valid
+0.000 s: Mono assembly refresh failure reports whether the previous domain survived
+0.000 s: successful rollback keeps the previous program valid
+0.000 s: Mono assembly refresh failure reports whether the previous domain survived
+0.000 s: failed rollback invalidates the managed program
+0.000 s: Mono assembly refresh failure reports whether the previous domain survived
+0.000 s: Point lights produce six finite cube shadow views
+0.000 s: Managed catalog preserves enum button options and flags
+0.007 s: Synchronous text hit-test queries allocate nothing after warm-up
+0.001 s: Depth prepass configures motion-vector and object-ID outputs independently
+0.000 s: Depth prepass includes alpha-tested materials without accepting transparent modes
+[14:50:26] CROWNY: Importer returned no assets for '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny_import_scheduler_669401594791000\\asset1.ordered"'.
+0.034 s: Import results publish once in input order including failures
+0.000 s: PixelUtils::PackUnpack::SignedInteger
+0.000 s: Viewport transform undo and redo restore prefab override state
+0.000 s: Undo history follows the edit scene context
+0.000 s: Discrete asset edits are ready immediately
+0.000 s: AffineTransform3x4 preserves affine matrices
+0.000 s: Material inspector schema cache invalidates only for a new layout
+0.092 s: Crowny Builder validates managed timeout using the compiler limit
+0.000 s: Viewport picking rejects unsafe coordinates before integer conversion
+0.000 s: Undo transactions coalesce continuous edits into one action
+0.001 s: Legacy project scene paths migrate without losing unresolved entries
+Unexpected SEH unhandled exception filter on disengage. The filter was restored, but might be rolled back unexpectedly.0.732 s: CoreCLR adapter loads a published private package
+0.000 s: Immediate component transactions capture the mutated bound value
+0.000 s: Local scale follows the primary orientation
+0.000 s: Multi-selection scale distinguishes world and local axes
+0.000 s: World scale follows world axes without rotating entities
+0.000 s: Multi-selection scale distinguishes world and local axes
+[14:50:26] CROWNY: Skipping transformed skinned mesh instance 'MeshNode' because Crowny stores one inverse bind pose per bone.
+0.007 s: Mesh parser rejects transformed skinned instances
+0.000 s: GpuTexturePool enforces its retained-byte budget and trims ready textures
+0.000 s: Bindless descriptors are not reused before timeline retirement
+0.000 s: Component selection properties accept component methods and entity-aware setters
+0.000 s: PixelUtils::D24S8 stencil mask
+0.000 s: Console severity toggle visuals preserve each severity hue
+[14:50:26] CROWNY: Skipping mesh instance 'Collapsed' because its node transform collapses an axis.
+0.007 s: Mesh parser rejects only degenerate transformed instances
+0.000 s: Scene camera keeps projection parameters valid
+0.000 s: Input maps allocate nothing after warm-up
+0.000 s: Clustered lights assign local lights and separate directionals
+0.000 s: Component scope ownership preserves unrelated transactions
+0.000 s: Event Properties
+0.000 s: Event System
+0.000 s: Correct Dispatch
+0.000 s: Event Dispatcher
+0.000 s: Event System
+0.000 s: Incorrect Dispatch Type
+0.000 s: Event Dispatcher
+0.000 s: Event System
+0.297 s: Build pipeline rolls publication back when cancellation arrives before commit
+0.001 s: Bulk delete undo normalizes selected descendants before snapshotting
+0.000 s: Enum buttons toggle flags and composite values
+0.000 s: full table
+0.000 s: EFX entrypoint tables classify full partial and missing support without a device
+0.000 s: partial table
+0.000 s: EFX entrypoint tables classify full partial and missing support without a device
+0.000 s: missing table
+0.000 s: EFX entrypoint tables classify full partial and missing support without a device
+0.000 s: Undo-driven asset saves enter the same retained queue
+0.000 s: PixelUtils::Conversion::RGB8toRGBA8
+0.000 s: Cylinder node produces bounded topology
+0.000 s: Editor scene persistence is disabled for runtime clones
+0.000 s: Directional cascades cover their camera slices
+0.000 s: Input map state transitions survive disabled contexts
+0.000 s: PixelUtils::PackUnpack::BGRA8
+0.000 s: Text layout caret stops do not split combining sequences
+0.000 s: Reusing an initialized window system cancels deferred shutdown
+0.000 s: Input maps apply gamepad dead zones, scale, and inversion
+6.688 s: Managed build compiles and inspects a real assembly when Mono is available
+[14:50:33] CROWNY: Cannot convert pixel buffers with different sizes
+0.000 s: PixelUtils::Conversion::SizeMismatch
+0.000 s: Erase middle
+0.000 s: SmallVector::Operations
+0.000 s: Erase last
+0.000 s: SmallVector::Operations
+0.000 s: Resize
+0.000 s: SmallVector::Operations
+0.000 s: Clear
+0.000 s: SmallVector::Operations
+0.000 s: Pop back
+0.000 s: SmallVector::Operations
+0.000 s: Importer threading policy defaults to main-thread-only
+0.000 s: Console ordering uses stable tie breakers
+0.000 s: Searchable inspector values support fuzzy and recursive matching
+0.187 s: A worker can submit and wait for a child with one worker
+0.001 s: UUID fixed-buffer formatting is canonical and allocation-free
+[14:50:34] CROWNY: Error deserializing scene ""C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny-broken-scene.yaml"". yaml-cpp: error at line 8, column 15: bad conversion.
+0.004 s: Failed YAML scene loads discard partial entities
+0.219 s: Build pipeline never adopts or removes stale staging directories
+[14:50:34] CROWNY: Font import options are missing or have the wrong type for '"ignored.ttf"'.
+0.000 s: Font importer rejects options for another asset type
+0.000 s: Camera-less frames retire inactive scene history
+0.000 s: Image loader enforces source dimension and decoded memory limits
+0.100 s: Scene light synchronization allocates nothing after warm-up
+0.000 s: Moving an unselected asset does not select its destination
+0.072 s: Content pack paths are portable and traversal lookups fail
+0.000 s: Managed entity parent accepts the empty UUID as unparent
+0.000 s: 2D physics material values enforce backend-neutral ranges
+0.000 s: Text layout preserves advance for spacing marks classified as grapheme extenders
+0.000 s: Shadow update scheduling preserves equal-score input order and filters invalid work
+4.919 s: Deep hierarchy transform propagation and resolution are iterative
+[14:50:39] CROWNY: Material created with null shader handle
+[14:50:39] CROWNY: Material created with null shader handle
+0.000 s: Material inspector schema cache retains no material resources
+0.000 s: Managed inspector warm frames do not capture or allocate
+0.001 s: Text layout groups regional indicators and emoji joiner sequences
+0.000 s: Managed inspector captures redo state after the managed setter
+0.000 s: GPU vendor discovery accepts driver vendor strings
+0.000 s: Partial overlap - middle
+0.000 s: VulkanUtils::CutHorizontal
+0.000 s: No overlap - left
+0.000 s: VulkanUtils::CutHorizontal
+0.000 s: Full containment - cutWith covers toCut
+0.000 s: VulkanUtils::CutHorizontal
+0.000 s: Overlap - left edge
+0.000 s: VulkanUtils::CutHorizontal
+0.000 s: Visual Studio solution generation writes version-correct headers
+0.000 s: Reverse Z Hi-Z keeps the farthest occluder conservatively
+0.000 s: Material shader picker filters and orders options
+0.000 s: Console keeps selected message details practical and resizable
+0.000 s: Better-ratio level
+0.000 s: FastLZ buffer compression
+0.000 s: Short inputs are stored verbatim
+0.000 s: FastLZ buffer compression
+0.000 s: Empty inputs round trip
+0.005 s: FastLZ buffer compression
+0.000 s: Destination bounds are checked
+0.000 s: FastLZ buffer compression
+0.000 s: Corrupt data is rejected
+0.000 s: FastLZ buffer compression
+0.000 s: Exact division
+0.005 s: Math::DivideAndRoundUp
+0.000 s: Non-exact division rounds up
+0.001 s: Math::DivideAndRoundUp
+0.000 s: Zero dividend
+0.000 s: Math::DivideAndRoundUp
+0.000 s: Dividend equals divisor
+0.000 s: Math::DivideAndRoundUp
+0.000 s: Divisor of one
+0.000 s: Math::DivideAndRoundUp
+0.000 s: Unsigned types
+0.000 s: Math::DivideAndRoundUp
+0.000 s: Typical texture mip-level calculations
+0.000 s: Math::DivideAndRoundUp
+0.000 s: Hierarchy ranges use the current filtered and reordered view
+0.252 s: Managed compilation preserves the last published assembly when process startup fails
+0.000 s: Shadow update scheduling honors update and pixel budgets
+0.106 s: Mono runtime discovery prefers a complete candidate
+0.000 s: Spot shadow view follows the physical light cone
+0.012 s: Player template validation rejects case-only path collisions
+0.000 s: Thread allocation snapshots cover standard allocation families
+0.010 s: Rejected worker-lane submission publishes failed imports
+0.000 s: Material inspector schema preserves reflected editor metadata
+0.000 s: Immediate component edits create one undo action
+0.000 s: GpuTexturePool separates every resource-creation field
+0.000 s: Instantiated script components stay dormant outside play mode
+0.161 s: TaskSystem destruction drains dependency continuations
+0.000 s: Material render classification is explicit and fails closed
+0.001 s: Stable asset browser selection reconciliation allocates nothing
+0.000 s: Normal GCHandle
+0.000 s: Mono::Utils::GCHandles
+0.000 s: Resurrection-tracking weak GCHandle
+0.000 s: Mono::Utils::GCHandles
+0.000 s: Box collider bounds transactions cannot cross scene selections
+0.106 s: Queued dependencies do not block the only worker
+0.552 s: Build pipeline restores a backup even when its move reports failure after moving
+0.000 s: RenderWorld coalesces changes before render-thread consumption
+0.000 s: Mesh deformer applies morph targets before skeletal skinning
+0.000 s: Stable console filtering and snapshot checks allocate nothing
+0.000 s: Stable GPU scenes produce no upload work
+0.000 s: 3D backend factories are safe before initialization
+0.001 s: Legacy C# project generation uses the selected Visual Studio toolset
+0.000 s: RenderGraph rejects a transient read before its first write
+0.000 s: Input transitions remain latched for the frame
+0.000 s: PixelUtils::GetNumBytes
+0.140 s: Console snapshots are safe while messages are produced concurrently
+0.000 s: ExpressionEvaluator::Unary
+0.000 s: Signed 8-bit PCM is converted to OpenAL unsigned PCM
+0.000 s: RenderGraph history ping-pongs per camera and resets on cuts
+0.000 s: Input maps evaluate modifier chords and frame transitions
+0.001 s: Deleted entity undo restores its subtree and sibling position
+0.000 s: Physics material drags produce one undo action with the final value
+0.021 s: Parallel imports obey the configured worker-lane cap
+0.000 s: Content closure retains a root-to-dependency explanation
+0.000 s: Box collider bounds no-op does not create undo
+0.000 s: Managed state preserves nested tooltips
+0.360 s: Default artifact validation compares the complete manifest
+0.000 s: Managed ABI rejects incompatible tables before invoking them
+0.000 s: Compose/Decompose Roundtrip
+0.000 s: Math::Matrix
+0.000 s: OpenAL PCM preparation validates capabilities and ALsizei bounds
+0.000 s: Viewport HUD status describes the current selection
+0.000 s: Retained component snapshots preserve multi-edit undo state
+0.000 s: RenderGraph executes callbacks in compiled order
+0.000 s: Profile validation catches unsafe and ambiguous output names
+0.000 s: Render snapshots reset optional outputs to runtime defaults
+0.000 s: StringUtils::Compare
+0.000 s: Image loader preserves 16-bit PNM channel semantics
+0.000 s: Center cut - now produces 5 fragments
+0.000 s: VulkanUtils::CutRange
+0.000 s: No overlap
+0.000 s: VulkanUtils::CutRange
+0.000 s: Partial overlap - corner
+0.000 s: VulkanUtils::CutRange
+0.000 s: Different aspects - should not cut
+0.000 s: VulkanUtils::CutRange
+0.000 s: RenderGraph transient bindings allocate nothing after frame-slot warm-up
+0.000 s: Importer indexes normalized exact extensions
+0.001 s: MemoryDataStream appends serialized fields without quadratic allocation
+0.001 s: RenderGraph orders resource hazards
+0.000 s: Shader source parser separates passes, stages, and variations
+0.076 s: Build manager maps editor platforms into pipeline targets
+0.032 s: Drain seals submissions without orphaning accepted work
+0.225 s: Clustered light builds allocate nothing after warm-up
+0.000 s: an owned occurrence is erased from an existing component
+0.001 s: Mono failed creation rolls back only its added occurrence
+0.000 s: a pre-existing occurrence is never erased
+0.000 s: Mono failed creation rolls back only its added occurrence
+0.000 s: an owned component is removed when its owned occurrence was the only entry
+0.000 s: Mono failed creation rolls back only its added occurrence
+0.000 s: Disabling undo recording cancels an active component transaction
+0.000 s: Viewport transform interactions resolve commit and cancellation
+0.000 s: Managed collider material overrides round trip through the shared host table
+0.001 s: Stale queued previews release their scheduler slots
+0.000 s: Crowny Builder describes its command without loading a project
+0.000 s: Asset browser drop hit test uses the content rectangle
+0.001 s: Changing preview asset type replaces blocked work for the same asset
+[14:50:41] CROWNY: Physics material YAML version 999 is newer than the supported version 2.
+[14:50:41] CROWNY: Failed to deserialize physics material: yaml-cpp: error at line 1, column 10: bad conversion
+0.001 s: Physics material YAML preserves values and supplies legacy defaults
+0.000 s: New editor settings start without a load source
+0.683 s: Render blackboard rebuilds allocate nothing after warm-up
+0.000 s: Forward Direction
+0.000 s: Math::Directions
+0.440 s: Managed build plans include reference and compiler content
+0.000 s: Global pause resumes only a source that was playing
+0.000 s: Module::DoubleShutdownIsIdempotent
+0.000 s: IntrusiveRef preserves nulls, identity, and cycles
+0.000 s: Render pipeline cluster buffers follow non-default runtime settings
+0.000 s: PixelData::OwnershipAndValueSemantics
+0.000 s: ExpressionEvaluator::Complex
+0.060 s: Large hierarchy selection reuses its membership storage
+0.000 s: Window events retain platform state
+0.000 s: Invalid frame is rejected
+0.027 s: FastLZ stream compression
+0.000 s: Time preserves the fixed remainder when limiting a catch-up frame
+0.000 s: Selection property writes report the effective value after setter normalization
+0.000 s: CityHash64 matches the upstream reference vectors
+0.000 s: Managed catalog preserves unambiguous nested script identities
+0.000 s: Time applies scaling and hitch limits once
+0.000 s: GPU draw-bin admission never accepts a partial bin
+0.000 s: Viewport HUD status preserves the entity-name truncation boundary
+0.000 s: RenderGraph binds imported resources to typed runtime objects
+0.000 s: Stable asset browser viewport calculations allocate nothing
+0.000 s: ToLower
+0.000 s: StringUtils::CaseConversion
+0.000 s: ToUpper
+0.000 s: StringUtils::CaseConversion
+0.000 s: Sub-asset display names strip importer key noise
+0.000 s: Asset browser header dimensions follow font and breadcrumb content
+0.000 s: PixelUtils::PackUnpack::RGBA16F
+0.007 s: Mesh importer accepts binary glTF containers
+0.000 s: complete table
+0.000 s: EFX capability diagnostics report each outcome once
+0.000 s: partial table
+0.000 s: EFX capability diagnostics report each outcome once
+0.000 s: absent table
+0.000 s: EFX capability diagnostics report each outcome once
+0.000 s: meshes exclude dependents of other types and appear exactly once
+0.000 s: Asset search candidates list each imported asset once with its own type
+0.000 s: dependents are listed under their own type with a distinguishing name
+0.000 s: Asset search candidates list each imported asset once with its own type
+0.000 s: duplicate registrations and unavailable assets are dropped
+0.000 s: Asset search candidates list each imported asset once with its own type
+0.000 s: a missing root yields nothing
+0.000 s: Asset search candidates list each imported asset once with its own type
+0.001 s: Mesh processing output is deterministic
+0.000 s: Multi-selection rotation uses the shared pivot
+0.000 s: Only exact built-in shader names use the compatibility material route
+2.272 s: Shader compiler reuses identical stages and invalidates changed source
+0.000 s: RenderWorld transform settling reuses its change queues
+0.000 s: Popup label IDs fit the maximum stem and counter
+0.001 s: Inactive camera histories retire after the retention window
+0.000 s: Window-system shutdown without live windows is immediate
+0.000 s: Shader define and variation keys are deterministic and type-sensitive
+0.000 s: UUID project scene settings take precedence over legacy paths
+0.011 s: Player template staging does not erase a destination for an empty manifest
+0.000 s: RenderCapabilities reports only discovered features
+0.000 s: Material inspector schema resolves without allocations after warm-up
+0.000 s: Animation player evaluates events, morph weights, and cross fades
+0.045 s: TaskGroup cancellation is atomic with completion publication
+0.000 s: GPU geometry table ranges wait for in-flight frames before reuse
+0.000 s: PhysicsMeshResolver prefers explicit registrations
+0.061 s: Basis KTX2 rejects unsafe array ranges
+0.000 s: simulation advances at most once per application frame
+0.000 s: Time separates application frames from simulation time
+0.000 s: smooth delta time averages recent simulation frames
+0.000 s: Time separates application frames from simulation time
+0.000 s: resetting simulation preserves application time
+0.000 s: Time separates application frames from simulation time
+0.000 s: Base audio capability is independent from optional EFX support
+0.000 s: Bulk hierarchy destroy normalizes selected descendants
+0.006 s: Main-thread-only imports use main-thread import and publication
+0.000 s: Basis texture targets follow hardware compression support
+0.219 s: Shader reflection keeps storage buffers and images
+0.000 s: Static geometry heaps coalesce free ranges and report failures
+0.000 s: Startup falls back to the legacy last project
+0.159 s: Build pipeline forwards cancellation into managed compilation
+0.001 s: Missing node types survive node graph round trips
+0.001 s: GPU scene mirrors sparse instance and light changes
+0.000 s: Selection property writes skip equal values and track prefab overrides
+0.000 s: GPU radix digits traverse a 64-bit key from least significant byte
+0.000 s: Cancelling box collider bounds restores the initial values
+0.000 s: EndsWith
+0.000 s: StringUtils::Miscellaneous
+0.000 s: Managed state normalization uses the exact current schema
+0.000 s: Reparent undo retains its scene and restores hierarchy state
+0.000 s: PixelUtils::PackUnpack::RGB8
+0.000 s: Initial State
+0.000 s: Timer Utility
+0.066 s: Elapsed Time
+0.066 s: Timer Utility
+0.030 s: Reset
+0.030 s: Timer Utility
+0.000 s: Allocation and Basic Properties
+0.000 s: MeshData Functionality
+0.000 s: Vertex Data: Positions, Normals, Colors, UVs
+0.000 s: MeshData Functionality
+0.000 s: Vertex Data: Tangents
+0.000 s: MeshData Functionality
+0.000 s: 32-bit
+0.000 s: Index Data (16-bit and 32-bit)
+0.000 s: MeshData Functionality
+0.000 s: 16-bit Conversion
+0.000 s: Index Data (16-bit and 32-bit)
+0.000 s: MeshData Functionality
+0.000 s: Normal Mesh
+0.000 s: Bounds Calculation
+0.000 s: MeshData Functionality
+0.000 s: Single Vertex
+0.000 s: Bounds Calculation
+0.000 s: MeshData Functionality
+0.000 s: Sphere radius encloses all vertices
+0.000 s: Bounds Calculation
+0.000 s: MeshData Functionality
+0.000 s: Combining MeshData
+0.000 s: MeshData Functionality
+0.000 s: Combining MeshData with all 16-bit indices
+0.000 s: MeshData Functionality
+0.000 s: Combining MeshData with mixed 16/32-bit indices
+0.000 s: MeshData Functionality
+0.000 s: Combining MeshData merges layouts and zero-fills missing attributes
+0.000 s: MeshData Functionality
+[14:50:45] CROWNY: No audio listener in scene
+0.000 s: Play
+0.001 s: Runtime and physics simulation consume one shared frame plan
+0.000 s: Simulate
+0.000 s: Runtime and physics simulation consume one shared frame plan
+0.000 s: Projected selection properties preserve unrelated values per entity
+0.025 s: Build manager preserves asset database paths without guessing packaging inputs
+1.506 s: Build fingerprint changes when any consumed payload changes
+0.000 s: RenderGraph retires replaced physical textures through its allocator
+0.000 s: RenderGraph detects explicit dependency cycles
+0.000 s: Console search queries support fields, phrases, and exclusions
+0.000 s: Managed inspector edits retained state without constructing a script
+0.000 s: CoreCLR adapter validates its private runtime before activation
+0.008 s: Player template validation reports cancellation explicitly
+0.000 s: Scene root cannot be parented or destroyed
+0.000 s: state restoration diagnostics are preserved
+0.000 s: Mono reload reports state rollback failure
+0.000 s: assembly restoration failure is explicit
+0.000 s: Mono reload reports state rollback failure
+0.238 s: Build pipeline reports failed cancellation rollback when invalid output remains
+0.000 s: Build manifest validation rejects traversal before normalization
+0.514 s: Build pipeline forwards cancellation into packing and template staging
+0.017 s: Atomic text publication accepts an empty document
+0.000 s: Progress bar reads and edits supported numeric values
+0.021 s: Crowny Builder writes parsed report paths for command-line errors
+0.000 s: Managed catalog preserves inspector button methods
+0.189 s: Build pipeline cancellation stops at the next checkpoint and cleans staging
+0.195 s: Build pipeline preserves the backup path when a failed output blocks rollback
+0.000 s: Audio buffer sizes use interleaved sample counts
+[14:50:48] CROWNY: Import failed for '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny_import_scheduler_669423903916800\\first.throwmain"': main
+[14:50:48] CROWNY: Import failed for '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny_import_scheduler_669423903916800\\second.throwworker"': worker
+0.009 s: Throwing importers publish failed results without escaping
+0.000 s: Nested member properties preserve each parent value and use the nested override path
+0.646 s: Build pipeline executes deterministic stages and decisions
+0.000 s: Editor camera reuses stable matrices without allocations
+0.000 s: GPU block formats are compressed
+0.000 s: PixelUtils::IsCompressedFormat
+0.000 s: Uncompressed formats are not compressed
+0.000 s: PixelUtils::IsCompressedFormat
+0.000 s: Module::StartUpWithExternalInstance
+0.000 s: Managed inspector finish and reset preserve redo state
+0.000 s: 2D physics components reset runtime pointers when copied
+0.000 s: StringUtils::Replace
+0.000 s: Regular viewport
+0.000 s: VulkanUtils maps normalized viewports to framebuffer rectangles
+0.000 s: Viewport is clamped to the framebuffer
+0.000 s: VulkanUtils maps normalized viewports to framebuffer rectangles
+0.000 s: StringUtils::Search
+0.000 s: RenderGraph does not commit history from a failed frame
+0.000 s: Escape cancels a viewport transform interaction without recording undo
+0.000 s: Component undo actions retain their target scene
+0.000 s: Box collider bounds transactions retain their target scene
+0.018 s: Multiline properties balance ImGui row and property-grid stacks
+0.000 s: ExpressionEvaluator::Basic
+0.000 s: Subdivided plane with an arbitrary normal
+0.000 s: MeshFactory creates render-ready primitive data
+0.000 s: Single quad
+0.000 s: MeshFactory creates render-ready primitive data
+0.000 s: Box and cube
+0.000 s: MeshFactory creates render-ready primitive data
+0.000 s: UV sphere
+0.000 s: MeshFactory creates render-ready primitive data
+0.000 s: Capped and open cylinders
+0.000 s: MeshFactory creates render-ready primitive data
+0.000 s: Cone
+0.000 s: MeshFactory creates render-ready primitive data
+0.000 s: Capsule
+0.000 s: MeshFactory creates render-ready primitive data
+0.000 s: 3D contact batches normalize independent of backend callback order
+0.092 s: Progress snapshots remain consistent during parallel imports
+0.000 s: Viewport HUD status formatting allocates nothing per frame
+[14:50:49] CROWNY: Entity 'Script host' already has managed script 'Assembly:Namespace.Behaviour'. The duplicate was ignored.
+[14:50:49] CROWNY: Cannot attach managed script with invalid identity ':Namespace.Malformed'.
+0.000 s: Duplicate managed script identities are rejected
+0.000 s: World plane moves every selected entity
+0.000 s: Viewport gizmo frame translates planes, local axes, parents, and selections logically
+0.000 s: Local X follows the primary rotation
+0.000 s: Viewport gizmo frame translates planes, local axes, parents, and selections logically
+0.000 s: World movement of a parented entity is converted back to local position
+0.000 s: Viewport gizmo frame translates planes, local axes, parents, and selections logically
+[14:50:49] CROWNY: Cannot save node graph 'Untitled Graph' without a destination path.
+[14:50:49] CROWNY: Failed to publish node graph '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny-node-graph-blocked-9426ffdc-533c-4cae-ad58-2cd9ab591468"': Publishing the atomic-write temporary file failed with Windows error 5.
+[14:50:49] CROWNY: Cannot save a null node graph to '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny-node-graph-9426ffdc-533c-4cae-ad58-2cd9ab591468.cwng"'.
+0.030 s: Node graph serialization publishes atomically
+0.000 s: Animation player composes masked override and additive skeletal layers
+0.000 s: Window focus events are edge triggered
+0.000 s: Skeleton pose maps named tracks to skinning matrices
+0.000 s: PixelData::RGB8 ColorAt
+0.000 s: Physics material overrides resolve only selected fields
+0.003 s: required identity fields are missing
+0.007 s: Asset metadata reports corruption without manufacturing UUIDs
+0.004 s: both copies are corrupt
+0.009 s: Asset metadata reports corruption without manufacturing UUIDs
+[14:50:49] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+0.003 s: dependent keys must be unique
+0.008 s: Asset metadata reports corruption without manufacturing UUIDs
+0.046 s: Template validation checks declared hashes and target identity
+0.000 s: Parenting preserves the prefab's world transform
+0.001 s: Prefab instantiation honors parent and world pose options
+0.000 s: World pose overrides are applied to the instance root
+0.001 s: Prefab instantiation honors parent and world pose options
+0.000 s: Invalid handles are rejected
+0.000 s: Prefab instantiation honors parent and world pose options
+0.000 s: Active 2D components survive AddOrReplace and clean up
+0.000 s: GpuTexturePool rejects invalid zero-valued descriptors instead of aliasing them
+0.000 s: Bulk hierarchy destroy rejects inconsistent child ownership atomically
+0.000 s: Component snapshots finalize redo after the setter
+0.062 s: Player template staging replaces the complete destination
+0.052 s: Mono invocation returns managed exceptions with their stack
+0.002 s: Mesh processing preserves scattered submesh vertices and world-space LOD errors
+0.000 s: Text layout hit testing includes justification and ellipsis
+0.000 s: VulkanUtils maps BGRA and block-compressed texture formats
+0.000 s: RenderWorld cancels instances destroyed before first upload
+0.000 s: GPU radix sort plans bounded scratch storage
+0.142 s: Build pipeline attributes stage failure and preserves the last good build
+0.000 s: Shader variation expansion has a fixed upper bound
+0.000 s: OpenGL fixed texture arrays clear every reflected slot
+0.000 s: Basic Parenting
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Transform Propagation
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Reparenting Preserves World Transform
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Deep Hierarchy Invalidation
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Cycle Prevention
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Unparenting Preserves World Transform
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: SetWorldPosition Works with Hierarchy
+0.002 s: Entity Parenting and Transform Hierarchies
+0.000 s: Scaling Propagation
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Duplicate with children
+0.000 s: Entity Duplication
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Duplicate without children
+0.000 s: Entity Duplication
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Component Lifecycle
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Component pack queries
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Transform invalidation remains lazy
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Scene copies own their hierarchy
+0.001 s: Entity Parenting and Transform Hierarchies
+0.000 s: Complex Destruction
+0.001 s: Entity Parenting and Transform Hierarchies
+0.000 s: Non-recursive destruction reparents children in sibling order
+0.001 s: Entity Parenting and Transform Hierarchies
+0.000 s: Sibling indices stay coherent across reorder and reparent
+0.001 s: Entity Parenting and Transform Hierarchies
+0.000 s: Duplicate is inserted beside the source and owns cloned children
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Duplicate attaches each clone to its final parent once
+0.000 s: Entity Parenting and Transform Hierarchies
+0.000 s: Text layout replaces each malformed UTF-8 byte deterministically
+0.031 s: Shader state descriptors survive asset round trips
+0.000 s: Popup label IDs preserve current editor identifiers
+0.001 s: RenderGraph history ping-pong follows each camera instead of global frame parity
+0.000 s: Viewport picking maps the displayed image to the object ID texture
+0.016 s: Build manifests round-trip the strict player contract
+0.000 s: Geometry heap layout matching is structural
+[14:50:49] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+0.009 s: Legacy dependent metadata migrates by type ordinal once
+0.004 s: Text layout binary serialization
+[14:50:49] CROWNY: FormatException: Input string was not in a correct format.
+  at System.Number.ThrowOverflowOrFormatException (System.Boolean overflow, System.String overflowResourceKey) [0x0001a] in <b9aa46ca7e704286b432955093e83a10>:0 
+  at System.Number.ParseInt32 (System.ReadOnlySpan`1[T] value, System.Globalization.NumberStyles styles, System.Globalization.NumberFormatInfo info) [0x00016] in <b9aa46ca7e704286b432955093e83a10>:0 
+  at System.Int32.Parse (System.String s) [0x00016] in <b9aa46ca7e704286b432955093e83a10>:0 
+0.003 s: Mono update surfaces queued exceptions once
+0.308 s: Build pipeline reconciles an interrupted persistent backup before publishing
+0.012 s: PhysicsMesh assets survive binary round trips
+0.000 s: Built-in shader identifiers are stable and unique
+0.000 s: Strict transparent draw generation preserves render-layer and depth order
+0.024 s: Physics material asset references and collider overrides survive scene round trips
+0.000 s: Buffer layouts calculate independent stream strides
+0.001 s: Toon passes are omitted when no toon material is resident
+[14:50:49] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+[14:50:50] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+[14:50:50] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+[14:50:50] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+[14:50:50] CROWNY: Metadata file does not have valid import options. Correspnding asset may be broken.
+0.030 s: Asset metadata keeps a last-good identity document
+0.001 s: Component snapshots preserve distinct multi-edit undo values
+0.001 s: Project settings preserve managed assembly dependency declarations
+0.000 s: Directional cascade centers snap to shadow texels
+0.000 s: Clustered light runtime settings resolve once for allocation and dispatch
+0.000 s: RenderGraph resources allocate lazily and preserve physical aliasing
+0.000 s: Image loader applies orientation without global stb state
+0.000 s: Material shader picker sorts names without case and preserves equivalent options
+0.000 s: Component snapshots capture the final drag value after the setter
+0.057 s: CoreCLR package manifest resolves only package-local artifacts
+0.024 s: Build profiles round-trip editor-owned settings
+0.000 s: Discrete 3D physics material edits use the retained undo transaction
+0.000 s: PixelUtils::UnpackAllowsIgnoredChannels
+[14:50:50] CROWNY: Built-in material preset 'Toon/DoesNotExist' was not found.
+0.008 s: Built-in toon presets are complete data files
+0.000 s: Asset browser toolbar keeps its table shape stable for the rendered frame
+0.001 s: Odd dimensions reach a one-pixel terminal level
+0.002 s: PixelUtils::GenerateMipChain
+0.001 s: Color mips filter sRGB values in linear light
+0.001 s: PixelUtils::GenerateMipChain
+0.001 s: Transparent colors do not bleed into opaque texels
+0.001 s: PixelUtils::GenerateMipChain
+0.001 s: Alpha coverage preserves the straight color of sparse opaque texels
+0.001 s: PixelUtils::GenerateMipChain
+0.000 s: Alpha coverage keeps fully transparent mips finite
+0.001 s: PixelUtils::GenerateMipChain
+0.001 s: Normal-map mips are renormalized
+0.001 s: PixelUtils::GenerateMipChain
+0.001 s: Maximum level count is respected
+0.001 s: PixelUtils::GenerateMipChain
+0.000 s: Invalid mode is rejected
+0.000 s: PixelUtils::GenerateMipChain
+0.000 s: Renderer views keep independent camera history namespaces
+0.000 s: Module::IsStartedUpReturnsCorrectValues
+0.001 s: PhysicsMesh caps the convex point cloud and keeps extreme points
+0.261 s: GPU draw-list preparation allocates nothing after warm-up
+0.008 s: Serialize and Deserialize Hierarchy and Components
+0.010 s: Complex Scene Serialization
+0.001 s: Weighted OIT allocates transient accumulation targets only when requested
+0.000 s: MaterialPropertyBlock stores renderer overrides by property ID
+0.000 s: Input transition state ignores repeated held values
+0.000 s: Legacy recent paths normalize without dropping later valid entries
+0.000 s: Project Hub layout caps and centers a standard editor window
+0.011 s: Player template creation rejects a file it cannot hash
+0.000 s: 24-bit PCM converts and downmixes without losing sign
+0.000 s: OpenGL runtime texture arrays bind assigned slots without scanning unused units
+0.000 s: OpenGL texture binding plans stay inside the device unit range
+0.000 s: Managed backend presets resolve without exposing runtime objects
+0.009 s: An orphaned metadata backup is reported for cleanup
+0.000 s: Managed reload debounce coalesces source events
+0.000 s: PixelUtils::PackUnpack::RG16F
+0.001 s: Successful deferred moves preserve exact-path selection
+0.001 s: Material presets target a material model or shader
+0.000 s: Uniform parameter binding queries preserve combined texture samplers
+0.611 s: Mesh upload command storage allocates nothing after warm-up
+0.000 s: GPU scene retains packed shadow tables without a graphics device
+0.000 s: Selection component initialization applies only to newly added complex components
+0.000 s: Build manifest validation rejects ambiguous scene and quality policy
+0.844 s: Shader compiler cache invalidates stages that consume a changed include
+0.000 s: Value-returning snapshots assign implicit frame numbers
+0.011 s: Synchronous text hit-test scratch is independent per thread
+0.008 s: Console view model retains severity summaries
+0.000 s: Color::Conversion
+0.001 s: PixelUtils::GetBlockSize
+[14:50:51] CROWNY: Managed script 'Unavailable.Assembly:GhostBehaviour' on entity 11225176-85d4-494a-8d27-321b021ec763 [managed.mono.program_not_loaded]: No Mono program is loaded.
+0.013 s: YAML
+0.014 s: Missing managed scripts round-trip with exact identity and state
+[14:50:51] CROWNY: Managed script 'Unavailable.Assembly:GhostBehaviour' on entity 11adc413-12d8-4506-ad19-edec0638050d [managed.mono.program_not_loaded]: No Mono program is loaded.
+0.005 s: Binary
+0.006 s: Missing managed scripts round-trip with exact identity and state
+0.000 s: Node graphs reject invalid connections and cycles
+0.000 s: Time rejects invalid frame and settings values
+0.002 s: Mesh import options survive metadata round trip
+0.176 s: Content pack entries survive lookup and allow concurrent reads
+0.000 s: Component menu model allocates nothing for a stable visible query
+0.001 s: Render pipeline dispatches typed cluster passes in dependency order
+0.000 s: ManagedScript vector moves preserve runtime identity
+0.000 s: Renderer destruction releases history without another snapshot
+0.000 s: Scene camera clamps viewport rectangles and orthographic ranges
+0.000 s: RenderWorld settles previous transforms one frame after movement
+0.001 s: Forward Plus frame graph contains the GPU-driven shared pass sequence
+0.000 s: Asset browser viewport maps clipped grid rows to absolute items
+0.013 s: Material presets survive binary asset round trips
+0.010 s: Empty, single-file, and repeated import batches complete
+[14:50:52] CROWNY: Error deserializing scene ""C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny-invalid-scene-45181499-9429-4c15-b09a-63520de316f7.cwscene"". yaml-cpp: error at line 1, column 1: end of sequence flow not found.
+0.005 s: Scene deserialization reports invalid input without leaving an empty scene
+0.000 s: Morph channels blend sparse targets without rebuilding storage
+0.000 s: Copy assignment
+0.000 s: SmallVector::AssignmentAndMove
+0.000 s: Move constructor - from static to static
+0.000 s: SmallVector::AssignmentAndMove
+0.000 s: Move constructor - from heap to heap
+0.000 s: SmallVector::AssignmentAndMove
+0.000 s: Move assignment - from static to static
+0.000 s: SmallVector::AssignmentAndMove
+0.000 s: Move assignment - from heap to heap
+0.000 s: SmallVector::AssignmentAndMove
+0.000 s: Self copy-assignment is safe
+0.000 s: SmallVector::AssignmentAndMove
+0.002 s: Shader compiler rejects malformed blend-state values
+0.000 s: PhysicsMesh scaled copies flip winding for mirrored scales
+0.000 s: GPU draw generation keeps material models in separate submission bins
+0.000 s: Collapsed console ordering uses the latest group activity
+0.000 s: Transform selection layout reports widths that cannot fit three reset and input pairs
+0.007 s: Upstream RapidJSON and Assimp parse transformed scene instances
+0.000 s: EFX capability failures remain inspectable without an OpenAL device
+0.000 s: Input capture filters keyboard and mouse actions only
+0.004 s: Basis KTX2 cube arrays retain six faces per layer
+0.000 s: MakeWorld
+0.000 s: Transform::SpaceConversion
+0.000 s: MakeLocal
+0.000 s: Transform::SpaceConversion
+0.000 s: Initialization
+0.000 s: Flags Template
+0.000 s: Bitwise Operations
+0.000 s: Flags Template
+0.000 s: Set and Unset
+0.000 s: Flags Template
+0.000 s: Operators
+0.000 s: Flags Template
+0.000 s: Boolean Conversion
+0.000 s: Flags Template
+0.000 s: Viewport transform release commits one grouped action for undo and redo
+0.001 s: Managed project dependencies reject missing assemblies
+0.027 s: Crowny Builder rejects incomplete request files as structured input errors
+0.000 s: Full saturation roundtrip
+0.000 s: Color::RoundtripIdentity
+0.000 s: Black roundtrip
+0.000 s: Color::RoundtripIdentity
+0.000 s: White roundtrip
+0.000 s: Color::RoundtripIdentity
+0.000 s: Transparent roundtrip
+0.000 s: Color::RoundtripIdentity
+0.002 s: Task handles cannot cross scheduler generations
+0.000 s: Clustered lights use logarithmic depth slices
+0.000 s: PixelUtils::PackUnpack::RGBA16
+0.000 s: Invalid managed script identities do not mutate a selection
+0.000 s: Hierarchy selection recovers when entities or scenes disappear
+0.000 s: Asset browser selection clears stale state for an empty result
+[14:50:52] CROWNY: Importer returned no assets for '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny_import_scheduler_669427658108800\\empty.multiempty"'.
+0.009 s: Empty multi-output imports publish one failed result
+0.001 s: Loaded scene enumeration is sorted and allocation-free after mutation
+0.000 s: PixelUtils::Conversion::SameFormat::MultiplePixels
+0.000 s: Asset browser presentation fingerprints follow same-cardinality metadata changes
+0.000 s: Text layout normalizes newline sequences without losing byte offsets
+0.000 s: Recent project paths normalize before storage
+0.000 s: PixelUtils::GetMemSize
+0.002 s: ParallelFor remains canceled when shutdown rejects a runner submission
+0.000 s: Basic construction
+0.000 s: StringID
+0.000 s: Interning
+0.000 s: StringID
+0.000 s: Comparison with strings
+0.000 s: StringID
+0.000 s: Empty strings
+0.000 s: StringID
+0.000 s: Hashing
+0.000 s: StringID
+0.000 s: Ordering
+0.000 s: StringID
+0.000 s: Container compatibility
+0.000 s: StringID
+0.003 s: Stable string storage
+0.003 s: StringID
+0.001 s: Repeated operations do not grow the intern table
+0.001 s: StringID
+0.000 s: Cached literal
+0.000 s: StringID
+0.001 s: Matrix decomposition preserves rotations across quaternion trace branches
+0.000 s: Interactive asset edits produce one save after the interaction finishes
+0.000 s: ReadAll returns all data
+0.000 s: MemoryDataStream::ReadAll
+0.000 s: ReadAll on empty stream returns empty vector
+0.000 s: MemoryDataStream::ReadAll
+0.000 s: ReadAll returns correct data after Write
+0.000 s: MemoryDataStream::ReadAll
+0.034 s: Build manager rejects unsupported editor platforms before execution
+0.000 s: Project Hub layout remains usable in a constrained viewport
+0.002 s: Task failures reach waiters without killing workers
+0.000 s: Integer PCM conversion reaches the normalized endpoints
+0.171 s: Hierarchy transform propagation allocates nothing after warm-up
+0.000 s: Managed labels do not replace serialized member names
+0.000 s: Text layout positions bounded alignment and flush spacing
+0.000 s: PixelUtils::Conversion::CompressedWithPadding
+0.003 s: Box3D 0.1
+0.004 s: 3D backends implement convex hull and triangle mesh shapes
+[14:50:52] CROWNY: Jolt triangle meshes and height fields require a static body
+[14:50:52] CROWNY: Jolt convex hulls need at least 4 points, got 3
+0.075 s: Jolt 5.6
+0.075 s: 3D backends implement convex hull and triangle mesh shapes
+[14:50:52] CROWNY: Bullet triangle meshes and height fields require a static body
+0.007 s: Bullet 3.25
+0.008 s: 3D backends implement convex hull and triangle mesh shapes
+0.058 s: VS Code synchronization preserves user workspace settings
+0.000 s: Visibility frustum rejects spheres outside any plane
+0.000 s: CoreCLR C# project generation uses an SDK-style project
+0.000 s: GPU standard materials pack a bounded stable record
+0.018 s: Player template staging rejects overlapping source and destination trees
+0.000 s: MeshData reallocation clears and replaces its owned buffer
+0.000 s: Console split layout stays nonnegative when constrained
+0.000 s: Time plans exact fixed simulation ticks
+0.005 s: Parameterized node graph evaluation reuses scratch after warm-up
+0.000 s: Image loader preserves 16-bit grayscale precision
+0.002 s: Running tasks observe cooperative cancellation
+0.000 s: Physics contact collider pairs stay inline on the dispatch path
+0.000 s: Ping-pong animation events follow every reflected segment
+0.000 s: GPU scene applies legacy toon variations before classifying draw bins
+0.000 s: Size Calculation
+0.000 s: BufferElement
+0.000 s: Constructor
+0.000 s: BufferElement
+0.000 s: Searchable inspector values honor filter options
+0.000 s: Manual Handle Creation
+0.000 s: Asset Handling
+0.000 s: Reference Counting
+0.000 s: Asset Handling
+0.000 s: Weak Handles
+0.000 s: Asset Handling
+0.000 s: Asset browser operations own deferred paths in submission order
+0.000 s: Uniqueness
+0.000 s: UUID::Generator
+0.000 s: Version 4 Format
+0.000 s: UUID::Generator
+0.000 s: Progress bar resolves state-backed presentation values
+0.000 s: Depth prepass selects static and animated programs independently
+0.000 s: PixelData::IsNice
+0.000 s: Color::StaticColors
+0.000 s: Ping-pong animation events remain ordered across both clip ends
+0.501 s: Shader compiler applies reverse-Z depth compare pragmas
+[14:50:53] CROWNY: Pixel pitch exceeds the 32-bit PixelData layout limit
+0.000 s: PixelUtils::PitchAndMipChain
+0.006 s: Labeled ImGui scopes isolate asset reference child IDs
+0.000 s: ExpressionEvaluator::PowerAssociativity
+[14:50:53] CROWNY: Scene '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny-obsolete-scene.yaml"' uses version 11, but this build requires version 12.
+0.003 s: YAML
+0.003 s: Scene deserialization requires the current format
+[14:50:53] CROWNY: Binary scene '"C:\\Users\\BOA53C~1.IVA\\AppData\\Local\\Temp\\crowny-obsolete-scene.cwb"' uses version 11, but this build requires version 12.
+0.003 s: binary
+0.003 s: Scene deserialization requires the current format
+0.001 s: Prefab sync propagates mesh collider settings unless overridden
+0.001 s: Dependency failures suppress dependent work
+[14:50:53] CROWNY: Mesh collider on 'Mesh floor' uses a triangle mesh, which every physics backend restricts to Static bodies. Enable Convex or make the body static.
+[14:50:53] CROWNY: Mesh collider on 'Mesh floor' uses a triangle mesh, which every physics backend restricts to Static bodies. Enable Convex or make the body static.
+0.003 s: Box3D 0.1
+0.003 s: Mesh colliders build backend shapes from cooked physics meshes
+[14:50:53] CROWNY: Mesh collider on 'Mesh floor' uses a triangle mesh, which every physics backend restricts to Static bodies. Enable Convex or make the body static.
+[14:50:53] CROWNY: Mesh collider on 'Mesh floor' uses a triangle mesh, which every physics backend restricts to Static bodies. Enable Convex or make the body static.
+0.088 s: Jolt 5.6
+0.089 s: Mesh colliders build backend shapes from cooked physics meshes
+[14:50:53] CROWNY: Mesh collider on 'Mesh floor' uses a triangle mesh, which every physics backend restricts to Static bodies. Enable Convex or make the body static.
+[14:50:53] CROWNY: Mesh collider on 'Mesh floor' uses a triangle mesh, which every physics backend restricts to Static bodies. Enable Convex or make the body static.
+0.011 s: Bullet 3.25
+0.012 s: Mesh colliders build backend shapes from cooked physics meshes
+0.000 s: Unchanged input context edit callbacks skip ID repair and allocations
+0.000 s: Noise2D
+0.000 s: Noise
+0.000 s: Noise3D
+0.000 s: Noise
+0.000 s: Simplex
+0.000 s: Noise
+0.000 s: All FastNoise Lite algorithms
+0.000 s: Noise
+0.000 s: Fractal and domain warp options
+0.000 s: Noise
+0.000 s: Asset browser selection removes entries hidden by filtering
+0.000 s: Build paths reject parent traversal before normalization
+0.000 s: Clustered light overflow is explicit and bounded
+0.001 s: Runtime clones create fresh component and script identities
+0.000 s: Adding a native component to a selection changes only missing entities
+0.000 s: 2D stable batches preserve exact ordering and only merge adjacent items
+0.082 s: 2D render ordering allocates nothing after warm-up
+2.654 s: Build fingerprint includes schemas and managed execution settings
+0.000 s: Shader material model metadata is global and deterministic
+0.000 s: GPU toon materials pack bounded artistic controls
+[14:50:55] CROWNY: Asset manifest version 999 is newer than supported version 1.
+0.001 s: Asset manifest YAML rejects unsupported schemas and resolves collisions
+0.003 s: FrameVector retains nested storage across frame resets
+1.455 s: Image loader decodes raster sources concurrently
+0.012 s: Player template validation checks declared hash contents
+0.001 s: main-thread import initializes the complete batch
+0.006 s: Import scheduler preserves complete ordered importer output
+0.036 s: worker import defers initialization for publication on the main thread
+0.051 s: Import scheduler preserves complete ordered importer output
+0.000 s: Color temperature conversion is bounded and physically ordered
+0.053 s: FileDataStream::Basic
+0.001 s: Mono exception diagnostics accept an absent managed stack
+0.000 s: Compressed formats have 4x4 block dimensions
+0.000 s: PixelUtils::BlockDimensions
+0.000 s: Uncompressed formats have 1x1 block dimensions
+0.000 s: PixelUtils::BlockDimensions
+0.000 s: IntrusiveRef restores registered polymorphic objects
+0.000 s: CommandQueue reuses both frame buffers
+0.000 s: RenderWorld rejects stale generational handles
+0.000 s: 3D physics components reset runtime handles when copied
+0.000 s: Deferred Plus frame graph reuses visibility and forward transparency
+0.000 s: PixelUtils::IntegerPackingSanitizesNaN
+0.000 s: PixelUtils::FormatMetadata
+0.000 s: String to MonoString and back
+0.000 s: Mono::Utils::StringConversion
+0.000 s: Empty string conversion
+0.000 s: Mono::Utils::StringConversion
+0.000 s: Generated metadata backend exercises the managed scripting contract
+0.000 s: RenderGraph context resolves typed buffer resources
+0.002 s: Window state publishes minimize and restore before their final extent
+[14:50:57] CROWNY: Cannot bind storage to an invalid pixel layout
+[14:50:57] CROWNY: Cannot bind owned storage to an invalid pixel layout
+[14:50:57] CROWNY: Cannot bind storage to an invalid pixel layout
+0.000 s: PixelData::InvalidLayoutsRejectStorage
+0.000 s: Render statistics do not underflow incomplete strips
+0.000 s: Selection properties support guarded custom accessors
+0.000 s: Material presets validate against the shader layout
+0.000 s: Viewport texture extents are validated once for resize propagation
+0.000 s: Component snapshots coalesce instantaneous changes from one frame
+0.000 s: Managed host ABI exposes complete typed bindings and stable value layouts
+0.000 s: GPU draw-bin capacity rejects excess bins and preserves zero-count slots
+0.000 s: Console retention keeps newest rows and rebuilds collapsed counts
+0.000 s: Selection properties aggregate only accessible entities
+0.007 s: Negative mesh scale preserves mirrored winding and tangent basis
+0.000 s: Clustered light directional lists honor their configured limit
+0.000 s: Read and Write
+0.000 s: MemoryDataStream::Basic
+0.000 s: Skip and Seek
+0.000 s: MemoryDataStream::Basic
+0.000 s: VulkanUtils derives pipeline stages from access masks
+0.000 s: Input events retain native metadata
+0.000 s: Mono refresh resolves duplicate script types by runtime occurrence
+0.216 s: Default artifact validation rejects content path identity changes
+0.000 s: Text layout keeps grapheme clusters on one wrapped line
+0.000 s: Runtime rebinds do not change authored defaults
+0.000 s: ExpressionEvaluator::Precedence
+0.000 s: Font fallback chains ignore unusable and duplicate entries
+0.000 s: Viewport gizmo frame applies a single world axis drag and records one undo action
+0.000 s: GPU draw buffers have a headless compatibility mode
+[14:50:57] CROWNY: Plane tessellation produces 16785409 vertices and 100663296 indices. The limits are 262144 vertices and 1572864 indices.
+[14:50:57] CROWNY: Plane requires 1 to 4096 segments, got 4097.
+[14:50:57] CROWNY: Plane requires positive dimensions, a non-zero normal, and valid subdivisions.
+[14:50:57] CROWNY: Plane requires 1 to 4096 segments, got 4294967295.
+[14:50:57] CROWNY: Plane requires positive dimensions, a non-zero normal, and valid subdivisions.
+[14:50:57] CROWNY: Sphere tessellation produces 16785409 vertices and 100638720 indices. The limits are 262144 vertices and 1572864 indices.
+[14:50:57] CROWNY: Capsule tessellation produces 33570818 vertices and 201326592 indices. The limits are 262144 vertices and 1572864 indices.
+0.047 s: MeshFactory bounds tessellation allocations and selects index width
+0.000 s: Bulk reparent undo restores sparse sibling positions
+0.000 s: GPU draw-bin layout is deterministic and respects indirect device limits
+0.000 s: GPU directional shadows preserve cascade layers and splits
+0.000 s: Physics3D advances exactly once by the supplied fixed tick
+0.000 s: Mismatched parentheses
+0.000 s: ExpressionEvaluator::ErrorHandling
+0.000 s: Invalid characters
+0.000 s: ExpressionEvaluator::ErrorHandling
+0.000 s: Division by zero
+0.000 s: ExpressionEvaluator::ErrorHandling
+0.000 s: Empty string input
+0.000 s: ExpressionEvaluator::ErrorHandling
+0.000 s: RenderGraph registry preserves transient aliasing within a frame
+0.379 s: prepared restores the exact backup when the output is absent
+0.380 s: Build pipeline reconciles every valid publication journal phase
+0.362 s: backed_up quarantines an unvalidated candidate and restores the exact backup
+0.362 s: Build pipeline reconciles every valid publication journal phase
+0.694 s: published keeps the validated output and cleans its exact backup
+0.695 s: Build pipeline reconciles every valid publication journal phase
+0.000 s: Bulk hierarchy preserve-children destroy promotes multiple sibling groups in place
+0.000 s: Window descriptions and properties preserve window state
+0.000 s: Bindless table reports exhaustion without overwriting live slots
+0.000 s: Undo history invalidates redo after a new edit
+0.005 s: YAML
+0.006 s: Runtime physics materials flatten into collider overrides during scene round trips
+0.015 s: Binary
+0.016 s: Runtime physics materials flatten into collider overrides during scene round trips
+0.050 s: Shutdown waits for active import lanes and discards callbacks
+0.000 s: Managed catalog preserves every dictionary display layout
+18.735 s: GPU-driven renderer shaders compile together
+0.000 s: Text layout decodes UTF-8 into code point and byte clusters
+0.001 s: Texture import options survive metadata round trip
+0.000 s: Asset manifests preserve a UUID-path bijection
+0.000 s: Directional cascade builds reuse caller storage without allocations
+0.614 s: Shader compiler preserves material model technique metadata
+0.001 s: Managed catalog preserves progress bar inspector settings
+0.000 s: Prepared text layout preserves contiguous font ownership runs
+0.000 s: Text layout hit testing follows visible caret geometry
+0.000 s: Component menu model invalidates results only when inputs change
+[14:51:18] CROWNY: Skipping mesh-processing submesh 0 because index range [4294967293, 4294967299) exceeds the 6 available indices.
+0.000 s: overflowing submesh ranges are skipped while valid material slots survive
+0.001 s: Mesh processing rejects malformed geometry without reading out of bounds
+[14:51:18] CROWNY: Skipping mesh-processing submesh 0 because index 2 references vertex 4, but the mesh has 4 vertices.
+0.000 s: out-of-range vertex indices reject the affected submesh
+0.000 s: Mesh processing rejects malformed geometry without reading out of bounds
+[14:51:18] CROWNY: Skipping mesh-processing submesh 0 because its index count 4 does not describe complete triangles.
+0.000 s: partial triangles are rejected
+0.000 s: Mesh processing rejects malformed geometry without reading out of bounds
+[14:51:18] CROWNY: Skipping mesh processing because the CPU mesh data is incomplete or contains non-finite positions.
+0.000 s: non-finite positions are rejected before meshoptimizer sees them
+0.000 s: Mesh processing rejects malformed geometry without reading out of bounds
+0.000 s: Transform mutation scopes merge overlapping hierarchy ranges
+0.001 s: Project scene history serializes stable asset identities
+0.000 s: GPU draw-bin lookup includes every submission compatibility field
+0.000 s: RenderGraph releases retired camera history namespaces
+0.001 s: Custom material shaders cannot override the reverse-Z prepass contract
+0.000 s: Projected size and LOD error scale with distance
+0.000 s: Managed catalog preserves color usage settings
+0.000 s: Box/Unbox Int32
+0.000 s: Mono::Utils::Boxing
+0.000 s: Box/Unbox Float
+0.000 s: Mono::Utils::Boxing
+0.000 s: Box/Unbox Bool
+0.000 s: Mono::Utils::Boxing
+0.000 s: Render pipeline compatibility bridge executes after its prerequisite
+0.000 s: Scene changes requested in callback scopes are deferred
+0.000 s: Dependent asset reconciliation preserves keyed UUIDs across reordering
+0.000 s: Asset browser toolbar uses full-width search before controls collapse
+0.000 s: UTF8 decodes Unicode code points without allocations
+0.000 s: Audio component snapshots apply settings without replacing identity
+0.000 s: Weighted OIT falls back to forward transparency until composited
+[14:51:18] CROWNY: Cannot change pixel row pitch while storage is bound
+[14:51:18] CROWNY: Cannot change pixel slice pitch while storage is bound
+0.000 s: PixelData::BoundStorageFreezesPitchLayout
+0.000 s: Console messages collapse without losing stable identity
+0.000 s: RenderGraph history pairs share a stable identity
+0.000 s: Preview cache reserves a bounded amount for every supported asset kind
+0.066 s: C# solution writer preserves external solution projects and folders
+0.000 s: Text layout reports line and paragraph metrics
+0.006 s: Property dropdowns allocate nothing after ImGui warm-up
+0.000 s: Importer falls back for dynamic extensions
+0.000 s: Script undo and redo use the shared ScriptState policy
+0.000 s: PixelUtils::GetMipSizeForLevel
+0.000 s: Popup label ID construction allocates nothing per frame
+0.000 s: Startup selects the newest existing recent project
+===============================================================================
+All tests passed (89390 assertions in 853 test cases)
+

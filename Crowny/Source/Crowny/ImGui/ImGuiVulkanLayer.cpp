@@ -69,7 +69,8 @@ namespace Crowny
         passDesc.Offscreen = false;
         passDesc.Color[0].Format = renderWindow->GetColorFormat();
         passDesc.Color[0].Enabled = true;
-        passDesc.Depth.Enabled = false;
+        passDesc.Depth.Enabled = renderWindow->GetDepthFormat() != VK_FORMAT_UNDEFINED;
+        passDesc.Depth.Format = renderWindow->GetDepthFormat();
 
         m_RenderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
         init_info.PipelineInfoMain.RenderPass = m_RenderPass->GetVkRenderPass(RT_NONE, RT_NONE, CLEAR_COLOR0);

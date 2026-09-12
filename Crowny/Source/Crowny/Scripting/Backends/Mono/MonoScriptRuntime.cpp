@@ -49,6 +49,7 @@ namespace Crowny
         {
             Collision2DInterop data;
             data.Colliders = mono_array_new(MonoManager::Get().GetDomain(), ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(), 2);
+            const MonoGCHandle colliders(reinterpret_cast<MonoObject*>(data.Colliders), true);
             if (MonoObject* managedSelf = GetManagedEntity(self))
                 mono_array_setref(data.Colliders, 0, managedSelf);
             if (MonoObject* managedOther = GetManagedEntity(other))
@@ -59,6 +60,7 @@ namespace Crowny
             if (vectorClass == nullptr || collisionClass == nullptr)
                 return nullptr;
             data.ContactPoints = mono_array_new(MonoManager::Get().GetDomain(), vectorClass->GetInternalPtr(), event.Contacts.size());
+            const MonoGCHandle contacts(reinterpret_cast<MonoObject*>(data.ContactPoints), true);
             for (size_t index = 0; index < event.Contacts.size(); ++index)
             {
                 const glm::vec2 point(event.Contacts[index].Position.x, event.Contacts[index].Position.y);
@@ -71,6 +73,7 @@ namespace Crowny
         {
             Collision3DInterop data;
             data.Colliders = mono_array_new(MonoManager::Get().GetDomain(), ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(), 2);
+            const MonoGCHandle colliders(reinterpret_cast<MonoObject*>(data.Colliders), true);
             if (MonoObject* managedSelf = GetManagedEntity(self))
                 mono_array_setref(data.Colliders, 0, managedSelf);
             if (MonoObject* managedOther = GetManagedEntity(other))
@@ -81,6 +84,7 @@ namespace Crowny
             if (contactClass == nullptr || collisionClass == nullptr)
                 return nullptr;
             data.Contacts = mono_array_new(MonoManager::Get().GetDomain(), contactClass->GetInternalPtr(), event.Contacts.size());
+            const MonoGCHandle contacts(reinterpret_cast<MonoObject*>(data.Contacts), true);
             for (size_t index = 0; index < event.Contacts.size(); ++index)
             {
                 const ScriptContactPoint& point = event.Contacts[index];
@@ -90,19 +94,39 @@ namespace Crowny
             return MonoUtils::Box(collisionClass->GetInternalPtr(), &data);
         }
 
-        template <typename Thunk> void Invoke(Thunk thunk, MonoObject* instance, MonoObject* argument)
+        template <typename Thunk, typename... Args> MonoObject* Invoke(Thunk thunk, MonoObject* instance, Args... args)
         {
-            if (thunk != nullptr && instance != nullptr && argument != nullptr)
-                MonoUtils::InvokeThunk(thunk, instance, argument);
+            if (thunk == nullptr || instance == nullptr)
+                return nullptr;
+            MonoException* exception = nullptr;
+            thunk(instance, args..., &exception);
+            return reinterpret_cast<MonoObject*>(exception);
+        }
+
+        template <typename Thunk> MonoObject* Invoke(Thunk thunk, const MonoScriptRuntime& runtime, MonoObject* argument)
+        {
+            // Argument construction can collect and move the script target.
+            return Invoke(thunk, runtime.GetInstance(), argument);
         }
     } // namespace
 
-    bool MonoScriptRuntime::Bind(MonoObject* instance, MonoClass* scriptClass)
+    MonoObject* MonoScriptRuntime::GetInstance() const
+    {
+        if (m_RuntimeInstanceId == 0 || !ScriptSceneObjectManager::IsStartedUp())
+            return nullptr;
+        ScriptEntityBehaviour* behaviour = ScriptSceneObjectManager::Get().GetManagedScriptComponent(m_RuntimeInstanceId);
+        return behaviour != nullptr ? behaviour->GetManagedInstance() : nullptr;
+    }
+
+    bool MonoScriptRuntime::Bind(uint64_t runtimeInstanceId, MonoClass* scriptClass)
     {
         Clear();
-        if (instance == nullptr || scriptClass == nullptr)
+        m_RuntimeInstanceId = runtimeInstanceId;
+        if (GetInstance() == nullptr || scriptClass == nullptr)
+        {
+            Clear();
             return false;
-        m_Instance = instance;
+        }
         m_ScriptClass = scriptClass;
 
         for (MonoClass* current = scriptClass; current != nullptr; current = current->GetBaseClass())
@@ -161,75 +185,49 @@ namespace Crowny
         return true;
     }
 
-    void MonoScriptRuntime::Clear()
-    {
-        *this = {};
-    }
+    void MonoScriptRuntime::Clear() { *this = {}; }
 
-    void MonoScriptRuntime::Dispatch(Entity self, Entity other, const ScriptEvent& event) const
+    MonoObject* MonoScriptRuntime::Dispatch(Entity self, Entity other, const ScriptEvent& event) const
     {
         switch (event.Kind)
         {
         case ScriptEventKind::Awake:
-            if (m_OnAwake != nullptr)
-                MonoUtils::InvokeThunk(m_OnAwake, m_Instance);
-            break;
+            return Invoke(m_OnAwake, GetInstance());
         case ScriptEventKind::Start:
-            if (m_OnStart != nullptr)
-                MonoUtils::InvokeThunk(m_OnStart, m_Instance);
-            break;
+            return Invoke(m_OnStart, GetInstance());
         case ScriptEventKind::Update:
-            if (m_OnUpdate != nullptr)
-                MonoUtils::InvokeThunk(m_OnUpdate, m_Instance);
-            break;
+            return Invoke(m_OnUpdate, GetInstance());
         case ScriptEventKind::LateUpdate:
-            if (m_OnLateUpdate != nullptr)
-                MonoUtils::InvokeThunk(m_OnLateUpdate, m_Instance);
-            break;
+            return Invoke(m_OnLateUpdate, GetInstance());
         case ScriptEventKind::FixedUpdate:
-            if (m_OnFixedUpdate != nullptr)
-                MonoUtils::InvokeThunk(m_OnFixedUpdate, m_Instance);
-            break;
+            return Invoke(m_OnFixedUpdate, GetInstance());
         case ScriptEventKind::Destroy:
-            if (m_OnDestroy != nullptr)
-                MonoUtils::InvokeThunk(m_OnDestroy, m_Instance);
-            break;
+            return Invoke(m_OnDestroy, GetInstance());
         case ScriptEventKind::CollisionEnter2D:
-            Invoke(m_OnCollisionEnter2D, m_Instance, CreateCollision2D(self, other, event));
-            break;
+            return Invoke(m_OnCollisionEnter2D, *this, CreateCollision2D(self, other, event));
         case ScriptEventKind::CollisionStay2D:
-            Invoke(m_OnCollisionStay2D, m_Instance, CreateCollision2D(self, other, event));
-            break;
+            return Invoke(m_OnCollisionStay2D, *this, CreateCollision2D(self, other, event));
         case ScriptEventKind::CollisionExit2D:
-            Invoke(m_OnCollisionExit2D, m_Instance, CreateCollision2D(self, other, event));
-            break;
+            return Invoke(m_OnCollisionExit2D, *this, CreateCollision2D(self, other, event));
         case ScriptEventKind::TriggerEnter2D:
-            Invoke(m_OnTriggerEnter2D, m_Instance, GetManagedEntity(other));
-            break;
+            return Invoke(m_OnTriggerEnter2D, *this, GetManagedEntity(other));
         case ScriptEventKind::TriggerStay2D:
-            Invoke(m_OnTriggerStay2D, m_Instance, GetManagedEntity(other));
-            break;
+            return Invoke(m_OnTriggerStay2D, *this, GetManagedEntity(other));
         case ScriptEventKind::TriggerExit2D:
-            Invoke(m_OnTriggerExit2D, m_Instance, GetManagedEntity(other));
-            break;
+            return Invoke(m_OnTriggerExit2D, *this, GetManagedEntity(other));
         case ScriptEventKind::CollisionEnter3D:
-            Invoke(m_OnCollisionEnter3D, m_Instance, CreateCollision3D(self, other, event));
-            break;
+            return Invoke(m_OnCollisionEnter3D, *this, CreateCollision3D(self, other, event));
         case ScriptEventKind::CollisionStay3D:
-            Invoke(m_OnCollisionStay3D, m_Instance, CreateCollision3D(self, other, event));
-            break;
+            return Invoke(m_OnCollisionStay3D, *this, CreateCollision3D(self, other, event));
         case ScriptEventKind::CollisionExit3D:
-            Invoke(m_OnCollisionExit3D, m_Instance, CreateCollision3D(self, other, event));
-            break;
+            return Invoke(m_OnCollisionExit3D, *this, CreateCollision3D(self, other, event));
         case ScriptEventKind::TriggerEnter3D:
-            Invoke(m_OnTriggerEnter3D, m_Instance, GetManagedEntity(other));
-            break;
+            return Invoke(m_OnTriggerEnter3D, *this, GetManagedEntity(other));
         case ScriptEventKind::TriggerStay3D:
-            Invoke(m_OnTriggerStay3D, m_Instance, GetManagedEntity(other));
-            break;
+            return Invoke(m_OnTriggerStay3D, *this, GetManagedEntity(other));
         case ScriptEventKind::TriggerExit3D:
-            Invoke(m_OnTriggerExit3D, m_Instance, GetManagedEntity(other));
-            break;
+            return Invoke(m_OnTriggerExit3D, *this, GetManagedEntity(other));
         }
+        return nullptr;
     }
 } // namespace Crowny

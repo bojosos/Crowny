@@ -37,6 +37,7 @@ namespace Crowny
     MemoryDataStream::MemoryDataStream(const Ref<DataStream>& stream) : DataStream(READ | WRITE)
     {
         m_Size = stream->Size();
+        m_Capacity = m_Size;
         m_Data = m_Cursor = new uint8_t[m_Size];
         m_End = m_Data + stream->Read(m_Data, m_Size);
     }
@@ -52,12 +53,14 @@ namespace Crowny
     {
         m_Data = m_Cursor = static_cast<uint8_t*>(memory);
         m_Size = capacity;
+        m_Capacity = capacity;
         m_End = m_Data + m_Size;
     }
 
     MemoryDataStream::MemoryDataStream(const MemoryDataStream& other) : DataStream(READ | WRITE)
     {
         m_Size = other.Size();
+        m_Capacity = m_Size;
         m_Data = m_Cursor = new uint8_t[m_Size];
         m_End = m_Data + other.Read(m_Data, m_Size);
     }
@@ -74,6 +77,7 @@ namespace Crowny
         if (!other.m_OwnsMemory)
         {
             m_Size = other.m_Size;
+            m_Capacity = other.m_Capacity;
             m_Data = other.m_Data;
             m_Cursor = other.m_Cursor;
             m_End = other.m_End;
@@ -84,6 +88,7 @@ namespace Crowny
             if (m_Data && m_OwnsMemory)
                 delete[] m_Data;
             m_Size = 0;
+            m_Capacity = 0;
             m_Data = nullptr;
             m_Cursor = nullptr;
             m_End = nullptr;
@@ -107,6 +112,7 @@ namespace Crowny
 
         m_AccessMode = std::exchange(other.m_AccessMode, 0);
         m_Size = std::exchange(other.m_Size, 0);
+        m_Capacity = std::exchange(other.m_Capacity, 0);
         m_Cursor = std::exchange(other.m_Cursor, nullptr);
         m_End = std::exchange(other.m_End, nullptr);
         m_Data = std::exchange(other.m_Data, nullptr);
@@ -192,7 +198,16 @@ namespace Crowny
         if (bytes == m_Size)
             return;
         CW_ENGINE_ASSERT(bytes > m_Size);
-        uint8_t* buffer = new uint8_t[bytes];
+        // Keep the readable extent separate from reserved storage. Meshlet serialization writes many small
+        // fields after a large index array; allocating exactly enough for each field copies that array every time.
+        if (bytes <= m_Capacity)
+        {
+            m_Size = bytes;
+            return;
+        }
+        const size_t grownCapacity = m_Capacity <= std::numeric_limits<size_t>::max() / 2 ? m_Capacity * 2 : bytes;
+        const size_t capacity = std::max(bytes, grownCapacity);
+        uint8_t* buffer = new uint8_t[capacity];
         if (m_Data)
         {
             m_Cursor = buffer + (m_Cursor - m_Data);
@@ -209,6 +224,7 @@ namespace Crowny
 
         m_Data = buffer;
         m_Size = bytes;
+        m_Capacity = capacity;
     }
 
     FileDataStream::FileDataStream(const fs::path& path, AccessMode accessMode, bool freeOnClose)

@@ -129,7 +129,7 @@ namespace Crowny
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Show or hide %s messages", ConsoleBuffer::Message::GetLevelName(level));
             if (i + 1 < ConsoleBuffer::Message::Levels.size())
-                ImGui::SameLine();
+                ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.x + 3.0f);
         }
 
         ImGui::SameLine();

@@ -321,6 +321,13 @@ namespace Crowny
             auto bodyIt = m_Bodies.find(body.Value);
             if (bodyIt == m_Bodies.end())
                 return {};
+            // JPH::MeshShape::MustBeStatic() asserts when a mesh ends up on a moving body.
+            if ((desc.Type == PhysicsShapeType3D::TriangleMesh || desc.Type == PhysicsShapeType3D::HeightField) &&
+                bodyIt->second.Desc.Type != PhysicsBodyType3D::Static)
+            {
+                CW_ENGINE_ERROR("Jolt triangle meshes and height fields require a static body");
+                return {};
+            }
             PhysicsShape3DHandle handle{ m_NextShape++ };
             JPH::RefConst<JPH::Shape> native = CreateShape(desc, handle);
             if (native == nullptr)
@@ -329,6 +336,9 @@ namespace Crowny
             shape.Body = body;
             shape.Desc = desc;
             shape.Native = std::move(native);
+            // Mesh-backed shapes are never recreated from their description (see SetShapeMaterial), so drop the copies.
+            if (IsMeshBacked(shape.Desc.Type))
+                ReleaseGeometry(shape.Desc);
             m_Shapes.emplace(handle.Value, std::move(shape));
             bodyIt->second.Shapes.push_back(handle);
             RebuildBodyShape(bodyIt->second);
@@ -478,6 +488,14 @@ namespace Crowny
             auto found = m_Shapes.find(shape.Value);
             if (found == m_Shapes.end())
                 return;
+            if (IsMeshBacked(found->second.Desc.Type))
+            {
+                // Mesh shapes carry no density, so only the body-level friction/restitution needs refreshing.
+                found->second.Desc.Material = NormalizePhysicsMaterialData(material);
+                if (const BodyRecord* body = FindBody(found->second.Body))
+                    UpdateBodyMaterial(*body);
+                return;
+            }
             PhysicsShape3DDesc updated = found->second.Desc;
             updated.Material = NormalizePhysicsMaterialData(material);
             JPH::RefConst<JPH::Shape> native = CreateShape(updated, shape);
@@ -747,6 +765,21 @@ namespace Crowny
             return found == m_Bodies.end() ? nullptr : &found->second;
         }
 
+        static bool IsMeshBacked(PhysicsShapeType3D type)
+        {
+            return type == PhysicsShapeType3D::TriangleMesh || type == PhysicsShapeType3D::HeightField;
+        }
+
+        static void ReleaseGeometry(PhysicsShape3DDesc& desc)
+        {
+            desc.Vertices.clear();
+            desc.Vertices.shrink_to_fit();
+            desc.Indices.clear();
+            desc.Indices.shrink_to_fit();
+            desc.Heights.clear();
+            desc.Heights.shrink_to_fit();
+        }
+
         static JPH::Vec3 SafeAxis(const glm::vec3& axis)
         {
             const JPH::Vec3 converted = ToJolt(axis);
@@ -804,6 +837,11 @@ namespace Crowny
                 break;
             }
             case PhysicsShapeType3D::ConvexHull: {
+                if (desc.Vertices.size() < 4)
+                {
+                    CW_ENGINE_ERROR("Jolt convex hulls need at least 4 points, got {0}", desc.Vertices.size());
+                    return nullptr;
+                }
                 JPH::Array<JPH::Vec3> vertices;
                 vertices.reserve(desc.Vertices.size());
                 for (const glm::vec3& vertex : desc.Vertices)
@@ -1018,9 +1056,8 @@ namespace Crowny
             PhysicsContactEvent3D event = found->second;
             m_ActiveContacts.erase(found);
             const auto pairKey = ContactPair(event);
-            const bool pairRemainsActive = std::any_of(m_ActiveContacts.begin(), m_ActiveContacts.end(), [&](const auto& active) {
-                return ContactPair(active.second) == pairKey;
-            });
+            const bool pairRemainsActive = std::any_of(m_ActiveContacts.begin(), m_ActiveContacts.end(),
+                                                       [&](const auto& active) { return ContactPair(active.second) == pairKey; });
             if (!pairRemainsActive)
             {
                 event.Type = PhysicsContactEventType3D::Exit;
@@ -1048,12 +1085,12 @@ namespace Crowny
             event.MaterialB = shapeB->second.Desc.Material;
             event.IsTrigger = shapeA->second.Desc.IsTrigger || shapeB->second.Desc.IsTrigger;
             settings.mIsSensor = event.IsTrigger;
-            settings.mCombinedFriction = CombinePhysicsMaterialValue(
-              shapeA->second.Desc.Material.Friction, shapeA->second.Desc.Material.FrictionCombine, shapeB->second.Desc.Material.Friction,
-              shapeB->second.Desc.Material.FrictionCombine);
-            settings.mCombinedRestitution = CombinePhysicsMaterialValue(
-              shapeA->second.Desc.Material.Restitution, shapeA->second.Desc.Material.RestitutionCombine,
-              shapeB->second.Desc.Material.Restitution, shapeB->second.Desc.Material.RestitutionCombine);
+            settings.mCombinedFriction =
+              CombinePhysicsMaterialValue(shapeA->second.Desc.Material.Friction, shapeA->second.Desc.Material.FrictionCombine,
+                                          shapeB->second.Desc.Material.Friction, shapeB->second.Desc.Material.FrictionCombine);
+            settings.mCombinedRestitution =
+              CombinePhysicsMaterialValue(shapeA->second.Desc.Material.Restitution, shapeA->second.Desc.Material.RestitutionCombine,
+                                          shapeB->second.Desc.Material.Restitution, shapeB->second.Desc.Material.RestitutionCombine);
             event.Points.reserve(manifold.mRelativeContactPointsOn1.size());
             for (uint32_t i = 0; i < manifold.mRelativeContactPointsOn1.size(); ++i)
             {
@@ -1068,9 +1105,8 @@ namespace Crowny
             if (event.Type == PhysicsContactEventType3D::Enter)
             {
                 const auto pairKey = ContactPair(event);
-                const bool pairAlreadyActive = std::any_of(m_ActiveContacts.begin(), m_ActiveContacts.end(), [&](const auto& active) {
-                    return ContactPair(active.second) == pairKey;
-                });
+                const bool pairAlreadyActive = std::any_of(m_ActiveContacts.begin(), m_ActiveContacts.end(),
+                                                           [&](const auto& active) { return ContactPair(active.second) == pairKey; });
                 if (pairAlreadyActive)
                     event.Type = PhysicsContactEventType3D::Stay;
             }

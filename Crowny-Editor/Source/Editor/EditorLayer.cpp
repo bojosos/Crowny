@@ -11,24 +11,25 @@
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/ImGui/ImGuiMenu.h"
 #include "Crowny/Physics/Physics2D.h"
+#include "Crowny/RenderAPI/RenderCapabilities.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
+#include "Crowny/Renderer/ReverseZ.h"
 #include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
-#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
+#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 
-#include "Editor/PrefabUtils.h"
 #include "Editor/ViewportPicking.h"
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AudioMixerPanel.h"
-#include "Panels/EntityInspector.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/EditorPanelRegistry.h"
+#include "Panels/EntityInspector.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
@@ -55,6 +56,7 @@
 #include "Editor/Script/VisualStudioCodeEditor.h"
 #endif
 
+#include <cstdio>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <spdlog/fmt/fmt.h>
@@ -128,7 +130,10 @@ namespace Crowny
         std::function<bool()> m_EditorEnabled;
     };
 
-    EditorLayer::EditorLayer() : Layer("EditorLayer"), m_SceneRenderer(nullptr) {}
+    EditorLayer::EditorLayer(EditorLaunchOptions launchOptions)
+      : Layer("EditorLayer"), m_LaunchOptions(std::move(launchOptions)), m_SceneRenderer(nullptr)
+    {
+    }
 
     EditorLayer::~EditorLayer() = default;
 
@@ -178,12 +183,22 @@ namespace Crowny
         m_ViewportPanel = &m_Panels->Add(
           ViewportPanel::Registration, [this]() { return m_HierarchyPanel->GetSelectedEntity(); },
           [this]() -> const Vector<Entity>& { return m_HierarchyPanel->GetSelectedEntities(); });
-        m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
+        m_ViewportPanel->SetDropActions(
+          { [this](const UUID& scene) { OpenScene(scene); }, [this](Entity entity) { m_HierarchyPanel->SetSelectedEntity(entity); } },
+          [this](const glm::vec2& position) { return PickEntity(position); });
         m_ViewportPanel->SetViewportSettingsCallbacks([this]() { m_ShowViewportSettings = !m_ShowViewportSettings; },
                                                       [this]() { return m_ShowViewportSettings; });
-        m_ViewportPanel->SetRenderOverlayBinding(ViewportRenderOverlayBinding{
-          [this]() { return IsWireframeMode(); }, [this](bool wireframe) { SetWireframeMode(wireframe); },
-          [this]() { return IsShowingRenderingStatistics(); }, [this](bool show) { SetShowRenderingStatistics(show); } });
+        m_ViewportPanel->SetRenderOverlayBinding(
+          ViewportRenderOverlayBinding{ [this]() { return IsWireframeMode(); }, [this](bool wireframe) { SetWireframeMode(wireframe); },
+                                        [this]() { return IsShowingRenderingStatistics(); }, [this](bool show) { SetShowRenderingStatistics(show); },
+                                        [this]() { return m_SceneRenderer ? m_SceneRenderer->GetRenderPipelineSettings().DecalDebugView : 0u; },
+                                        [this](uint32_t mode) {
+                                            if (!m_SceneRenderer)
+                                                return;
+                                            auto settings = m_SceneRenderer->GetRenderPipelineSettings();
+                                            settings.DecalDebugView = mode;
+                                            m_SceneRenderer->SetRenderPipelineSettings(settings);
+                                        } });
         m_ConsolePanel = &m_Panels->Add(ConsolePanel::Registration);
         m_AssetBrowser = &m_Panels->Add(AssetBrowserPanel::Registration, [this](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
         m_AudioMixerPanel = &m_Panels->Add(AudioMixerPanel::Registration);
@@ -313,56 +328,12 @@ namespace Crowny
         m_RenderTarget = RenderTexture::Create(rtProps);
     }
 
-    bool EditorLayer::OnViewportEvent(Event& event)
-    {
-        EventDispatcher dispatcher(event);
-        dispatcher.Dispatch<ImGuiViewportSceneDraggedEvent>([this](ImGuiViewportSceneDraggedEvent& fileDragEvent) {
-            const FileEntry* fileEntry = fileDragEvent.GetFileEntry();
-            if (fileEntry->Metadata == nullptr)
-                return true;
-            const AssetType assetType = fileEntry->Metadata->Type;
-            if (assetType == AssetType::Scene)
-                OpenScene(fileEntry->Metadata->Uuid);
-            else if (assetType == AssetType::Material)
-            {
-                Entity entity = PickEntity(fileDragEvent.GetScreenPosition());
-                if (entity && entity.HasComponent<MeshRendererComponent>())
-                {
-                    const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
-                    entity.GetComponent<MeshRendererComponent>().SetMaterial(0, static_asset_cast<Material>(assetHandle));
-                }
-            }
-            else if (assetType == AssetType::Mesh)
-            {
-                Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
-                Entity entity = activeScene->CreateEntity(fileEntry->Filepath.filename().string());
-                MeshRendererComponent& meshRenderer = entity.AddComponent<MeshRendererComponent>();
-                const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
-                meshRenderer.MeshHandle = static_asset_cast<Mesh>(assetHandle);
-            }
-            else if (assetType == AssetType::AudioClip)
-            {
-                Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
-                Entity entity = activeScene->CreateEntity(fileEntry->Filepath.filename().string());
-                AudioSourceComponent& audioSourceComponent = entity.AddComponent<AudioSourceComponent>();
-                const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
-                audioSourceComponent.SetClip(static_asset_cast<AudioClip>(assetHandle));
-            }
-            else if (assetType == AssetType::Prefab)
-            {
-                Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
-                const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
-                AssetHandle<Prefab> prefab = static_asset_cast<Prefab>(assetHandle);
-                Entity root = activeScene->GetRootEntity();
-                PrefabUtils::InstantiatePrefab(prefab, root);
-            }
-            return true;
-        });
-        return true;
-    }
-
     void EditorLayer::OnDetach()
     {
+        if (m_BuildCancellation)
+            m_BuildCancellation->store(true);
+        if (m_PlayerBuild.valid())
+            m_PlayerBuild.wait();
         if (SceneManager::TryGet() != nullptr && SceneManager::TryGet()->GetExecutionState() != SceneExecutionState::Edit)
             SceneManager::TryGet()->Stop();
 
@@ -393,7 +364,7 @@ namespace Crowny
             settings->CodeEditorPath = CodeEditorManager::Get().GetActiveEditorPath();
 
         EditorAssets::Unload();
-        if (Editor::Get().IsProjectLoaded())
+        if (Editor::Get().IsProjectLoaded() && !m_LaunchOptions.Quit)
         {
             SaveProjectSettings();
             const Ref<Scene>& activeScene = SceneManager::TryGet()->GetActiveScene();
@@ -432,6 +403,15 @@ namespace Crowny
     Entity EditorLayer::PickEntity()
     {
         const ImVec2 mousePosition = ImGui::GetMousePos();
+        const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
+        if (scene && (m_SceneState == SceneState::Edit || m_SceneState == SceneState::Simulate) && m_ViewportPanel)
+        {
+            const Entity icon =
+              SceneGizmos::PickIcon(*scene, s_EditorCamera.GetProjection() * s_EditorCamera.GetViewMatrix(), m_ViewportPanel->GetViewportBounds(),
+                                    m_ViewportPanel->GetSceneGizmoSettings(), { mousePosition.x, mousePosition.y });
+            if (icon)
+                return icon;
+        }
         return PickEntity(glm::vec2(mousePosition.x, mousePosition.y));
     }
 
@@ -450,8 +430,7 @@ namespace Crowny
             return Entity::Invalid;
 
         const ViewportTextureExtent textureExtent{ objectIdTexture->GetWidth(), objectIdTexture->GetHeight() };
-        const std::optional<ViewportPickPixel> pixel =
-          ResolveViewportPickPixel(screenPosition, m_ViewportPanel->GetViewportBounds(), textureExtent);
+        const std::optional<ViewportPickPixel> pixel = ResolveViewportPickPixel(screenPosition, m_ViewportPanel->GetViewportBounds(), textureExtent);
         if (!pixel)
             return Entity::Invalid;
 
@@ -470,14 +449,15 @@ namespace Crowny
         if (renderAPI == nullptr || m_ViewportPanel == nullptr || m_SceneRenderer == nullptr)
             return;
 
-        const glm::vec2 displaySize = m_ViewportPanel->GetViewportSize();
+        const bool capture = !m_LaunchOptions.RenderOutput.empty();
+        const glm::vec2 displaySize = capture ? glm::vec2(m_LaunchOptions.Width, m_LaunchOptions.Height) : m_ViewportPanel->GetViewportSize();
         const std::optional<ViewportTextureExtent> viewportExtent = ResolveViewportTextureExtent(displaySize);
         if (!viewportExtent)
             return;
 
         const bool resizeRequired = !m_RenderTarget || m_RenderTarget->GetProperties().Width != viewportExtent->Width ||
                                     m_RenderTarget->GetProperties().Height != viewportExtent->Height;
-        if (m_ViewportPanel->IsShown() && resizeRequired)
+        if ((capture || m_ViewportPanel->IsShown()) && resizeRequired)
         {
             TextureDesc colorParams;
             colorParams.Width = viewportExtent->Width;
@@ -563,7 +543,11 @@ namespace Crowny
             SceneManager::TryGet()->GetActiveScene()->OnUpdateEditor(ts);
             m_SceneRenderer->UpdateProceduralMeshes();
             RenderSnapshot& snapshot = AcquireSnapshot();
-            m_SceneRenderer->ExtractSnapshot(snapshot, s_EditorCamera, s_EditorCamera.GetViewMatrix(), m_ShowGrid);
+            if (m_LaunchOptions.SceneCamera && !m_LaunchOptions.RenderOutput.empty())
+                m_SceneRenderer->ExtractSnapshot(snapshot);
+            else
+                m_SceneRenderer->ExtractSnapshot(snapshot, s_EditorCamera, s_EditorCamera.GetViewMatrix(),
+                                                 m_ShowGrid && m_LaunchOptions.RenderOutput.empty());
             snapshot.OverridePolygonMode = m_WireframeMode ? PolygonMode::Wireframe : PolygonMode::Solid;
             snapshot.Grid = { m_GridFineSize, m_GridCoarseSize, m_GridLineWidth, m_GridOpacity, m_ShowGridAxes };
             SubmitSnapshot(snapshot);
@@ -645,6 +629,19 @@ namespace Crowny
         if (CodeEditorManager::IsStartedUp())
             CodeEditorManager::Get().Update();
 
+        if (m_LaunchScenePending && !ProjectLibrary::Get().IsImporting())
+        {
+            m_LaunchScenePending = false;
+            m_Temp = nullptr;
+            OpenScene(m_LaunchOptions.Scene);
+            if (!m_Temp)
+            {
+                std::fprintf(stderr, "Could not open scene: %s\n", m_LaunchOptions.Scene.string().c_str());
+                Application::Get().Exit(1);
+                return;
+            }
+        }
+
         if (m_Temp) // Delay scene reload
         {
             Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
@@ -664,6 +661,18 @@ namespace Crowny
             Application::TryGet()->GetWindow().SetTitle(title);
         }
 
+        if (m_LaunchPlayPending && !m_LaunchScenePending && !ProjectLibrary::Get().IsImporting())
+        {
+            m_LaunchPlayPending = false;
+            TogglePlay();
+            if (m_SceneState != SceneState::Play)
+            {
+                std::fprintf(stderr, "Could not enter Play mode\n");
+                Application::Get().Exit(1);
+                return;
+            }
+        }
+
         bool rebuildAssemblies = false;
         if (m_SceneState == SceneState::Edit)
         {
@@ -678,6 +687,13 @@ namespace Crowny
         }
 
         Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
+        if (!m_LaunchOptions.RenderOutput.empty() && (m_LaunchOptions.SceneCamera || m_LaunchOptions.Play) && !m_LaunchScenePending &&
+            !ProjectLibrary::Get().IsImporting() && (!scene || !scene->GetPrimaryCameraEntity()))
+        {
+            std::fprintf(stderr, "Scene camera capture requires a primary camera\n");
+            Application::Get().Exit(1);
+            return;
+        }
         HandleRenderTargetResize();
         HandleSceneState(ts);
 
@@ -688,6 +704,7 @@ namespace Crowny
         if (rt && rt->IsRunning())
             rt->WaitForFrameDone();
 
+        CaptureLaunchRender();
         RenderOverlay();
 
         if (m_ViewportPanel->IsHovered())
@@ -729,62 +746,27 @@ namespace Crowny
     void EditorLayer::RenderOverlay()
     {
         Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
+        if (!scene)
+            return;
+        const bool reverseDepth = RenderAPI::Get().GetCapabilities().GetFeatureTier() != RenderFeatureTier::Compatibility;
+        const auto beginOverlay = [&](const Camera& camera, const glm::mat4& view) {
+            Renderer2D::Begin(ReverseZ::ConvertClipDepth(camera.GetProjection(), reverseDepth), view, reverseDepth);
+        };
         if (m_SceneState == SceneState::Play)
         {
             Entity camera = scene->GetPrimaryCameraEntity();
             if (!camera)
                 return;
-            Renderer2D::Begin(camera.GetComponent<CameraComponent>().Camera, camera.GetWorldMatrix());
+            beginOverlay(camera.GetComponent<CameraComponent>().Camera, glm::inverse(camera.GetWorldMatrix()));
         }
         else
-            Renderer2D::Begin(s_EditorCamera, s_EditorCamera.GetViewMatrix());
+            beginOverlay(s_EditorCamera, s_EditorCamera.GetViewMatrix());
 
         if (m_ShowColliders)
             ColliderOverlay::Draw(*scene, m_ColliderColor);
 
-        // Audio cone gizmo for the selected entity. Drawn only for the selection so the viewport
-        // isn't flooded when there are many AudioSources in the scene.
-        Entity selected = m_HierarchyPanel->GetSelectedEntity();
-        if (selected && selected.HasComponent<AudioSourceComponent>())
-        {
-            const AudioSourceComponent& asc = selected.GetComponent<AudioSourceComponent>();
-            // Skip the gizmo for omnidirectional sources — no useful cone to draw.
-            if (asc.GetConeOuterAngle() < 360.0f)
-            {
-                const glm::mat4 world = selected.GetWorldMatrix();
-                const glm::vec3 apex = glm::vec3(world[3]);
-                const glm::vec3 forward = glm::normalize(-glm::vec3(world[2]));
-                const glm::vec3 up = glm::normalize(glm::vec3(world[1]));
-                const glm::vec3 right = glm::normalize(glm::cross(forward, up));
-
-                // Apex-to-base distance matches min distance so the gizmo scales with the source's
-                // audible near-field. Half-angle drives base radius.
-                const float length = std::max(asc.GetMinDistance(), 0.1f);
-                const glm::vec3 baseCenter = apex + forward * length;
-
-                auto drawCone = [&](float fullAngleDegrees, const glm::vec4& color) {
-                    const float halfAngle = glm::radians(fullAngleDegrees) * 0.5f;
-                    const float baseRadius = length * std::tan(halfAngle);
-                    constexpr int Segments = 24;
-                    glm::vec3 prev;
-                    for (int i = 0; i <= Segments; i++)
-                    {
-                        const float t = (float)i / Segments * glm::two_pi<float>();
-                        const glm::vec3 offset = right * (std::cos(t) * baseRadius) + up * (std::sin(t) * baseRadius);
-                        const glm::vec3 p = baseCenter + offset;
-                        if (i > 0)
-                            Renderer2D::DrawLine(prev, p, color);
-                        // Spokes from apex to every 3rd circle point — keeps the gizmo readable.
-                        if (i % 3 == 0 && i < Segments)
-                            Renderer2D::DrawLine(apex, p, color);
-                        prev = p;
-                    }
-                };
-
-                drawCone(asc.GetConeInnerAngle(), { 0.2f, 0.9f, 0.3f, 1.0f });
-                drawCone(asc.GetConeOuterAngle(), { 0.9f, 0.5f, 0.1f, 0.7f });
-            }
-        }
+        if (m_SceneState == SceneState::Edit || m_SceneState == SceneState::Simulate)
+            SceneGizmos::DrawSelectionGuides(m_HierarchyPanel->GetSelectedEntities(), m_ViewportPanel->GetSceneGizmoSettings());
 
         Renderer2D::End();
     }

@@ -3,6 +3,7 @@
 #include "Crowny/Common/UTF8.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Scripting/Backends/CoreCLR/CoreClrHostContext.h"
 #include "Crowny/Scripting/Managed/Internal/ManagedBackend.h"
 #include "Crowny/Scripting/Managed/Interop/CrownyManagedAbi.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedAbiValidation.h"
@@ -10,7 +11,9 @@
 #include "Crowny/Scripting/Managed/Interop/ManagedJson.h"
 
 #include <cstring>
+#include <iomanip>
 #include <limits>
+#include <sstream>
 
 #if defined(CW_PLATFORM_WIN32) && !defined(CW_EMSCRIPTEN)
 #include <Windows.h>
@@ -66,6 +69,8 @@ namespace Crowny
         using HostFxrInitializeForRuntimeConfigFn = int32_t(CW_HOSTFXR_CALL*)(const HostChar*, const HostFxrInitializeParameters*, HostFxrHandle*);
         using HostFxrGetRuntimeDelegateFn = int32_t(CW_HOSTFXR_CALL*)(HostFxrHandle, HostFxrDelegateType, void**);
         using HostFxrCloseFn = int32_t(CW_HOSTFXR_CALL*)(HostFxrHandle);
+        using HostFxrErrorWriterFn = void(CW_HOSTFXR_CALL*)(const HostChar*);
+        using HostFxrSetErrorWriterFn = HostFxrErrorWriterFn(CW_HOSTFXR_CALL*)(HostFxrErrorWriterFn);
         using LoadAssemblyAndGetFunctionPointerFn = int32_t(CW_CORECLR_DELEGATE_CALL*)(const HostChar*, const HostChar*, const HostChar*,
                                                                                        const HostChar*, void*, void**);
 
@@ -129,6 +134,70 @@ namespace Crowny
 
         bool IsUsableHostFxrInitialization(int32_t status) { return status == HOSTFXR_SUCCESS || status == HOSTFXR_SUCCESS_ALREADY_INITIALIZED; }
 
+        // hostfxr registers error writers per thread. Restore the previous writer and buffer after hosting,
+        // including when another hosting operation is nested on the same thread.
+        class HostFxrErrorScope
+        {
+        public:
+            explicit HostFxrErrorScope(HostFxrSetErrorWriterFn setWriter) : m_SetWriter(setWriter), m_PreviousMessages(s_Messages)
+            {
+                s_Messages = &m_Messages;
+                m_PreviousWriter = m_SetWriter(&Write);
+            }
+
+            ~HostFxrErrorScope()
+            {
+                m_SetWriter(m_PreviousWriter);
+                s_Messages = m_PreviousMessages;
+            }
+
+            HostFxrErrorScope(const HostFxrErrorScope&) = delete;
+            HostFxrErrorScope& operator=(const HostFxrErrorScope&) = delete;
+
+            String Describe(StringView message, int32_t status) const
+            {
+                std::ostringstream output;
+                output << message << " Status: 0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << static_cast<uint32_t>(status)
+                       << '.';
+                if (!m_Messages.empty())
+                    output << '\n' << m_Messages;
+                return output.str();
+            }
+
+            void Clear() { m_Messages.clear(); }
+
+        private:
+            static void CW_HOSTFXR_CALL Write(const HostChar* message) noexcept
+            {
+                if (message == nullptr || s_Messages == nullptr)
+                    return;
+                try
+                {
+                    constexpr size_t maxLength = 64 * 1024;
+                    if (s_Messages->size() >= maxLength)
+                        return;
+#ifdef CW_PLATFORM_WIN32
+                    const String text = UTF8::FromWide(message);
+#else
+                    const StringView text(message);
+#endif
+                    if (!s_Messages->empty())
+                        s_Messages->push_back('\n');
+                    s_Messages->append(text.data(), std::min(text.size(), maxLength - s_Messages->size()));
+                }
+                catch (...)
+                {
+                    // The host callback cannot propagate C++ exceptions into hostfxr.
+                }
+            }
+
+            inline static thread_local String* s_Messages = nullptr;
+            HostFxrSetErrorWriterFn m_SetWriter;
+            HostFxrErrorWriterFn m_PreviousWriter = nullptr;
+            String* m_PreviousMessages;
+            String m_Messages;
+        };
+
         const ManagedProgramArtifact* FindArtifact(const ManagedProgramDefinition& program, ManagedProgramArtifactKind kind,
                                                    StringView logicalName = {})
         {
@@ -153,27 +222,13 @@ namespace Crowny
         cw_managed_uuid ToAbiUuid(const UUID& uuid)
         {
             cw_managed_uuid result{};
-            const String text = uuid.ToString();
-            uint32_t output = 0;
-            uint8_t high = 0;
-            bool haveHigh = false;
-            for (const char character : text)
+            for (size_t index = 0; index < 4; ++index)
             {
-                if (character == '-')
-                    continue;
-                const uint8_t value = character >= '0' && character <= '9'   ? static_cast<uint8_t>(character - '0')
-                                      : character >= 'a' && character <= 'f' ? static_cast<uint8_t>(character - 'a' + 10)
-                                                                             : static_cast<uint8_t>(character - 'A' + 10);
-                if (!haveHigh)
-                {
-                    high = value;
-                    haveHigh = true;
-                }
-                else if (output < 16)
-                {
-                    result.bytes[output++] = static_cast<uint8_t>((high << 4u) | value);
-                    haveHigh = false;
-                }
+                const uint32_t word = uuid.Word(index);
+                result.bytes[index * 4] = static_cast<uint8_t>(word >> 24u);
+                result.bytes[index * 4 + 1] = static_cast<uint8_t>(word >> 16u);
+                result.bytes[index * 4 + 2] = static_cast<uint8_t>(word >> 8u);
+                result.bytes[index * 4 + 3] = static_cast<uint8_t>(word);
             }
             return result;
         }
@@ -208,8 +263,12 @@ namespace Crowny
         class CoreClrBackend final : public ManagedBackend
         {
         public:
+            ~CoreClrBackend() override { Shutdown(); }
+
             ManagedOperationResult Start(const ManagedScriptingConfig& config) override
             {
+                if (!OnOwnerThread())
+                    return WrongThread();
                 if (config.ExecutionMode != ManagedExecutionMode::Jit && config.ExecutionMode != ManagedExecutionMode::ReadyToRun)
                     return ManagedOperationResult::Failure("managed.coreclr.execution_mode", "CoreCLR supports JIT and ReadyToRun execution modes.",
                                                            ManagedBackendId::CoreCLR);
@@ -235,9 +294,11 @@ namespace Crowny
 
             void Shutdown() override
             {
+                if (!OnOwnerThread())
+                    return;
                 if (m_RuntimeReady && m_Api.shutdown != nullptr)
                     m_Api.shutdown();
-                ReleaseManagedHostBindings(this);
+                m_HostContext.reset();
                 m_Instances.clear();
                 m_Catalog = {};
                 m_CurrentProgram = {};
@@ -253,6 +314,8 @@ namespace Crowny
             ManagedCapabilities GetCapabilities() const override
             {
                 ManagedCapabilities capabilities;
+                if (!OnOwnerThread())
+                    return capabilities;
                 capabilities.DynamicProgramLoading = true;
                 capabilities.Reload = true;
                 capabilities.RuntimeReflection = true;
@@ -265,6 +328,8 @@ namespace Crowny
 
             ManagedOperationResult LoadProgram(const ManagedProgramDefinition& program) override
             {
+                if (!OnOwnerThread())
+                    return WrongThread();
                 if (!m_Started)
                     return NotStarted();
                 if (!m_Instances.empty())
@@ -292,6 +357,8 @@ namespace Crowny
             ManagedBackendReloadResult ReloadProgram(const ManagedProgramDefinition& program,
                                                      const Vector<ManagedBackendReloadInstance>& snapshots) override
             {
+                if (!OnOwnerThread())
+                    return { WrongThread(), {} };
                 if (!m_RuntimeReady || !m_ProgramLoaded)
                     return { ProgramNotLoaded(), {} };
                 const ManagedProgramDefinition previousProgram = m_CurrentProgram;
@@ -359,10 +426,16 @@ namespace Crowny
                 return { std::move(replacement), {}, !restored.Succeeded };
             }
 
-            const ScriptCatalog& GetScriptCatalog() const override { return m_Catalog; }
+            const ScriptCatalog& GetScriptCatalog() const override
+            {
+                static const ScriptCatalog empty;
+                return OnOwnerThread() ? m_Catalog : empty;
+            }
 
             ManagedBackendCreateResult CreateScript(const ScriptCreateRequest& request) override
             {
+                if (!OnOwnerThread())
+                    return { WrongThread(), 0 };
                 if (!m_ProgramLoaded)
                     return { ProgramNotLoaded(), 0 };
                 const ScriptTypeSchema* schema = m_Catalog.FindType(request.Identity);
@@ -391,6 +464,8 @@ namespace Crowny
 
             ManagedOperationResult DestroyScript(uint64_t handle) override
             {
+                if (!OnOwnerThread())
+                    return WrongThread();
                 const auto instance = m_Instances.find(handle);
                 if (instance == m_Instances.end())
                     return StaleHandle();
@@ -403,6 +478,8 @@ namespace Crowny
 
             ManagedOperationResult Dispatch(uint64_t handle, const ScriptEvent& event) override
             {
+                if (!OnOwnerThread())
+                    return WrongThread();
                 const auto instance = m_Instances.find(handle);
                 if (instance == m_Instances.end())
                     return StaleHandle();
@@ -437,6 +514,8 @@ namespace Crowny
 
             ManagedBackendStateResult CaptureState(uint64_t handle) override
             {
+                if (!OnOwnerThread())
+                    return { WrongThread(), {} };
                 const auto instance = m_Instances.find(handle);
                 if (instance == m_Instances.end())
                     return { StaleHandle(), {} };
@@ -462,6 +541,8 @@ namespace Crowny
 
             ManagedOperationResult ApplyState(uint64_t handle, const ScriptState& state) override
             {
+                if (!OnOwnerThread())
+                    return WrongThread();
                 const auto instance = m_Instances.find(handle);
                 if (instance == m_Instances.end())
                     return StaleHandle();
@@ -480,9 +561,10 @@ namespace Crowny
                 return normalized.Result;
             }
 
-            ScriptInvocationResult InvokeButton(uint64_t handle, uint64_t methodId,
-                                                const Vector<ScriptValue>& arguments) override
+            ScriptInvocationResult InvokeButton(uint64_t handle, uint64_t methodId, const Vector<ScriptValue>& arguments) override
             {
+                if (!OnOwnerThread())
+                    return { WrongThread(), false, {} };
                 const auto instance = m_Instances.find(handle);
                 if (instance == m_Instances.end())
                     return { StaleHandle(), false, {} };
@@ -504,6 +586,8 @@ namespace Crowny
 
             Vector<ManagedDiagnostic> Update() override
             {
+                if (!OnOwnerThread())
+                    return WrongThread().Diagnostics;
                 CollectManagedDiagnostics();
                 Lock lock(m_DiagnosticMutex);
                 Vector<ManagedDiagnostic> diagnostics = std::move(m_Diagnostics);
@@ -513,6 +597,8 @@ namespace Crowny
 
             void NotifySceneEventsAvailable() override
             {
+                if (!OnOwnerThread())
+                    return;
                 SceneManager* manager = SceneManager::TryGet();
                 if (!m_RuntimeReady || m_Api.notify_scene_event == nullptr || manager == nullptr)
                     return;
@@ -574,17 +660,23 @@ namespace Crowny
                     hostFxrPath.resize(hostFxrPathSize);
                     pathStatus = getHostFxrPath(hostFxrPath.data(), &hostFxrPathSize, &pathParameters);
                 }
-                if (pathStatus != HOSTFXR_SUCCESS || hostFxrPathSize == 0 || !m_HostFxr.Load(Path(hostFxrPath.data())))
-                    return ManagedOperationResult::Failure("managed.coreclr.hostfxr_path_failed", "nethost could not resolve the private hostfxr.",
+                if (pathStatus != HOSTFXR_SUCCESS || hostFxrPathSize == 0)
+                    return ManagedOperationResult::Failure(
+                      "managed.coreclr.hostfxr_path_failed",
+                      "nethost could not resolve the private hostfxr. Status: " + std::to_string(pathStatus) + '.', ManagedBackendId::CoreCLR);
+                if (!m_HostFxr.Load(Path(hostFxrPath.data())))
+                    return ManagedOperationResult::Failure("managed.coreclr.hostfxr_load_failed", "Could not load the resolved hostfxr library.",
                                                            ManagedBackendId::CoreCLR);
 
                 auto initialize = reinterpret_cast<HostFxrInitializeForRuntimeConfigFn>(m_HostFxr.Find("hostfxr_initialize_for_runtime_config"));
                 auto getDelegate = reinterpret_cast<HostFxrGetRuntimeDelegateFn>(m_HostFxr.Find("hostfxr_get_runtime_delegate"));
                 auto close = reinterpret_cast<HostFxrCloseFn>(m_HostFxr.Find("hostfxr_close"));
-                if (initialize == nullptr || getDelegate == nullptr || close == nullptr)
+                auto setErrorWriter = reinterpret_cast<HostFxrSetErrorWriterFn>(m_HostFxr.Find("hostfxr_set_error_writer"));
+                if (initialize == nullptr || getDelegate == nullptr || close == nullptr || setErrorWriter == nullptr)
                     return ManagedOperationResult::Failure("managed.coreclr.hostfxr_symbol_missing", "hostfxr is missing required hosting exports.",
                                                            ManagedBackendId::CoreCLR);
 
+                HostFxrErrorScope hostingErrors(setErrorWriter);
                 const auto configPath = ToHostString(runtimeConfig->Filepath);
                 const HostFxrInitializeParameters initializeParameters{ sizeof(initializeParameters), nullptr, dotnetRoot.c_str() };
                 HostFxrHandle context = nullptr;
@@ -593,22 +685,26 @@ namespace Crowny
                 {
                     if (context != nullptr)
                         close(context);
-                    return ManagedOperationResult::Failure("managed.coreclr.runtime_properties_mismatch",
-                                                           "A process-wide CoreCLR is already running with different runtime properties.",
-                                                           ManagedBackendId::CoreCLR);
+                    return ManagedOperationResult::Failure(
+                      "managed.coreclr.runtime_properties_mismatch",
+                      hostingErrors.Describe("A process-wide CoreCLR is already running with different runtime properties.", initializeStatus),
+                      ManagedBackendId::CoreCLR);
                 }
                 if (!IsUsableHostFxrInitialization(initializeStatus) || context == nullptr)
                 {
                     if (context != nullptr)
                         close(context);
-                    return ManagedOperationResult::Failure("managed.coreclr.initialize_failed", "hostfxr could not initialize CoreCLR.",
+                    return ManagedOperationResult::Failure("managed.coreclr.initialize_failed",
+                                                           hostingErrors.Describe("hostfxr could not initialize CoreCLR.", initializeStatus),
                                                            ManagedBackendId::CoreCLR);
                 }
                 void* loader = nullptr;
+                hostingErrors.Clear();
                 const int32_t delegateStatus = getDelegate(context, HostFxrDelegateType::LoadAssemblyAndGetFunctionPointer, &loader);
                 close(context);
                 if (delegateStatus != HOSTFXR_SUCCESS || loader == nullptr)
-                    return ManagedOperationResult::Failure("managed.coreclr.delegate_failed", "hostfxr did not provide the component loader.",
+                    return ManagedOperationResult::Failure("managed.coreclr.delegate_failed",
+                                                           hostingErrors.Describe("hostfxr did not provide the component loader.", delegateStatus),
                                                            ManagedBackendId::CoreCLR);
 
                 auto loadAssembly = reinterpret_cast<LoadAssemblyAndGetFunctionPointerFn>(loader);
@@ -617,9 +713,12 @@ namespace Crowny
                 const auto methodName = ToHostString(StringView(CW_MANAGED_BOOTSTRAP_METHOD));
                 void* getApiPointer = nullptr;
                 const HostChar* unmanagedCallersOnly = reinterpret_cast<const HostChar*>(static_cast<intptr_t>(-1));
-                if (loadAssembly(assemblyPath.c_str(), typeName.c_str(), methodName.c_str(), unmanagedCallersOnly, nullptr, &getApiPointer) != 0 ||
-                    getApiPointer == nullptr)
-                    return ManagedOperationResult::Failure("managed.coreclr.bootstrap_failed", "CoreCLR could not load the Crowny managed bootstrap.",
+                hostingErrors.Clear();
+                const int32_t loadStatus =
+                  loadAssembly(assemblyPath.c_str(), typeName.c_str(), methodName.c_str(), unmanagedCallersOnly, nullptr, &getApiPointer);
+                if (loadStatus != HOSTFXR_SUCCESS || getApiPointer == nullptr)
+                    return ManagedOperationResult::Failure("managed.coreclr.bootstrap_failed",
+                                                           hostingErrors.Describe("CoreCLR could not load the Crowny managed bootstrap.", loadStatus),
                                                            ManagedBackendId::CoreCLR);
 
                 const auto getApi = reinterpret_cast<cw_managed_get_api_fn>(getApiPointer);
@@ -628,14 +727,14 @@ namespace Crowny
                 ManagedOperationResult validation = ValidateManagedProgramApi(m_Api, ManagedBackendId::CoreCLR);
                 if (!validation.Succeeded)
                     return validation;
-                cw_managed_host_api hostApi{};
-                hostApi.size = sizeof(hostApi);
-                hostApi.abi_version = CW_MANAGED_ABI_VERSION;
-                hostApi.context = this;
-                hostApi.log = &Log;
-                PopulateManagedHostBindings(hostApi);
-                if (cw_managed_status status = m_Api.initialize(&hostApi); status != CW_MANAGED_STATUS_OK)
-                    return StatusFailure(status, "managed.coreclr.bootstrap_initialize_failed", "The managed bootstrap failed to initialize.");
+                m_HostContext = CreateScope<CoreClrHostContext>();
+                if (cw_managed_status status = m_Api.initialize(&m_HostContext->GetApi()); status != CW_MANAGED_STATUS_OK)
+                {
+                    ManagedOperationResult failure =
+                      StatusFailure(status, "managed.coreclr.bootstrap_initialize_failed", "The managed bootstrap failed to initialize.");
+                    m_HostContext.reset();
+                    return failure;
+                }
                 m_RuntimeReady = true;
                 return ManagedOperationResult::Success();
             }
@@ -674,8 +773,17 @@ namespace Crowny
             ManagedOperationResult RecreateInstances(const Vector<ManagedBackendReloadInstance>& snapshots, const ScriptCatalog& catalog,
                                                      Map<uint64_t, Instance>& instances)
             {
+                // Public instance slots are reused, so snapshot order can differ from attachment order. Backend
+                // handles remain monotonic across reloads; use them to preserve first-match component lookup.
+                Vector<const ManagedBackendReloadInstance*> ordered;
+                ordered.reserve(snapshots.size());
                 for (const ManagedBackendReloadInstance& snapshot : snapshots)
+                    ordered.push_back(&snapshot);
+                std::sort(ordered.begin(), ordered.end(),
+                          [](const auto* first, const auto* second) { return first->PreviousHandle < second->PreviousHandle; });
+                for (const ManagedBackendReloadInstance* entry : ordered)
                 {
+                    const ManagedBackendReloadInstance& snapshot = *entry;
                     const ScriptTypeSchema* schema = catalog.FindType(snapshot.State.Identity);
                     if (schema == nullptr)
                         return ManagedOperationResult::Failure("managed.coreclr.reload_type_missing",
@@ -721,6 +829,13 @@ namespace Crowny
 
             void CollectManagedDiagnostics()
             {
+                if (m_HostContext != nullptr)
+                {
+                    Vector<ManagedDiagnostic> diagnostics = m_HostContext->TakeDiagnostics();
+                    Lock lock(m_DiagnosticMutex);
+                    m_Diagnostics.insert(m_Diagnostics.end(), std::make_move_iterator(diagnostics.begin()),
+                                         std::make_move_iterator(diagnostics.end()));
+                }
                 if (!m_RuntimeReady || m_Api.collect_diagnostics == nullptr)
                     return;
                 Vector<uint8_t> bytes;
@@ -733,34 +848,12 @@ namespace Crowny
                 m_Diagnostics.insert(m_Diagnostics.end(), std::make_move_iterator(diagnostics.begin()), std::make_move_iterator(diagnostics.end()));
             }
 
-            static String Decode(cw_managed_string_view value)
-            {
-                return value.data == nullptr ? String() : String(reinterpret_cast<const char*>(value.data), value.length);
-            }
+            bool OnOwnerThread() const { return m_OwnerThread == std::this_thread::get_id(); }
 
-            static void CW_MANAGED_CALL Log(void* context, uint32_t severity, cw_managed_string_view code, cw_managed_string_view message,
-                                            cw_managed_string_view stack)
+            static ManagedOperationResult WrongThread()
             {
-                if (context == nullptr)
-                    return;
-                try
-                {
-                    auto* backend = static_cast<CoreClrBackend*>(context);
-                    ManagedDiagnostic diagnostic;
-                    diagnostic.Severity = severity == 0   ? ManagedDiagnosticSeverity::Info
-                                          : severity == 1 ? ManagedDiagnosticSeverity::Warning
-                                                          : ManagedDiagnosticSeverity::Error;
-                    diagnostic.Code = Decode(code);
-                    diagnostic.Message = Decode(message);
-                    diagnostic.ManagedStack = Decode(stack);
-                    diagnostic.Backend = ManagedBackendId::CoreCLR;
-                    Lock lock(backend->m_DiagnosticMutex);
-                    backend->m_Diagnostics.push_back(std::move(diagnostic));
-                }
-                catch (...)
-                {
-                    // Native callbacks must not let C++ exceptions cross the managed ABI.
-                }
+                return ManagedOperationResult::Failure("managed.coreclr.wrong_thread", "CoreCLR engine operations require the owning thread.",
+                                                       ManagedBackendId::CoreCLR);
             }
 
             static ManagedOperationResult NotStarted()
@@ -781,6 +874,7 @@ namespace Crowny
                                                        ManagedBackendId::CoreCLR);
             }
 
+            const std::thread::id m_OwnerThread = std::this_thread::get_id();
             bool m_Started = false;
             bool m_RuntimeReady = false;
             bool m_ProgramLoaded = false;
@@ -794,6 +888,7 @@ namespace Crowny
             Map<uint64_t, Instance> m_Instances;
             Mutex m_DiagnosticMutex;
             Vector<ManagedDiagnostic> m_Diagnostics;
+            Scope<CoreClrHostContext> m_HostContext;
         };
     } // namespace
 

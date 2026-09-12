@@ -34,7 +34,6 @@ namespace Crowny
 
     private:
         Scope<VulkanGpuBuffer> m_Buffer;
-        BufferUsage m_Usage;
 
         VkBufferView m_BufferView = VK_NULL_HANDLE;
         VkBuffer m_CacheBuffer = VK_NULL_HANDLE;

@@ -33,14 +33,19 @@ namespace Crowny
     {
         switch (type)
         {
-        case LightType::Directional:
-            return "Directional Light";
-        case LightType::Point:
-            return "Point Light";
-        case LightType::Spot:
-            return "Spot Light";
+        case LightType::Directional: return "Directional Light";
+        case LightType::Point: return "Point Light";
+        case LightType::Spot: return "Spot Light";
         }
         return "Light";
+    }
+
+    Entity EntityFactory::CreateDecal(const Ref<Scene>& scene, Entity parent, DecalProjection projection)
+    {
+        if (!scene) return Entity::Invalid;
+        Entity entity = CreateChild(scene, parent, projection == DecalProjection::Box ? "Box Decal" : "Cylinder Decal");
+        entity.AddComponent<DecalComponent>().Projection = projection;
+        return entity;
     }
 
     void EntityFactory::ApplyLightDefaults(LightComponent& light, LightType type)
@@ -81,8 +86,9 @@ namespace Crowny
         ApplyLightDefaults(entity.AddComponent<LightComponent>(), type);
         if (type == LightType::Directional)
         {
-            // Unity's default sun orientation: pitched down 50 degrees, yawed -30 degrees.
-            entity.GetTransform().SetRotation(glm::quat(glm::radians(glm::vec3(50.0f, -30.0f, 0.0f))));
+            // Unity-style default sun: pitched down 50 degrees, yawed -30 degrees.
+            // Crowny is right-handed with -Z forward, so the pitch sign is inverted compared to Unity's left-handed +Z forward.
+            entity.GetTransform().SetRotation(glm::quat(glm::radians(glm::vec3(-50.0f, -30.0f, 0.0f))));
         }
         return entity;
     }

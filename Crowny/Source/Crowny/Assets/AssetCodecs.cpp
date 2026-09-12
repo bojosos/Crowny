@@ -9,6 +9,7 @@
 #include "Crowny/Assets/AssetListener.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Serialization/PrefabSerializer.h"
 
 #include "Crowny/Audio/AudioMixer.h"
 #include "Crowny/Audio/AudioSource.h"
@@ -18,6 +19,7 @@
 #include "Crowny/NodeGraph/NodeRegistry.h"
 #include "Crowny/NodeGraph/Pin.h"
 #include "Crowny/Physics/PhysicsMaterial.h"
+#include "Crowny/Physics/PhysicsMesh.h"
 #include "Crowny/RenderAPI/Buffer.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/Shader.h"
@@ -33,6 +35,7 @@
 #include "Platform/Vulkan/VulkanTexture.h"
 
 #include "Crowny/Utils/Compression.h"
+#include "Crowny/Utils/ShaderCompiler.h"
 
 #include <tracy/Tracy.hpp>
 
@@ -638,7 +641,7 @@ namespace Crowny
         {
             if (header.Type != AssetType::Mesh)
                 throw cereal::Exception("Asset type does not match the serialized mesh payload.");
-            if (header.Version != 2 && header.Version != 3 && header.Version != MESH_FORMAT_VERSION)
+            if (header.Version < 2 || header.Version > MESH_FORMAT_VERSION)
                 throw cereal::Exception("Mesh asset format version is not supported. Reimport the source asset.");
         }
         archive(cereal::base_class<Asset>(&mesh));
@@ -703,6 +706,9 @@ namespace Crowny
         }
         mesh.m_MeshMorph = LoadMeshMorph(archive);
         mesh.m_Skeleton = LoadSkeleton(archive);
+        mesh.m_CollisionMeshUuid = UUID::EMPTY;
+        if (header.Magic == ASSET_FILE_MAGIC && header.Version >= 5)
+            archive(mesh.m_CollisionMeshUuid);
         archive(mesh.m_CPUMeshData);
         mesh.Init();
         if (!mesh.m_Usage.IsSet(MeshUsage::CpuCached))
@@ -729,6 +735,7 @@ namespace Crowny
         archive(mesh.m_GpuGeometry.MeshletIndices);
         SaveMeshMorph(archive, mesh.m_MeshMorph);
         SaveSkeleton(archive, mesh.m_Skeleton);
+        archive(mesh.m_CollisionMeshUuid);
         Ref<MeshData> meshData = mesh.m_Usage.IsSet(MeshUsage::CpuCached) ? mesh.m_CPUMeshData : nullptr;
         if (meshData == nullptr)
         {
@@ -863,11 +870,63 @@ namespace Crowny
                 static_cast<uint8_t>(data.RestitutionCombine));
     }
 
+    void Load(BinaryDataStreamInputArchive& archive, PhysicsMesh& physicsMesh)
+    {
+        const AssetFileHeader header = ReadAssetHeader(archive);
+        ValidateAssetHeader(header, AssetType::PhysicsMesh, PHYSICS_MESH_FORMAT_VERSION);
+        if (header.Magic != ASSET_FILE_MAGIC)
+            throw cereal::Exception("A physics mesh requires a versioned asset header.");
+        archive(cereal::base_class<Asset>(&physicsMesh));
+
+        uint32_t positionCount = 0;
+        uint32_t indexCount = 0;
+        uint32_t convexCount = 0;
+        uint32_t sourceVertexCount = 0;
+        archive(positionCount, indexCount, convexCount, sourceVertexCount);
+        if (indexCount % 3u != 0u)
+            throw cereal::Exception("Physics mesh index count is not a triangle list.");
+        Vector<glm::vec3> positions(positionCount);
+        Vector<uint32_t> indices(indexCount);
+        Vector<glm::vec3> convexPoints(convexCount);
+        if (positionCount > 0)
+            archive(cereal::binary_data(positions.data(), positionCount * sizeof(glm::vec3)));
+        if (indexCount > 0)
+            archive(cereal::binary_data(indices.data(), indexCount * sizeof(uint32_t)));
+        if (convexCount > 0)
+            archive(cereal::binary_data(convexPoints.data(), convexCount * sizeof(glm::vec3)));
+        for (uint32_t index : indices)
+        {
+            if (index >= positionCount)
+                throw cereal::Exception("Physics mesh index is out of range.");
+        }
+        physicsMesh.SetGeometry(std::move(positions), std::move(indices), std::move(convexPoints), sourceVertexCount);
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const PhysicsMesh& physicsMesh)
+    {
+        WriteAssetHeader(archive, AssetType::PhysicsMesh, PHYSICS_MESH_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&physicsMesh));
+        const Vector<glm::vec3>& positions = physicsMesh.m_Positions;
+        const Vector<uint32_t>& indices = physicsMesh.m_Indices;
+        const Vector<glm::vec3>& convexPoints = physicsMesh.m_ConvexPoints;
+        archive(static_cast<uint32_t>(positions.size()), static_cast<uint32_t>(indices.size()), static_cast<uint32_t>(convexPoints.size()),
+                physicsMesh.m_SourceVertexCount);
+        if (!positions.empty())
+            archive(cereal::binary_data(const_cast<glm::vec3*>(positions.data()), positions.size() * sizeof(glm::vec3)));
+        if (!indices.empty())
+            archive(cereal::binary_data(const_cast<uint32_t*>(indices.data()), indices.size() * sizeof(uint32_t)));
+        if (!convexPoints.empty())
+            archive(cereal::binary_data(const_cast<glm::vec3*>(convexPoints.data()), convexPoints.size() * sizeof(glm::vec3)));
+    }
+
     void Load(BinaryDataStreamInputArchive& archive, BufferLayout& layout)
     {
-        archive(layout.m_Id, layout.m_Elements);
+        uint32_t serializedId;
+        archive(serializedId, layout.m_Elements);
+        // Layout IDs key runtime pipeline caches. Separate asset imports can save
+        // the same ID for different layouts, so never restore it into that cache.
+        layout.m_Id = BufferLayout::s_NextFreeId++;
         layout.CalculateOffsetsAndStride();
-        BufferLayout::s_NextFreeId = std::max(BufferLayout::s_NextFreeId, layout.m_Id + 1);
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const BufferLayout& layout) { archive(layout.m_Id, layout.m_Elements); }
@@ -876,6 +935,8 @@ namespace Crowny
     {
         archive(binaryShaderData.Data, binaryShaderData.EntryPoint, binaryShaderData.Type, binaryShaderData.Description,
                 binaryShaderData.VertexLayout);
+        if constexpr (Archive::is_loading::value)
+            ShaderCompiler::RestoreVertexLayout(binaryShaderData);
     }
 
     template <typename Archive> void Serialize(Archive& archive, BlendStateDesc& stateDesc)
@@ -982,6 +1043,10 @@ namespace Crowny
             }
         }
         archive(material.m_HasAlphaModeOverride, material.m_AlphaMode);
+        archive(static_cast<uint32_t>(material.m_TextureHandles.size()));
+        for (const auto& [name, texture] : material.m_TextureHandles)
+            archive(name, texture.GetUUID());
+        archive(material.m_DecalResponseMask);
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const MaterialPreset& preset)
@@ -1033,7 +1098,10 @@ namespace Crowny
         {
             material.m_Shader = static_asset_cast<Shader>(AssetManager::TryGet()->LoadFromUUID(shaderUuid));
             if (material.m_Shader)
+            {
                 material.ReloadParams();
+                material.ApplyModelDefaults();
+            }
         }
         uint32_t paramCount;
         archive(paramCount);
@@ -1090,6 +1158,28 @@ namespace Crowny
             material.m_HasAlphaModeOverride = false;
             material.m_AlphaMode = AlphaMode::Opaque;
         }
+        if (header.Magic == ASSET_FILE_MAGIC && header.Version >= 5u)
+        {
+            uint32_t textureCount = 0;
+            archive(textureCount);
+            for (uint32_t index = 0; index < textureCount; ++index)
+            {
+                String name;
+                UUID textureUuid;
+                archive(name, textureUuid);
+                if (!textureUuid.Empty())
+                {
+                    AssetHandle<Texture> texture = AssetManager::Get().LoadFromUUID<Texture>(textureUuid);
+                    if (!texture)
+                        texture = static_asset_cast<Texture>(AssetManager::Get().GetAssetHandle(textureUuid));
+                    material.SetTexture(name, texture);
+                }
+            }
+        }
+        material.m_DecalResponseMask = 255u;
+        if (header.Magic == ASSET_FILE_MAGIC && header.Version >= 6u)
+            archive(material.m_DecalResponseMask);
+        material.m_DecalResponseMask &= 255u;
     }
 
     static void SerializePinValue(BinaryDataStreamOutputArchive& archive, PinDataType type, const PinValue& value)
@@ -1372,6 +1462,23 @@ namespace Crowny
         Serialize(archive, desc.RingModulator);
     }
 
+    void Save(BinaryDataStreamOutputArchive& archive, const Prefab& prefab)
+    {
+        WriteAssetHeader(archive, AssetType::Prefab, PREFAB_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&prefab));
+        PrefabSerializer serializer(const_cast<Prefab&>(prefab));
+        archive(serializer.SerializeToString());
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, Prefab& prefab)
+    {
+        ValidateAssetHeader(ReadAssetHeader(archive), AssetType::Prefab, PREFAB_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&prefab));
+        String text;
+        archive(text);
+        PrefabSerializer(prefab).DeserializeFromString(text);
+    }
+
     void Save(BinaryDataStreamOutputArchive& archive, const AudioMixer& mixer)
     {
         WriteAssetHeader(archive, AssetType::AudioMixer, AUDIO_MIXER_FORMAT_VERSION);
@@ -1408,6 +1515,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::VulkanTexture, "VulkanTexture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::OpenGLTexture, "OpenGLTexture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMaterial2D, "PhysicsMaterial2D")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMaterial3D, "PhysicsMaterial3D")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMesh, "PhysicsMesh")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Mesh, "Mesh")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Material, "Material")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
@@ -1417,6 +1525,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::PhysicsMaterial2D)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::PhysicsMaterial3D)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::PhysicsMesh)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Mesh)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Material)
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::NodeGraphAsset, "NodeGraphAsset")
@@ -1429,4 +1538,6 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::AnimationClip, "AnimationClip")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AnimationClip)
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::MaterialPreset, "MaterialPreset")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::MaterialPreset)
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Prefab, "Prefab")
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Prefab)
 CEREAL_REGISTER_DYNAMIC_INIT(AssetCodecs)

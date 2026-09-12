@@ -31,8 +31,8 @@ namespace Crowny
 
             if (subMesh.IndexCount < 3 || subMesh.IndexCount % 3 != 0)
             {
-                CW_ENGINE_WARN("Skipping mesh-processing submesh {} because its index count {} does not describe complete triangles.",
-                               materialSlot, subMesh.IndexCount);
+                CW_ENGINE_WARN("Skipping mesh-processing submesh {} because its index count {} does not describe complete triangles.", materialSlot,
+                               subMesh.IndexCount);
                 return false;
             }
 
@@ -41,8 +41,8 @@ namespace Crowny
             if (indexOffset > indices.size() || indexCount > indices.size() - indexOffset)
             {
                 const uint64_t indexEnd = static_cast<uint64_t>(subMesh.IndexOffset) + subMesh.IndexCount;
-                CW_ENGINE_WARN("Skipping mesh-processing submesh {} because index range [{}, {}) exceeds the {} available indices.",
-                               materialSlot, indexOffset, indexEnd, indices.size());
+                CW_ENGINE_WARN("Skipping mesh-processing submesh {} because index range [{}, {}) exceeds the {} available indices.", materialSlot,
+                               indexOffset, indexEnd, indices.size());
                 return false;
             }
 
@@ -58,8 +58,9 @@ namespace Crowny
             return true;
         }
 
-        void BuildMeshlets(MeshGpuGeometry& result, MeshLod& lod, const Vector<uint32_t>& indices, uint32_t materialSlot,
-                           float lodError, const Vector<glm::vec3>& positions, const MeshProcessingSettings& settings)
+        // `indices` and `positions` describe one compacted sub-mesh; `localToGlobal` maps its vertices back to the full mesh.
+        void BuildMeshlets(MeshGpuGeometry& result, MeshLod& lod, const Vector<uint32_t>& indices, uint32_t materialSlot, float lodError,
+                           const Vector<glm::vec3>& positions, const Vector<uint32_t>& localToGlobal, const MeshProcessingSettings& settings)
         {
             if (indices.empty())
                 return;
@@ -68,10 +69,9 @@ namespace Crowny
             Vector<meshopt_Meshlet> meshlets(bound);
             Vector<uint32_t> vertices(indices.size());
             Vector<uint8_t> triangles(indices.size());
-            const size_t meshletCount =
-              meshopt_buildMeshlets(meshlets.data(), vertices.data(), triangles.data(), indices.data(), indices.size(), &positions[0].x,
-                                    positions.size(), sizeof(glm::vec3), settings.MeshletMaxVertices, settings.MeshletMaxTriangles,
-                                    settings.MeshletConeWeight);
+            const size_t meshletCount = meshopt_buildMeshlets(meshlets.data(), vertices.data(), triangles.data(), indices.data(), indices.size(),
+                                                              &positions[0].x, positions.size(), sizeof(glm::vec3), settings.MeshletMaxVertices,
+                                                              settings.MeshletMaxTriangles, settings.MeshletConeWeight);
             meshlets.resize(meshletCount);
             if (meshlets.empty())
                 return;
@@ -82,7 +82,8 @@ namespace Crowny
 
             const uint32_t vertexBase = static_cast<uint32_t>(result.MeshletVertices.size());
             const uint32_t triangleBase = static_cast<uint32_t>(result.MeshletTriangles.size());
-            result.MeshletVertices.insert(result.MeshletVertices.end(), vertices.begin(), vertices.end());
+            for (uint32_t localVertex : vertices)
+                result.MeshletVertices.push_back(localToGlobal[localVertex]);
             result.MeshletTriangles.insert(result.MeshletTriangles.end(), triangles.begin(), triangles.end());
             result.MeshletIndices.resize(triangleBase + triangles.size());
 
@@ -104,7 +105,7 @@ namespace Crowny
                 {
                     const uint32_t localVertex = triangles[source.triangle_offset + index];
                     result.MeshletIndices[triangleBase + source.triangle_offset + index] =
-                      vertices[source.vertex_offset + localVertex];
+                      localToGlobal[vertices[source.vertex_offset + localVertex]];
                 }
                 result.Meshlets.push_back(meshlet);
                 lod.MeshletCount++;
@@ -116,8 +117,7 @@ namespace Crowny
                                                      const MeshProcessingSettings& inputSettings)
     {
         MeshGpuGeometry result;
-        if (meshData.GetVertexCount() == 0 || meshData.GetIndexCount() < 3 ||
-            !meshData.GetBufferLayout().HasAttribute(VertexAttribute::Position))
+        if (meshData.GetVertexCount() == 0 || meshData.GetIndexCount() < 3 || !meshData.GetBufferLayout().HasAttribute(VertexAttribute::Position))
             return result;
 
         MeshProcessingSettings settings = inputSettings;
@@ -153,7 +153,33 @@ namespace Crowny
         if (subMeshes.empty())
             return result;
 
-        const float simplifyScale = meshopt_simplifyScale(&positions[0].x, positions.size(), sizeof(glm::vec3));
+        // meshoptimizer sizes its scratch memory by the vertex count it is given. Passing the whole mesh for every
+        // sub-mesh made multi-material imports quadratic (thousands of sub-meshes times millions of vertices), so each
+        // sub-mesh is compacted to the vertices it references first. The lookup table is allocated once and only the
+        // touched entries are reset between sub-meshes.
+        constexpr uint32_t UnmappedVertex = std::numeric_limits<uint32_t>::max();
+        Vector<uint32_t> globalToLocal(positions.size(), UnmappedVertex);
+        Vector<uint32_t> localToGlobal;
+        Vector<glm::vec3> localPositions;
+        auto compactSubMesh = [&](const SubMesh& subMesh, Vector<uint32_t>& localIndices) {
+            for (uint32_t globalVertex : localToGlobal)
+                globalToLocal[globalVertex] = UnmappedVertex;
+            localToGlobal.clear();
+            localPositions.clear();
+            localIndices.resize(subMesh.IndexCount);
+            for (uint32_t index = 0; index < subMesh.IndexCount; index++)
+            {
+                const uint32_t globalVertex = sourceIndices[subMesh.IndexOffset + index];
+                uint32_t& localVertex = globalToLocal[globalVertex];
+                if (localVertex == UnmappedVertex)
+                {
+                    localVertex = static_cast<uint32_t>(localToGlobal.size());
+                    localToGlobal.push_back(globalVertex);
+                    localPositions.push_back(positions[globalVertex]);
+                }
+                localIndices[index] = localVertex;
+            }
+        };
 
         uint32_t previousIndexCount = std::numeric_limits<uint32_t>::max();
         for (uint32_t lodIndex = 0; lodIndex < settings.LodCount; lodIndex++)
@@ -172,35 +198,38 @@ namespace Crowny
                 const SubMesh& subMesh = validated.Geometry;
                 const uint32_t materialSlot = validated.MaterialSlot;
 
-                Vector<uint32_t> indices(sourceIndices.begin() + subMesh.IndexOffset,
-                                         sourceIndices.begin() + subMesh.IndexOffset + subMesh.IndexCount);
+                Vector<uint32_t> indices;
+                compactSubMesh(subMesh, indices);
                 float resultError = 0.0f;
                 if (lodIndex > 0)
                 {
                     size_t targetCount = std::max<size_t>(3, (indices.size() >> lodIndex) / 3u * 3u);
                     Vector<uint32_t> simplified(indices.size());
                     const size_t simplifiedCount =
-                      meshopt_simplify(simplified.data(), indices.data(), indices.size(), &positions[0].x, positions.size(), sizeof(glm::vec3),
-                                       targetCount, settings.LodTargetError, meshopt_SimplifyLockBorder, &resultError);
+                      meshopt_simplify(simplified.data(), indices.data(), indices.size(), &localPositions[0].x, localPositions.size(),
+                                       sizeof(glm::vec3), targetCount, settings.LodTargetError, meshopt_SimplifyLockBorder, &resultError);
                     simplified.resize(simplifiedCount);
                     if (simplified.size() >= 3)
                         indices = std::move(simplified);
                 }
 
-                meshopt_optimizeVertexCache(indices.data(), indices.data(), indices.size(), positions.size());
-                meshopt_optimizeOverdraw(indices.data(), indices.data(), indices.size(), &positions[0].x, positions.size(), sizeof(glm::vec3), 1.05f);
+                meshopt_optimizeVertexCache(indices.data(), indices.data(), indices.size(), localPositions.size());
+                meshopt_optimizeOverdraw(indices.data(), indices.data(), indices.size(), &localPositions[0].x, localPositions.size(),
+                                         sizeof(glm::vec3), 1.05f);
 
                 MeshLodSubMesh lodSubMesh;
                 lodSubMesh.IndexOffset = static_cast<uint32_t>(result.LodIndices.size());
                 lodSubMesh.IndexCount = static_cast<uint32_t>(indices.size());
                 lodSubMesh.MaterialSlot = materialSlot;
-                result.LodIndices.insert(result.LodIndices.end(), indices.begin(), indices.end());
+                for (uint32_t localVertex : indices)
+                    result.LodIndices.push_back(localToGlobal[localVertex]);
                 result.LodSubMeshes.push_back(lodSubMesh);
                 lod.SubMeshCount++;
                 lodIndexCount += lodSubMesh.IndexCount;
-                lod.Error = std::max(lod.Error, resultError * simplifyScale);
+                const float subMeshError = resultError * meshopt_simplifyScale(&localPositions[0].x, localPositions.size(), sizeof(glm::vec3));
+                lod.Error = std::max(lod.Error, subMeshError);
                 if (settings.GenerateMeshlets)
-                    BuildMeshlets(result, lod, indices, materialSlot, lod.Error, positions, settings);
+                    BuildMeshlets(result, lod, indices, materialSlot, subMeshError, localPositions, localToGlobal, settings);
             }
 
             if (lod.SubMeshCount == 0 || (lodIndex > 0 && lodIndexCount >= previousIndexCount))

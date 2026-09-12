@@ -21,7 +21,8 @@ namespace Crowny
 {
     namespace
     {
-        constexpr std::array<const char*, 3> KNOWN_MATERIAL_SHADERS = { UNLIT_SHADER_PATH, TOON_SHADER_PATH, PBRIBL_SHADER_PATH };
+        constexpr std::array<const char*, 4> KNOWN_MATERIAL_SHADERS = { UNLIT_SHADER_PATH, TOON_SHADER_PATH, PBRIBL_SHADER_PATH,
+                                                                    "Resources/Shaders/Decal.asset" };
         constexpr StringView UUID_NAMESPACE = "crowny-builtin-shader:";
 
         AssetManager* s_RegisteredManager = nullptr;

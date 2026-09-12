@@ -10,11 +10,11 @@ namespace Crowny
 
     struct GenericGpuBufferDesc
     {
-        uint32_t        ElementCount = 0;
-        uint32_t        ElementSize  = 0;
-        GpuBufferType   Type         = GpuBufferType::Standard;
-        GpuBufferFormat Format       = BF_UNKNOWN;
-        BufferUsage     Usage        = BufferUsage::BU_STATIC_DRAW;
+        uint32_t ElementCount = 0;
+        uint32_t ElementSize = 0;
+        GpuBufferType Type = GpuBufferType::Standard;
+        GpuBufferFormat Format = BF_UNKNOWN;
+        BufferUsage Usage = BufferUsage::BU_STATIC_DRAW;
     };
 
     class GenericGpuBuffer : public GpuBuffer
@@ -28,5 +28,8 @@ namespace Crowny
         virtual uint32_t GetBufferSize() const = 0;
 
         static Ref<GenericGpuBuffer> Create(const GenericGpuBufferDesc& desc);
+
+    protected:
+        GenericGpuBuffer(uint32_t size, BufferUsage usage) : GpuBuffer(size, usage) {}
     };
 } // namespace Crowny

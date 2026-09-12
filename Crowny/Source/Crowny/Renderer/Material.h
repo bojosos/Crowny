@@ -20,6 +20,7 @@
 
 namespace Crowny
 {
+    enum class MaterialDomain : uint8_t { Surface, Decal };
     class Material;
     class MaterialPreset;
 
@@ -98,6 +99,11 @@ namespace Crowny
 
         static Ref<Material> Create(const AssetHandle<Shader>& shader);
         static Ref<Material> CreatePBR(const AssetHandle<Shader>& shader);
+        static Ref<Material> CreateDefault();
+        static Ref<Material> CreateDecal();
+        MaterialDomain GetDomain() const;
+        uint32_t GetDecalResponseMask() const { return m_DecalResponseMask; }
+        void SetDecalResponseMask(uint32_t mask) { m_DecalResponseMask = mask & 255u; ++m_ParamVersion; }
         static Ref<Material> CreateToon(const AssetHandle<Shader>& shader);
         static Ref<Material> CreateUnlit(const AssetHandle<Shader>& shader);
 
@@ -113,7 +119,14 @@ namespace Crowny
         void ApplyModelDefaults();
 
         AssetHandle<Shader> GetShader() const { return m_Shader; }
-        virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }
+        virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override
+        {
+            assets.push_back(m_Shader);
+            for (const auto& [name, texture] : m_TextureHandles)
+                if (texture.HasUUID())
+                    assets.push_back(texture);
+        }
+        void OnDependentAssigned(const Ref<Asset>& dependent, const UUID& uuid) override;
 
         void SetShader(const AssetHandle<Shader>& shader);
         void SetVariation(const ShaderVariation& variation);
@@ -178,40 +191,16 @@ namespace Crowny
             return T();
         }
 
-        Ref<Texture> GetTexture(uint32_t set, uint32_t slot) const { return m_Passes[0].Uniforms->GetTexture(set, slot); }
+        Ref<Texture> GetTexture(uint32_t set, uint32_t slot) const;
         UniformDesc::TextureMap GetTextures() const { return GetTextureDescriptors(); }
 
-        /** Returns the reflected texture layout. The reference is valid until the next ReloadParams(). */
-        const UniformDesc::TextureMap& GetTextureDescriptors() const
-        {
-            static const UniformDesc::TextureMap s_Empty;
-            if (m_Passes.empty() || m_Passes[0].Pipeline == nullptr)
-                return s_Empty;
-            const Ref<UniformDesc>& desc = m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc(FRAGMENT_SHADER);
-            return desc != nullptr ? desc->Textures : s_Empty;
-        }
-
+        /** Returns textures reflected across all passes, valid until ReloadParams(). */
+        const UniformDesc::TextureMap& GetTextureDescriptors() const { return m_TextureDescriptors; }
         const UnorderedMap<String, AnnotationSet>& GetAnnotations(ShaderType shaderType = FRAGMENT_SHADER) const
         {
-            static const UnorderedMap<String, AnnotationSet> s_Empty;
-            const Ref<UniformDesc>& desc = m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc(shaderType);
-            return desc ? desc->Annotations : s_Empty;
+            return m_Annotations[static_cast<size_t>(shaderType)];
         }
-
-        // Get the binding slot for a uniform buffer block by name (for sort ordering)
-        uint32_t GetBlockBindingSlot(const String& blockName) const
-        {
-            for (uint32_t i = 0; i < SHADER_COUNT; i++)
-            {
-                const Ref<UniformDesc>& desc = m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc((ShaderType)i);
-                if (!desc)
-                    continue;
-                auto it = desc->Uniforms.find(blockName);
-                if (it != desc->Uniforms.end())
-                    return it->second.Slot;
-            }
-            return 0;
-        }
+        uint32_t GetBlockBindingSlot(const String& blockName) const;
 
         void FlushUniformBuffers();
         void SetBool(const String& name, bool value);
@@ -271,6 +260,8 @@ namespace Crowny
     private:
         CW_SERIALIZABLE(Material);
 
+        UniformDesc::TextureMap m_TextureDescriptors;
+        Array<UnorderedMap<String, AnnotationSet>, SHADER_COUNT> m_Annotations;
         Vector<PassData> m_Passes;
         BindingMap m_Bindings;
         UnorderedMap<String, AssetHandle<Texture>> m_TextureHandles;
@@ -278,6 +269,7 @@ namespace Crowny
         ShaderVariation m_Variation;
         AlphaMode m_AlphaMode = AlphaMode::Opaque;
         bool m_HasAlphaModeOverride = false;
+        uint32_t m_DecalResponseMask = 255u;
         uint64_t m_ParamVersion = 0;
         uint64_t m_LayoutVersion = NextLayoutVersion();
     };

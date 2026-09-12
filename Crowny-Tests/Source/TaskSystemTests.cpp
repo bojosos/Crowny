@@ -117,6 +117,27 @@ TEST_CASE("TaskSystem preserves the legacy task and group interface", "[Threadin
     CHECK_FALSE(canceledCall.load(std::memory_order_acquire));
 }
 
+TEST_CASE("Workers release canceled tasks after unlocking their state", "[Threading][TaskSystem]")
+{
+    TaskSystem system(1);
+    TestGate gate;
+    auto blocker = system.Submit("Hold worker", [&]() { gate.EnterAndWait(); });
+    REQUIRE(gate.WaitForEntered(1));
+    std::atomic<bool> ran{ false };
+    auto token = std::make_shared<int>(0);
+    std::weak_ptr<int> lifetime = token;
+    auto canceled = system.Submit("Released canceled task", [&, token]() { ran.store(true); });
+    REQUIRE(canceled->Cancel());
+    canceled = nullptr;
+    token.reset();
+    CHECK_FALSE(lifetime.expired());
+    auto next = system.Submit("After canceled task", []() {});
+    gate.Open();
+    next->Wait();
+    CHECK(lifetime.expired());
+    CHECK_FALSE(ran.load());
+}
+
 TEST_CASE("Queued dependencies do not block the only worker", "[Threading][TaskSystem]")
 {
     TaskSystem system(1);

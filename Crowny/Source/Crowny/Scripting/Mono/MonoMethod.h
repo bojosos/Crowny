@@ -23,7 +23,7 @@ namespace Crowny
         MonoObject* GetAttribute(MonoClass* monoClass) const;
         Vector<MonoClass*> GetAttributes() const;
         void* GetThunk() const;
-        MonoObject* Invoke(MonoObject* instance, void** params);
+        MonoObject* Invoke(MonoObject* instance, void** params, MonoObject** exception = nullptr);
 
     private:
         void CacheSignature() const;

@@ -13,6 +13,7 @@
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics3D.h"
+#include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Scene/Scene.h"
@@ -65,8 +66,7 @@ namespace
     class ScopedAssetManifestRegistration
     {
     public:
-        ScopedAssetManifestRegistration(AssetManager& manager, const Ref<AssetManifest>& manifest)
-          : m_Manager(manager), m_Manifest(manifest)
+        ScopedAssetManifestRegistration(AssetManager& manager, const Ref<AssetManifest>& manifest) : m_Manager(manager), m_Manifest(manifest)
         {
             m_Manager.RegisterAssetManifest(m_Manifest);
         }
@@ -125,6 +125,22 @@ private:
     bool m_OwnsInstance;
     Ref<Scene> m_PreviousScene;
 };
+
+TEST_CASE_METHOD(SerializationTestFixture, "Failed scene Save As preserves its original path", "[Scene][Serialization][Save]")
+{
+    const Path root = fs::temp_directory_path() / ("crowny-scene-save-" + UuidGenerator::Generate().ToString());
+    fs::create_directories(root);
+    Ref<Scene> scene = CreateRef<Scene>("Save Test");
+    SceneSerializer serializer(scene);
+    const Path original = root / "Original.cwscene";
+    REQUIRE(serializer.Serialize(original));
+    const String before = FileSystem::ReadTextFile(original);
+    // A file used as the parent directory forces a deterministic write failure.
+    CHECK_FALSE(serializer.Serialize(original / "CannotSave.cwscene"));
+    CHECK(scene->GetFilepath() == original);
+    CHECK(FileSystem::ReadTextFile(original) == before);
+    fs::remove_all(root);
+}
 
 TEST_CASE("ManagedScript vector moves preserve runtime identity", "[Scene][Scripting][Lifetime]")
 {
@@ -215,8 +231,7 @@ TEST_CASE("Missing managed scripts round-trip with exact identity and state", "[
     }
 }
 
-TEST_CASE("Mono applies retained ScriptState and survives constructor reentry",
-          "[Serialization][Scripting][ScriptState][Mono][.ProcessIsolated]")
+TEST_CASE("Mono applies retained ScriptState and survives constructor reentry", "[Serialization][Scripting][ScriptState][Mono][.ProcessIsolated]")
 {
     SerializationTestFixture fixture;
     const Path engineAssemblyPath = Crowny::Test::ResolveManagedAssembly("CrownySharp.dll", "Crowny-Sharp/CrownySharp.dll");
@@ -296,8 +311,7 @@ TEST_CASE("Mono applies retained ScriptState and survives constructor reentry",
     uint32_t paddingIndex = 0;
     while (before.Scripts.size() < before.Scripts.capacity())
     {
-        before.Scripts.emplace_back(
-          ScriptTypeIdentity{ "Test.Padding", "Sandbox", "Padding" + std::to_string(paddingIndex++) });
+        before.Scripts.emplace_back(ScriptTypeIdentity{ "Test.Padding", "Sandbox", "Padding" + std::to_string(paddingIndex++) });
     }
     const size_t saturatedSize = before.Scripts.size();
     REQUIRE(saturatedSize == before.Scripts.capacity());
@@ -442,6 +456,11 @@ TEST_CASE("Complex Scene Serialization", "[Serialization]")
     auto& box3d = child2.AddComponent<BoxCollider3DComponent>();
     box3d.SetSize({ 2.0f, 3.0f, 4.0f }, child2);
     box3d.SetOffset({ 0.5f, 0.0f, -0.5f }, child2);
+    const UUID collisionMeshUuid = UuidGenerator::Generate();
+    auto& meshCollider3d = child2.AddComponent<MeshCollider3DComponent>();
+    meshCollider3d.SetMesh(static_asset_cast<Mesh>(AssetManager::TryGet()->GetAssetHandle(collisionMeshUuid)), child2);
+    meshCollider3d.SetConvex(true, child2);
+    meshCollider3d.SetOffset({ 0.0f, 1.0f, 0.0f }, child2);
     Ref<PhysicsMaterial3D> material3d = CreateRef<PhysicsMaterial3D>();
     material3d->SetDensity(2.0f);
     material3d->SetFriction(0.25f);
@@ -588,6 +607,11 @@ TEST_CASE("Complex Scene Serialization", "[Serialization]")
         CHECK(dBox3d.GetOffset() == glm::vec3(0.5f, 0.0f, -0.5f));
         CHECK_THAT(dBox3d.GetMaterialData().Restitution, Catch::Matchers::WithinAbs(0.6f, 0.0001f));
         CHECK(dBox3d.GetMaterialData().FrictionCombine == PhysicsCombineMode::Minimum);
+        REQUIRE(dChild2.HasComponent<MeshCollider3DComponent>());
+        const auto& dMesh3d = dChild2.GetComponent<MeshCollider3DComponent>();
+        CHECK(dMesh3d.GetMesh().GetUUID() == collisionMeshUuid);
+        CHECK(dMesh3d.IsConvex());
+        CHECK(dMesh3d.GetOffset() == glm::vec3(0.0f, 1.0f, 0.0f));
 
         REQUIRE(dChild1.HasComponent<AudioSourceComponent>());
         auto& dAsc = dChild1.GetComponent<AudioSourceComponent>();
@@ -717,8 +741,7 @@ TEST_CASE("Physics material asset references and collider overrides survive scen
         CHECK(loaded2D.GetMaterial().GetUUID() == material2DId);
         CHECK(loaded3D.GetMaterial().GetUUID() == material3DId);
         CHECK(loaded2D.GetMaterialOverride().Fields == PhysicsMaterialOverrideBits::Friction);
-        CHECK(loaded3D.GetMaterialOverride().Fields ==
-              (PhysicsMaterialOverrideBits::Restitution | PhysicsMaterialOverrideBits::RestitutionCombine));
+        CHECK(loaded3D.GetMaterialOverride().Fields == (PhysicsMaterialOverrideBits::Restitution | PhysicsMaterialOverrideBits::RestitutionCombine));
         CHECK(loaded2D.GetMaterialData().Density == 2.0f);
         CHECK(loaded2D.GetMaterialData().Friction == 0.75f);
         CHECK(loaded3D.GetMaterialData().Density == 3.0f);
@@ -790,12 +813,12 @@ TEST_CASE("Failed YAML scene loads discard partial entities", "[Serialization]")
     scene->CreateEntity("Existing");
 
     YAML::Emitter emitter;
-    emitter << YAML::BeginMap << YAML::Key << "Version" << YAML::Value << SceneSerializer::FORMAT_VERSION << YAML::Key << "Scene"
-            << YAML::Value << "Broken" << YAML::Key << "Entities" << YAML::Value << YAML::BeginSeq << YAML::BeginMap << YAML::Key
-            << "Entity" << YAML::Value << UuidGenerator::Generate() << YAML::Key << "TagComponent" << YAML::Value << YAML::BeginMap
-            << YAML::Key << "Tag" << YAML::Value << "Partial" << YAML::EndMap << YAML::Key << "BoxCollider2DComponent" << YAML::Value
-            << YAML::BeginMap << YAML::Key << "Offset" << YAML::Value << "invalid" << YAML::Key << "Size" << YAML::Value << glm::vec2(1.0f)
-            << YAML::Key << "IsTrigger" << YAML::Value << false << YAML::EndMap << YAML::EndMap << YAML::EndSeq << YAML::EndMap;
+    emitter << YAML::BeginMap << YAML::Key << "Version" << YAML::Value << SceneSerializer::FORMAT_VERSION << YAML::Key << "Scene" << YAML::Value
+            << "Broken" << YAML::Key << "Entities" << YAML::Value << YAML::BeginSeq << YAML::BeginMap << YAML::Key << "Entity" << YAML::Value
+            << UuidGenerator::Generate() << YAML::Key << "TagComponent" << YAML::Value << YAML::BeginMap << YAML::Key << "Tag" << YAML::Value
+            << "Partial" << YAML::EndMap << YAML::Key << "BoxCollider2DComponent" << YAML::Value << YAML::BeginMap << YAML::Key << "Offset"
+            << YAML::Value << "invalid" << YAML::Key << "Size" << YAML::Value << glm::vec2(1.0f) << YAML::Key << "IsTrigger" << YAML::Value << false
+            << YAML::EndMap << YAML::EndMap << YAML::EndSeq << YAML::EndMap;
 
     const Path path = fs::temp_directory_path() / "crowny-broken-scene.yaml";
     const Ref<DataStream> stream = FileSystem::CreateAndOpenFile(path);
@@ -910,10 +933,10 @@ TEST_CASE("Text layout binary serialization", "[Serialization][Text]")
     CHECK(loaded.OrderInLayer == -7);
 }
 
-TEST_CASE("Scene deserialization requires the current format", "[Serialization][Scene]")
+TEST_CASE("Scene deserialization rejects formats older than version twelve", "[Serialization][Scene]")
 {
     SerializationTestFixture fixture;
-    const uint32_t obsoleteVersion = SceneSerializer::FORMAT_VERSION - 1;
+    const uint32_t obsoleteVersion = 11;
 
     SECTION("YAML")
     {
@@ -1030,7 +1053,7 @@ TEST_CASE("Text layout ellipsizes hidden lines and fits font size", "[Text][Layo
 TEST_CASE("Scene component codecs have stable complete registrations", "[Serialization][Scene]")
 {
     const auto codecs = GetSceneComponentCodecs();
-    REQUIRE(codecs.size() == 21);
+    REQUIRE(codecs.size() == 23);
 
     for (size_t index = 0; index < codecs.size(); index++)
     {
@@ -1051,7 +1074,98 @@ TEST_CASE("Scene component codecs have stable complete registrations", "[Seriali
 
     CHECK(static_cast<uint32_t>(SceneComponentId::Tag) == 0);
     CHECK(static_cast<uint32_t>(SceneComponentId::Light) == 20);
-    CHECK(FindSceneComponentCodec(21) == nullptr);
+    CHECK(static_cast<uint32_t>(SceneComponentId::MeshCollider3D) == 21);
+    CHECK(static_cast<uint32_t>(SceneComponentId::Decal) == 22);
+    CHECK(FindSceneComponentCodec(23) == nullptr);
     CHECK(FindSceneComponentCodec(SceneComponentId::Transform)->PrefabPath != nullptr);
     CHECK(FindSceneComponentCodec(SceneComponentId::Transform)->EditorName != nullptr);
+}
+
+TEST_CASE("Scene environment references survive both scene formats and scene copies", "[Serialization][Scene][Environment]")
+{
+    SerializationTestFixture fixture;
+    const UUID environmentId("a2c4e6f8-1020-3040-5060-708090abcdef");
+    const Ref<Scene> scene = CreateRef<Scene>();
+    scene->SetName("Environment round trip");
+    scene->SetEnvironmentAsset(static_asset_cast<EnvironmentMap>(AssetManager::Get().GetAssetHandle(environmentId)));
+    const Ref<Scene> copy = CreateRef<Scene>(*scene);
+    CHECK(copy->GetEnvironmentAsset().GetUUID() == environmentId);
+    const Path path = fs::temp_directory_path() / ("crowny-environment-" + UuidGenerator::Generate().ToString());
+    const Ref<Scene> loaded = CreateRef<Scene>(false);
+    SECTION("YAML")
+    {
+        SceneSerializer(scene).Serialize(path);
+        REQUIRE(SceneSerializer(loaded).Deserialize(path));
+    }
+    SECTION("Binary")
+    {
+        SceneSerializer(scene).SerializeBinary(path);
+        REQUIRE(SceneSerializer(loaded).DeserializeBinary(path));
+    }
+    CHECK(loaded->GetEnvironmentAsset().GetUUID() == environmentId);
+    CHECK_FALSE(loaded->GetEnvironmentAsset().IsLoaded());
+    fs::remove(path);
+}
+
+TEST_CASE("Scenes resolve replaced environment assets without reopening", "[Serialization][Scene][Environment]")
+{
+    SerializationTestFixture fixture;
+    const Ref<Scene> scene = CreateRef<Scene>();
+    const Ref<EnvironmentMap> original = CreateRef<EnvironmentMap>();
+    const auto handle = static_asset_cast<EnvironmentMap>(AssetManager::Get().CreateAssetHandle(original));
+    scene->SetEnvironmentAsset(handle);
+    const Ref<Scene> copy = CreateRef<Scene>(*scene);
+    REQUIRE(scene->GetEnvironment() == original);
+    const Ref<EnvironmentMap> replacement = CreateRef<EnvironmentMap>();
+    AssetManager::Get().CreateAssetHandle(replacement, handle.GetUUID());
+    CHECK(scene->GetEnvironment() == replacement);
+    CHECK(copy->GetEnvironment() == replacement);
+    scene->SetEnvironment(original);
+    CHECK(scene->GetEnvironment() == original);
+    CHECK_FALSE(scene->GetEnvironmentAsset().HasUUID());
+}
+
+TEST_CASE("Version twelve scenes remain readable without an environment reference", "[Serialization][Scene][Environment]")
+{
+    SerializationTestFixture fixture;
+    const Ref<Scene> scene = CreateRef<Scene>();
+    scene->SetName("Legacy environment");
+    const Entity marker = scene->CreateEntity("Marker");
+    const UUID markerId = marker.GetUuid();
+    const Path path = fs::temp_directory_path() / ("crowny-environment-legacy-" + UuidGenerator::Generate().ToString());
+    const Ref<Scene> loaded = CreateRef<Scene>(false);
+    SECTION("YAML")
+    {
+        SceneSerializer(scene).Serialize(path);
+        YAML::Node data = YAML::Load(FileSystem::OpenFile(path)->GetAsString());
+        data["Version"] = 12;
+        data.remove("Environment");
+        YAML::Emitter output;
+        output << data;
+        const String text = output.c_str();
+        REQUIRE(FileSystem::WriteFileAtomic(path, reinterpret_cast<const byte*>(text.data()), text.size()));
+        REQUIRE(SceneSerializer(loaded).Deserialize(path));
+    }
+    SECTION("Binary")
+    {
+        SceneSerializer(scene).SerializeBinary(path);
+        const Ref<DataStream> stream = FileSystem::OpenFile(path);
+        BinaryDataStreamInputArchive archive(stream);
+        uint32_t version;
+        String name, layout;
+        archive(version, name, layout);
+        const size_t environmentOffset = static_cast<size_t>(stream->Tell());
+        stream->Seek(0);
+        Vector<byte> bytes(stream->Size());
+        stream->Read(bytes.data(), bytes.size());
+        stream->Close();
+        bytes.erase(bytes.begin() + environmentOffset, bytes.begin() + environmentOffset + 16);
+        version = 12;
+        std::memcpy(bytes.data(), &version, sizeof(version));
+        REQUIRE(FileSystem::WriteFileAtomic(path, bytes.data(), bytes.size()));
+        REQUIRE(SceneSerializer(loaded).DeserializeBinary(path));
+    }
+    CHECK(loaded->GetEntityFromUuid(markerId));
+    CHECK_FALSE(loaded->GetEnvironmentAsset().HasUUID());
+    fs::remove(path);
 }

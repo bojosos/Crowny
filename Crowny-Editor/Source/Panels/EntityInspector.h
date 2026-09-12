@@ -34,6 +34,9 @@ namespace Crowny
         return AddComponentToSelection<Component>(entities);
     }
 
+    // Pre-fills the collider with the entity's rendered mesh. Defined in ComponentInspector.cpp.
+    template <> SelectionComponentChange ComponentSelectionAddAction<MeshCollider3DComponent>(std::span<const Entity> entities);
+
     template <class Component> Ref<UndoAction> ComponentRemoveAction(Entity entity)
     {
         auto comp = entity.GetComponent<Component>();
@@ -114,8 +117,7 @@ namespace Crowny
                     ImGui::Columns(2);
                     return;
                 }
-                Traits::RenderWithUndo(
-                  undoFactory, [&widget](Entity entity, const Vector<Entity>&) { widget(entity); }, primary, entities);
+                Traits::RenderWithUndo(undoFactory, [&widget](Entity entity, const Vector<Entity>&) { widget(entity); }, primary, entities);
             };
             return RegisterComponent<Component>(ComponentInfo{
               name,
@@ -179,6 +181,7 @@ namespace Crowny
     template <> void ComponentSelectionEditorWidget<TransformComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<CameraComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<LightComponent>(Entity primary, const Vector<Entity>& entities);
+    template <> void ComponentSelectionEditorWidget<DecalComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<TextComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<SpriteRendererComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<MeshRendererComponent>(Entity primary, const Vector<Entity>& entities);
@@ -190,6 +193,7 @@ namespace Crowny
     template <> void ComponentSelectionEditorWidget<BoxCollider3DComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<SphereCollider3DComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<CapsuleCollider3DComponent>(Entity primary, const Vector<Entity>& entities);
+    template <> void ComponentSelectionEditorWidget<MeshCollider3DComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<AudioListenerComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<AudioSourceComponent>(Entity primary, const Vector<Entity>& entities);
 

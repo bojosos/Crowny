@@ -136,9 +136,7 @@ namespace Crowny
             for (uint32_t index = 0; index < m_ParamInfo->GetNumElements(ParamType::Buffer); ++index)
             {
                 const Ref<GenericGpuBuffer>& buffer = m_Buffers[index];
-                uint32_t set = 0, slot = 0;
-                m_ParamInfo->GetBinding(ParamType::Buffer, index, set, slot);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, OpenGLUtils::FlattenBinding(set, slot),
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index,
                                  buffer ? static_cast<const OpenGLGenericGpuBuffer*>(buffer.get())->GetRendererID() : 0);
             }
         }

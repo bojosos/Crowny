@@ -209,7 +209,20 @@ namespace Crowny
             record.Body = body;
             record.Desc = desc;
             if (!CreateNativeShape(handle, record))
+            {
+                DestroyShapeResource(record);
                 return {};
+            }
+            if (desc.Type == PhysicsShapeType3D::TriangleMesh)
+            {
+                // The cooked b3MeshData is kept on the record and reused when the shape is recreated (SetShapeTrigger),
+                // so the description copies are not needed again. Hull points stay (b3CreateHull needs them on recreate)
+                // and Heights stay because the height-field data may reference them.
+                record.Desc.Vertices.clear();
+                record.Desc.Vertices.shrink_to_fit();
+                record.Desc.Indices.clear();
+                record.Desc.Indices.shrink_to_fit();
+            }
             m_NativeShapes[b3StoreShapeId(record.Native)] = handle;
             m_Shapes.emplace(handle, std::move(record));
             ApplyMass(body);
@@ -377,7 +390,7 @@ namespace Crowny
             RemoveActiveContacts(shape);
             m_NativeShapes.erase(b3StoreShapeId(it->second.Native));
             b3DestroyShape(it->second.Native, false);
-            DestroyShapeResource(it->second);
+            // Mesh/height-field data is independent of the sensor flag; CreateNativeShape reuses it.
             it->second.Desc.IsTrigger = trigger;
             if (CreateNativeShape(shape, it->second))
                 m_NativeShapes[b3StoreShapeId(it->second.Native)] = shape;
@@ -653,41 +666,50 @@ namespace Crowny
                 break;
             }
             case PhysicsShapeType3D::TriangleMesh: {
-                if (body->Desc.Type != PhysicsBodyType3D::Static || desc.Vertices.size() < 3 || desc.Indices.size() < 3 ||
-                    desc.Indices.size() % 3 != 0)
+                if (body->Desc.Type != PhysicsBodyType3D::Static)
                     return false;
-                Vector<b3Vec3> vertices;
-                vertices.reserve(desc.Vertices.size());
-                for (const glm::vec3& point : desc.Vertices)
-                    vertices.push_back(ToBox(desc.LocalPosition + desc.LocalRotation * point));
-                Vector<int32_t> indices(desc.Indices.begin(), desc.Indices.end());
-                b3MeshDef meshDef{};
-                meshDef.vertices = vertices.data();
-                meshDef.indices = indices.data();
-                meshDef.vertexCount = static_cast<int>(vertices.size());
-                meshDef.triangleCount = static_cast<int>(indices.size() / 3);
-                meshDef.identifyEdges = true;
-                record.Mesh = b3CreateMesh(&meshDef, nullptr, 0);
-                if (!record.Mesh)
-                    return false;
+                if (record.Mesh == nullptr)
+                {
+                    if (desc.Vertices.size() < 3 || desc.Indices.size() < 3 || desc.Indices.size() % 3 != 0)
+                        return false;
+                    Vector<b3Vec3> vertices;
+                    vertices.reserve(desc.Vertices.size());
+                    for (const glm::vec3& point : desc.Vertices)
+                        vertices.push_back(ToBox(desc.LocalPosition + desc.LocalRotation * point));
+                    Vector<int32_t> indices(desc.Indices.begin(), desc.Indices.end());
+                    b3MeshDef meshDef{};
+                    meshDef.vertices = vertices.data();
+                    meshDef.indices = indices.data();
+                    meshDef.vertexCount = static_cast<int>(vertices.size());
+                    meshDef.triangleCount = static_cast<int>(indices.size() / 3);
+                    meshDef.identifyEdges = true;
+                    record.Mesh = b3CreateMesh(&meshDef, nullptr, 0);
+                    if (!record.Mesh)
+                        return false;
+                }
                 record.Native = b3CreateMeshShape(body->Native, &shapeDef, record.Mesh, { 1.0f, 1.0f, 1.0f });
                 break;
             }
             case PhysicsShapeType3D::HeightField: {
-                if (body->Desc.Type != PhysicsBodyType3D::Static || desc.HeightFieldRows < 2 || desc.HeightFieldColumns < 2 ||
-                    desc.Heights.size() != size_t(desc.HeightFieldRows) * desc.HeightFieldColumns)
+                if (body->Desc.Type != PhysicsBodyType3D::Static)
                     return false;
-                b3HeightFieldDef fieldDef{};
-                fieldDef.heights = const_cast<float*>(desc.Heights.data());
-                fieldDef.countX = static_cast<int>(desc.HeightFieldColumns);
-                fieldDef.countZ = static_cast<int>(desc.HeightFieldRows);
-                fieldDef.scale = ToBox(glm::max(desc.HeightFieldScale, glm::vec3(0.001f)));
-                const auto range = std::minmax_element(desc.Heights.begin(), desc.Heights.end());
-                fieldDef.globalMinimumHeight = *range.first;
-                fieldDef.globalMaximumHeight = *range.second;
-                record.HeightField = b3CreateHeightField(&fieldDef);
-                if (!record.HeightField)
-                    return false;
+                if (record.HeightField == nullptr)
+                {
+                    if (desc.HeightFieldRows < 2 || desc.HeightFieldColumns < 2 ||
+                        desc.Heights.size() != size_t(desc.HeightFieldRows) * desc.HeightFieldColumns)
+                        return false;
+                    b3HeightFieldDef fieldDef{};
+                    fieldDef.heights = const_cast<float*>(desc.Heights.data());
+                    fieldDef.countX = static_cast<int>(desc.HeightFieldColumns);
+                    fieldDef.countZ = static_cast<int>(desc.HeightFieldRows);
+                    fieldDef.scale = ToBox(glm::max(desc.HeightFieldScale, glm::vec3(0.001f)));
+                    const auto range = std::minmax_element(desc.Heights.begin(), desc.Heights.end());
+                    fieldDef.globalMinimumHeight = *range.first;
+                    fieldDef.globalMaximumHeight = *range.second;
+                    record.HeightField = b3CreateHeightField(&fieldDef);
+                    if (!record.HeightField)
+                        return false;
+                }
                 record.Native = b3CreateHeightFieldShape(body->Native, &shapeDef, record.HeightField);
                 break;
             }

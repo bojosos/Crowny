@@ -6,22 +6,25 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Hash.h"
-#include "Crowny/Import/Importer.h"
 #include "Crowny/Import/ImportOptions.h"
+#include "Crowny/Import/Importer.h"
+#include "Crowny/RenderAPI/RenderAPI.h"
+#include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Font.h"
+#include "Crowny/Renderer/Material.h"
 
 namespace Crowny
 {
     namespace
     {
         constexpr Array<const char*, 17> TEXTURE_SOURCES = {
-            "Resources/Icons/Play.png",         "Resources/Icons/Pause.png",       "Resources/Icons/Stop.png",
-            "Resources/Icons/File.png",         "Resources/Icons/Folder.png",      "Resources/Icons/ArrowPointerIcon.png",
-            "Resources/Icons/ArrowsIcon.png",   "Resources/Icons/RotateIcon.png",  "Resources/Icons/MaximizeIcon.png",
-            "Resources/Icons/GlobeIcon.png",    "Resources/Icons/SearchIcon.png",  "Resources/Icons/ConsoleInfo.png",
-            "Resources/Icons/ConsoleWarn.png",  "Resources/Icons/ConsoleError.png", "Resources/Icons/AlignLeft.png",
-            "Resources/Icons/AlignCenter.png",  "Resources/Icons/AlignRight.png"
+            "Resources/Icons/Play.png",        "Resources/Icons/Pause.png",        "Resources/Icons/Stop.png",
+            "Resources/Icons/File.png",        "Resources/Icons/Folder.png",       "Resources/Icons/ArrowPointerIcon.png",
+            "Resources/Icons/ArrowsIcon.png",  "Resources/Icons/RotateIcon.png",   "Resources/Icons/MaximizeIcon.png",
+            "Resources/Icons/GlobeIcon.png",   "Resources/Icons/SearchIcon.png",   "Resources/Icons/ConsoleInfo.png",
+            "Resources/Icons/ConsoleWarn.png", "Resources/Icons/ConsoleError.png", "Resources/Icons/AlignLeft.png",
+            "Resources/Icons/AlignCenter.png", "Resources/Icons/AlignRight.png"
         };
 
         Path GetEditorRoot()
@@ -106,6 +109,49 @@ namespace Crowny
             return;
         uint32_t cooked = 0;
         uint32_t failed = 0;
+
+        // The BRDF lookup is a generated texture whose source is its integration shader.
+        // Older unversioned copies could contain an unsubmitted render target readback.
+        const Path brdfSource = editorRoot / "Resources/Shaders/Brdf.glsl";
+        const Path brdfAsset = editorRoot / "Resources/Textures/Brdf.asset";
+        const uint64_t brdfHash = HashFile(brdfSource);
+        AssetFileHeader brdfHeader;
+        if (!ReadEmbeddedAssetHeader(brdfAsset, brdfHeader) || brdfHeader.Version != TEXTURE_FORMAT_VERSION ||
+            brdfHeader.Type != AssetType::Texture || brdfHeader.SourceContentHash != brdfHash)
+        {
+            const auto shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Brdf.asset");
+            if (shader)
+            {
+                TextureDesc desc;
+                desc.Width = desc.Height = 512;
+                desc.Format = TextureFormat::RG32F;
+                desc.sRGB = false;
+                desc.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+                const Ref<Texture> texture = Texture::Create(desc);
+                RenderTextureDesc targetDesc;
+                targetDesc.Width = targetDesc.Height = 512;
+                targetDesc.ColorSurfaces[0].Texture = texture;
+                const Ref<RenderTexture> target = RenderTexture::Create(targetDesc);
+                const Ref<Material> material = Material::Create(shader);
+                RenderAPI& api = RenderAPI::Get();
+                api.SetRenderTarget(target);
+                api.SetGraphicsPipeline(material->GetGraphicsPipeline());
+                api.SetVertexLayout(CreateRef<BufferLayout>());
+                api.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+                api.SetUniforms(material->GetUniformParams());
+                api.Draw(0, 3, 1);
+                api.SetRenderTarget(nullptr);
+                api.SubmitCommandBuffer(nullptr);
+                texture->SetSourceTimestamp(GetTimestamp(brdfSource));
+                texture->SetSourceContentHash(brdfHash);
+                if (AssetManager::Get().Save(texture, brdfAsset))
+                    cooked++;
+                else
+                    failed++;
+            }
+            else
+                failed++;
+        }
 
         for (const char* sourceName : TEXTURE_SOURCES)
         {

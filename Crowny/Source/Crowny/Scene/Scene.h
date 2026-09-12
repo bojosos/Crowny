@@ -98,8 +98,7 @@ namespace Crowny
         void DestroyEntity(Entity entity);
         // DestroySubtree normalizes inputs to top-level roots. PreserveChildren rejects nested inputs, deletes each
         // requested root, and promotes its direct children in place.
-        HierarchyMutationResult DestroyEntities(std::span<const Entity> entities,
-                                                HierarchyDestroyMode mode = HierarchyDestroyMode::DestroySubtree);
+        HierarchyMutationResult DestroyEntities(std::span<const Entity> entities, HierarchyDestroyMode mode = HierarchyDestroyMode::DestroySubtree);
         // Input order becomes sibling order at the destination. The insertion index is evaluated after removing movers.
         HierarchyMutationResult ReparentEntities(std::span<const Entity> entities, Entity newParent,
                                                  uint32_t insertionIndex = std::numeric_limits<uint32_t>::max());
@@ -116,8 +115,14 @@ namespace Crowny
         void SetName(const String& name) { m_Name = name; }
         const Path& GetFilepath() const { return m_Filepath; }
 
-        void SetEnvironment(const Ref<EnvironmentMap>& env) { m_Environment = env; }
-        const Ref<EnvironmentMap>& GetEnvironment() const { return m_Environment; }
+        void SetEnvironment(const Ref<EnvironmentMap>& env)
+        {
+            m_Environment = env;
+            m_EnvironmentAsset = {};
+        }
+        void SetEnvironmentAsset(const AssetHandle<EnvironmentMap>& environment);
+        const AssetHandle<EnvironmentMap>& GetEnvironmentAsset() const { return m_EnvironmentAsset; }
+        Ref<EnvironmentMap> GetEnvironment() const;
 
         bool IsEditorScene() const { return m_IsEditorScene; }
         void SetEditorScene(bool isEditor) { m_IsEditorScene = isEditor; }
@@ -197,6 +202,9 @@ namespace Crowny
         void OnCapsuleCollider3DComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnCapsuleCollider3DComponentUpdate(entt::registry& registry, entt::entity entity);
         void OnCapsuleCollider3DComponentDestroy(entt::registry& registry, entt::entity entity);
+        void OnMeshCollider3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnMeshCollider3DComponentUpdate(entt::registry& registry, entt::entity entity);
+        void OnMeshCollider3DComponentDestroy(entt::registry& registry, entt::entity entity);
 
         bool BeginPhysics3D();
         void EndPhysics3D();
@@ -238,6 +246,7 @@ namespace Crowny
         Entity* m_RootEntity = nullptr;
         UnorderedMap<UUID, entt::entity> m_EntityMap;
         Ref<EnvironmentMap> m_Environment;
+        AssetHandle<EnvironmentMap> m_EnvironmentAsset;
         UnorderedMap<entt::entity, PhysicsBody3DHandle> m_Physics3DBodies;
         UnorderedMap<PhysicsBody3DHandle, entt::entity> m_Physics3DEntities;
         UnorderedMap<entt::entity, glm::vec3> m_Physics3DScales;

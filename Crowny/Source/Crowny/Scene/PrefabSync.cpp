@@ -4,6 +4,7 @@
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Scene/Scene.h"
 
 namespace Crowny
 {
@@ -67,6 +68,57 @@ namespace Crowny
             inst.MeshHandle = pref.MeshHandle;
         if (!pc.IsPropertyOverridden("Mesh Filter.Materials"_hstr))
             inst.Materials = pref.Materials;
+        if (!pc.IsPropertyOverridden("Mesh Filter.ReceiveDecals"_hstr))
+            inst.ReceiveDecals = pref.ReceiveDecals;
+        if (!pc.IsPropertyOverridden("Mesh Filter.DecalLayers"_hstr))
+            inst.DecalLayers = pref.DecalLayers;
+    }
+
+    template <> void PrefabSync::SyncComponent<ProceduralMeshComponent>(Entity instance, Entity prefab, const PrefabComponent& pc)
+    {
+        auto& target = instance.GetComponent<ProceduralMeshComponent>();
+        const bool receiveDecals = target.ReceiveDecals;
+        const uint32_t decalLayers = target.DecalLayers;
+        target = prefab.GetComponent<ProceduralMeshComponent>();
+        if (pc.IsPropertyOverridden("Procedural Mesh.ReceiveDecals"_hstr))
+            target.ReceiveDecals = receiveDecals;
+        if (pc.IsPropertyOverridden("Procedural Mesh.DecalLayers"_hstr))
+            target.DecalLayers = decalLayers;
+    }
+
+    template <> void PrefabSync::SyncComponent<DecalComponent>(Entity instance, Entity prefab, const PrefabComponent& pc)
+    {
+        auto& target = instance.GetComponent<DecalComponent>();
+        auto source = prefab.GetComponent<DecalComponent>();
+        source.Visit([&](const char* name, const auto& value) {
+            if (pc.IsPropertyOverridden("Decal", name))
+                return;
+            target.Visit([&](const char* targetName, auto& destination) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(value)>, std::decay_t<decltype(destination)>>)
+                    if (StringView(name) == targetName)
+                        destination = value;
+            });
+        });
+        if (!pc.IsPropertyOverridden("Decal.Material"_hstr))
+            target.Material = source.Material;
+        if (!pc.IsPropertyOverridden("Decal.Target"_hstr) && !source.Target.Empty())
+        {
+            Entity root = instance;
+            while (root.GetParent() && root.GetParent().HasComponent<PrefabComponent>() &&
+                   root.GetParent().GetComponent<PrefabComponent>().PrefabAssetUuid == pc.PrefabAssetUuid)
+                root = root.GetParent();
+            std::function<void(Entity)> remap = [&](Entity entity) {
+                if (entity.HasComponent<PrefabComponent>())
+                {
+                    const auto& link = entity.GetComponent<PrefabComponent>();
+                    if (link.PrefabAssetUuid == pc.PrefabAssetUuid && link.PrefabEntityUuid == source.Target)
+                        target.Target = entity.GetUuid();
+                }
+                for (Entity child : entity.GetChildren())
+                    remap(child);
+            };
+            remap(root);
+        }
     }
 
     template <> void PrefabSync::SyncComponent<TextComponent>(Entity instance, Entity prefab, const PrefabComponent& pc)
@@ -254,6 +306,17 @@ namespace Crowny
             target.SetHeight(source.GetHeight(), instance);
     }
 
+    template <> void PrefabSync::SyncComponent<MeshCollider3DComponent>(Entity instance, Entity prefab, const PrefabComponent& pc)
+    {
+        auto& target = instance.GetComponent<MeshCollider3DComponent>();
+        const auto& source = prefab.GetComponent<MeshCollider3DComponent>();
+        SyncCollider3DBase(target, source, instance, pc, "Mesh Collider 3D");
+        if (!pc.IsPropertyOverridden("Mesh Collider 3D.Mesh"_hstr))
+            target.SetMesh(source.GetMesh(), instance);
+        if (!pc.IsPropertyOverridden("Mesh Collider 3D.Convex"_hstr))
+            target.SetConvex(source.IsConvex(), instance);
+    }
+
     template <typename... Component>
     static void SyncAllComponents(ComponentGroup<Component...>, Entity instance, Entity prefab, const PrefabComponent& pc)
     {
@@ -270,6 +333,8 @@ namespace Crowny
               if (prefabHas && !instanceHas)
               {
                   instance.AddComponent<T>(prefab.GetComponent<T>());
+                  if constexpr (std::is_same_v<T, DecalComponent>)
+                      PrefabSync::SyncComponent<T>(instance, prefab, pc);
               }
               else if (!prefabHas && instanceHas)
               {

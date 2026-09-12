@@ -200,6 +200,15 @@ namespace Crowny
         Ref<MeshMorph> GetMorph() const { return m_MeshMorph; }
         Ref<Skeleton> GetSkeleton() const { return m_Skeleton; }
 
+        // Cooked collision geometry (a PhysicsMesh dependent produced at import). Empty when none exists.
+        const UUID& GetCollisionMeshUuid() const { return m_CollisionMeshUuid; }
+        void SetCollisionMeshUuid(const UUID& uuid) { m_CollisionMeshUuid = uuid; }
+        void OnDependentAssigned(const Ref<Asset>& dependent, const UUID& uuid) override
+        {
+            if (dependent != nullptr && dependent->GetAssetType() == AssetType::PhysicsMesh)
+                m_CollisionMeshUuid = uuid;
+        }
+
         static Ref<Mesh> Create(const MeshDesc& desc);
 
     protected:
@@ -230,5 +239,6 @@ namespace Crowny
         uint64_t m_GpuVersion = 1;
         Ref<MeshMorph> m_MeshMorph;
         Ref<Skeleton> m_Skeleton;
+        UUID m_CollisionMeshUuid;
     };
 } // namespace Crowny

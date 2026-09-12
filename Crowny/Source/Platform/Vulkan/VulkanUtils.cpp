@@ -7,6 +7,20 @@
 
 namespace Crowny
 {
+    uint32_t VulkanUtils::GetBindlessTextureCapacity(const VkPhysicalDeviceLimits& limits,
+                                                     const VkPhysicalDeviceDescriptorIndexingProperties* updateAfterBind)
+    {
+        // CrownyDecals declares 256 textures. Reserve those plus environment/shadow textures and pass buffers.
+        constexpr uint32_t reservedPassResources = 256 + 32;
+        const uint32_t limit =
+          updateAfterBind != nullptr
+            ? std::min({ updateAfterBind->maxDescriptorSetUpdateAfterBindSampledImages,
+                         updateAfterBind->maxPerStageDescriptorUpdateAfterBindSampledImages, updateAfterBind->maxDescriptorSetUpdateAfterBindSamplers,
+                         updateAfterBind->maxPerStageDescriptorUpdateAfterBindSamplers, updateAfterBind->maxPerStageUpdateAfterBindResources })
+            : std::min({ limits.maxDescriptorSetSampledImages, limits.maxPerStageDescriptorSampledImages, limits.maxDescriptorSetSamplers,
+                         limits.maxPerStageDescriptorSamplers, limits.maxPerStageResources });
+        return limit > reservedPassResources ? limit - reservedPassResources : 1u;
+    }
 
     VkPipelineStageFlags VulkanUtils::GetPipelineStageFlags(VkAccessFlags accessFlags)
     {
@@ -104,6 +118,8 @@ namespace Crowny
             return VK_COMPARE_OP_LESS;
         case CompareFunction::LESS_EQUAL:
             return VK_COMPARE_OP_LESS_OR_EQUAL;
+        case CompareFunction::EQUAL:
+            return VK_COMPARE_OP_EQUAL;
         case CompareFunction::NOT_EQUAL:
             return VK_COMPARE_OP_NOT_EQUAL;
         case CompareFunction::GREATER:
@@ -355,9 +371,9 @@ namespace Crowny
         if ((shaderStageFlags & VK_SHADER_STAGE_COMPUTE_BIT) != 0)
             output |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
-        constexpr VkShaderStageFlags rayTracingStages =
-          VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-          VK_SHADER_STAGE_MISS_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_KHR | VK_SHADER_STAGE_CALLABLE_BIT_KHR;
+        constexpr VkShaderStageFlags rayTracingStages = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR |
+                                                        VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR |
+                                                        VK_SHADER_STAGE_INTERSECTION_BIT_KHR | VK_SHADER_STAGE_CALLABLE_BIT_KHR;
         if ((shaderStageFlags & rayTracingStages) != 0)
             output |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 

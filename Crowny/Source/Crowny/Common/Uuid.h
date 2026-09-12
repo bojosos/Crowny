@@ -40,6 +40,10 @@ namespace Crowny
 
         bool Empty() const { return m_Data[0] == 0 && m_Data[1] == 0 && m_Data[2] == 0 && m_Data[3] == 0; }
 
+        /// Raw 32-bit words in canonical text order (data1..data4). Use for byte-level marshalling
+        /// instead of round-tripping through ToString().
+        uint32_t Word(size_t index) const noexcept { return m_Data[index]; }
+
         template <typename OStream> friend OStream& operator<<(OStream& os, const UUID& ms) { return os << ms.ToString(); }
 
         static const UUID EMPTY;

@@ -1,5 +1,5 @@
 {
-  "abiVersion": 19,
+  "abiVersion": 20,
   "managedEntryPoint": "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi",
   "statusCodes": {
     "Ok": 0,
@@ -275,6 +275,15 @@
     "SpriteRendererGetOrderInLayer": { "parameters": [{ "name": "entity", "type": "uuid" }], "result": "i32" },
     "SpriteRendererSetOrderInLayer": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "value", "type": "i32" }] },
     "LightGetType": { "parameters": [{ "name": "entity", "type": "uuid" }], "result": "i32" },
+    "DecalGetFloat": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "field", "type": "u32" }], "result": "f32" },
+    "DecalSetFloat": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "field", "type": "u32" }, { "name": "value", "type": "f32" }] },
+    "DecalGetInt": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "field", "type": "u32" }], "result": "i32" },
+    "DecalSetInt": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "field", "type": "u32" }, { "name": "value", "type": "i32" }] },
+    "DecalGetVector": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "field", "type": "u32" }], "result": "color" },
+    "DecalSetVector": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "field", "type": "u32" }, { "name": "value", "type": "color" }] },
+    "DecalGetReference": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "field", "type": "u32" }], "result": "uuid" },
+    "DecalSetReference": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "field", "type": "u32" }, { "name": "value", "type": "uuid" }] },
+    "DecalLifetime": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "restart", "type": "bool" }] },
     "LightSetType": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "value", "type": "i32" }] },
     "LightGetColor": { "parameters": [{ "name": "entity", "type": "uuid" }], "result": "color" },
     "LightSetColor": { "parameters": [{ "name": "entity", "type": "uuid" }, { "name": "value", "type": "color" }] },
@@ -435,6 +444,10 @@
     "CapsuleCollider3D": {
       "receiver": { "name": "entity", "type": "uuid" },
       "properties": { "Radius": "f32", "Height": "f32" }
+    },
+    "MeshCollider3D": {
+      "receiver": { "name": "entity", "type": "uuid" },
+      "properties": { "Mesh": "uuid", "Convex": "bool" }
     },
     "Rigidbody3D": {
       "receiver": { "name": "entity", "type": "uuid" },

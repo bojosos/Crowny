@@ -39,6 +39,8 @@ namespace Crowny
         static bool IsScriptAwake(const ManagedScript& script);
         // Dispatches OnDestroy (awakened scripts only, unless dispatchDestroy is false) and releases the instance.
         static void DestroyScript(Entity entity, ManagedScript& script, bool dispatchDestroy = true);
+        // Snapshots script occurrences and re-resolves each one after callbacks mutate the entity.
+        static void Dispatch(Entity entity, const ScriptEvent& event);
         static void Dispatch(ManagedScript& script, const ScriptEvent& event);
         static ScriptState CaptureState(ManagedScript& script);
         static bool ApplyState(ManagedScript& script, const ScriptState& state);

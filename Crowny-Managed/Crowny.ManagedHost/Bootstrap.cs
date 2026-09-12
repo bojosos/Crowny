@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Reflection;
@@ -10,7 +11,8 @@ namespace Crowny.ManagedHost;
 public static unsafe class Bootstrap
 {
     private static readonly ManagedProgram Program = new();
-    private static readonly Queue<object> Diagnostics = new();
+    private readonly record struct Diagnostic(string Code, string Message, string Stack);
+    private static readonly Queue<Diagnostic> Diagnostics = new();
     private static readonly object DiagnosticLock = new();
     private static NativeHostApi _host;
     private static bool _initialized;
@@ -62,8 +64,7 @@ public static unsafe class Bootstrap
         }
         catch (Exception error)
         {
-            ManagedRuntimeContext.SetNativeHostApi(default);
-            ManagedRuntimeContext.SetScriptResolver(null);
+            ManagedRuntimeContext.ClearNativeHostApi();
             _host = default;
             return Record(error);
         }
@@ -82,8 +83,7 @@ public static unsafe class Bootstrap
             // Native shutdown cannot propagate a managed exception.
         }
         _initialized = false;
-        ManagedRuntimeContext.SetNativeHostApi(default);
-        ManagedRuntimeContext.SetScriptResolver(null);
+        ManagedRuntimeContext.ClearNativeHostApi();
         _host = default;
         lock (DiagnosticLock)
             Diagnostics.Clear();
@@ -216,7 +216,7 @@ public static unsafe class Bootstrap
         try
         {
             SceneManager.NotifySceneEvent((SceneLifecycleEventType)eventType,
-                                          ManagedRuntimeContext.FromGuid(Decode(scene)),
+                                          Decode(scene),
                                           (SceneExecutionState)executionState);
             return NativeStatus.Ok;
         }
@@ -285,14 +285,33 @@ public static unsafe class Bootstrap
             return NativeStatus.NotInitialized;
         try
         {
-            object[] diagnostics;
+            Diagnostic[] diagnostics;
             lock (DiagnosticLock)
             {
                 diagnostics = Diagnostics.ToArray();
                 Diagnostics.Clear();
             }
-            byte[] json = JsonSerializer.SerializeToUtf8Bytes(diagnostics);
-            Write(output, json);
+            if (diagnostics.Length == 0)
+            {
+                Write(output, "[]"u8);
+                return NativeStatus.Ok;
+            }
+            var buffer = new ArrayBufferWriter<byte>();
+            using (var writer = new Utf8JsonWriter(buffer))
+            {
+                writer.WriteStartArray();
+                foreach (Diagnostic diagnostic in diagnostics)
+                {
+                    writer.WriteStartObject();
+                    writer.WriteString("Severity", "Error");
+                    writer.WriteString("Code", diagnostic.Code);
+                    writer.WriteString("Message", diagnostic.Message);
+                    writer.WriteString("Stack", diagnostic.Stack);
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndArray();
+            }
+            Write(output, buffer.WrittenSpan);
             return NativeStatus.Ok;
         }
         catch (Exception error)
@@ -308,7 +327,7 @@ public static unsafe class Bootstrap
         try
         {
             lock (DiagnosticLock)
-                Diagnostics.Enqueue(new { Severity = "Error", Code = "managed.exception", Message = error.Message, Stack = error.ToString() });
+                Diagnostics.Enqueue(new Diagnostic("managed.exception", error.Message, error.ToString()));
         }
         catch
         {
@@ -322,7 +341,7 @@ public static unsafe class Bootstrap
         try
         {
             lock (DiagnosticLock)
-                Diagnostics.Enqueue(new { Severity = "Error", Code = code, Message = message, Stack = string.Empty });
+                Diagnostics.Enqueue(new Diagnostic(code, message, string.Empty));
         }
         catch
         {
@@ -340,16 +359,16 @@ public static unsafe class Bootstrap
     private static string Decode(NativeStringView value) =>
         value.Data is null || value.Length == 0 ? string.Empty : Encoding.UTF8.GetString(new ReadOnlySpan<byte>(value.Data, checked((int)value.Length)));
 
-    private static Guid Decode(NativeUuid value)
+    private static UUID Decode(NativeUuid value)
     {
         byte* bytes = value.Bytes;
-        return new Guid(new ReadOnlySpan<byte>(bytes, 16), bigEndian: true);
+        return UUID.FromBytes(bytes);
     }
 
     private static ReadOnlySpan<byte> AsSpan(NativeBlob value) =>
         value.Length == 0 ? ReadOnlySpan<byte>.Empty : new ReadOnlySpan<byte>(value.Data, (int)value.Length);
 
-    private static void Write(NativeBlobWriter* writer, byte[] data)
+    private static void Write(NativeBlobWriter* writer, ReadOnlySpan<byte> data)
     {
         if (writer is null || writer->Size < (uint)sizeof(NativeBlobWriter) || writer->Write == null)
             throw new ArgumentException("Invalid native blob writer.");

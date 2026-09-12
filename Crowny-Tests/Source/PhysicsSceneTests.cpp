@@ -1,7 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Scene/Scene.h"
 
 using namespace Crowny;
@@ -106,6 +108,13 @@ TEST_CASE("3D physics components reset runtime handles when copied", "[Physics][
     auto& sphere = source.AddComponent<SphereCollider3DComponent>();
     sphere.SetRadius(1.5f, source);
     sphere.RuntimeShape = { 25 };
+    AssetManager meshAssets;
+    const UUID meshUuid = UuidGenerator::Generate();
+    auto& meshCollider = source.AddComponent<MeshCollider3DComponent>();
+    meshCollider.SetMesh(static_asset_cast<Mesh>(meshAssets.GetAssetHandle(meshUuid)), source);
+    meshCollider.SetConvex(true, source);
+    meshCollider.RuntimeShape = { 26 };
+    meshCollider.RuntimeSkipLogged = true;
     const uint64_t bodyInstanceId = rigidbody.InstanceId;
     const uint64_t colliderInstanceId = collider.InstanceId;
 
@@ -115,10 +124,15 @@ TEST_CASE("3D physics components reset runtime handles when copied", "[Physics][
     const auto& copiedCollider = duplicate.GetComponent<CapsuleCollider3DComponent>();
     const auto& copiedBox = duplicate.GetComponent<BoxCollider3DComponent>();
     const auto& copiedSphere = duplicate.GetComponent<SphereCollider3DComponent>();
+    const auto& copiedMesh = duplicate.GetComponent<MeshCollider3DComponent>();
     CHECK_FALSE(static_cast<bool>(copiedBody.RuntimeBody));
     CHECK_FALSE(static_cast<bool>(copiedCollider.RuntimeShape));
     CHECK_FALSE(static_cast<bool>(copiedBox.RuntimeShape));
     CHECK_FALSE(static_cast<bool>(copiedSphere.RuntimeShape));
+    CHECK_FALSE(static_cast<bool>(copiedMesh.RuntimeShape));
+    CHECK_FALSE(copiedMesh.RuntimeSkipLogged);
+    CHECK(copiedMesh.GetMesh().GetUUID() == meshUuid);
+    CHECK(copiedMesh.IsConvex());
     CHECK(copiedBody.InstanceId != bodyInstanceId);
     CHECK(copiedCollider.InstanceId != colliderInstanceId);
     CHECK(copiedBody.GetBodyType() == PhysicsBodyType3D::Dynamic);
@@ -180,11 +194,15 @@ TEST_CASE("3D collider and rigidbody components can be added and removed without
     entity.AddComponent<BoxCollider3DComponent>();
     entity.AddComponent<SphereCollider3DComponent>();
     entity.AddComponent<CapsuleCollider3DComponent>();
+    entity.AddComponent<MeshCollider3DComponent>();
     CHECK(entity.HasComponent<Rigidbody3DComponent>());
     CHECK(entity.HasComponent<BoxCollider3DComponent>());
     CHECK(entity.HasComponent<SphereCollider3DComponent>());
     CHECK(entity.HasComponent<CapsuleCollider3DComponent>());
+    CHECK(entity.HasComponent<MeshCollider3DComponent>());
 
+    entity.RemoveComponent<MeshCollider3DComponent>();
+    CHECK_FALSE(entity.HasComponent<MeshCollider3DComponent>());
     entity.RemoveComponent<CapsuleCollider3DComponent>();
     entity.RemoveComponent<SphereCollider3DComponent>();
     entity.RemoveComponent<BoxCollider3DComponent>();

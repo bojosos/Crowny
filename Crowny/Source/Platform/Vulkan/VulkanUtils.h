@@ -84,6 +84,8 @@ namespace Crowny
     class VulkanUtils
     {
     public:
+        static uint32_t GetBindlessTextureCapacity(const VkPhysicalDeviceLimits& limits,
+                                                   const VkPhysicalDeviceDescriptorIndexingProperties* updateAfterBind = nullptr);
         static VkFilter GetFilter(TextureFilter magFilter);
         static VkSamplerMipmapMode GetMipFilter(TextureFilter mipFilter);
         static VkSamplerAddressMode GetAddressingMode(TextureWrap mode);

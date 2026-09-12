@@ -3,8 +3,6 @@
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
 
-#include "Crowny/Common/ConsoleBuffer.h"
-#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/UTF8.h"
 
 #include <mono/metadata/appdomain.h>
@@ -14,8 +12,32 @@
 #include <mono/metadata/object.h>
 #include <mono/metadata/reflection.h>
 
+#include <utility>
+
 namespace Crowny
 {
+    MonoGCHandle::MonoGCHandle(MonoObject* object, bool pinned) : m_Handle(object != nullptr ? MonoUtils::NewGCHandle(object, pinned) : 0) {}
+
+    MonoGCHandle::~MonoGCHandle()
+    {
+        if (m_Handle != 0)
+            MonoUtils::FreeGCHandle(m_Handle);
+    }
+
+    MonoGCHandle::MonoGCHandle(MonoGCHandle&& other) noexcept : m_Handle(std::exchange(other.m_Handle, 0)) {}
+
+    MonoGCHandle& MonoGCHandle::operator=(MonoGCHandle&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (m_Handle != 0)
+                MonoUtils::FreeGCHandle(m_Handle);
+            m_Handle = std::exchange(other.m_Handle, 0);
+        }
+        return *this;
+    }
+
+    MonoObject* MonoGCHandle::Get() const { return m_Handle != 0 ? MonoUtils::GetObjectFromGCHandle(m_Handle) : nullptr; }
 
     std::wstring MonoUtils::WFromMonoString(MonoString* str)
     {
@@ -34,57 +56,67 @@ namespace Crowny
 
     std::string MonoUtils::FromMonoString(MonoString* str)
     {
-        const std::wstring wideString = WFromMonoString(str);
+        if (str == nullptr)
+            return {};
+        const mono_unichar2* chars = mono_string_chars(str);
+        const int length = mono_string_length(str);
+        return UTF8::FromUTF16(U16String(chars, chars + length));
+    }
 
-        return UTF8::FromWide(wideString);
+    namespace
+    {
+        thread_local Vector<ManagedDiagnostic> s_PendingDiagnostics;
+    }
+
+    ManagedDiagnostic MonoUtils::DescribeException(MonoObject* exception)
+    {
+        ManagedDiagnostic diagnostic;
+        diagnostic.Code = "managed.mono.exception";
+        diagnostic.Backend = ManagedBackendId::Mono;
+        diagnostic.Message = "Managed exception";
+        if (exception == nullptr)
+            return diagnostic;
+
+        // Getters can allocate or throw. Keep the original exception rooted and
+        // capture getter failures without recursively trying to describe them.
+        const uint32_t handle = NewGCHandle(exception, true);
+        ::MonoClass* exceptionClass = mono_object_get_class(GetObjectFromGCHandle(handle));
+        diagnostic.Message = mono_class_get_name(exceptionClass);
+        const auto readProperty = [&](const char* name) -> String {
+            ::MonoProperty* property = nullptr;
+            for (::MonoClass* current = exceptionClass; current != nullptr && property == nullptr; current = mono_class_get_parent(current))
+                property = mono_class_get_property_from_name(current, name);
+            ::MonoMethod* getter = property != nullptr ? mono_property_get_get_method(property) : nullptr;
+            if (getter == nullptr)
+                return {};
+            MonoObject* getterException = nullptr;
+            MonoObject* value = mono_runtime_invoke(getter, GetObjectFromGCHandle(handle), nullptr, &getterException);
+            return getterException == nullptr ? FromMonoString(reinterpret_cast<MonoString*>(value)) : String{};
+        };
+        const String message = readProperty("Message");
+        if (!message.empty())
+            diagnostic.Message += ": " + message;
+        diagnostic.ManagedStack = readProperty("StackTrace");
+        FreeGCHandle(handle);
+        return diagnostic;
+    }
+
+    Vector<ManagedDiagnostic> MonoUtils::DrainDiagnostics()
+    {
+        Vector<ManagedDiagnostic> diagnostics;
+        diagnostics.swap(s_PendingDiagnostics);
+        return diagnostics;
     }
 
     void MonoUtils::CheckException(MonoException* exception) { CheckException(reinterpret_cast<MonoObject*>(exception)); }
 
     void MonoUtils::CheckException(MonoObject* exception)
     {
-        if (exception != nullptr)
-        {
-            ::MonoClass* exceptionClass = mono_object_get_class(exception);
-            const char* exceptionClassName = mono_class_get_name(exceptionClass);
-            ::MonoProperty* exceptionProp = mono_class_get_property_from_name(exceptionClass, "Message");
-            ::MonoMethod* exceptionMsgGetter = mono_property_get_get_method(exceptionProp);
-            MonoString* exceptionMsg = (MonoString*)mono_runtime_invoke(exceptionMsgGetter, exception, nullptr, nullptr);
-
-            ::MonoProperty* exceptionStackProp = mono_class_get_property_from_name(exceptionClass, "StackTrace");
-            ::MonoMethod* exceptionStackGetter = mono_property_get_get_method(exceptionStackProp);
-            MonoString* exceptionStackTrace = (MonoString*)mono_runtime_invoke(exceptionStackGetter, exception, nullptr, nullptr);
-
-            char* exceptionMsgRaw = mono_string_to_utf8(exceptionMsg);
-            const String exceptionString = exceptionMsgRaw;
-            mono_free(exceptionMsgRaw);
-
-            char* exceptionStackTraceRaw = mono_string_to_utf8(exceptionStackTrace);
-            const String nativeExceptionStackTrace = exceptionStackTraceRaw;
-            mono_free(exceptionStackTraceRaw);
-#ifndef CW_EDITOR // TODO: Fix this
-            Vector<String> lines = StringUtils::SplitString(nativeExceptionStackTrace, "\n");
-            lines.pop_back(); // Last line if the stack trace is the native-to-managed wrapper
-
-            ConsoleBuffer::CallstackBuffer callstack;
-            for (const String& line : lines)
-            {
-                const String trace = line.substr(5);
-                const Vector<String> split = StringUtils::SplitString(trace, " ");
-                const String method = split[0] + split[1];
-                const Vector<String> fileInfo = StringUtils::SplitString(split[4], ":");
-                // TODO: csc
-                const String pathString = fileInfo[0] + ":" + fileInfo[1];
-                const Path filepath = pathString;
-                const uint32_t lineNum = StringUtils::ParseInt(fileInfo[2]);
-
-                callstack.push_back({ method, filepath, lineNum });
-            }
-            ConsoleBuffer::Get().AddMessage(ConsoleBuffer::Message::Level::Error, exceptionString, callstack);
-#else
-            CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName, exceptionString, nativeExceptionStackTrace);
-#endif
-        }
+        if (exception == nullptr)
+            return;
+        ManagedDiagnostic diagnostic = DescribeException(exception);
+        CW_ENGINE_ERROR("{}\n{}", diagnostic.Message, diagnostic.ManagedStack);
+        s_PendingDiagnostics.push_back(std::move(diagnostic));
     }
 
     bool MonoUtils::IsEnum(MonoClass* monoClass) { return IsEnum(monoClass->GetInternalPtr()); }
@@ -114,10 +146,7 @@ namespace Crowny
 
     uint32_t MonoUtils::NewGCHandle(MonoObject* object, bool pinned) { return mono_gchandle_new(object, pinned); }
 
-    uint32_t MonoUtils::NewWeakGCHandle(MonoObject* object, bool trackResurrection)
-    {
-        return mono_gchandle_new_weakref(object, trackResurrection);
-    }
+    uint32_t MonoUtils::NewWeakGCHandle(MonoObject* object, bool trackResurrection) { return mono_gchandle_new_weakref(object, trackResurrection); }
 
     void MonoUtils::FreeGCHandle(uint32_t handle) { mono_gchandle_free(handle); }
 

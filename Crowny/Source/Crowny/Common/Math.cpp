@@ -50,9 +50,18 @@ namespace Crowny
     {
         glm::vec3 skew;
         glm::vec4 perspective;
-        const bool res = glm::decompose(transform, scale, rotation, translation, skew, perspective);
-        rotation = glm::conjugate(rotation);
-        return res;
+        if (!glm::decompose(transform, scale, rotation, translation, skew, perspective))
+            return false;
+
+        // This GLM revision uses inconsistent quaternion signs across its trace branches.
+        // Recover the orthonormal basis from its scale/shear results instead.
+        const glm::mat3 basis = glm::mat3(transform) / transform[3][3];
+        glm::mat3 rotationBasis;
+        rotationBasis[0] = basis[0] / scale.x;
+        rotationBasis[1] = basis[1] / scale.y - rotationBasis[0] * skew.z;
+        rotationBasis[2] = basis[2] / scale.z - rotationBasis[0] * skew.y - rotationBasis[1] * skew.x;
+        rotation = glm::normalize(glm::quat_cast(rotationBasis));
+        return true;
     }
 
     glm::mat4 Math::ComposeMatrix(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale)

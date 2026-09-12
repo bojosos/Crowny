@@ -23,10 +23,14 @@ CORECLR_BACKEND = (
 )
 
 RUNTIME_HELPERS = {
+    "ClearNativeHostApi",
     "AddComponent",
     "CreateAsset",
     "GetComponent",
+    "GetComponentEntity",
+    "GetTransform",
     "HasComponent",
+    "InvalidateComponentCaches",
     "Push",
     "RemoveComponent",
     "ResolveRegisteredScriptComponent",

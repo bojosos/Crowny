@@ -256,7 +256,10 @@ def output_read_lock(root, configuration, wait=True):
 
 def auto_jobs(requested_jobs=0):
     budget = max(1, os.cpu_count() or 1)
-    reserved = min(4, budget // 3)
+    # cl.exe processes are pinned to one codegen thread (see msbuild.build), so
+    # each worker is a well-behaved single thread; only a small reserve is kept
+    # for concurrent build readers.
+    reserved = min(2, budget // 6)
     automatic = max(1, budget - reserved)
     if requested_jobs == 0:
         wanted = automatic

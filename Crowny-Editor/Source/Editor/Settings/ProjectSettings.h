@@ -21,6 +21,10 @@ namespace Crowny
         UUID LastOpenSceneId;
         Vector<UUID> RecentSceneIds;
 
+        UUID GameStartupScene;
+        Path GameBuildOutput;
+        bool GameBuildDevelopment = false;
+
         // Kept only until legacy path-based settings can be resolved through the project asset index.
         Path LegacyLastOpenScenePath;
         Vector<Path> LegacyRecentScenePaths;

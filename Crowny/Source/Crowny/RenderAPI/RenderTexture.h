@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Constants.h"
 #include "Crowny/RenderAPI/RenderTarget.h"
 
 namespace Crowny

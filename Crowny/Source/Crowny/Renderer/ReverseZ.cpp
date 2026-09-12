@@ -4,6 +4,14 @@
 
 namespace Crowny
 {
+    glm::mat4 ReverseZ::ConvertClipDepth(const glm::mat4& projection, bool reverseDepth)
+    {
+        glm::mat4 result = projection;
+        for (uint32_t column = 0; column < 4; ++column)
+            result[column][2] = (projection[column][3] + (reverseDepth ? -1.0f : 1.0f) * projection[column][2]) * 0.5f;
+        return result;
+    }
+
     glm::mat4 ReverseZ::Perspective(float verticalFovRadians, float aspectRatio, float nearPlane, float farPlane)
     {
         verticalFovRadians = std::clamp(verticalFovRadians, glm::radians(1.0f), glm::radians(179.0f));

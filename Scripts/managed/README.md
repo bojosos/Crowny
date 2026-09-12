@@ -2,7 +2,7 @@
 
 `managed-interop.json` is the transport contract shared by every Crowny managed backend. The generator emits the native ABI, the managed-host ABI, the CrownySharp transport, AOT roots, and linker roots. Gameplay-facing C# never selects Mono or CoreCLR for an engine operation.
 
-The current ABI exposes 520 typed feature functions. Mono and CoreCLR consume the same table; the parity check prevents a backend-specific feature path from being added beside it.
+The current ABI exposes 533 typed feature functions. Mono and CoreCLR consume the same table. The parity check detects undeclared names and adapter-boundary violations; it does not prove equivalent runtime behavior or correct marshalling.
 
 To add a managed binding:
 
@@ -20,10 +20,12 @@ The parity check rejects undeclared calls, missing native implementations, backe
 
 The three runtime hooks are separate from feature bindings. Mono acquires the host table and resolves managed script instances through small runtime adapters. `ScriptObject` also retains its Mono finalization hook while native wrapper ownership remains in the Mono backend. New engine features must not add code to those adapters.
 
+String views in the host table are borrowed UTF-8 bytes with an explicit length, which may include embedded nulls. Input views are valid only during the call; native implementations must copy them before retaining them. Returned views may point into engine objects or temporary thread-local storage. Managed callers must decode or copy the bytes immediately, before another host call or any mutation of the owning object. Callers must not free borrowed views. The buffer-writer callbacks copy data during the callback and do not transfer ownership of the source pointer.
+
 ## Shared scripting policy
 
 `Crowny-Sharp/Source/Runtime` is the single implementation of managed member discovery, inspector visibility, lifecycle callback discovery, `RequireComponent`, script-catalog generation, and script-state serialization. Both runtime adapters call that code. A backend must not recreate those rules with Mono metadata or CoreCLR reflection.
 
 Managed state JSON contains the raw `Fields` payload consumed by both runtime adapters plus one native `Metadata` map. The metadata makes nested kinds and declared types self-describing without changing the payload applied by C#. Decimal values are invariant strings; vectors, colors, quaternions, and matrices are numeric arrays; entity, component, asset, and UUID references are UUID strings. Runtime state is normalized against exact current catalog identities and member names; old schema aliases are outside the runtime contract.
 
-Mono reflection is limited to `Backends/Mono/MonoBindingRegistry` and runtime wrapper dispatch. It is not used for managed-script discovery, scene state, undo, inspection, or reload snapshots. The retired `SerializableObject` graph and Mono-only inspector no longer exist. Previously compiled CrownySharp assemblies and pre-format-11 scenes are not supported; a future compatibility promise must be implemented as an explicit import adapter rather than folded back into the runtime-neutral model.
+Mono reflection is limited to `Backends/Mono/MonoBindingRegistry` and runtime wrapper dispatch. It is not used for managed-script discovery, scene state, undo, inspection, or reload snapshots. The retired `SerializableObject` graph and Mono-only inspector no longer exist. Previously compiled CrownySharp assemblies and scenes other than format 12 are not supported; a future compatibility promise must be implemented as an explicit import adapter rather than folded back into the runtime-neutral model.

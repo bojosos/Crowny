@@ -1585,7 +1585,9 @@ namespace Crowny
         plan.CompilerArguments = { "/noconfig", "/nostdlib+", "/target:library", "/deterministic+", "/utf8output", "/fullpaths" };
         plan.CompilerArguments.push_back("/langversion:" + request.LanguageVersion);
         plan.CompilerArguments.push_back(request.Configuration == BuildConfiguration::Shipping ? "/optimize+" : "/optimize-");
-        plan.CompilerArguments.push_back(request.Configuration == BuildConfiguration::Shipping ? "/debug:pdbonly" : "/debug:portable");
+        // Mono's compiler cannot write Windows PDBs. Portable symbols work for both configurations;
+        // the packaging profile decides whether they are distributed.
+        plan.CompilerArguments.push_back("/debug:portable");
         plan.CompilerArguments.push_back("/out:" + PathArgument(output));
         if (!symbols.empty())
         {
@@ -1675,8 +1677,7 @@ namespace Crowny
         Path stagingPdb = stagingAssembly;
         stagingPdb.replace_extension(".pdb");
         arguments.push_back("/pdb:" + PathArgument(stagingPdb));
-        const ProcessResult process =
-          RunProcess(executable, arguments, request.Timeout, request.MaxCapturedOutputBytes, request.Cancellation);
+        const ProcessResult process = RunProcess(executable, arguments, request.Timeout, request.MaxCapturedOutputBytes, request.Cancellation);
         result.StandardOutput = process.StandardOutput;
         result.StandardError = process.StandardError;
         result.ExitCode = process.ExitCode;
@@ -1783,8 +1784,8 @@ namespace Crowny
             return result;
         }
 
-        AddDiagnostic(result.Diagnostics, "MB600",
-                      "No usable .NET SDK was found. Run Scripts\\crowny.bat deps dotnet or set CROWNY_DOTNET_ROOT.", root);
+        AddDiagnostic(result.Diagnostics, "MB600", "No usable .NET SDK was found. Run Scripts\\crowny.bat deps dotnet or set CROWNY_DOTNET_ROOT.",
+                      root);
         return result;
     }
 
@@ -1800,9 +1801,8 @@ namespace Crowny
         if (request.OutputDirectory.empty())
             AddDiagnostic(result.Diagnostics, "MB603", "The SDK-style managed output directory is empty.");
         if (request.TargetFramework.empty() ||
-            std::any_of(request.TargetFramework.begin(), request.TargetFramework.end(), [](unsigned char character) {
-                return std::isalnum(character) == 0 && character != '.' && character != '-';
-            }))
+            std::any_of(request.TargetFramework.begin(), request.TargetFramework.end(),
+                        [](unsigned char character) { return std::isalnum(character) == 0 && character != '.' && character != '-'; }))
             AddDiagnostic(result.Diagnostics, "MB604", "The managed target framework is invalid.");
         if (request.Timeout <= std::chrono::milliseconds::zero() || request.Timeout > std::chrono::minutes(30))
             AddDiagnostic(result.Diagnostics, "MB605", "The SDK build timeout must be between 1 ms and 30 minutes.");
@@ -1835,8 +1835,7 @@ namespace Crowny
             "--property:UseAppHost=false",
             "--property:GenerateDependencyFile=true",
         };
-        const ProcessResult process =
-          RunProcess(sdk.Executable, arguments, request.Timeout, request.MaxCapturedOutputBytes, request.Cancellation);
+        const ProcessResult process = RunProcess(sdk.Executable, arguments, request.Timeout, request.MaxCapturedOutputBytes, request.Cancellation);
         result.StandardOutput = process.StandardOutput;
         result.StandardError = process.StandardError;
         result.ExitCode = process.ExitCode;

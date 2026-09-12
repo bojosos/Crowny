@@ -14,7 +14,10 @@ namespace Crowny
 {
     namespace
     {
-        constexpr std::array<const char*, 3> KNOWN_BUILT_IN_PRESETS = { "Toon/Classic", "Toon/Soft", "Toon/Hatched" };
+        constexpr std::array<const char*, 11> KNOWN_BUILT_IN_PRESETS = {
+            "Toon/Classic", "Toon/Soft", "Toon/Hatched", "Decal/Texture Sticker", "Decal/Paper Label", "Decal/Paint",
+            "Decal/Dirt", "Decal/Wet Patch", "Decal/Normal Detail", "Decal/Emissive Mark", "Decal/Color Correction"
+        };
 
         UnorderedMap<String, Ref<MaterialPreset>>& BuiltInCache()
         {

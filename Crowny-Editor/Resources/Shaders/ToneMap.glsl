@@ -1,6 +1,7 @@
 #lang glsl
 #pragma variation CW_TONEMAP_OBJECT_ID
-#pragma depth_read false
+// Vulkan requires depth testing enabled for gl_FragDepth to reach the viewport depth attachment.
+#pragma depth_read true
 #pragma depth_write true
 #pragma depth_compare always_pass
 #type vertex

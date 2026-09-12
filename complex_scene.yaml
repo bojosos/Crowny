@@ -1,14 +1,15 @@
 # Crowny Scene
-Version: 12
+Version: 14
 Scene: ComplexScene
 ImGuiLayout: ""
+Environment: 00000000-0000-0000-0000-000000000000
 Entities:
-  - Entity: 8595fa13-12db-46fd-a1b9-cd9d1e4bb040
+  - Entity: f6df626f-bb32-493d-927a-7a62902056f7
     TagComponent:
       Tag: GrandChild
     TransformComponent:
       Position: [0, 0, 5]
-      Rotation: [-0, -0, -0, 1]
+      Rotation: [0, 0, 0, 1]
       Scale: [1, 1, 1]
     TextComponent:
       Text: Aligned text
@@ -48,16 +49,16 @@ Entities:
     RelationshipComponent:
       Children:
         []
-  - Entity: 4441e2ba-6bb4-40b8-94f4-6fccd836c6a9
+  - Entity: ad6ef191-1e7d-414e-8a8f-139b693e405a
     TagComponent:
       Tag: Child2
     TransformComponent:
       Position: [0, 10, 0]
-      Rotation: [-0, -0, -0, 1]
+      Rotation: [0, 0, 0, 1]
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
-        - 8595fa13-12db-46fd-a1b9-cd9d1e4bb040
+        - f6df626f-bb32-493d-927a-7a62902056f7
     Rigidbody3DComponent:
       BodyType: 1
       Mass: 3.5
@@ -94,12 +95,30 @@ Entities:
       Mask: 4294967295
       Group: 0
       Size: [2, 3, 4]
-  - Entity: 57d330b6-93d4-4766-a2d3-e8b43a4486c0
+    MeshCollider3DComponent:
+      Offset: [0, 1, 0]
+      Rotation: [0, 0, 0, 1]
+      IsTrigger: false
+      MaterialOverride:
+        Version: 1
+        Fields: 63
+        Density: 1
+        Friction: 0.5
+        Restitution: 0
+        RestitutionThreshold: 0.5
+        FrictionCombine: 0
+        RestitutionCombine: 4
+      Layer: 0
+      Mask: 4294967295
+      Group: 0
+      Mesh: dc5ef6b2-1b97-4d42-b632-6111ee7f5ef2
+      Convex: true
+  - Entity: 54fdfcf6-859a-4db9-b302-afe36cb496fa
     TagComponent:
       Tag: Child1
     TransformComponent:
       Position: [5, 0, 0]
-      Rotation: [-0, -0, -0, 1]
+      Rotation: [0, 0, 0, 1]
       Scale: [1, 1, 1]
     SpriteRendererComponent:
       Color: [0.25, 0.5, 0.75, 1]
@@ -132,7 +151,7 @@ Entities:
     RelationshipComponent:
       Children:
         []
-  - Entity: 018f2e5b-91dc-4879-a271-5f45bcb2ea4d
+  - Entity: 8019b63a-7cf0-4b8c-ad26-54e402ad8763
     TagComponent:
       Tag: Parent
     TransformComponent:
@@ -141,8 +160,8 @@ Entities:
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
-        - 57d330b6-93d4-4766-a2d3-e8b43a4486c0
-        - 4441e2ba-6bb4-40b8-94f4-6fccd836c6a9
+        - 54fdfcf6-859a-4db9-b302-afe36cb496fa
+        - ad6ef191-1e7d-414e-8a8f-139b693e405a
     LightComponent:
       Type: 2
       Color: [0.400000006, 0.600000024, 0.800000012]
@@ -168,7 +187,8 @@ Entities:
 TimeSettings:
   TimeScale: 1
   MaxTimestep: 0.333333343
-  FixedTimestep: 0.0199999996  # Crowny Physics Settings
+  FixedTimestep: 0.0199999996
+  MaxFixedStepsPerFrame: 17  # Crowny Physics Settings
 PhysicsSettings:
   Backend: 0
   LayerNames:

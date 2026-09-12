@@ -84,6 +84,7 @@ namespace Crowny
         uint8_t* m_Data = nullptr;
         mutable uint8_t* m_Cursor = nullptr;
         uint8_t* m_End = nullptr;
+        size_t m_Capacity = 0;
         bool m_OwnsMemory = true;
     };
 

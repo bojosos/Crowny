@@ -119,7 +119,7 @@ namespace Crowny
         Mutex m_AllocationMutex;
 
         static constexpr VkDeviceSize STAGING_POOL_BLOCK_SIZE = 32ull * 1024ull * 1024ull;
-        VmaPool m_StagingPools[VK_MAX_MEMORY_TYPES]{};
+        Map<std::pair<uint32_t, VkDeviceSize>, VmaPool> m_StagingPools;
 
         VkPipelineCache m_PipelineCache = VK_NULL_HANDLE;
         Path m_PipelineCachePath;

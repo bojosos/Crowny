@@ -14,6 +14,8 @@ namespace Crowny
 
     ScriptCapsuleCollider3D::ScriptCapsuleCollider3D(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
+    ScriptMeshCollider3D::ScriptMeshCollider3D(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
+
     void ScriptCollider3D::InitRuntimeData() {}
 
     void ScriptBoxCollider3D::InitRuntimeData() {}
@@ -21,5 +23,7 @@ namespace Crowny
     void ScriptSphereCollider3D::InitRuntimeData() {}
 
     void ScriptCapsuleCollider3D::InitRuntimeData() {}
+
+    void ScriptMeshCollider3D::InitRuntimeData() {}
 
 } // namespace Crowny

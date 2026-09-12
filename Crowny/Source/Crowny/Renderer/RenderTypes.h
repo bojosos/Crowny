@@ -154,6 +154,7 @@ namespace Crowny
         bool EnableGtao = true;
         bool EnableBloom = true;
         bool EnableToonOutlines = true;
+        uint32_t DecalDebugView = 0; // 0 shaded, 1 UV, 2 coverage, 3 receiver filtering, 4 overlap
     };
 
     struct RenderView

@@ -4,6 +4,7 @@
 
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Assets/AssetManifest.h"
+#include "Crowny/Build/ContentGraph.h"
 #include "Crowny/Utils/UUIDDirectory.h"
 
 #include "Editor/AssetLibraryServices.h"
@@ -58,6 +59,7 @@ namespace Crowny
         AssetType GetAssetType(const UUID& uuid) const;
 
         Vector<UUID> GetAllAssets(AssetType type) const;
+        ContentDatabase GetBuildContentDatabase() const;
         String GetAssetName(const UUID& uuid) const;
 
     private:

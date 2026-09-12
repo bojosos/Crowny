@@ -1,6 +1,6 @@
+#include "Crowny/Common/Math.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include "Crowny/Common/Math.h"
 
 using namespace Crowny;
 
@@ -33,7 +33,7 @@ TEST_CASE("Math::Directions", "[Math]")
     {
         // Yaw 0, Pitch 0 -> -Z direction (in some coordinate systems)
         // Let's check what the implementation does.
-        glm::vec3 forward = Math::GetForwardDirection({0.0f, 0.0f, 0.0f});
+        glm::vec3 forward = Math::GetForwardDirection({ 0.0f, 0.0f, 0.0f });
         // Yaw 0 + 90 = 90 deg. cos(90)=0, sin(90)=1 -> x=0, z=1. Pitch 0 -> y=0.
         // Result: {-0, -0, -1}
         CHECK_THAT(forward.x, Catch::Matchers::WithinAbs(0.0f, 0.0001f));
@@ -51,24 +51,63 @@ TEST_CASE("Math::Matrix", "[Math]")
         glm::vec3 scale(1.0f, 1.0f, 1.0f);
 
         glm::mat4 matrix = Math::ComposeMatrix(pos, rot, scale);
-        
+
         glm::vec3 dPos, dScale;
         glm::quat dRot;
         bool success = Math::DecomposeMatrix(matrix, dPos, dRot, dScale);
-        
+
         REQUIRE(success);
         CHECK(dPos == pos);
         CHECK(dScale == scale);
-        
+
         float dot = glm::dot(dRot, rot);
         CHECK_THAT(std::abs(dot), Catch::Matchers::WithinAbs(1.0f, 0.0001f));
     }
 }
 
+TEST_CASE("Matrix decomposition preserves rotations across quaternion trace branches", "[Math]")
+{
+    const glm::vec3 position(1.0f, 2.0f, 3.0f);
+    for (const glm::vec3 axis :
+         { glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f)) })
+    {
+        for (float degrees : { -121.0f, -120.0f, -119.0f, 119.0f, 120.0f, 121.0f, 179.0f, 180.0f, 181.0f, 240.0f, 270.0f })
+        {
+            for (const glm::vec3 scale : { glm::vec3(2.0f, 3.0f, 4.0f), glm::vec3(-2.0f, 3.0f, 4.0f) })
+            {
+                CAPTURE(axis.x, axis.y, axis.z, degrees, scale.x);
+                const glm::quat rotation = glm::angleAxis(glm::radians(degrees), axis);
+                const glm::mat4 matrix = Math::ComposeMatrix(position, rotation, scale);
+                glm::vec3 decomposedPosition, decomposedScale;
+                glm::quat decomposedRotation;
+                REQUIRE(Math::DecomposeMatrix(matrix, decomposedPosition, decomposedRotation, decomposedScale));
+                const glm::mat4 recomposed = Math::ComposeMatrix(decomposedPosition, decomposedRotation, decomposedScale);
+                for (int column = 0; column < 4; ++column)
+                    for (int row = 0; row < 4; ++row)
+                        CHECK_THAT(recomposed[column][row], Catch::Matchers::WithinAbs(matrix[column][row], 0.0001f));
+            }
+        }
+    }
+}
+
+TEST_CASE("Matrix decomposition removes shear before extracting rotation", "[Math]")
+{
+    const glm::quat rotation = glm::angleAxis(glm::radians(130.0f), glm::normalize(glm::vec3(1.0f, 2.0f, 3.0f)));
+    glm::mat4 shear(1.0f);
+    shear[1][0] = 0.3f;
+    shear[2][0] = -0.2f;
+    shear[2][1] = 0.4f;
+    const glm::mat4 matrix = Math::ComposeMatrix(glm::vec3(0.0f), rotation, glm::vec3(1.0f)) * shear;
+    glm::vec3 position, scale;
+    glm::quat decomposedRotation;
+    REQUIRE(Math::DecomposeMatrix(matrix, position, decomposedRotation, scale));
+    CHECK_THAT(std::abs(glm::dot(decomposedRotation, rotation)), Catch::Matchers::WithinAbs(1.0f, 0.0001f));
+}
+
 TEST_CASE("Transform::SpaceConversion", "[Math]")
 {
-    Transform parent({10.0f, 0.0f, 0.0f}, glm::quat(1, 0, 0, 0), {1.0f, 1.0f, 1.0f});
-    Transform child({5.0f, 0.0f, 0.0f}, glm::quat(1, 0, 0, 0), {1.0f, 1.0f, 1.0f});
+    Transform parent({ 10.0f, 0.0f, 0.0f }, glm::quat(1, 0, 0, 0), { 1.0f, 1.0f, 1.0f });
+    Transform child({ 5.0f, 0.0f, 0.0f }, glm::quat(1, 0, 0, 0), { 1.0f, 1.0f, 1.0f });
 
     SECTION("MakeWorld")
     {
@@ -78,7 +117,7 @@ TEST_CASE("Transform::SpaceConversion", "[Math]")
 
     SECTION("MakeLocal")
     {
-        Transform worldChild({15.0f, 0.0f, 0.0f}, glm::quat(1, 0, 0, 0), {1.0f, 1.0f, 1.0f});
+        Transform worldChild({ 15.0f, 0.0f, 0.0f }, glm::quat(1, 0, 0, 0), { 1.0f, 1.0f, 1.0f });
         worldChild.MakeLocal(parent);
         CHECK(worldChild.GetPosition() == glm::vec3(5.0f, 0.0f, 0.0f));
     }
@@ -95,10 +134,10 @@ TEST_CASE("Math::DivideAndRoundUp", "[Math]")
 
     SECTION("Non-exact division rounds up")
     {
-        CHECK(Math::DivideAndRoundUp(10, 3) == 4);  // ceil(10/3) = 4
-        CHECK(Math::DivideAndRoundUp(7, 2) == 4);   // ceil(7/2) = 4
-        CHECK(Math::DivideAndRoundUp(1, 2) == 1);   // ceil(1/2) = 1
-        CHECK(Math::DivideAndRoundUp(5, 3) == 2);   // ceil(5/3) = 2
+        CHECK(Math::DivideAndRoundUp(10, 3) == 4); // ceil(10/3) = 4
+        CHECK(Math::DivideAndRoundUp(7, 2) == 4);  // ceil(7/2) = 4
+        CHECK(Math::DivideAndRoundUp(1, 2) == 1);  // ceil(1/2) = 1
+        CHECK(Math::DivideAndRoundUp(5, 3) == 2);  // ceil(5/3) = 2
     }
 
     SECTION("Zero dividend")

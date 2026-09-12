@@ -103,7 +103,7 @@ void main()
 
 	if ((v_Flags & 1) != 0)
 	{
-		o_Color = Input.Color;
+		o_Color = vec4(Input.Color.rgb * Input.Color.a, Input.Color.a);
 		if (o_Color.a <= 0.0)
 			discard;
 		return;
@@ -117,6 +117,7 @@ void main()
     float outlineOpacity = clamp(softenedDistance + max(Input.OutlineThickness, 0.0) + 0.5, 0.0, 1.0);
     o_Color = mix(Input.OutlineColor, Input.Color, fillOpacity);
     o_Color.a *= outlineOpacity;
+    o_Color.rgb *= o_Color.a;
 	if (o_Color.a <= 0.0)
 		discard;
 }

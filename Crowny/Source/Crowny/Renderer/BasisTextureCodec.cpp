@@ -5,6 +5,8 @@
 #include "basis_universal/encoder/basisu_comp.h"
 #include "basis_universal/transcoder/basisu_transcoder.h"
 
+#include <condition_variable>
+
 namespace Crowny
 {
     namespace
@@ -17,6 +19,63 @@ namespace Crowny
             if (error != nullptr)
                 error->assign(message.data(), message.size());
         }
+
+        // Concurrent imports share a fixed CPU budget. Each lease owns one Basis
+        // queue exclusively because wait_for_all() belongs to one compressor.
+        class EncoderLease
+        {
+            struct Slot
+            {
+                std::unique_ptr<basisu::job_pool> Jobs;
+                bool Busy = false;
+            };
+            struct Pools
+            {
+                const uint32_t Threads = std::max(1u, std::thread::hardware_concurrency());
+                const uint32_t Count = std::min(4u, Threads);
+                std::mutex Mutex;
+                std::condition_variable Ready;
+                std::array<Slot, 4> Slots;
+            };
+            static Pools& GetPools()
+            {
+                static Pools pools;
+                return pools;
+            }
+            Slot* m_Slot = nullptr;
+
+        public:
+            EncoderLease()
+            {
+                auto& pools = GetPools();
+                std::unique_lock lock(pools.Mutex);
+                pools.Ready.wait(lock, [&] {
+                    for (uint32_t index = 0; index < pools.Count; ++index)
+                        if (!pools.Slots[index].Busy)
+                        {
+                            m_Slot = &pools.Slots[index];
+                            return true;
+                        }
+                    return false;
+                });
+                if (!m_Slot->Jobs)
+                    m_Slot->Jobs = std::make_unique<basisu::job_pool>(std::max(1u, pools.Threads / pools.Count));
+                m_Slot->Busy = true;
+            }
+            ~EncoderLease()
+            {
+                m_Slot->Jobs->wait_for_all();
+                auto& pools = GetPools();
+                {
+                    std::lock_guard lock(pools.Mutex);
+                    m_Slot->Busy = false;
+                }
+                pools.Ready.notify_one();
+            }
+            EncoderLease(const EncoderLease&) = delete;
+            EncoderLease& operator=(const EncoderLease&) = delete;
+            basisu::job_pool* Get() const { return m_Slot->Jobs.get(); }
+        };
 
         bool InitializeEncoder()
         {
@@ -43,8 +102,7 @@ namespace Crowny
 
             const uint64_t slices = static_cast<uint64_t>(layers) * faces;
             const uint64_t subresources = slices * levels;
-            if (slices > MAX_TEXTURE_SLICES || subresources > MAX_TEXTURE_SUBRESOURCES ||
-                subresources > std::numeric_limits<size_t>::max())
+            if (slices > MAX_TEXTURE_SLICES || subresources > MAX_TEXTURE_SUBRESOURCES || subresources > std::numeric_limits<size_t>::max())
             {
                 SetError(error, "Basis texture subresource range is too large");
                 return false;
@@ -73,8 +131,7 @@ namespace Crowny
             return ValidateSubresourceRange(layers, faces, levels, error);
         }
 
-        bool InspectTranscoder(basist::ktx2_transcoder& transcoder, const void* data, size_t size, BasisTextureInfo& info,
-                               String* error)
+        bool InspectTranscoder(basist::ktx2_transcoder& transcoder, const void* data, size_t size, BasisTextureInfo& info, String* error)
         {
             if (!ValidateContainerHeader(data, size, error))
                 return false;
@@ -130,15 +187,18 @@ namespace Crowny
             return ValidateSubresourceRange(info.Layers, info.Faces, info.Levels, error);
         }
 
-        bool GetTranscoderFormat(TextureFormat format, basist::transcoder_texture_format& output, int& channel0,
-                                 int& channel1)
+        bool GetTranscoderFormat(TextureFormat format, basist::transcoder_texture_format& output, int& channel0, int& channel1)
         {
             channel0 = -1;
             channel1 = -1;
             switch (format)
             {
-            case TextureFormat::BC1: output = basist::transcoder_texture_format::cTFBC1_RGB; return true;
-            case TextureFormat::BC3: output = basist::transcoder_texture_format::cTFBC3_RGBA; return true;
+            case TextureFormat::BC1:
+                output = basist::transcoder_texture_format::cTFBC1_RGB;
+                return true;
+            case TextureFormat::BC3:
+                output = basist::transcoder_texture_format::cTFBC3_RGBA;
+                return true;
             case TextureFormat::BC4:
                 output = basist::transcoder_texture_format::cTFBC4_R;
                 channel0 = 0;
@@ -148,9 +208,15 @@ namespace Crowny
                 channel0 = 0;
                 channel1 = 1;
                 return true;
-            case TextureFormat::BC7: output = basist::transcoder_texture_format::cTFBC7_RGBA; return true;
-            case TextureFormat::ETC2_RGB: output = basist::transcoder_texture_format::cTFETC1_RGB; return true;
-            case TextureFormat::ETC2_RGBA: output = basist::transcoder_texture_format::cTFETC2_RGBA; return true;
+            case TextureFormat::BC7:
+                output = basist::transcoder_texture_format::cTFBC7_RGBA;
+                return true;
+            case TextureFormat::ETC2_RGB:
+                output = basist::transcoder_texture_format::cTFETC1_RGB;
+                return true;
+            case TextureFormat::ETC2_RGBA:
+                output = basist::transcoder_texture_format::cTFETC2_RGBA;
+                return true;
             case TextureFormat::ETC2_R11:
                 output = basist::transcoder_texture_format::cTFETC2_EAC_R11;
                 channel0 = 0;
@@ -160,17 +226,21 @@ namespace Crowny
                 channel0 = 0;
                 channel1 = 1;
                 return true;
-            case TextureFormat::ASTC4x4: output = basist::transcoder_texture_format::cTFASTC_4x4_RGBA; return true;
+            case TextureFormat::ASTC4x4:
+                output = basist::transcoder_texture_format::cTFASTC_4x4_RGBA;
+                return true;
             case TextureFormat::R8:
             case TextureFormat::RG8:
             case TextureFormat::RGB8:
-            case TextureFormat::RGBA8: output = basist::transcoder_texture_format::cTFRGBA32; return true;
-            default: return false;
+            case TextureFormat::RGBA8:
+                output = basist::transcoder_texture_format::cTFRGBA32;
+                return true;
+            default:
+                return false;
             }
         }
 
-        Ref<PixelData> RepackUncompressed(const Vector<uint8_t>& rgba, uint32_t width, uint32_t height,
-            TextureFormat targetFormat)
+        Ref<PixelData> RepackUncompressed(const Vector<uint8_t>& rgba, uint32_t width, uint32_t height, TextureFormat targetFormat)
         {
             Ref<PixelData> output = PixelData::Create(width, height, 1, targetFormat);
             const uint32_t components = PixelUtils::GetComponentCount(targetFormat);
@@ -182,8 +252,8 @@ namespace Crowny
             return output;
         }
 
-        bool EncodeMipChain(const Vector<const PixelData*>& mipChain, TextureDiskFormat diskFormat, bool sRGB,
-                            bool generateMips, Vector<uint8_t>& output, BasisTextureInfo* info, String* error)
+        bool EncodeMipChain(const Vector<const PixelData*>& mipChain, TextureDiskFormat diskFormat, bool sRGB, bool generateMips,
+                            Vector<uint8_t>& output, BasisTextureInfo* info, String* error)
         {
             output.clear();
             if (diskFormat != TextureDiskFormat::ETC1S && diskFormat != TextureDiskFormat::UASTC)
@@ -193,8 +263,8 @@ namespace Crowny
             }
             if (mipChain.empty() || !InitializeEncoder())
             {
-                SetError(error, mipChain.empty() ? "Basis encoding requires at least one mip level"
-                                                 : "Basis Universal encoder initialization failed");
+                SetError(error,
+                         mipChain.empty() ? "Basis encoding requires at least one mip level" : "Basis Universal encoder initialization failed");
                 return false;
             }
 
@@ -204,9 +274,8 @@ namespace Crowny
             uint32_t expectedHeight = mipChain.front()->GetHeight();
             for (const PixelData* source : mipChain)
             {
-                if (source == nullptr || !source->IsValid() || source->GetDepth() != 1 ||
-                    PixelUtils::IsCompressedFormat(source->GetFormat()) || PixelUtils::IsFloatFormat(source->GetFormat()) ||
-                    source->GetWidth() != expectedWidth || source->GetHeight() != expectedHeight)
+                if (source == nullptr || !source->IsValid() || source->GetDepth() != 1 || PixelUtils::IsCompressedFormat(source->GetFormat()) ||
+                    PixelUtils::IsFloatFormat(source->GetFormat()) || source->GetWidth() != expectedWidth || source->GetHeight() != expectedHeight)
                 {
                     SetError(error, "Basis encoding received an invalid LDR mip chain");
                     return false;
@@ -230,9 +299,8 @@ namespace Crowny
             if (generateMips && images.size() == 1)
                 flags |= basisu::cFlagGenMipsClamp;
 
-            const basist::basis_tex_format mode = diskFormat == TextureDiskFormat::ETC1S
-                                                    ? basist::basis_tex_format::cETC1S
-                                                    : basist::basis_tex_format::cUASTC4x4;
+            const basist::basis_tex_format mode =
+              diskFormat == TextureDiskFormat::ETC1S ? basist::basis_tex_format::cETC1S : basist::basis_tex_format::cUASTC4x4;
             if (diskFormat == TextureDiskFormat::ETC1S)
                 flags |= 192u;
             else
@@ -260,8 +328,8 @@ namespace Crowny
             return true;
         }
 
-        bool EncodeTextureSource(const BasisTextureSource& source, TextureDiskFormat diskFormat, bool sRGB,
-                                 Vector<uint8_t>& output, BasisTextureInfo* info, String* error)
+        bool EncodeTextureSource(const BasisTextureSource& source, TextureDiskFormat diskFormat, bool sRGB, Vector<uint8_t>& output,
+                                 BasisTextureInfo* info, String* error)
         {
             output.clear();
             if (diskFormat != TextureDiskFormat::ETC1S && diskFormat != TextureDiskFormat::UASTC)
@@ -271,6 +339,11 @@ namespace Crowny
             }
             if (!ValidateSubresourceRange(source.Layers, source.Faces, source.Levels, error))
                 return false;
+            if (diskFormat == TextureDiskFormat::UASTC && source.UASTCEffort > 4)
+            {
+                SetError(error, "UASTC effort must be between 0 and 4");
+                return false;
+            }
 
             const uint32_t sliceCount = source.Layers * source.Faces;
             const size_t subresourceCount = static_cast<size_t>(sliceCount) * source.Levels;
@@ -280,9 +353,8 @@ namespace Crowny
                 return false;
             }
             const Ref<PixelData>& base = source.Subresources.front();
-            if (!base || !base->IsValid() || base->GetDepth() != 1 ||
-                PixelUtils::IsCompressedFormat(base->GetFormat()) || PixelUtils::IsFloatFormat(base->GetFormat()) ||
-                (source.Faces == 6 && base->GetWidth() != base->GetHeight()) ||
+            if (!base || !base->IsValid() || base->GetDepth() != 1 || PixelUtils::IsCompressedFormat(base->GetFormat()) ||
+                PixelUtils::IsFloatFormat(base->GetFormat()) || (source.Faces == 6 && base->GetWidth() != base->GetHeight()) ||
                 source.Levels > PixelUtils::GetMaxMipCount(base->GetWidth(), base->GetHeight()))
             {
                 SetError(error, "Basis encoding source has invalid base dimensions or too many mip levels");
@@ -295,9 +367,8 @@ namespace Crowny
             }
 
             basisu::basis_compressor_params params;
-            const basist::basis_tex_format mode = diskFormat == TextureDiskFormat::ETC1S
-                                                    ? basist::basis_tex_format::cETC1S
-                                                    : basist::basis_tex_format::cUASTC4x4;
+            const basist::basis_tex_format mode =
+              diskFormat == TextureDiskFormat::ETC1S ? basist::basis_tex_format::cETC1S : basist::basis_tex_format::cUASTC4x4;
             params.set_format_mode(mode);
             params.m_source_images.resize(sliceCount);
             if (source.Levels > 1)
@@ -317,9 +388,9 @@ namespace Crowny
                     {
                         const size_t sourceIndex = (static_cast<size_t>(mip) * source.Layers + layer) * source.Faces + face;
                         const Ref<PixelData>& pixels = source.Subresources[sourceIndex];
-                        if (!pixels || !pixels->IsValid() || pixels->GetDepth() != 1 ||
-                            PixelUtils::IsCompressedFormat(pixels->GetFormat()) || PixelUtils::IsFloatFormat(pixels->GetFormat()) ||
-                            pixels->GetWidth() != expectedWidth || pixels->GetHeight() != expectedHeight)
+                        if (!pixels || !pixels->IsValid() || pixels->GetDepth() != 1 || PixelUtils::IsCompressedFormat(pixels->GetFormat()) ||
+                            PixelUtils::IsFloatFormat(pixels->GetFormat()) || pixels->GetWidth() != expectedWidth ||
+                            pixels->GetHeight() != expectedHeight)
                         {
                             SetError(error, "Basis encoding received an invalid layer, face, or mip subresource");
                             return false;
@@ -343,9 +414,8 @@ namespace Crowny
                 }
             }
 
-            const uint32_t threadCount = std::max(std::thread::hardware_concurrency(), 1u);
-            basisu::job_pool jobPool(threadCount);
-            params.m_pJob_pool = &jobPool;
+            EncoderLease encoder;
+            params.m_pJob_pool = encoder.Get();
             params.m_multithreading = true;
             params.m_status_output = false;
             params.m_print_stats = false;
@@ -356,14 +426,13 @@ namespace Crowny
             params.m_check_for_alpha = true;
             params.m_create_ktx2_file = true;
             params.m_ktx2_srgb_transfer_func = sRGB;
-            params.m_tex_type = source.Faces == 6
-                                  ? basist::cBASISTexTypeCubemapArray
-                                  : (source.Layers > 1 ? basist::cBASISTexType2DArray : basist::cBASISTexType2D);
+            params.m_tex_type =
+              source.Faces == 6 ? basist::cBASISTexTypeCubemapArray : (source.Layers > 1 ? basist::cBASISTexType2DArray : basist::cBASISTexType2D);
             if (diskFormat == TextureDiskFormat::ETC1S)
                 params.m_etc1s_quality_level = 192;
             else
             {
-                params.m_pack_uastc_ldr_4x4_flags = basisu::cPackUASTCLevelDefault;
+                params.m_pack_uastc_ldr_4x4_flags = source.UASTCEffort;
                 params.m_ktx2_uastc_supercompression = basist::KTX2_SS_ZSTANDARD;
             }
 
@@ -391,14 +460,14 @@ namespace Crowny
         }
     } // namespace
 
-    bool BasisTextureCodec::Encode(const PixelData& source, TextureDiskFormat diskFormat, bool sRGB, bool generateMips,
-                                   Vector<uint8_t>& output, BasisTextureInfo* info, String* error)
+    bool BasisTextureCodec::Encode(const PixelData& source, TextureDiskFormat diskFormat, bool sRGB, bool generateMips, Vector<uint8_t>& output,
+                                   BasisTextureInfo* info, String* error)
     {
         return EncodeMipChain({ &source }, diskFormat, sRGB, generateMips, output, info, error);
     }
 
-    bool BasisTextureCodec::Encode(const Vector<Ref<PixelData>>& mipChain, TextureDiskFormat diskFormat, bool sRGB,
-                                   Vector<uint8_t>& output, BasisTextureInfo* info, String* error)
+    bool BasisTextureCodec::Encode(const Vector<Ref<PixelData>>& mipChain, TextureDiskFormat diskFormat, bool sRGB, Vector<uint8_t>& output,
+                                   BasisTextureInfo* info, String* error)
     {
         BasisTextureSource source;
         source.Levels = static_cast<uint32_t>(mipChain.size());
@@ -406,8 +475,8 @@ namespace Crowny
         return EncodeTextureSource(source, diskFormat, sRGB, output, info, error);
     }
 
-    bool BasisTextureCodec::Encode(const BasisTextureSource& source, TextureDiskFormat diskFormat, bool sRGB,
-                                   Vector<uint8_t>& output, BasisTextureInfo* info, String* error)
+    bool BasisTextureCodec::Encode(const BasisTextureSource& source, TextureDiskFormat diskFormat, bool sRGB, Vector<uint8_t>& output,
+                                   BasisTextureInfo* info, String* error)
     {
         return EncodeTextureSource(source, diskFormat, sRGB, output, info, error);
     }
@@ -419,8 +488,7 @@ namespace Crowny
         return InspectTranscoder(transcoder, data, size, info, error);
     }
 
-    TextureFormat BasisTextureCodec::SelectTarget(const BasisTextureInfo& info, TextureFormat sourceFormat,
-                                                  const RenderCapabilities& capabilities)
+    TextureFormat BasisTextureCodec::SelectTarget(const BasisTextureInfo& info, TextureFormat sourceFormat, const RenderCapabilities& capabilities)
     {
         const bool bc = capabilities.HasCapability(CW_TEXTURE_COMPRESSION_BC);
         const bool bptc = capabilities.HasCapability(CW_TEXTURE_COMPRESSION_BPTC);
@@ -458,8 +526,8 @@ namespace Crowny
         return TextureFormat::RGBA8;
     }
 
-    bool BasisTextureCodec::Transcode(const void* data, size_t size, TextureFormat sourceFormat, TextureFormat targetFormat,
-                                      uint32_t maximumLevels, BasisTextureTranscodeResult& output, String* error)
+    bool BasisTextureCodec::Transcode(const void* data, size_t size, TextureFormat sourceFormat, TextureFormat targetFormat, uint32_t maximumLevels,
+                                      BasisTextureTranscodeResult& output, String* error)
     {
         output = {};
         basist::ktx2_transcoder transcoder;
@@ -497,9 +565,9 @@ namespace Crowny
                 for (uint32_t face = 0; face < output.Info.Faces; face++)
                 {
                     basist::ktx2_image_level_info levelInfo;
-                    if (!transcoder.get_image_level_info(levelInfo, mip, layer, face) ||
-                        levelInfo.m_level_index != mip || levelInfo.m_layer_index != layer || levelInfo.m_face_index != face ||
-                        levelInfo.m_orig_width != width || levelInfo.m_orig_height != height)
+                    if (!transcoder.get_image_level_info(levelInfo, mip, layer, face) || levelInfo.m_level_index != mip ||
+                        levelInfo.m_layer_index != layer || levelInfo.m_face_index != face || levelInfo.m_orig_width != width ||
+                        levelInfo.m_orig_height != height)
                     {
                         SetError(error, "Basis texture contains an invalid layer, face, or mip range");
                         output = {};
@@ -514,12 +582,11 @@ namespace Crowny
                         output = {};
                         return false;
                     }
-                    const size_t outputUnits64 = compressed
-                                                   ? pixels->GetSize() / PixelUtils::GetBlockSize(targetFormat)
-                                                   : static_cast<size_t>(width) * height;
+                    const size_t outputUnits64 =
+                      compressed ? pixels->GetSize() / PixelUtils::GetBlockSize(targetFormat) : static_cast<size_t>(width) * height;
                     if (outputUnits64 == 0 || outputUnits64 > std::numeric_limits<uint32_t>::max() ||
-                        !transcoder.transcode_image_level(mip, layer, face, pixels->GetData(), static_cast<uint32_t>(outputUnits64),
-                                                          transcodeFormat, 0, 0, 0, channel0, channel1))
+                        !transcoder.transcode_image_level(mip, layer, face, pixels->GetData(), static_cast<uint32_t>(outputUnits64), transcodeFormat,
+                                                          0, 0, 0, channel0, channel1))
                     {
                         SetError(error, "Basis Universal failed to transcode a texture subresource");
                         output = {};

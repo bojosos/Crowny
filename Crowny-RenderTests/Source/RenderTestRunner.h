@@ -11,6 +11,15 @@ namespace Crowny::RenderTests
         Path References = "Crowny-RenderTests/References";
         Path Artifacts = "artifacts/render-tests";
         String Filter;
+        Path BenchmarkProject;
+        Path BenchmarkScene;
+        Path BenchmarkImport;
+        Path BenchmarkTexture;
+        bool BenchmarkTextureNormal = false;
+        bool BenchmarkNoCache = false;
+        bool BenchmarkLegacyTextures = false;
+        bool BenchmarkSerialWrites = false;
+        bool ValidateImporters = false;
         bool UpdateReferences = false;
         bool ShowHelp = false;
     };

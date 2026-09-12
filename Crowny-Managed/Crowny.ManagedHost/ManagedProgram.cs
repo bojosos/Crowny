@@ -12,6 +12,7 @@ internal sealed class ManagedProgram
     private readonly Dictionary<Type, ScriptMember[]> _members = new();
     private readonly Dictionary<Type, Dictionary<NativeEventKind, MethodInfo?>> _callbacks = new();
     private readonly Dictionary<ulong, ScriptRecord> _instances = new();
+    private readonly Dictionary<UUID, List<ScriptRecord>> _instancesByEntity = new();
     private GameLoadContext? _loadContext;
     private WeakReference? _unloadReference;
     private ulong _nextHandle = 1;
@@ -21,9 +22,12 @@ internal sealed class ManagedProgram
 
     internal Component? ResolveScriptComponent(UUID entity, Type requestedType)
     {
-        foreach (ScriptRecord record in _instances.Values)
+        if (!_instancesByEntity.TryGetValue(entity, out List<ScriptRecord>? instances))
+            return null;
+        // Match the first live script in attachment order, including derived types requested through a base type.
+        foreach (ScriptRecord record in instances)
         {
-            if (record.Entity == entity && requestedType.IsAssignableFrom(record.Type))
+            if (requestedType.IsAssignableFrom(record.Type))
                 return (Component)record.Instance;
         }
         return null;
@@ -74,10 +78,12 @@ internal sealed class ManagedProgram
 
     internal bool Unload()
     {
+        _instancesByEntity.Clear();
         _instances.Clear();
         _types.Clear();
         _members.Clear();
         _callbacks.Clear();
+        SceneManager.ClearEventHandlers();
         _generation = 0;
         _nextHandle = 1;
         _unloadReference = BeginUnload();
@@ -109,14 +115,13 @@ internal sealed class ManagedProgram
         return ManagedScriptCatalog.Capture(_types.Values);
     }
 
-    internal ulong Create(string assemblyName, string typeNamespace, string typeName, Guid entity, ReadOnlySpan<byte> state)
+    internal ulong Create(string assemblyName, string typeNamespace, string typeName, UUID entity, ReadOnlySpan<byte> state)
     {
         string identity = assemblyName + ":" + (string.IsNullOrEmpty(typeNamespace) ? typeName : typeNamespace + "." + typeName);
         if (!_types.TryGetValue(identity, out Type? type))
             throw new TypeLoadException(identity);
         object instance = Activator.CreateInstance(type, nonPublic: true) ?? throw new InvalidOperationException($"Cannot create {identity}.");
-        UUID managedEntity = ManagedRuntimeContext.FromGuid(entity);
-        ((Component)instance).m_ManagedEntityId = managedEntity;
+        ((Component)instance).m_ManagedEntityId = entity;
         string? preparationError = ManagedScriptLifecycle.TryPrepare(instance);
         if (preparationError is not null)
             throw new InvalidOperationException(preparationError);
@@ -124,18 +129,47 @@ internal sealed class ManagedProgram
             ManagedStateCodec.Apply(instance, Members(type), System.Text.Encoding.UTF8.GetString(state));
         if (_nextHandle == 0)
             throw new InvalidOperationException("Managed script handles are exhausted.");
+        var record = new ScriptRecord(instance, type, entity, BindCallbacks(type, instance));
         ulong handle = _nextHandle++;
-        _instances.Add(handle, new ScriptRecord(instance, type, managedEntity, BindCallbacks(type, instance)));
+        // Constructors and preparation can reenter Create. Publish only after every construction step succeeds;
+        // nested instances that finish first retain their place in the entity's attachment order.
+        if (!_instancesByEntity.TryGetValue(entity, out List<ScriptRecord>? instances))
+        {
+            instances = new List<ScriptRecord>();
+            _instancesByEntity.Add(entity, instances);
+        }
+        try
+        {
+            _instances.Add(handle, record);
+            instances.Add(record);
+        }
+        catch
+        {
+            _instances.Remove(handle);
+            if (instances.Count == 0)
+                _instancesByEntity.Remove(entity);
+            throw;
+        }
         return handle;
     }
 
     internal void Destroy(ulong handle)
     {
-        if (!_instances.Remove(handle))
+        if (!_instances.Remove(handle, out ScriptRecord? record))
             throw new KeyNotFoundException($"Unknown script handle {handle}.");
+        List<ScriptRecord> instances = _instancesByEntity[record.Entity];
+        for (int index = 0; index < instances.Count; ++index)
+        {
+            if (!ReferenceEquals(instances[index], record))
+                continue;
+            instances.RemoveAt(index);
+            break;
+        }
+        if (instances.Count == 0)
+            _instancesByEntity.Remove(record.Entity);
     }
 
-    internal void Dispatch(ulong handle, NativeEventKind kind, float deltaTime, Guid otherEntityId,
+    internal void Dispatch(ulong handle, NativeEventKind kind, float deltaTime, UUID otherEntityId,
                            ReadOnlySpan<NativeContactPoint> contacts)
     {
         ScriptRecord record = Get(handle);
@@ -211,8 +245,6 @@ internal sealed class ManagedProgram
     }
 
     private static string Identity(Type type) => type.Assembly.GetName().Name + ":" + type.FullName;
-
-    private static Entity CreateEntity(Guid value) => CreateEntity(ManagedRuntimeContext.FromGuid(value));
 
     private static Entity CreateEntity(UUID value) => new() { m_ManagedUuid = value };
 

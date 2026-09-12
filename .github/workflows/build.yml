@@ -20,6 +20,8 @@ jobs:
       - name: Check generated interop and runtime asset API boundaries
         run: |
           python Scripts/managed/generate_managed_interop.py --check
+          python Scripts/managed/check_managed_binding_parity.py
+          python -m unittest discover -s Tools/crowny/tests
           python Scripts/check_asset_api.py --self-test
 
       - name: Install dependencies
@@ -70,11 +72,22 @@ jobs:
         run: |
           test_binary=./bin/Release-linux-x86_64/Crowny-Tests/Crowny-Tests
           echo "Running focused Mono tests with a 90-second deadline"
-          stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 90s "$test_binary" "[Mono]" --reporter console --durations yes
-          echo "Running the process-isolated managed reload test with a 90-second deadline"
-          stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 90s "$test_binary" \
-            "[.ProcessIsolated]" \
-            --reporter console --durations yes
+          # Explicit [Mono] selection includes hidden lifecycle tests. They need
+          # their own processes below so live instances cannot leak between tests.
+          stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 90s "$test_binary" "[Mono]~[.ProcessIsolated]" --reporter console --durations yes
+          echo "Running one engine instance per isolated test with a 90-second deadline"
+          "$test_binary" --list-tests "[.ProcessIsolated]" --verbosity quiet > isolated-tests.txt
+          while IFS= read -r isolated_test; do
+            [ -z "$isolated_test" ] && continue
+            set +e
+            stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 90s "$test_binary" \
+              "$isolated_test" --reporter console --durations yes > isolated-output.txt 2>&1
+            status=$?
+            set -e
+            cat isolated-output.txt
+            python Scripts/check_catch2_exit.py "$status" --allow-all-skipped
+          done < isolated-tests.txt
+          rm -f isolated-tests.txt isolated-output.txt
           echo "Running the full native suite with a 10-minute deadline"
           stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 10m "$test_binary" --reporter console --durations yes
 
@@ -88,6 +101,11 @@ jobs:
       - name: Check generated interop and runtime asset API boundaries
         run: |
           python Scripts/managed/generate_managed_interop.py --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python Scripts/managed/check_managed_binding_parity.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest discover -s Tools/crowny/tests
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python Scripts/check_asset_api.py --self-test
 
       - name: Setup MSBuild
@@ -130,7 +148,18 @@ jobs:
 
       - name: Build
         run: |
-          msbuild Crowny.sln /p:Configuration=Release /p:Platform=Win64 /m
+          # Resource cooking launches the Vulkan editor; hosted CI has no graphics device.
+          & Scripts\crowny.bat build All --skip-editor-resources
+
+      - name: Publish CoreCLR test package
+        shell: powershell
+        run: |
+          & Scripts\crowny.bat deps dotnet
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & Scripts\managed\publish-coreclr.ps1 -RuntimeIdentifier win-x64 `
+            -GameProject Crowny-Sandbox\GameAssembly.Managed.csproj -GameAssemblyName GameAssembly `
+            -OutputDirectory artifacts\ci-coreclr
+          "CROWNY_CORECLR_TEST_PACKAGE=$PWD\artifacts\ci-coreclr\managed-program.json" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Run Tests
         shell: bash
@@ -149,21 +178,23 @@ jobs:
               --reporter console --durations yes > isolated-output.txt 2>&1
             status=$?
             set -e
-            # Opt-in benchmarks SKIP with a nonzero exit code; that is not a failure.
-            if grep -q "FAILED" isolated-output.txt || { [ "$status" -ne 0 ] && ! grep -q "SKIPPED:" isolated-output.txt; }; then
+            if ! python Scripts/check_catch2_exit.py "$status" --allow-all-skipped; then
               echo "Isolated test FAILED (exit $status): $isolated_test"
               cat isolated-output.txt
               exit 1
             fi
             cat isolated-output.txt
           done < isolated-tests.txt
-          rm isolated-tests.txt isolated-output.txt
+          rm -f isolated-tests.txt isolated-output.txt
+          echo "Running CoreCLR package smoke test"
+          timeout --signal=TERM --kill-after=15s 90s "$test_binary" \
+            "CoreCLR adapter loads a published private package" --reporter console --durations yes
           echo "Running the full native suite"
           set +e
           "$test_binary" --reporter console --durations yes > full-output.txt 2>&1
           status=$?
           set -e
-          if grep -q "FAILED" full-output.txt || { [ "$status" -ne 0 ] && ! grep -q "SKIPPED:" full-output.txt; }; then
+          if ! python Scripts/check_catch2_exit.py "$status"; then
             echo "Full native suite FAILED (exit $status)"
             cat full-output.txt
             exit 1

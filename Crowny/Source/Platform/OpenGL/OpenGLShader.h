@@ -12,6 +12,7 @@ namespace Crowny
 
         uint32_t GetRendererID() const { return m_RendererID; }
         bool IsValid() const { return m_RendererID != 0; }
+        String GetStorageBlockName(uint32_t set, uint32_t slot) const;
 
     protected:
         explicit OpenGLShader(const Ref<BinaryShaderData>& data);

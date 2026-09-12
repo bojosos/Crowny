@@ -11,17 +11,29 @@ namespace Crowny
 {
     namespace
     {
+        String StorageBlockName(ShaderType type, uint32_t set, uint32_t slot)
+        {
+            return "CrownyStorage_" + std::to_string(type) + "_" + std::to_string(set) + "_" + std::to_string(slot);
+        }
+
         GLenum GetShaderType(ShaderType type)
         {
             switch (type)
             {
-            case VERTEX_SHADER: return GL_VERTEX_SHADER;
-            case FRAGMENT_SHADER: return GL_FRAGMENT_SHADER;
-            case GEOMETRY_SHADER: return GL_GEOMETRY_SHADER;
-            case HULL_SHADER: return GL_TESS_CONTROL_SHADER;
-            case DOMAIN_SHADER: return GL_TESS_EVALUATION_SHADER;
-            case COMPUTE_SHADER: return GL_COMPUTE_SHADER;
-            default: break;
+            case VERTEX_SHADER:
+                return GL_VERTEX_SHADER;
+            case FRAGMENT_SHADER:
+                return GL_FRAGMENT_SHADER;
+            case GEOMETRY_SHADER:
+                return GL_GEOMETRY_SHADER;
+            case HULL_SHADER:
+                return GL_TESS_CONTROL_SHADER;
+            case DOMAIN_SHADER:
+                return GL_TESS_EVALUATION_SHADER;
+            case COMPUTE_SHADER:
+                return GL_COMPUTE_SHADER;
+            default:
+                break;
             }
             throw std::invalid_argument("OpenGL does not support the requested shader stage");
         }
@@ -30,13 +42,20 @@ namespace Crowny
         {
             switch (type)
             {
-            case VERTEX_SHADER: return "vertex shader";
-            case FRAGMENT_SHADER: return "fragment shader";
-            case GEOMETRY_SHADER: return "geometry shader";
-            case HULL_SHADER: return "tessellation control shader";
-            case DOMAIN_SHADER: return "tessellation evaluation shader";
-            case COMPUTE_SHADER: return "compute shader";
-            default: return "shader";
+            case VERTEX_SHADER:
+                return "vertex shader";
+            case FRAGMENT_SHADER:
+                return "fragment shader";
+            case GEOMETRY_SHADER:
+                return "geometry shader";
+            case HULL_SHADER:
+                return "tessellation control shader";
+            case DOMAIN_SHADER:
+                return "tessellation evaluation shader";
+            case COMPUTE_SHADER:
+                return "compute shader";
+            default:
+                return "shader";
             }
         }
 
@@ -57,12 +76,26 @@ namespace Crowny
             std::memcpy(words.data(), data.Data.data(), data.Data.size());
             spirv_cross::CompilerGLSL compiler(words);
             const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-            for (const spirv_cross::Resource& resource : resources.uniform_buffers) RemoveResourceBinding(compiler, resource);
-            for (const spirv_cross::Resource& resource : resources.storage_buffers) RemoveResourceBinding(compiler, resource);
-            for (const spirv_cross::Resource& resource : resources.sampled_images) RemoveResourceBinding(compiler, resource);
-            for (const spirv_cross::Resource& resource : resources.separate_images) RemoveResourceBinding(compiler, resource);
-            for (const spirv_cross::Resource& resource : resources.separate_samplers) RemoveResourceBinding(compiler, resource);
-            for (const spirv_cross::Resource& resource : resources.storage_images) RemoveResourceBinding(compiler, resource);
+            for (const spirv_cross::Resource& resource : resources.uniform_buffers)
+                RemoveResourceBinding(compiler, resource);
+            for (const spirv_cross::Resource& resource : resources.storage_buffers)
+            {
+                // Link-time binding uses a predictable block name, independent
+                // of the source's block type and instance names. Keep stages
+                // distinct so compatible byte layouts need not share member names.
+                const uint32_t set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+                const uint32_t slot = compiler.get_decoration(resource.id, spv::DecorationBinding);
+                compiler.set_name(resource.base_type_id, StorageBlockName(data.Type, set, slot));
+                RemoveResourceBinding(compiler, resource);
+            }
+            for (const spirv_cross::Resource& resource : resources.sampled_images)
+                RemoveResourceBinding(compiler, resource);
+            for (const spirv_cross::Resource& resource : resources.separate_images)
+                RemoveResourceBinding(compiler, resource);
+            for (const spirv_cross::Resource& resource : resources.separate_samplers)
+                RemoveResourceBinding(compiler, resource);
+            for (const spirv_cross::Resource& resource : resources.storage_images)
+                RemoveResourceBinding(compiler, resource);
 
             compiler.build_combined_image_samplers();
             for (const spirv_cross::CombinedImageSampler& combined : compiler.get_combined_image_samplers())
@@ -83,10 +116,13 @@ namespace Crowny
             options.es = false;
             options.vulkan_semantics = false;
             options.separate_shader_objects = false;
+            options.vertex.fixup_clipspace = true;
             compiler.set_common_options(options);
             return compiler.compile();
         }
     } // namespace
+
+    String OpenGLShader::GetStorageBlockName(uint32_t set, uint32_t slot) const { return StorageBlockName(m_ShaderData->Type, set, slot); }
 
     OpenGLShader::OpenGLShader(const Ref<BinaryShaderData>& data) : ShaderStage(data)
     {

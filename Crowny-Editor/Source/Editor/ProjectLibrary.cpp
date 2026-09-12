@@ -51,6 +51,7 @@ namespace Crowny
 
         for (const Ref<LibraryEntry>& entry : diff.RemovedEntries)
         {
+            CW_ENGINE_INFO("Library entry '{}' no longer exists on disk; removing it from the index.", entry->Filepath);
             if (entry->Type == LibraryEntryType::Directory)
                 DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(entry));
             else
@@ -100,6 +101,9 @@ namespace Crowny
             tasks.erase(std::remove_if(tasks.begin(), tasks.end(),
                                        [this](ImportTask& task) {
                                            if (!EnsureMetadataLoaded(task.Entry.get()))
+                                               return true;
+                                           // Match the synchronous path: only files without current imported output go to the workers.
+                                           if (!task.ForceReimport && task.Options == nullptr && IsUpToDate(task.Entry.get()))
                                                return true;
                                            if (task.Options == nullptr && task.Entry->Metadata != nullptr)
                                                task.Options = task.Entry->Metadata->ImportOptions;
@@ -307,6 +311,12 @@ namespace Crowny
             return false;
         }
 
+        Vector<std::pair<Ref<Asset>, UUID>> referenceAssignments{ { assets.front(), nextMetadata->Uuid } };
+        for (const AssetDependentAssignment& assignment : reconciled.Assignments)
+            referenceAssignments.emplace_back(assignment.Asset, assignment.Metadata->Uuid);
+        if (!Importer::ResolveDependencies(referenceAssignments))
+            return false;
+
         UnorderedSet<UUID> previousDependentIds;
         for (const Ref<AssetMetadata>& dependent : previousDependents)
         {
@@ -332,12 +342,15 @@ namespace Crowny
             }
         };
 
+        Vector<std::pair<Ref<Asset>, Path>> cacheWrites;
+        cacheWrites.reserve(assets.size());
         auto saveAsset = [&](const Ref<Asset>& asset, const UUID& uuid) {
             Path outputPath = m_UuidDirectory.GetPath(uuid);
             outputPath.replace_filename(outputPath.filename().string() + ".asset");
-            if (asset->GetAssetType() == AssetType::Scene || asset->GetAssetType() == AssetType::Prefab)
+            if (asset->GetAssetType() == AssetType::Scene)
                 return m_Filesystem.CopyFileAtomic(entry->Filepath, outputPath, true);
-            return AssetManager::TryGet()->Save(asset, outputPath);
+            cacheWrites.emplace_back(asset, outputPath);
+            return true;
         };
 
         if (!saveAsset(assets.front(), nextMetadata->Uuid))
@@ -358,6 +371,13 @@ namespace Crowny
                 return false;
             }
             nextDependents.push_back(assignment.Metadata);
+        }
+
+        if (!AssetManager::Get().SaveBatch(cacheWrites))
+        {
+            CW_ENGINE_ERROR("Failed to publish imported cache for '{}'.", entry->Filepath);
+            cleanupUncommitted();
+            return false;
         }
 
         const Path metadataPath = AssetFileSystemScanner::GetMetadataPath(entry->Filepath);
@@ -648,6 +668,46 @@ namespace Crowny
         return result;
     }
 
+    ContentDatabase ProjectLibrary::GetBuildContentDatabase() const
+    {
+        ContentDatabase database;
+        std::function<void(const Ref<DirectoryEntry>&)> visit = [&](const Ref<DirectoryEntry>& directory) {
+            if (!directory)
+                return;
+            for (const auto& entry : directory->Children)
+            {
+                if (entry->Type == LibraryEntryType::Directory)
+                {
+                    visit(StaticRefCast<DirectoryEntry>(entry));
+                    continue;
+                }
+                const auto file = StaticRefCast<FileEntry>(entry);
+                const auto add = [&](const Ref<AssetMetadata>& metadata, bool dependent) {
+                    if (!metadata || metadata->Uuid.Empty() || metadata->Type == AssetType::ScriptCode || metadata->Type == AssetType::None)
+                        return;
+                    Path cooked;
+                    AssetManager::Get().GetAssetPath(metadata->Uuid, cooked);
+                    if (metadata->Type == AssetType::Scene)
+                        cooked = file->Filepath;
+                    Path logical = file->Filepath.lexically_relative(m_ProjectFolder);
+                    if (dependent)
+                        logical = Path("Subassets") / (metadata->Uuid.ToString() + ".asset");
+                    database.Assets.push_back({ metadata->Uuid,
+                                                logical,
+                                                cooked.lexically_relative(m_ProjectFolder),
+                                                {},
+                                                metadata->Type == AssetType::Scene ? "Scene" : "Asset",
+                                                {} });
+                };
+                add(file->Metadata, false);
+                for (const auto& metadata : file->DependentMetadata)
+                    add(metadata, true);
+            }
+        };
+        visit(m_AssetIndex.GetRoot());
+        return database;
+    }
+
     String ProjectLibrary::GetAssetName(const UUID& uuid) const { return m_AssetIndex.GetAssetName(uuid); }
 
     AssetType ProjectLibrary::GetAssetType(const Path& path) const { return m_AssetIndex.GetAssetType(path); }
@@ -870,7 +930,24 @@ namespace Crowny
         {
             auto material = StaticRefCast<Material>(asset);
             MaterialSerializer serializer(material);
-            return serializer.Serialize(absPath);
+            if (!serializer.Serialize(absPath))
+                return false;
+            const Ref<LibraryEntry> entry = FindEntry(absPath);
+            if (entry && entry->Type == LibraryEntryType::File)
+            {
+                const Ref<FileEntry> file = StaticRefCast<FileEntry>(entry);
+                Path cachedPath;
+                if (file->Metadata && m_AssetManifest->UuidToFilepath(file->Metadata->Uuid, cachedPath))
+                {
+                    // The source watcher compares timestamps in seconds. Publish the cache here as well
+                    // so multiple edits in one second survive reopening the project.
+                    if (!AssetManager::Get().Save(material, cachedPath))
+                        return false;
+                    ++file->Revision;
+                    file->LastUpdateTime = std::time(nullptr);
+                }
+            }
+            return true;
         }
         if (asset->GetAssetType() == AssetType::MaterialPreset)
         {
@@ -974,7 +1051,8 @@ namespace Crowny
     void ProjectLibrary::MakeEntriesAbsolute()
     {
         std::function<void(LibraryEntry*)> makeAbsolute = [&](LibraryEntry* entry) {
-            entry->Filepath = (m_AssetFolder / entry->Filepath).lexically_normal();
+            // The root is stored with an empty relative path; appending it would leave a trailing separator behind.
+            entry->Filepath = entry->Filepath.empty() ? m_AssetFolder.lexically_normal() : (m_AssetFolder / entry->Filepath).lexically_normal();
             if (entry->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(entry);

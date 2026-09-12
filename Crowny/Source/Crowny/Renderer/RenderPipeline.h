@@ -112,6 +112,10 @@ namespace Crowny
         RenderGraph::ExecuteCallback CompatibilityRenderer;
         RenderGraph::ExecuteCallback ScheduledShadowRenderer;
         RenderGraph::ExecuteCallback FinalComposition;
+        // Legacy-composited 2D-only views draw straight to the output target.
+        // They have no mesh, sky, lighting, or scene post-processing passes.
+        RenderGraph::ExecuteCallback Clear2DTarget;
+        bool Only2D = false;
         IRenderPipelinePassExecutor* PassExecutor = nullptr;
         uint32_t DrawBinCount = 0;
         uint32_t DrawBinLookupCapacity = 0;

@@ -19,6 +19,7 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptLight.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptDecal.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptMeshComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody3D.h"
@@ -50,9 +51,11 @@ namespace Crowny
         ScriptBoxCollider3D::InitMetaData();
         ScriptSphereCollider3D::InitMetaData();
         ScriptCapsuleCollider3D::InitMetaData();
+        ScriptMeshCollider3D::InitMetaData();
         ScriptEntity::InitMetaData();
         ScriptEntityBehaviour::InitMetaData();
         ScriptLight::InitMetaData();
+        ScriptDecal::InitMetaData();
         ScriptMeshComponent::InitMetaData();
         ScriptRigidbody2D::InitMetaData();
         ScriptRigidbody3D::InitMetaData();

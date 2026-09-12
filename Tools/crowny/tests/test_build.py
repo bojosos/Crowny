@@ -13,7 +13,7 @@ class AutoJobsTests(unittest.TestCase):
     def test_auto_reserves_capacity_for_a_second_build(self):
         budget, wanted, minimum = locks.auto_jobs(0)
         self.assertEqual(budget, max(1, os.cpu_count() or 1))
-        reserved = min(4, budget // 3)
+        reserved = min(2, budget // 6)
         self.assertEqual(wanted, budget - reserved)
         self.assertEqual(minimum, max(1, min(reserved, wanted)))
 

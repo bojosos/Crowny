@@ -63,6 +63,8 @@ namespace Crowny
         {
             VulkanDescriptorSet* LatestSet = nullptr;
             Vector<VulkanDescriptorSet*> Sets;
+            UnorderedMap<VulkanDescriptorSet*, Vector<Vector<VkDescriptorImageInfo>>> ImageSnapshots;
+            Vector<VkWriteDescriptorSet> PendingWrites;
             VkWriteDescriptorSet* WriteSetInfos = nullptr;
             WriteInfo* WriteInfos = nullptr;
             VkDescriptorImageInfo** ImageArrayInfos = nullptr;

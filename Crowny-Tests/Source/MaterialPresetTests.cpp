@@ -5,11 +5,14 @@
 #include "Crowny/Assets/AssetListener.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Import/MaterialImporter.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MaterialPreset.h"
 #include "Crowny/Renderer/MaterialPresetLibrary.h"
 #include "Crowny/Serialization/MaterialPresetSerializer.h"
+#include "Crowny/Serialization/MaterialSerializer.h"
+#include "Editor/MaterialEditing.h"
 
 using namespace Crowny;
 
@@ -41,6 +44,17 @@ namespace
         bool OwnsAssetManager = false;
     };
 
+    class MaterialTestTexture final : public Texture
+    {
+    public:
+        MaterialTestTexture() : Texture(TextureDesc{}, true) {}
+        PixelData Lock(GpuLockOptions, uint32_t, uint32_t, uint32_t) override { return {}; }
+        void Unlock() override {}
+        void ReadData(PixelData&, uint32_t, uint32_t, uint32_t) override {}
+        bool ReadPixel(uint32_t, uint32_t, void*, size_t, uint32_t, uint32_t, uint32_t) override { return false; }
+        void WriteData(const PixelData&, uint32_t, uint32_t, uint32_t) override {}
+    };
+
     Material::UniformMember Member(ShaderDataType type)
     {
         Material::UniformMember member{};
@@ -52,12 +66,33 @@ namespace
     Material::BindingMap ToonBindings()
     {
         Material::BindingMap bindings;
-        for (const char* name : { "thickness", "toonSilhouetteWidth", "bands", "specularSize", "specularSmoothness", "shadowBrightness",
-                                  "toonBandSmoothness", "toonSpecularThreshold", "toonSpecularSmoothness", "toonSpecularStrength", "rimPower",
-                                  "rimThreshold", "toonRimSmoothness", "toonRimStrength", "toonRimShadowMask", "toonIndirectStrength",
-                                  "toonPatternScale", "toonPatternStrength", "toonPatternSmoothness", "toonPatternDistanceFade",
-                                  "toonRampStrength", "toonRampOffset", "toonMatcapStrength", "toonMatcapRotation", "toonOutlineDepthThreshold",
-                                  "toonOutlineNormalThreshold", "toonOutlineDistanceFade" })
+        for (const char* name : { "thickness",
+                                  "toonSilhouetteWidth",
+                                  "bands",
+                                  "specularSize",
+                                  "specularSmoothness",
+                                  "shadowBrightness",
+                                  "toonBandSmoothness",
+                                  "toonSpecularThreshold",
+                                  "toonSpecularSmoothness",
+                                  "toonSpecularStrength",
+                                  "rimPower",
+                                  "rimThreshold",
+                                  "toonRimSmoothness",
+                                  "toonRimStrength",
+                                  "toonRimShadowMask",
+                                  "toonIndirectStrength",
+                                  "toonPatternScale",
+                                  "toonPatternStrength",
+                                  "toonPatternSmoothness",
+                                  "toonPatternDistanceFade",
+                                  "toonRampStrength",
+                                  "toonRampOffset",
+                                  "toonMatcapStrength",
+                                  "toonMatcapRotation",
+                                  "toonOutlineDepthThreshold",
+                                  "toonOutlineNormalThreshold",
+                                  "toonOutlineDistanceFade" })
             bindings.emplace(name, Member(ShaderDataType::Float));
         for (const char* name : { "outlineColor", "tint", "toonShadowColor", "toonSpecularColor", "toonRimColor" })
             bindings.emplace(name, Member(ShaderDataType::Float4));
@@ -65,6 +100,97 @@ namespace
         return bindings;
     }
 } // namespace
+
+TEST_CASE("Viewport material drops replace every slot and can be undone", "[Editor][Material][ViewportDrop]")
+{
+    ScopedAssetManager scope;
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Mesh");
+    auto& renderer = entity.AddComponent<MeshRendererComponent>();
+    const AssetHandle<Material> previous = static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(Material::Create({})));
+    const AssetHandle<Material> dropped = static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(Material::Create({})));
+    renderer.Materials = { previous, previous, previous };
+    const Ref<UndoAction> action = AssignViewportMaterial(entity, dropped);
+    REQUIRE(action);
+    for (uint32_t slot = 0; slot < 3; ++slot)
+        CHECK(renderer.GetMaterial(slot).GetUUID() == dropped.GetUUID());
+    action->Revert();
+    for (uint32_t slot = 0; slot < 3; ++slot)
+        CHECK(entity.GetComponent<MeshRendererComponent>().GetMaterial(slot).GetUUID() == previous.GetUUID());
+    action->Commit();
+    CHECK(entity.GetComponent<MeshRendererComponent>().GetMaterial(2).GetUUID() == dropped.GetUUID());
+    CHECK_FALSE(AssignViewportMaterial(entity, dropped));
+    CHECK_FALSE(AssignViewportMaterial(entity, {}));
+    CHECK_FALSE(AssignViewportMaterial({}, dropped));
+
+    Entity procedural = scene->CreateEntity("Procedural");
+    procedural.AddComponent<ProceduralMeshComponent>();
+    const Ref<UndoAction> proceduralAction = AssignViewportMaterial(procedural, dropped);
+    REQUIRE(proceduralAction);
+    CHECK(procedural.GetComponent<ProceduralMeshComponent>().Materials.front().GetUUID() == dropped.GetUUID());
+    proceduralAction->Revert();
+    CHECK(procedural.GetComponent<ProceduralMeshComponent>().Materials.empty());
+}
+
+TEST_CASE("Decal materials cannot replace mesh surfaces or change material domain", "[decals][Material][ViewportDrop]")
+{
+    ScopedAssetManager scope;
+    ShaderDesc desc;
+    desc.Techniques = { ShaderTechnique::Create({ "material_model=decal" }, {}, {}) };
+    const auto shader = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(Shader::Create(desc)));
+    const auto decal = static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(Material::Create(shader)));
+    REQUIRE(decal->GetDomain() == MaterialDomain::Decal);
+    auto scene = CreateRef<Scene>(false);
+    Entity mesh = scene->CreateEntity("Mesh receiver");
+    auto& renderer = mesh.AddComponent<MeshRendererComponent>();
+    const auto surface = static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(Material::Create({})));
+    renderer.SetMaterial(0, surface);
+    renderer.SetMaterial(0, decal);
+    CHECK(renderer.GetMaterial(0).GetUUID() == surface.GetUUID());
+    renderer.SetMaterial(3, decal);
+    CHECK(renderer.GetMaterialCount() == 1);
+    CHECK_FALSE(AssignViewportMaterial(mesh, decal));
+    Entity procedural = scene->CreateEntity("Procedural receiver");
+    procedural.AddComponent<ProceduralMeshComponent>();
+    CHECK_FALSE(AssignViewportMaterial(procedural, decal));
+    CHECK(procedural.GetComponent<ProceduralMeshComponent>().Materials.empty());
+    CHECK_FALSE(ChangeMaterialShader(*surface, shader));
+    CHECK(surface->GetDomain() == MaterialDomain::Surface);
+}
+
+TEST_CASE("Material importer preserves YAML authored in either material extension", "[Import][Material][MaterialWorkflow]")
+{
+    ScopedAssetManager scope;
+    ShaderDesc desc;
+    desc.Techniques = { ShaderTechnique::Create({ "material_model=standard" }, {}, {}) };
+    const AssetHandle<Shader> shader = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(Shader::Create(desc)));
+    const Ref<Material> source = Material::Create(shader);
+    source->SetName("Edited material");
+    source->SetAlphaMode(AlphaMode::Mask);
+    MaterialImporter importer;
+    for (const char* extension : { ".cwmat", ".mat" })
+    {
+        const Path path = fs::temp_directory_path() / ("crowny-material-workflow-" + UuidGenerator::Generate().ToString() + extension);
+        REQUIRE(MaterialSerializer(source).Serialize(path));
+        const Ref<Asset> imported = importer.Import(path, nullptr);
+        fs::remove(path);
+        REQUIRE(imported);
+        REQUIRE(imported->GetAssetType() == AssetType::Material);
+        const Ref<Material> material = StaticRefCast<Material>(imported);
+        CHECK(material->GetName() == "Edited material");
+        CHECK(material->GetShader().GetUUID() == shader.GetUUID());
+        CHECK(material->GetAlphaMode() == AlphaMode::Mask);
+    }
+}
+
+TEST_CASE("Material importer rejects malformed YAML", "[Import][Material][MaterialWorkflow]")
+{
+    ScopedAssetManager scope;
+    const Path path = fs::temp_directory_path() / ("crowny-invalid-material-" + UuidGenerator::Generate().ToString() + ".cwmat");
+    REQUIRE(FileSystem::WriteTextFile(path, "Parameters: [invalid"));
+    CHECK_FALSE(MaterialImporter().Import(path, nullptr));
+    fs::remove(path);
+}
 
 TEST_CASE("Material presets round trip through YAML", "[Renderer][Material][Preset]")
 {
@@ -144,6 +270,35 @@ TEST_CASE("Material presets survive binary asset round trips", "[Renderer][Mater
     CHECK(restored->Find("albedo")->Vector.z == Catch::Approx(0.3f));
     CHECK(restored->Find("roughness")->Vector.x == Catch::Approx(0.75f));
     CHECK(restored->Find("useIBL")->Integer == 0);
+    fs::remove(assetPath);
+}
+
+TEST_CASE("Material texture references survive binary asset round trips", "[Renderer][Material][Serialization][MaterialTextures]")
+{
+    ScopedAssetManager scopedAssetManager;
+    AssetManager& manager = AssetManager::Get();
+    const UUID textureId("d9347255-58ac-407f-b260-d3a0e1218261");
+    const Ref<Texture> texture = CreateRef<MaterialTestTexture>();
+    const AssetHandle<Texture> textureHandle = static_asset_cast<Texture>(manager.CreateAssetHandle(texture, textureId));
+    Ref<Material> material = Material::Create({});
+    material->SetTexture("albedoMap", textureHandle);
+    material->SetTexture("aoMap", textureHandle);
+    const UUID missingTextureId("681f0c45-042b-4b53-a8a8-3ca068f73f65");
+    material->SetTexture("normalMap", static_asset_cast<Texture>(manager.GetAssetHandle(missingTextureId)));
+    const Path assetPath = fs::temp_directory_path() / "crowny-material-textures-roundtrip.asset";
+    REQUIRE(manager.Save(material, assetPath));
+    const AssetHandle<Material> restored = manager.Load<Material>(assetPath, false);
+    REQUIRE(restored);
+    CHECK(restored->GetTextureHandle("albedoMap").GetUUID() == textureId);
+    CHECK(restored->GetTextureHandle("albedoMap").GetInternalPtr() == texture);
+    CHECK(restored->GetTextureHandle("aoMap").GetUUID() == textureId);
+    CHECK(restored->GetTextureHandle("normalMap").GetUUID() == missingTextureId);
+    CHECK_FALSE(restored->GetTextureHandle("normalMap"));
+    Vector<AssetHandle<Asset>> dependencies;
+    restored->GetAssets(dependencies);
+    CHECK(std::count_if(dependencies.begin(), dependencies.end(), [&](const auto& dependency) { return dependency.GetUUID() == textureId; }) == 2);
+    restored->SetTexture("albedoMap", Ref<Texture>{});
+    CHECK_FALSE(restored->GetTextureHandle("albedoMap").HasUUID());
     fs::remove(assetPath);
 }
 

@@ -13,6 +13,7 @@
 #include "Crowny/RenderAPI/VertexArray.h"
 #include "Crowny/RenderAPI/VertexBuffer.h"
 #include "Crowny/Renderer/Camera.h"
+#include "Crowny/Renderer/DecalRenderer.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
@@ -47,6 +48,9 @@ namespace Crowny
 
     struct ForwardRendererData
     {
+        DecalRenderer Decals;
+        LegacySurfacePass SurfacePass = LegacySurfacePass::All;
+        Map<std::pair<uint64_t, uint32_t>, Ref<GraphicsPipeline>> SurfacePipelines;
         Ref<Material> SkyboxMaterial;
         Ref<Material> PbrMaterial;
         Ref<Material> WireframeMaterial;
@@ -103,6 +107,7 @@ namespace Crowny
         const Ref<Material> brdfMaterial = Material::Create(shaderHandle);
         rapi.SetRenderTarget(target);
         rapi.SetGraphicsPipeline(brdfMaterial->GetGraphicsPipeline());
+        rapi.SetVertexLayout(CreateRef<BufferLayout>());
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         rapi.SetUniforms(brdfMaterial->GetUniformParams());
         rapi.Draw(0, 3, 1);
@@ -149,9 +154,9 @@ namespace Crowny
         s_Data->DefaultEnvironment = nullptr;
 
         // Skybox mesh (single copy)
-        s_Data->SkyboxVbo = VertexBuffer::Create({sizeof(s_SkyboxVertices), BufferUsage::BU_STATIC_DRAW, s_SkyboxVertices});
+        s_Data->SkyboxVbo = VertexBuffer::Create({ sizeof(s_SkyboxVertices), BufferUsage::BU_STATIC_DRAW, s_SkyboxVertices });
         s_Data->SkyboxVbo->SetLayout(CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "inPos" } }));
-        s_Data->SkyboxIbo = IndexBuffer::Create({36, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, s_SkyboxIndices});
+        s_Data->SkyboxIbo = IndexBuffer::Create({ 36, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, s_SkyboxIndices });
 
         // Skybox material
         const AssetHandle<Shader> skyboxHandle = AssetManager::TryGet()->Load<Shader>(SKYBOX_SHADER_PATH);
@@ -162,6 +167,10 @@ namespace Crowny
             const AssetHandle<Shader> wireframeShader = AssetManager::Get().Load<Shader>("Resources/Shaders/Wireframe.asset");
             s_Data->WireframeMaterial = Material::Create(wireframeShader);
         }
+        RenderSnapshot empty;
+        empty.ViewMatrix = empty.ProjectionMatrix = glm::mat4(1);
+        empty.CameraPosition = glm::vec3(0);
+        s_Data->Decals.PrepareCompatibility(empty);
     }
 
     void ForwardRenderer::Begin() {}
@@ -221,6 +230,7 @@ namespace Crowny
         material->SetMatrix("viewProjection"_hstr, s_Data->ViewProjection);
         material->SetMatrix("model"_hstr, model);
         material->SetVector3("camPos"_hstr, s_Data->CamPos);
+        material->SetColor("lightDir"_hstr, s_Data->LightDirectionOuter[0]);
         material->SetFloat("gamma"_hstr, s_Data->Gamma);
         material->SetFloat("exposure"_hstr, s_Data->Exposure);
         material->SetInt("lightCount"_hstr, static_cast<int32_t>(s_Data->LightCount));
@@ -262,8 +272,8 @@ namespace Crowny
         DrawSkybox(rapi);
     }
 
-    void ForwardRenderer::BeginForwardOnlyScene(const glm::mat4& projection, const glm::mat4& viewMatrix,
-                                                 const glm::vec3& cameraPosition, const Ref<EnvironmentMap>& environment)
+    void ForwardRenderer::BeginForwardOnlyScene(const glm::mat4& projection, const glm::mat4& viewMatrix, const glm::vec3& cameraPosition,
+                                                const Ref<EnvironmentMap>& environment)
     {
         ZoneScopedN("ForwardRenderer::BeginForwardOnlyScene");
         BindEnvironment(environment);
@@ -289,8 +299,8 @@ namespace Crowny
 
             const LightType type = static_cast<LightType>(light.Metadata.x);
             const float distanceSquared = glm::length2(glm::vec3(light.PositionRange) - s_Data->CamPos);
-            float score = type == LightType::Directional ? std::numeric_limits<float>::max()
-                                                         : light.ColorIntensity.w / std::max(distanceSquared, 0.01f);
+            float score =
+              type == LightType::Directional ? std::numeric_limits<float>::max() : light.ColorIntensity.w / std::max(distanceSquared, 0.01f);
             if (HasFlag(flags, RenderLightFlags::CastShadows) && std::isfinite(score))
                 score *= 2.0f;
 
@@ -325,16 +335,57 @@ namespace Crowny
     static void DrawMaterialPasses(RenderAPI& rapi, const Ref<Material>& material, DrawMode drawMode, uint32_t indexOffset, uint32_t indexCount,
                                    uint32_t vertexCount)
     {
+        if (material->GetDomain() == MaterialDomain::Decal)
+            return;
+        const auto alpha = MaterialRenderClassifier::Classify(*material).Alpha;
+        const bool transparent = alpha >= AlphaMode::Premultiplied;
+        const auto surfacePass = s_Data->SurfacePass;
+        if (surfacePass == LegacySurfacePass::Opaque && transparent)
+            return;
+        if ((surfacePass == LegacySurfacePass::Coating || surfacePass == LegacySurfacePass::Transparent) && !transparent)
+            return;
+        if (surfacePass == LegacySurfacePass::Coating &&
+            (!s_Data->Decals.HasCoatings() ||
+             !material->GetGraphicsPipeline()->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 1)))
+            return;
+        Ref<GraphicsPipeline> overridePipeline;
+        if (transparent && surfacePass != LegacySurfacePass::All && material->GetPassCount() == 1)
+        {
+            const uint32_t mode = surfacePass == LegacySurfacePass::Coating ? 0u : alpha == AlphaMode::Additive ? 2u : 1u;
+            auto& pipeline = s_Data->SurfacePipelines[{ material->GetLayoutVersion(), mode }];
+            if (!pipeline)
+            {
+                auto blend = CreateRef<BlendStateDesc>();
+                blend->EnableBlending = mode != 0;
+                blend->SrcBlend = BlendFactor::SourceAlpha;
+                blend->DstBlend = mode == 2 ? BlendFactor::One : BlendFactor::InvSourceAlpha;
+                blend->SrcBlendAlpha = BlendFactor::One;
+                blend->DstBlendAlpha = BlendFactor::InvSourceAlpha;
+                auto depth = CreateRef<DepthStencilStateDesc>();
+                depth->DepthCompareFunction = CompareFunction::LESS_EQUAL;
+                depth->EnableDepthWrite = mode == 0;
+                GraphicsMaterial adapter;
+                if (adapter.Initialize(material->GetShader(), material->GetVariation(), blend, depth))
+                    pipeline = adapter.GetPipeline();
+            }
+            overridePipeline = pipeline;
+        }
+        material->FlushUniformBuffers();
         for (uint32_t p = 0; p < material->GetPassCount(); p++)
         {
-            rapi.SetGraphicsPipeline(material->GetGraphicsPipeline(p));
+            rapi.SetGraphicsPipeline(overridePipeline ? overridePipeline : material->GetGraphicsPipeline(p));
             rapi.SetUniforms(material->GetUniformParams(p));
             rapi.SetDrawMode(drawMode);
             rapi.DrawIndexed(indexOffset, indexCount, 0, vertexCount);
         }
     }
 
-    void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, std::span<const AssetHandle<Material>> materials, const glm::mat4& transform)
+    void ForwardRenderer::PrepareDecals(const RenderSnapshot& snapshot) { s_Data->Decals.PrepareCompatibility(snapshot); }
+    void ForwardRenderer::SetSurfacePass(LegacySurfacePass pass) { s_Data->SurfacePass = pass; }
+    const DecalRenderStats& ForwardRenderer::GetDecalStatistics() { return s_Data->Decals.GetStats(); }
+
+    void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, std::span<const AssetHandle<Material>> materials, const glm::mat4& transform,
+                                 uint32_t objectId)
     {
         ZoneScopedN("ForwardRenderer::Submit");
         RenderAPI& rapi = (*RenderAPI::TryGet());
@@ -359,7 +410,11 @@ namespace Crowny
         {
             const Ref<Material> renderMaterial = wireframe ? s_Data->WireframeMaterial : getMaterial(0);
             ApplySceneUniforms(renderMaterial, transform);
-            if (!wireframe)
+            s_Data->Decals.BindCompatibility(*renderMaterial, objectId,
+                                             s_Data->SurfacePass == LegacySurfacePass::Coating       ? 1u
+                                             : s_Data->SurfacePass == LegacySurfacePass::Transparent ? 2u
+                                                                                                     : 0u);
+            if (!wireframe && renderMaterial == s_Data->PbrMaterial)
             {
                 renderMaterial->SetColor("albedo"_hstr, albedo);
                 renderMaterial->SetFloat("roughness"_hstr, roughness);
@@ -374,7 +429,11 @@ namespace Crowny
                 const SubMesh& sub = subMeshes[i];
                 const Ref<Material> renderMaterial = wireframe ? s_Data->WireframeMaterial : getMaterial(i);
                 ApplySceneUniforms(renderMaterial, transform);
-                if (!wireframe)
+                s_Data->Decals.BindCompatibility(*renderMaterial, objectId,
+                                                 s_Data->SurfacePass == LegacySurfacePass::Coating       ? 1u
+                                                 : s_Data->SurfacePass == LegacySurfacePass::Transparent ? 2u
+                                                                                                         : 0u);
+                if (!wireframe && renderMaterial == s_Data->PbrMaterial)
                 {
                     renderMaterial->SetColor("albedo"_hstr, albedo);
                     renderMaterial->SetFloat("roughness"_hstr, roughness);
@@ -386,7 +445,7 @@ namespace Crowny
     }
 
     void ForwardRenderer::SubmitForwardOnlyOpaque(const AssetHandle<Mesh>& mesh, std::span<const AssetHandle<Material>> materials,
-                                                   const glm::mat4& transform)
+                                                  const glm::mat4& transform)
     {
         ZoneScopedN("ForwardRenderer::SubmitForwardOnlyOpaque");
         if (!mesh)
@@ -405,8 +464,7 @@ namespace Crowny
             const Ref<Material> sourceMaterial = getMaterial(materialIndex);
             if (!sourceMaterial || !MaterialRenderClassifier::Classify(*sourceMaterial).IsForwardOnlyOpaque())
                 return;
-            const Ref<Material> renderMaterial =
-              s_Data->OverridePolygonMode == PolygonMode::Wireframe ? s_Data->WireframeMaterial : sourceMaterial;
+            const Ref<Material> renderMaterial = s_Data->OverridePolygonMode == PolygonMode::Wireframe ? s_Data->WireframeMaterial : sourceMaterial;
             ApplySceneUniforms(renderMaterial, transform);
             DrawMaterialPasses(rapi, renderMaterial, drawMode, indexOffset, indexCount, mesh->GetVertexCount());
         };

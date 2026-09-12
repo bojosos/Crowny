@@ -2,19 +2,19 @@
 
 #include <limits>
 
+#include "Crowny/Application/Application.h"
+#include "Crowny/Application/EngineRuntime.h"
+#include "Crowny/Common/Timestep.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedAbiValidation.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedHostBindings.h"
 #include "Crowny/Scripting/Managed/Interop/ManagedJson.h"
 #include "Crowny/Scripting/Managed/ManagedBackendSelection.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
-#include "Crowny/Application/Application.h"
-#include "Crowny/Application/EngineRuntime.h"
-#include "Crowny/Common/Timestep.h"
-#include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Mono/Mono.h"
 #include "ManagedTestPaths.h"
 
@@ -195,7 +195,7 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
 {
-    CHECK(CW_MANAGED_ABI_VERSION == 19);
+    CHECK(CW_MANAGED_ABI_VERSION == 20);
 
     cw_managed_program_api api{};
     api.size = sizeof(api);
@@ -235,7 +235,9 @@ TEST_CASE("Managed entity parent accepts the empty UUID as unparent", "[Scriptin
     const cw_managed_uuid managedChildId = { { 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 } };
     Ref<Scene> scene = CreateRef<Scene>(false);
     ScopedActiveScene activeScene(scene);
-    Entity parent = scene->CreateEntity("Parent");
+    const UUID parentId("01234567-89ab-cdef-fedc-ba9876543210");
+    const cw_managed_uuid managedParentId = { { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 } };
+    Entity parent = scene->CreateEntityWithUuid(parentId, "Parent");
     Entity child = scene->CreateEntityWithUuid(childId, "Child");
     REQUIRE(child.SetParent(parent));
 
@@ -243,6 +245,11 @@ TEST_CASE("Managed entity parent accepts the empty UUID as unparent", "[Scriptin
     PopulateManagedHostBindings(api);
     int context = 0;
     const cw_managed_uuid emptyParent{};
+
+    cw_managed_uuid returnedParent{};
+    REQUIRE(api.get_entity_parent(&context, managedChildId, &returnedParent) == CW_MANAGED_STATUS_OK);
+    for (size_t index = 0; index < 16; ++index)
+        CHECK(returnedParent.bytes[index] == managedParentId.bytes[index]);
 
     REQUIRE(api.set_entity_parent(&context, managedChildId, emptyParent) == CW_MANAGED_STATUS_OK);
     CHECK_FALSE(child.GetParent());
@@ -342,7 +349,7 @@ TEST_CASE("CoreCLR adapter loads a published private package", "[Scripting][Mana
     });
     REQUIRE(probe != catalog.Types.end());
 
-    const UUID entityId("11111111-2222-3333-4444-555555555555");
+    const UUID entityId("01b34567-89ab-cdef-102b-456789abcdef");
     Ref<Scene> scene = CreateRef<Scene>(false);
     ScopedActiveScene activeScene(scene);
     const Entity entity = scene->CreateEntityWithUuid(entityId, "CoreCLR integration host");
@@ -357,18 +364,33 @@ TEST_CASE("CoreCLR adapter loads a published private package", "[Scripting][Mana
     REQUIRE(created.Result.Succeeded);
     CHECK(entity.HasComponent<CameraComponent>());
 
+    REQUIRE(scripting.Dispatch(created.Handle, ScriptEvent::Lifecycle(ScriptEventKind::Start)).Succeeded);
+    ScriptEvent trigger;
+    trigger.Kind = ScriptEventKind::TriggerEnter3D;
+    trigger.OtherEntity = UUID("fedcba98-7654-3210-abcd-ef0123456789");
+    REQUIRE(scripting.Dispatch(created.Handle, trigger).Succeeded);
+
     REQUIRE(probe->Methods.size() == 1);
     const ScriptMethodSchema& button = probe->Methods.front();
     REQUIRE(button.Parameters.size() == 1);
-    const ScriptInvocationResult invocation = scripting.InvokeButton(created.Handle, button.StableId,
-                                                                      { button.Parameters.front().DefaultValue });
+    const ScriptInvocationResult invocation = scripting.InvokeButton(created.Handle, button.StableId, { button.Parameters.front().DefaultValue });
     INFO(DescribeDiagnostics(invocation.Result));
     REQUIRE(invocation.Result.Succeeded);
     REQUIRE(invocation.HasReturnValue);
     CHECK(invocation.ReturnValue.SignedValue == 3);
 
-    const auto conditionalField = std::find_if(probe->Fields.begin(), probe->Fields.end(),
-                                                [](const ScriptFieldSchema& field) { return field.Name == "conditionalValue"; });
+    const ManagedOperationResult failedCallback = scripting.Dispatch(created.Handle, ScriptEvent::Lifecycle(ScriptEventKind::Update));
+    REQUIRE_FALSE(failedCallback.Succeeded);
+    const auto exception = std::find_if(failedCallback.Diagnostics.begin(), failedCallback.Diagnostics.end(),
+                                        [](const ManagedDiagnostic& diagnostic) { return diagnostic.Code == "managed.exception"; });
+    REQUIRE(exception != failedCallback.Diagnostics.end());
+    CHECK(exception->Severity == ManagedDiagnosticSeverity::Error);
+    CHECK(exception->Message == "quoted \"callback\"\\path\n\xCE\xA9");
+    CHECK(exception->ManagedStack.find("CoreClrIntegrationProbe.Update") != String::npos);
+    CHECK(scripting.Update().empty());
+
+    const auto conditionalField =
+      std::find_if(probe->Fields.begin(), probe->Fields.end(), [](const ScriptFieldSchema& field) { return field.Name == "conditionalValue"; });
     REQUIRE(conditionalField != probe->Fields.end());
     const ScriptConditionalSettings* conditions = conditionalField->Attributes.Get<ScriptConditionalSettings>();
     REQUIRE(conditions != nullptr);
@@ -401,6 +423,10 @@ TEST_CASE("CoreCLR adapter loads a published private package", "[Scripting][Mana
     REQUIRE(beforeReload.State.Root.Members.contains("value"));
     CHECK(beforeReload.State.Root.Members.at("value").SignedValue == 3);
     CHECK(beforeReload.State.Root.Members.at("callbackValue").SignedValue == 7);
+    CHECK(beforeReload.State.Root.Members.at("entityUuidText").StringValue == "01b34567-89ab-cdef-102b-456789abcdef");
+    CHECK(beforeReload.State.Root.Members.at("otherUuidText").StringValue == "fedcba98-7654-3210-abcd-ef0123456789");
+    CHECK(beforeReload.State.Root.Members.at("wrapperCacheStable").BooleanValue);
+    CHECK(beforeReload.State.Root.Members.at("transformRoundTrip").BooleanValue);
     const ScriptConditionalSettings* resolvedConditions =
       beforeReload.State.Root.Members.at("conditionalValue").Attributes.Get<ScriptConditionalSettings>();
     REQUIRE(resolvedConditions != nullptr);
@@ -409,16 +435,101 @@ TEST_CASE("CoreCLR adapter loads a published private package", "[Scripting][Mana
     CHECK(resolvedConditions->Rules[0].ResolvedResult);
     CHECK(resolvedConditions->Rules[1].HasResolvedResult);
     CHECK(resolvedConditions->Rules[1].ResolvedResult);
+
+    const auto createLookup = [&](const char* type, const UUID& owner, int marker = 0) -> ScriptInstanceHandle {
+        ScriptCreateRequest lookup;
+        lookup.Identity = { "GameAssembly", "Sandbox", type };
+        lookup.Entity = owner;
+        lookup.InitialState.Identity = lookup.Identity;
+        lookup.InitialState.Root = ScriptValue::Object({ { "marker", ScriptValue::Signed(marker) } }, lookup.Identity);
+        const ScriptCreateResult result = scripting.CreateScript(lookup);
+        INFO(DescribeDiagnostics(result.Result));
+        REQUIRE(result.Result.Succeeded);
+        return result.Handle;
+    };
+    const auto checkLookup = [&](ScriptInstanceHandle observer, int first, int second, int base) {
+        REQUIRE(scripting.Dispatch(observer, ScriptEvent::Lifecycle(ScriptEventKind::Start)).Succeeded);
+        const ScriptStateResult state = scripting.CaptureState(observer);
+        INFO(DescribeDiagnostics(state.Result));
+        REQUIRE(state.Result.Succeeded);
+        CHECK(state.State.Root.Members.at("firstMarker").SignedValue == first);
+        CHECK(state.State.Root.Members.at("secondMarker").SignedValue == second);
+        CHECK(state.State.Root.Members.at("baseMarker").SignedValue == base);
+        CHECK_FALSE(state.State.Root.Members.at("hasFailing").BooleanValue);
+    };
+    Entity secondEntity = scene->CreateEntity("Second CoreCLR lookup host");
+    secondEntity.GetTransform().SetPosition({ 4.0f, 0.0f, 0.0f });
+    const ScriptInstanceHandle cacheProbe = createLookup("ComponentCacheProbe", secondEntity.GetUuid());
+    REQUIRE(scripting.Dispatch(cacheProbe, ScriptEvent::Lifecycle(ScriptEventKind::Update)).Succeeded);
+    const ScriptStateResult cacheState = scripting.CaptureState(cacheProbe);
+    REQUIRE(cacheState.Result.Succeeded);
+    CHECK(cacheState.State.Root.Members.at("TransformReused").BooleanValue);
+    CHECK(cacheState.State.Root.Members.at("EntityReused").BooleanValue);
+    CHECK(cacheState.State.Root.Members.at("WarmReadAllocatedBytes").SignedValue == 0);
+    CHECK(cacheState.State.Root.Members.at("PositionSum").FloatingValue == 2052.0);
+    REQUIRE(scripting.DestroyScript(cacheProbe).Succeeded);
+    const ScriptInstanceHandle firstA = createLookup("ScriptLookupFirst", entityId, 11);
+    const ScriptInstanceHandle duplicateA = createLookup("ScriptLookupFirst", entityId, 22);
+    const ScriptInstanceHandle secondA = createLookup("ScriptLookupSecond", entityId, 33);
+    const ScriptInstanceHandle firstB = createLookup("ScriptLookupFirst", secondEntity.GetUuid(), 44);
+    const ScriptInstanceHandle observerA = createLookup("ScriptLookupProbe", entityId);
+    const ScriptInstanceHandle observerB = createLookup("ScriptLookupProbe", secondEntity.GetUuid());
+    checkLookup(observerA, 11, 33, 11);
+    checkLookup(observerB, 44, -1, 44);
+
+    ScriptCreateRequest failingLookup;
+    failingLookup.Identity = { "GameAssembly", "Sandbox", "ScriptLookupFailing" };
+    failingLookup.Entity = entityId;
+    const ScriptCreateResult failedLookup = scripting.CreateScript(failingLookup);
+    CHECK_FALSE(failedLookup.Result.Succeeded);
+    checkLookup(observerA, 11, 33, 11);
+    REQUIRE(scripting.DestroyScript(firstA).Succeeded);
+    checkLookup(observerA, 22, 33, 22);
+    const ScriptInstanceHandle replacementA = createLookup("ScriptLookupFirst", entityId, 55);
+    checkLookup(observerA, 22, 33, 22);
+    REQUIRE(scripting.DestroyScript(duplicateA).Succeeded);
+    checkLookup(observerA, 55, 33, 33);
+    checkLookup(observerB, 44, -1, 44);
+
     ManagedProgramDefinition replacement = loaded.Package.Program;
-    replacement.Generation = 2;
-    const ManagedOperationResult reloaded = scripting.ReloadProgram(replacement);
-    INFO(DescribeDiagnostics(reloaded));
-    REQUIRE(reloaded.Succeeded);
+    for (uint64_t generation = 2; generation <= 4; ++generation)
+    {
+        replacement.Generation = generation;
+        const ManagedOperationResult reloaded = scripting.ReloadProgram(replacement);
+        INFO(DescribeDiagnostics(reloaded));
+        REQUIRE(reloaded.Succeeded);
+    }
 
     const ScriptStateResult afterReload = scripting.CaptureState(created.Handle);
     INFO(DescribeDiagnostics(afterReload.Result));
     REQUIRE(afterReload.Result.Succeeded);
     CHECK(afterReload.State == beforeReload.State);
+    checkLookup(observerA, 55, 33, 33);
+    checkLookup(observerB, 44, -1, 44);
+
+    // Reject the replacement after unloading, then recreate the previous program and its live instances.
+    ManagedProgramDefinition brokenReplacement = replacement;
+    brokenReplacement.Generation = 5;
+    std::erase_if(brokenReplacement.Artifacts,
+                  [](const ManagedProgramArtifact& artifact) { return artifact.Kind == ManagedProgramArtifactKind::GameAssembly; });
+    const ManagedOperationResult rolledBack = scripting.ReloadProgram(brokenReplacement);
+    CHECK_FALSE(rolledBack.Succeeded);
+    CHECK(rolledBack.HasDiagnosticCode("managed.coreclr.game_assembly_missing"));
+    CHECK_FALSE(rolledBack.HasDiagnosticCode("managed.coreclr.reload_rollback_failed"));
+    const ScriptStateResult afterRollback = scripting.CaptureState(created.Handle);
+    INFO(DescribeDiagnostics(afterRollback.Result));
+    REQUIRE(afterRollback.Result.Succeeded);
+    CHECK(afterRollback.State == beforeReload.State);
+    checkLookup(observerA, 55, 33, 33);
+    checkLookup(observerB, 44, -1, 44);
+    REQUIRE(scripting.DestroyScript(secondA).Succeeded);
+    checkLookup(observerA, 55, -1, 55);
+    REQUIRE(scripting.DestroyScript(replacementA).Succeeded);
+    checkLookup(observerA, -1, -1, -1);
+    checkLookup(observerB, 44, -1, 44);
+    REQUIRE(scripting.DestroyScript(observerA).Succeeded);
+    REQUIRE(scripting.DestroyScript(firstB).Succeeded);
+    REQUIRE(scripting.DestroyScript(observerB).Succeeded);
     REQUIRE(scripting.DestroyScript(created.Handle).Succeeded);
     scripting.Shutdown();
 }
@@ -490,8 +601,7 @@ TEST_CASE("Managed catalog preserves searchable inspector settings", "[Scripting
     CHECK_FALSE(typeSearch->Recursive);
     const ScriptSearchSettings* fieldSearch = catalog.Types.front().Fields.front().Attributes.Get<ScriptSearchSettings>();
     REQUIRE(fieldSearch != nullptr);
-    CHECK(fieldSearch->FilterOptions ==
-          (ScriptSearchFilterOptions::PropertyName | ScriptSearchFilterOptions::ValueToString));
+    CHECK(fieldSearch->FilterOptions == (ScriptSearchFilterOptions::PropertyName | ScriptSearchFilterOptions::ValueToString));
     CHECK_FALSE(fieldSearch->FuzzySearch);
     CHECK(fieldSearch->Recursive);
 
@@ -523,15 +633,14 @@ TEST_CASE("Managed inspector attributes are cached by settings type", "[Scriptin
 
 TEST_CASE("Managed JSON preserves conditional and value-changed inspector settings", "[Scripting][Managed][Contract]")
 {
-    const String json =
-      R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
-      R"("TypeName":"ConditionalExample","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[{)"
-      R"("StableId":12,"Name":"Target","ValueKind":"SignedInteger","ElementKind":null,"KeyKind":null,)"
-      R"("DeclaredType":null,"IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,)"
-      R"("Conditions":[{"Effect":0,"Condition":"Advanced","Animate":false,"HasValue":false,"ValueKind":"Null","Value":null},)"
-      R"({"Effect":3,"Condition":"Mode","Animate":true,"HasValue":true,"ValueKind":"SignedInteger","Value":2}],)"
-      R"("OnValueChanged":[{"Action":"TargetChanged","MethodId":42,"IncludeChildren":true,"InvokeOnInitialize":true,)"
-      R"("InvokeOnUndoRedo":false,"PassValue":true}]}]}]})";
+    const String json = R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"ConditionalExample","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[{)"
+                        R"("StableId":12,"Name":"Target","ValueKind":"SignedInteger","ElementKind":null,"KeyKind":null,)"
+                        R"("DeclaredType":null,"IsNullable":false,"IsSerializable":true,"IsInspectable":true,"IsReadOnly":false,)"
+                        R"("Conditions":[{"Effect":0,"Condition":"Advanced","Animate":false,"HasValue":false,"ValueKind":"Null","Value":null},)"
+                        R"({"Effect":3,"Condition":"Mode","Animate":true,"HasValue":true,"ValueKind":"SignedInteger","Value":2}],)"
+                        R"("OnValueChanged":[{"Action":"TargetChanged","MethodId":42,"IncludeChildren":true,"InvokeOnInitialize":true,)"
+                        R"("InvokeOnUndoRedo":false,"PassValue":true}]}]}]})";
 
     ScriptCatalog catalog;
     REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
@@ -567,13 +676,12 @@ TEST_CASE("Managed JSON preserves conditional and value-changed inspector settin
 
 TEST_CASE("Managed catalog preserves inspector button methods", "[Scripting][Managed][Contract]")
 {
-    const String json =
-      R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
-      R"("TypeName":"Actions","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[],"Methods":[{)"
-      R"("StableId":21,"Name":"AddScore","IsStatic":false,"ReturnKind":"SignedInteger","DeclaredReturnType":null,)"
-      R"("Parameters":[{"Name":"amount","ValueKind":"SignedInteger","DeclaredType":null,"HasDefaultValue":true,"DefaultValue":5}],)"
-      R"("Button":{"Name":"Add Score","ButtonHeight":30,"ButtonAlignment":0.25,"Stretch":false,"Style":2,)"
-      R"("DisplayParameters":true,"Expanded":true,"DrawResult":true,"DirtyOnClick":false,"Icon":"plus","IconAlignment":1}}]}]})";
+    const String json = R"({"ManifestVersion":2,"Types":[{"StableId":11,"Assembly":"GameAssembly","Namespace":"Game",)"
+                        R"("TypeName":"Actions","BaseType":null,"RunInEditor":false,"Events":[],"Fields":[],"Methods":[{)"
+                        R"("StableId":21,"Name":"AddScore","IsStatic":false,"ReturnKind":"SignedInteger","DeclaredReturnType":null,)"
+                        R"("Parameters":[{"Name":"amount","ValueKind":"SignedInteger","DeclaredType":null,"HasDefaultValue":true,"DefaultValue":5}],)"
+                        R"("Button":{"Name":"Add Score","ButtonHeight":30,"ButtonAlignment":0.25,"Stretch":false,"Style":2,)"
+                        R"("DisplayParameters":true,"Expanded":true,"DrawResult":true,"DirtyOnClick":false,"Icon":"plus","IconAlignment":1}}]}]})";
 
     ScriptCatalog catalog;
     REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
@@ -622,8 +730,7 @@ TEST_CASE("Managed catalog preserves progress bar inspector settings", "[Scripti
     ScriptCatalog catalog;
     REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
     REQUIRE(catalog.Types.size() == 1);
-    const ScriptProgressBarSettings* progressBar =
-      catalog.Types.front().Fields.front().Attributes.Get<ScriptProgressBarSettings>();
+    const ScriptProgressBarSettings* progressBar = catalog.Types.front().Fields.front().Attributes.Get<ScriptProgressBarSettings>();
     REQUIRE(progressBar != nullptr);
     const ScriptProgressBarSettings& settings = *progressBar;
     CHECK(settings.Min == 0.0);
@@ -692,8 +799,7 @@ TEST_CASE("Managed catalog preserves enum button options and flags", "[Scripting
 
     ScriptCatalog catalog;
     REQUIRE(ParseManagedCatalogJson(json, catalog, ManagedBackendId::CoreCLR).Succeeded);
-    const ScriptEnumButtonsSettings* enumButtons =
-      catalog.Types.front().Fields.front().Attributes.Get<ScriptEnumButtonsSettings>();
+    const ScriptEnumButtonsSettings* enumButtons = catalog.Types.front().Fields.front().Attributes.Get<ScriptEnumButtonsSettings>();
     REQUIRE(enumButtons != nullptr);
     const ScriptEnumButtonsSettings& settings = *enumButtons;
     CHECK(settings.IsFlags);
@@ -754,16 +860,14 @@ TEST_CASE("Managed catalog preserves every dictionary display layout", "[Scripti
     CHECK(catalog.DictionaryDisplays.front().Display.Layout == ScriptDictionaryLayout::OneColumnWithValueFoldout);
     CHECK(catalog.DictionaryDisplays.front().Display.KeyColumnFraction == Catch::Approx(0.35f));
     REQUIRE(catalog.Types.front().Fields.size() == 2);
-    const ScriptDictionaryDisplaySettings* columnSettings =
-      catalog.Types.front().Fields[0].Attributes.Get<ScriptDictionaryDisplaySettings>();
+    const ScriptDictionaryDisplaySettings* columnSettings = catalog.Types.front().Fields[0].Attributes.Get<ScriptDictionaryDisplaySettings>();
     REQUIRE(columnSettings != nullptr);
     const ScriptDictionaryDisplaySettings& columns = *columnSettings;
     CHECK(columns.Layout == ScriptDictionaryLayout::TwoColumns);
     CHECK(columns.KeyLabel == "Name");
     CHECK(columns.ValueLabel == "Amount");
     CHECK(columns.KeyColumnFraction == Catch::Approx(0.6f));
-    const ScriptDictionaryDisplaySettings* visibleSettings =
-      catalog.Types.front().Fields[1].Attributes.Get<ScriptDictionaryDisplaySettings>();
+    const ScriptDictionaryDisplaySettings* visibleSettings = catalog.Types.front().Fields[1].Attributes.Get<ScriptDictionaryDisplaySettings>();
     REQUIRE(visibleSettings != nullptr);
     const ScriptDictionaryDisplaySettings& visible = *visibleSettings;
     CHECK(visible.Layout == ScriptDictionaryLayout::OneColumnWithValueVisible);
@@ -1123,6 +1227,51 @@ TEST_CASE("Mono lifecycle awakens every script before Start and runs Update befo
     ScriptRuntime::OnShutdown(scene);
 }
 
+TEST_CASE("Scene scripts recover after their managed handles are invalidated", "[Scripting][Managed][Lifecycle][Mono][.ProcessIsolated]")
+{
+    ManagedScripting& scripting = StartMonoLifecycleFixture();
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    ScopedActiveScene activeScene(scene);
+    const ScriptTypeIdentity probe{ GAME_ASSEMBLY, "Sandbox", "LifecycleProbe" };
+    Entity entity = scene->CreateEntity("Lifecycle recovery");
+    REQUIRE(scene->AddScriptComponent(entity, probe, false));
+    const auto script = [&]() -> ManagedScript& { return entity.GetComponent<ManagedScriptComponent>().Scripts.front(); };
+    REQUIRE(ScriptRuntime::CreateScript(entity, script(), true));
+    REQUIRE(ScriptRuntime::IsScriptAwake(script()));
+    const ScriptState saved = ScriptRuntime::CaptureState(script());
+    const ScriptInstanceHandle previous = script().GetRuntimeHandle();
+
+    // A failed runtime rollback invalidates managed instances without removing their scene occurrences.
+    REQUIRE(scripting.DestroyScript(previous).Succeeded);
+    // CoreCLR invalidation leaves the cached scene handle for the scene layer to reconcile.
+    script().SetRuntimeHandle(previous);
+    CHECK_FALSE(ScriptRuntime::IsScriptAwake(script()));
+    SECTION("dispatch retires stale handles")
+    {
+        ScriptRuntime::Dispatch(script(), ScriptEvent::Lifecycle(ScriptEventKind::Update));
+        CHECK_FALSE(script().GetRuntimeHandle().IsValid());
+        CHECK(ScriptRuntime::CaptureState(script()) == saved);
+    }
+    SECTION("state capture keeps the saved scene state")
+    {
+        CHECK(ScriptRuntime::CaptureState(script()) == saved);
+        CHECK_FALSE(script().GetRuntimeHandle().IsValid());
+    }
+    SECTION("state editing remains available without a live instance")
+    {
+        CHECK(ScriptRuntime::ApplyState(script(), saved));
+        CHECK_FALSE(script().GetRuntimeHandle().IsValid());
+    }
+    SECTION("creation replaces a stale handle directly") {}
+
+    REQUIRE(ScriptRuntime::CreateScript(entity, script(), true));
+    CHECK(script().GetRuntimeHandle() != previous);
+    REQUIRE(scripting.CaptureState(script().GetRuntimeHandle()).Result.Succeeded);
+    CHECK(ScriptRuntime::IsScriptAwake(script()));
+    CHECK(LifecycleNames(CaptureLifecycleLog(scripting, script())) == Vector<String>{ "Awake", "Start", "Awake", "Start" });
+    ScriptRuntime::OnShutdown(scene);
+}
+
 TEST_CASE("Mono lifecycle delivers OnDestroy on entity destruction and scene stop for awakened scripts only",
           "[Scripting][Managed][Lifecycle][Mono][.ProcessIsolated]")
 {
@@ -1139,9 +1288,11 @@ TEST_CASE("Mono lifecycle delivers OnDestroy on entity destruction and scene sto
     ScriptRuntime::OnUpdate(scene, Timestep(1.0f / 60.0f));
     CHECK(sink.GetName() == "LifecycleProbeSink");
 
+    const UUID destroyedUuid = destroyed.GetUuid();
+
     // Destroying the entity while other scripts stay alive delivers OnDestroy exactly once, with the full history.
     scene->DestroyEntity(destroyed);
-    CHECK_FALSE(scene->TryGetEntityFromUuid(destroyed.GetUuid()));
+    CHECK_FALSE(scene->TryGetEntityFromUuid(destroyedUuid));
     String sinkName = sink.GetName();
     CHECK(CountOccurrences(sinkName, "OnDestroy@") == 1);
     CHECK(CountOccurrences(sinkName, "Awake@") == 1);

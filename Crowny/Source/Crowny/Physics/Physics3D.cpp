@@ -4,6 +4,7 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics3D.h"
+#include "Crowny/Physics/PhysicsMesh.h"
 #include "Crowny/Scene/SceneManager.h"
 
 #include <algorithm>
@@ -132,7 +133,12 @@ namespace Crowny
         m_Backend = MakeBackend(m_Settings.Backend);
     }
 
-    Physics3D::~Physics3D() { StopSimulation(); }
+    Physics3D::~Physics3D()
+    {
+        StopSimulation();
+        // Registrations must survive Start/StopSimulation cycles; only a full physics teardown drops them.
+        PhysicsMeshResolver::Clear();
+    }
 
     Scope<Physics3DBackend> Physics3D::MakeBackend(Physics3DBackendType backend) const
     {
@@ -289,6 +295,8 @@ namespace Crowny
             replaceDefault(Entity(handle, scene).GetComponent<SphereCollider3DComponent>());
         for (const entt::entity handle : scene->GetAllEntitiesWith<CapsuleCollider3DComponent>())
             replaceDefault(Entity(handle, scene).GetComponent<CapsuleCollider3DComponent>());
+        for (const entt::entity handle : scene->GetAllEntitiesWith<MeshCollider3DComponent>())
+            replaceDefault(Entity(handle, scene).GetComponent<MeshCollider3DComponent>());
     }
 
     PhysicsBody3DHandle Physics3D::CreateBody(const PhysicsBody3DDesc& desc)

@@ -1237,19 +1237,22 @@ namespace Crowny
                     const FileEntry* fileEntry = static_cast<const FileEntry*>(entry);
                     if (fileEntry->Metadata && fileEntry->Metadata->Type == assetType)
                     {
-                        ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-                        if (ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD))
-                            return fileEntry;
-                        else
-                            return nullptr;
+                        if (const ImGuiPayload* accepted =
+                              ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD, ImGuiDragDropFlags_AcceptBeforeDelivery))
+                        {
+                            ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+                            if (accepted->IsDelivery())
+                                return fileEntry;
+                        }
+                        return nullptr;
                     }
                 }
             }
             // Draw red outline for invalid assets. Note that for the proper outline to appear has to be called.
             UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
             // Application::TryGet()->GetWindow().SetCursor(Cursor::STOPSIGN);
-            ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
-            ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD);
+            if (ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD, ImGuiDragDropFlags_AcceptBeforeDelivery))
+                ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
             return nullptr;
         }
 
@@ -1264,19 +1267,22 @@ namespace Crowny
                     const FileEntry* fileEntry = static_cast<const FileEntry*>(entry);
                     if (fileEntry->Metadata && (!assetPayloadCallback || assetPayloadCallback(fileEntry)))
                     {
-                        ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-                        if (ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD))
-                            return fileEntry;
-                        else
-                            return nullptr;
+                        if (const ImGuiPayload* accepted =
+                              ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD, ImGuiDragDropFlags_AcceptBeforeDelivery))
+                        {
+                            ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+                            if (accepted->IsDelivery())
+                                return fileEntry;
+                        }
+                        return nullptr;
                     }
                 }
             }
             // Draw red outline for invalid assets. Note that for the proper outline to appear has to be called.
             UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
             // Application::TryGet()->GetWindow().SetCursor(Cursor::STOPSIGN);
-            ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
-            ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD);
+            if (ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD, ImGuiDragDropFlags_AcceptBeforeDelivery))
+                ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
             return nullptr;
         }
 

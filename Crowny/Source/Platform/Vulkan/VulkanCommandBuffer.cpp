@@ -514,6 +514,8 @@ namespace Crowny
             return;
         m_Viewport = rect;
         m_ViewportRequiresBind = true;
+        // Without explicit scissoring, the scissor follows the viewport.
+        m_ScissorRequiresBind = true;
     }
 
     void VulkanCmdBuffer::SetScissorRect(const Rect2I& area)
@@ -2063,8 +2065,7 @@ namespace Crowny
     {
         if (bufferCount == 0)
             return;
-        CW_ENGINE_ASSERT(buffers != nullptr && idx + bufferCount <= MAX_BOUND_VERTEX_BUFFERS,
-                         "Vulkan vertex buffer binding range is invalid");
+        CW_ENGINE_ASSERT(buffers != nullptr && idx + bufferCount <= MAX_BOUND_VERTEX_BUFFERS, "Vulkan vertex buffer binding range is invalid");
         if (buffers == nullptr || idx + bufferCount > MAX_BOUND_VERTEX_BUFFERS)
             return;
         uint32_t endIdx = idx + bufferCount;
@@ -2195,8 +2196,8 @@ namespace Crowny
         {
             if (m_NumBoundDescriptorSets > 0)
             {
-                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline->GetLayout(), 0,
-                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline->GetLayout(), 0, m_NumBoundDescriptorSets,
+                                        m_DescriptorSetsTemp, 0, nullptr);
             }
             m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Graphics);
         }
@@ -2231,14 +2232,14 @@ namespace Crowny
         {
             if (m_NumBoundDescriptorSets > 0)
             {
-                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline->GetLayout(), 0,
-                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline->GetLayout(), 0, m_NumBoundDescriptorSets,
+                                        m_DescriptorSetsTemp, 0, nullptr);
             }
             m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Graphics);
         }
 
-        vkCmdDrawIndexedIndirectCount(m_CmdBuffer, argumentBuffer->GetHandle(), argumentOffset, countBuffer->GetHandle(), countOffset,
-                                      maxDrawCount, stride);
+        vkCmdDrawIndexedIndirectCount(m_CmdBuffer, argumentBuffer->GetHandle(), argumentOffset, countBuffer->GetHandle(), countOffset, maxDrawCount,
+                                      stride);
     }
 
     static uint32_t vkAlignedSize(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
@@ -2375,8 +2376,8 @@ namespace Crowny
         {
             if (m_NumBoundDescriptorSets > 0)
             {
-                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->GetLayout(), 0,
-                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->GetLayout(), 0, m_NumBoundDescriptorSets,
+                                        m_DescriptorSetsTemp, 0, nullptr);
             }
             m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Compute);
         }

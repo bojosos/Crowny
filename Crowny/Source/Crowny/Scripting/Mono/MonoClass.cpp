@@ -5,6 +5,7 @@
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoMethod.h"
 #include "Crowny/Scripting/Mono/MonoProperty.h"
+#include "Crowny/Scripting/Mono/MonoUtils.h"
 
 #include <mono/jit/jit.h>
 #include <mono/metadata/debug-helpers.h>
@@ -14,10 +15,7 @@ namespace Crowny
 {
     namespace
     {
-        void CombineHash(size_t& hash, size_t value)
-        {
-            hash ^= value + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-        }
+        void CombineHash(size_t& hash, size_t value) { hash ^= value + 0x9e3779b9 + (hash << 6) + (hash >> 2); }
 
         size_t HashMethod(HashedString name, HashedString signature, uint32_t numParams, bool usesSignature)
         {
@@ -28,10 +26,7 @@ namespace Crowny
         }
     } // namespace
 
-    MonoClass::MethodLookupId::MethodLookupId(HashedString name, uint32_t paramCount)
-      : Name(name), NumParams(paramCount), UsesSignature(false)
-    {
-    }
+    MonoClass::MethodLookupId::MethodLookupId(HashedString name, uint32_t paramCount) : Name(name), NumParams(paramCount), UsesSignature(false) {}
 
     MonoClass::MethodLookupId::MethodLookupId(HashedString name, HashedString signature)
       : Name(name), Signature(signature), NumParams(0), UsesSignature(true)
@@ -40,10 +35,7 @@ namespace Crowny
 
     MonoClass::MethodId::MethodId(StringView name, uint32_t numParams) : Name(name), NumParams(numParams), UsesSignature(false) {}
 
-    MonoClass::MethodId::MethodId(StringView name, StringView signature)
-      : Name(name), Signature(signature), NumParams(0), UsesSignature(true)
-    {
-    }
+    MonoClass::MethodId::MethodId(StringView name, StringView signature) : Name(name), Signature(signature), NumParams(0), UsesSignature(true) {}
 
     size_t MonoClass::MethodId::Hash::operator()(const MonoClass::MethodId& value) const
     {
@@ -57,8 +49,7 @@ namespace Crowny
 
     bool MonoClass::MethodId::Equals::operator()(const MonoClass::MethodId& a, const MonoClass::MethodId& b) const
     {
-        return a.UsesSignature == b.UsesSignature && a.Name == b.Name &&
-               (a.UsesSignature ? a.Signature == b.Signature : a.NumParams == b.NumParams);
+        return a.UsesSignature == b.UsesSignature && a.Name == b.Name && (a.UsesSignature ? a.Signature == b.Signature : a.NumParams == b.NumParams);
     }
 
     bool MonoClass::MethodId::Equals::operator()(const MonoClass::MethodId& a, const MonoClass::MethodLookupId& b) const
@@ -69,10 +60,7 @@ namespace Crowny
         return a.UsesSignature ? StringEqual()(StringView(a.Signature), b.Signature) : a.NumParams == b.NumParams;
     }
 
-    bool MonoClass::MethodId::Equals::operator()(const MonoClass::MethodLookupId& a, const MonoClass::MethodId& b) const
-    {
-        return (*this)(b, a);
-    }
+    bool MonoClass::MethodId::Equals::operator()(const MonoClass::MethodLookupId& a, const MonoClass::MethodId& b) const { return (*this)(b, a); }
 
     MonoClass::MonoClass(::MonoClass* monoClass)
       : m_Class(monoClass), m_AllMethodsCached(false), m_AllFieldsCached(false), m_AllPropertiesCached(false)
@@ -98,10 +86,10 @@ namespace Crowny
     }
     MonoObject* MonoClass::CreateInstance(bool construct) const
     {
-        MonoObject* obj = mono_object_new(MonoManager::Get().GetDomain(), m_Class);
+        MonoGCHandle instance(mono_object_new(MonoManager::Get().GetDomain(), m_Class));
         if (construct)
-            mono_runtime_object_init(obj);
-        return obj;
+            mono_runtime_object_init(instance.Get());
+        return instance.Get();
     }
 
     void MonoClass::AddInternalCall(const String& managed, const void* func) { mono_add_internal_call((m_FullName + "::" + managed).c_str(), func); }
@@ -240,10 +228,7 @@ namespace Crowny
         return GetMethodBySignature(HashedString(name), HashedString(signature));
     }
 
-    MonoMethod* MonoClass::GetMethod(HashedString name, StringView signature) const
-    {
-        return GetMethodBySignature(name, HashedString(signature));
-    }
+    MonoMethod* MonoClass::GetMethod(HashedString name, StringView signature) const { return GetMethodBySignature(name, HashedString(signature)); }
 
     MonoMethod* MonoClass::GetMethodBySignature(HashedString name, HashedString signature) const
     {

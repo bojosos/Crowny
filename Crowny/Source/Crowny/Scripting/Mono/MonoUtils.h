@@ -2,6 +2,7 @@
 
 #include "Crowny/Common/StdHeaders.h"
 #include "Crowny/Common/Types.h"
+#include "Crowny/Scripting/Managed/ManagedTypes.h"
 #include "Crowny/Scripting/Mono/Mono.h"
 
 #undef GetClassName
@@ -10,11 +11,29 @@ namespace Crowny
 {
     typedef bool (*MonoStackWalk)(::MonoMethod* method, int32_t native_offset, int32_t il_offset, bool managed, void* data);
 
+    // A temporary strong root. Resolve Get() again after any managed allocation or callback.
+    class MonoGCHandle
+    {
+    public:
+        explicit MonoGCHandle(MonoObject* object, bool pinned = false);
+        ~MonoGCHandle();
+        MonoGCHandle(const MonoGCHandle&) = delete;
+        MonoGCHandle& operator=(const MonoGCHandle&) = delete;
+        MonoGCHandle(MonoGCHandle&& other) noexcept;
+        MonoGCHandle& operator=(MonoGCHandle&& other) noexcept;
+        MonoObject* Get() const;
+
+    private:
+        uint32_t m_Handle = 0;
+    };
+
     class MonoUtils
     {
     public:
         static void CheckException(MonoException* exception);
         static void CheckException(MonoObject* exception);
+        static ManagedDiagnostic DescribeException(MonoObject* exception);
+        static Vector<ManagedDiagnostic> DrainDiagnostics();
 
         static bool IsEnum(MonoClass* monoClass);
         static bool IsEnum(::MonoClass* monoClass);

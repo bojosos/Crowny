@@ -57,6 +57,7 @@ namespace
     class TestGpuBuffer final : public GenericGpuBuffer
     {
     public:
+        TestGpuBuffer() : GenericGpuBuffer(64, BufferUsage::BU_STATIC_DRAW) {}
         void* Map(uint32_t, uint32_t, GpuLockOptions) override { return nullptr; }
         void Unmap() override {}
         uint32_t GetBufferSize() const override { return 64; }
@@ -541,8 +542,7 @@ TEST_CASE("RenderGraph registry preserves transient aliasing within a frame", "[
     resources.EndFrame();
 }
 
-TEST_CASE("RenderGraph transient bindings allocate nothing after frame-slot warm-up",
-          "[Memory][Frame][Renderer][RenderGraph][Resources]")
+TEST_CASE("RenderGraph transient bindings allocate nothing after frame-slot warm-up", "[Memory][Frame][Renderer][RenderGraph][Resources]")
 {
 #if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL > 0
     SKIP("MSVC debug iterators allocate bookkeeping storage during container reuse.");
@@ -575,8 +575,7 @@ TEST_CASE("RenderGraph transient bindings allocate nothing after frame-slot warm
     for (uint64_t frame = 0; frame < 120u; frame++)
     {
         stable &= resources.BeginFrame(compiled, frame + 3u, 1u);
-        const std::array<uint64_t, 3> current{ resources.Get(first).PhysicalId, resources.Get(second).PhysicalId,
-                                               resources.Get(third).PhysicalId };
+        const std::array<uint64_t, 3> current{ resources.Get(first).PhysicalId, resources.Get(second).PhysicalId, resources.Get(third).PhysicalId };
         stable &= current == physicalIds[frame % physicalIds.size()];
         checksum += current[0] + current[1] + current[2];
         resources.EndFrame();

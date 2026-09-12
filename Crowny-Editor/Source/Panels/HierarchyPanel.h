@@ -50,8 +50,9 @@ namespace Crowny
         }
         void SelectEntity(Entity entity, EntitySelectionMode mode)
         {
-            if (m_Selection.Select(entity, mode, m_VisibleEntities))
-                NotifySelectionChanged();
+            m_Selection.Select(entity, mode, m_VisibleEntities);
+            // Reselecting an entity must restore the inspector after inspecting an asset.
+            NotifySelectionChanged();
         }
         Entity GetSelectedEntity() const { return m_Selection.GetPrimary(); }
         const Vector<Entity>& GetSelectedEntities() const { return m_Selection.GetAll(); }

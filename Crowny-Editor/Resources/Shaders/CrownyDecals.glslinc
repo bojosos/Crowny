@@ -1,0 +1,243 @@
+#ifndef CROWNY_DECALS_GLSL
+#define CROWNY_DECALS_GLSL
+
+struct CwDecal
+{
+    mat4 worldToLocal;
+    vec4 sizeProjection;
+    vec4 cylinder;
+    vec4 offsetArc;
+    vec4 fades;
+    vec4 tint;
+    vec4 uv;
+    vec4 controls;
+    uvec4 metadata;
+};
+struct CwDecalMaterial
+{
+    vec4 color;
+    vec4 emission;
+    vec4 surface;
+    vec4 strengths;
+    vec4 strengths2;
+    vec4 correctionTintExposure;
+    vec4 correction;
+    vec4 mask;
+    uvec4 modes;
+    uvec4 textures;
+    uvec4 textures2;
+};
+layout(set = 2, binding = 0) uniform cw_DecalConstants { uvec4 counts; } cwDecalConstants;
+layout(std430, set = 2, binding = 1) readonly buffer CwDecals { CwDecal cwDecals[]; };
+layout(std430, set = 2, binding = 2) readonly buffer CwDecalMaterials { CwDecalMaterial cwDecalMaterials[]; };
+layout(std430, set = 2, binding = 4) readonly buffer CwDecalReceivers { uvec4 cwDecalReceivers[]; };
+layout(set = 2, binding = 7) uniform cw_DecalGridConstants
+{
+    mat4 cw_DecalViewProjection;
+    vec4 depthRow;
+    uvec4 dimensions;
+    vec4 depthViewport;
+    vec4 cameraPosition;
+} cwDecalGrid;
+layout(std430, set = 2, binding = 8) readonly buffer CwDecalCells { uvec2 cwDecalCells[]; };
+layout(std430, set = 2, binding = 9) readonly buffer CwDecalIndices { uint cwDecalIndices[]; };
+#ifndef CW_DECAL_COMPATIBILITY
+vec4 cwSampleDecal(uint index, vec2 uv, vec2 dx, vec2 dy)
+{
+    return textureGrad(cwTextures[nonuniformEXT(index)], uv, dx, dy);
+}
+#else
+layout(set = 2, binding = 3) uniform sampler2DArray cwDecalAtlas;
+layout(std430, set = 2, binding = 5) readonly buffer CwDecalAtlasRects { vec4 cwDecalAtlasRects[]; };
+vec4 cwSampleDecal(uint index, vec2 uv, vec2 dx, vec2 dy)
+{
+    vec4 info = cwDecalAtlasRects[index * 33u];
+    float lod = clamp(log2(max(max(length(dx * info.xy), length(dy * info.xy)), 1.0)), 0.0, max(info.z - 1.0, 0.0));
+    uint low = uint(floor(lod)), high = min(low + 1u, uint(info.z) - 1u);
+    vec4 r0 = cwDecalAtlasRects[index * 33u + 1u + low * 2u];
+    vec4 r1 = cwDecalAtlasRects[index * 33u + 1u + high * 2u];
+    float l0 = cwDecalAtlasRects[index * 33u + 2u + low * 2u].x;
+    float l1 = cwDecalAtlasRects[index * 33u + 2u + high * 2u].x;
+    vec4 a = textureLod(cwDecalAtlas, vec3(r0.xy + fract(uv) * r0.zw, l0), 0.0);
+    vec4 b = textureLod(cwDecalAtlas, vec3(r1.xy + fract(uv) * r1.zw, l1), 0.0);
+    return mix(a, b, fract(lod));
+}
+#endif
+
+bool cwDecalCoatingCore(float originalOpacity, float coatedOpacity)
+{
+    return coatedOpacity >= 0.9999 && coatedOpacity > originalOpacity;
+}
+float cwDecalFeather(float distance, float width) { return width > 0.0 ? smoothstep(0.0, width, distance) : 1.0; }
+vec3 cwDecalCombine(vec3 base, vec3 value, uint mode, float weight)
+{
+    return mix(base, mode == 1u ? base * value : mode == 2u ? base + value : value, weight);
+}
+float cwDecalCombine(float base, float value, uint mode, float weight)
+{
+    return mix(base, mode == 1u ? base * value : mode == 2u ? base + value : value, weight);
+}
+vec3 cwDecalCorrect(vec3 color, CwDecalMaterial m)
+{
+    if (all(equal(m.correctionTintExposure, vec4(1, 1, 1, 0))) && all(equal(m.correction.xyz, vec3(0, 1, 1)))) return color;
+    vec3 c = color * m.correctionTintExposure.rgb * exp2(m.correctionTintExposure.w);
+    const vec3 luma = vec3(0.2126, 0.7152, 0.0722);
+    const vec3 axis = vec3(0.57735026919);
+    float y = dot(c, luma);
+    float angle = m.correction.x;
+    c = c * cos(angle) + cross(axis, c) * sin(angle) + axis * dot(axis, c) * (1.0 - cos(angle));
+    c += vec3(y - dot(c, luma));
+    c = mix(vec3(y), c, m.correction.y);
+    return max((c - 0.18) * m.correction.z + 0.18, vec3(0));
+}
+
+float cwProjectDecal(CwDecal d, vec3 position, vec3 geometricNormal, vec3 dpdx, vec3 dpdy,
+                     float cameraDistance, out vec2 uv, out vec2 dx, out vec2 dy)
+{
+    vec3 p = (d.worldToLocal * vec4(position, 1)).xyz - d.offsetArc.xyz;
+    vec3 px = mat3(d.worldToLocal) * dpdx;
+    vec3 py = mat3(d.worldToLocal) * dpdy;
+    vec3 n = vec3(0, 0, 1);
+    float coverage = 1.0;
+    if (d.sizeProjection.w < 0.5)
+    {
+        vec3 remaining = d.sizeProjection.xyz * 0.5 - abs(p);
+        if (any(lessThan(remaining, vec3(0)))) return 0.0;
+        uv = p.xy / d.sizeProjection.xy + 0.5;
+        dx = px.xy / d.sizeProjection.xy;
+        dy = py.xy / d.sizeProjection.xy;
+        coverage = cwDecalFeather(min(remaining.x, remaining.y), d.fades.x) * cwDecalFeather(remaining.z, d.fades.y);
+    }
+    else
+    {
+        float v = p.y / d.cylinder.z + 0.5;
+        float r2 = dot(p.xz, p.xz);
+        if (v < 0.0 || v > 1.0 || r2 < 1e-14) return 0.0;
+        float r = sqrt(r2);
+        float expected = mix(d.cylinder.x, d.cylinder.y, v);
+        float remaining = d.cylinder.w * 0.5 - abs(r - expected);
+        float angle = mod(atan(p.x, p.z) - d.controls.y, 6.28318530718);
+        if (remaining < 0.0 || angle > d.offsetArc.w) return 0.0;
+        uv = vec2(angle / d.offsetArc.w, v);
+        // Differentiate atan analytically before wrapping the coordinate at the seam.
+        dx = vec2((p.z * px.x - p.x * px.z) / (r2 * d.offsetArc.w), px.y / d.cylinder.z);
+        dy = vec2((p.z * py.x - p.x * py.z) / (r2 * d.offsetArc.w), py.y / d.cylinder.z);
+        n = normalize(vec3(p.x / r, -(d.cylinder.y - d.cylinder.x) / d.cylinder.z, p.z / r));
+        coverage = cwDecalFeather(min(v, 1.0 - v) * d.cylinder.z, d.fades.x) * cwDecalFeather(remaining, d.fades.y);
+        if (d.offsetArc.w < 6.283185)
+            coverage *= cwDecalFeather(min(angle, d.offsetArc.w - angle) * expected, d.fades.x);
+    }
+    n = normalize(transpose(mat3(d.worldToLocal)) * n);
+    float facing = dot(n, geometricNormal);
+    coverage *= d.fades.z > d.fades.w ? smoothstep(d.fades.w, d.fades.z, facing) : step(d.fades.z, facing);
+    if (d.controls.w > d.controls.z) coverage *= 1.0 - smoothstep(d.controls.z, d.controls.w, cameraDistance);
+    float angle = d.controls.x;
+    mat2 rotation = mat2(cos(angle), sin(angle), -sin(angle), cos(angle));
+    uv = rotation * ((uv - 0.5) * d.uv.xy) + 0.5 + d.uv.zw;
+    dx = rotation * (dx * d.uv.xy);
+    dy = rotation * (dy * d.uv.xy);
+    return coverage * clamp(d.tint.a, 0.0, 1.0);
+}
+
+void cwApplyDecals(uint objectId, uint response, vec3 position, vec3 geometricNormal, vec3 dpdx, vec3 dpdy,
+                   float cameraDistance, float preExposure, inout vec3 color, inout vec3 normal,
+                   inout float roughness, inout float metallic, inout float ao, inout vec3 emission, inout float opacity)
+{
+    uint debugView = uint(cwDecalGrid.cameraPosition.w);
+    if (cwDecalConstants.counts.x == 0u || (response == 0u && debugView != 3u)) return;
+    float debugCoverage = 0.0;
+    uint debugOverlap = 0u;
+    vec2 debugUV = vec2(0);
+    bool debugVolume = false;
+    uint low = 0u;
+    uint high = cwDecalConstants.counts.y;
+    while (low < high)
+    {
+        uint middle = low + (high - low) / 2u;
+        if (cwDecalReceivers[middle].x < objectId) low = middle + 1u;
+        else high = middle;
+    }
+    if (low >= cwDecalConstants.counts.y || cwDecalReceivers[low].x != objectId) return;
+    uvec4 receiver = cwDecalReceivers[low];
+    uvec2 cell = uvec2(0u, 0xffffffffu);
+    float depth = dot(cwDecalGrid.depthRow, vec4(position, 1));
+    vec4 clip = cwDecalGrid.cw_DecalViewProjection * vec4(position, 1);
+    if (cwDecalConstants.counts.z > 0u && depth >= cwDecalGrid.depthViewport.x && depth <= cwDecalGrid.depthViewport.y && clip.w > 0.0)
+    {
+        vec2 pixel = (clip.xy / clip.w * 0.5 + 0.5) * cwDecalGrid.depthViewport.zw;
+        uvec2 tile = min(uvec2(max(pixel, vec2(0))) / cwDecalGrid.dimensions.w, cwDecalGrid.dimensions.xy - 1u);
+        uint slice = min(uint(log(depth / cwDecalGrid.depthViewport.x) / log(cwDecalGrid.depthViewport.y / cwDecalGrid.depthViewport.x) * float(cwDecalGrid.dimensions.z)), cwDecalGrid.dimensions.z - 1u);
+        cell = cwDecalCells[tile.x + cwDecalGrid.dimensions.x * (tile.y + cwDecalGrid.dimensions.y * slice)];
+    }
+    uint candidates = cell.y == 0xffffffffu ? cwDecalConstants.counts.x : cell.y;
+    for (uint candidate = 0u; candidate < candidates; ++candidate)
+    {
+        uint index = cell.y == 0xffffffffu ? candidate : cwDecalIndices[cell.x + candidate];
+        CwDecal d = cwDecals[index];
+        bool accepted = (receiver.y & d.metadata.x) != 0u && receiver.z >= d.metadata.y && receiver.z < d.metadata.z;
+        if (!accepted && debugView != 3u) continue;
+        vec2 uv, dx, dy;
+        float coverage = cwProjectDecal(d, position, geometricNormal, dpdx, dpdy, cameraDistance, uv, dx, dy);
+        if (coverage <= 0.0) continue;
+        debugVolume = true;
+        if (!accepted) continue;
+        CwDecalMaterial m = cwDecalMaterials[d.metadata.w];
+        uint mask = m.modes.x & response & receiver.w;
+        if (mask == 0u) continue;
+        vec4 base = cwSampleDecal(m.textures.x, uv, dx, dy) * m.color * vec4(d.tint.rgb, 1);
+        float textureMask = cwSampleDecal(m.textures2.x, uv, dx, dy).r;
+        if (m.correction.w > 0.0)
+            textureMask = m.mask.x > 0.0 ? smoothstep(m.correction.w - m.mask.x, m.correction.w + m.mask.x, textureMask)
+                                          : step(m.correction.w, textureMask);
+        float a = clamp(coverage * base.a * textureMask, 0.0, 1.0);
+        if (a <= 0.0) continue;
+        debugUV = uv;
+        debugCoverage = max(debugCoverage, a);
+        ++debugOverlap;
+        vec4 w = a * clamp(m.strengths, 0.0, 1.0);
+        vec4 w2 = a * clamp(m.strengths2, 0.0, 1.0);
+        if ((mask & 64u) != 0u) color = mix(color, cwDecalCorrect(color, m), w2.z);
+        if ((mask & 1u) != 0u) color = cwDecalCombine(color, base.rgb, m.modes.y, w.x);
+        if ((mask & 28u) != 0u)
+        {
+            vec3 orm = cwSampleDecal(m.textures.z, uv, dx, dy).rgb;
+            if ((mask & 4u) != 0u && w.z > 0.0) roughness = cwDecalCombine(roughness, clamp(m.modes.z == 1u ? roughness * m.surface.x * orm.g : m.modes.z == 2u ? roughness + m.surface.x * orm.g : m.surface.x * orm.g, 0.0, 1.0), 0u, w.z);
+            if ((mask & 8u) != 0u && w.w > 0.0) metallic = mix(metallic, clamp(m.surface.y * orm.b, 0.0, 1.0), w.w);
+            if ((mask & 16u) != 0u) ao *= mix(1.0, m.surface.z * orm.r, w2.x);
+        }
+        if ((mask & 2u) != 0u && w.y > 0.0)
+        {
+            vec3 bump = cwSampleDecal(m.textures.y, uv, dx, dy).xyz * 2.0 - 1.0;
+            vec3 r1 = cross(dpdy, geometricNormal);
+            vec3 r2 = cross(geometricNormal, dpdx);
+            float determinant = dot(dpdx, r1);
+            if (abs(determinant) > 1e-12)
+            {
+                vec3 gu = (r1 * dx.x + r2 * dy.x) / determinant;
+                vec3 gv = (r1 * dx.y + r2 * dy.y) / determinant;
+                gu /= max(length(gu), 1e-8);
+                gv /= max(length(gv), 1e-8);
+                vec3 gradient = -(gu * bump.x + gv * bump.y) / max(bump.z, 0.05);
+                vec3 previous = geometricNormal - normal / max(dot(normal, geometricNormal), 0.05);
+                gradient = m.textures2.y != 0u ? mix(previous, gradient, w.y) : previous + gradient * w.y;
+                normal = normalize(geometricNormal - gradient);
+            }
+        }
+        if ((mask & 32u) != 0u)
+        {
+            vec3 e = cwSampleDecal(m.textures.w, uv, dx, dy).rgb * m.emission.rgb * m.emission.a * preExposure;
+            emission = cwDecalCombine(emission, e, m.modes.w, w2.y);
+        }
+        if ((mask & 128u) != 0u) opacity += w2.w * clamp(m.surface.w, 0.0, 1.0) * (1.0 - opacity);
+    }
+    if (debugView != 0u && debugVolume)
+    {
+        vec3 debugColor = debugView == 1u ? vec3(fract(debugUV), 0.0) : debugView == 2u ? vec3(debugCoverage) :
+            debugView == 3u ? (debugOverlap > 0u ? vec3(0, 1, 0) : vec3(1, 0, 0)) :
+            mix(vec3(0, 0.1, 1), vec3(1, 0.05, 0), clamp(float(debugOverlap) / 8.0, 0.0, 1.0));
+        color = vec3(0);
+        emission = debugColor * preExposure;
+        metallic = 0.0;
+    }
+}
+#endif

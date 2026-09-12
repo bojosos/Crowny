@@ -285,6 +285,17 @@ namespace Crowny
             if (options == GpuLockOptions::WRITE_ONLY_NO_OVERWRITE)
                 return m_Buffer->Map(offset, length);
 
+            if (options == GpuLockOptions::WRITE_DISCARD && m_Buffer->GetBoundCount() > m_Buffer->GetUseCount())
+            {
+                // A queue wait cannot finish a command buffer that is still being
+                // recorded. Preserve its bytes, including per-dispatch constants,
+                // even when this allocation is also used by a submitted frame.
+                VulkanBuffer* replacement = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice(), m_Size, false, true);
+                m_Buffer->Destroy();
+                m_Buffer = replacement;
+                return m_Buffer->Map(offset, length);
+            }
+
             uint32_t useMask = m_Buffer->GetUseInfo(VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
 
             bool isUsedOnGpu = useMask != 0 || m_SupportsGpuWrites;

@@ -30,14 +30,14 @@ namespace Crowny
             {
                 const String& scriptName = identity.TypeName;
                 if (diagnostic.Severity == ManagedDiagnosticSeverity::Error)
-                    CW_ENGINE_ERROR("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(),
-                                    diagnostic.Code, diagnostic.Message);
+                    CW_ENGINE_ERROR("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(), diagnostic.Code,
+                                    diagnostic.Message);
                 else if (diagnostic.Severity == ManagedDiagnosticSeverity::Warning)
-                    CW_ENGINE_WARN("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(),
-                                   diagnostic.Code, diagnostic.Message);
+                    CW_ENGINE_WARN("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(), diagnostic.Code,
+                                   diagnostic.Message);
                 else
-                    CW_ENGINE_INFO("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(),
-                                   diagnostic.Code, diagnostic.Message);
+                    CW_ENGINE_INFO("Managed script '{}:{}' on entity {} [{}]: {}", identity.Assembly, scriptName, entity.ToString(), diagnostic.Code,
+                                   diagnostic.Message);
             }
         }
 
@@ -54,10 +54,9 @@ namespace Crowny
             }
         }
 
-        Vector<ScriptInvocation>& CollectScriptInvocations(const Ref<Scene>& scene)
+        Vector<ScriptInvocation> CollectScriptInvocations(const Ref<Scene>& scene)
         {
-            static Vector<ScriptInvocation> invocations;
-            invocations.clear();
+            Vector<ScriptInvocation> invocations;
             auto view = scene->GetAllEntitiesWith<ManagedScriptComponent>();
             size_t scriptCount = 0;
             view.each([&scriptCount](const ManagedScriptComponent& component) { scriptCount += component.Scripts.size(); });
@@ -117,10 +116,19 @@ namespace Crowny
             return awake;
         }
 
+        bool HasLiveInstance(ManagedScripting* managed, ManagedScript& script)
+        {
+            if (managed != nullptr && managed->IsInstanceAlive(script.GetRuntimeHandle()))
+                return true;
+            // Runtime rollback or shutdown can invalidate a handle while its scene occurrence survives.
+            script.ClearRuntimeHandle();
+            AwakeScripts().erase(script.InstanceId);
+            return false;
+        }
+
         // Every entry is re-resolved through the entity UUID and script instance id, so callbacks may destroy
         // entities or add and remove scripts while the snapshot is walked.
-        void DispatchLifecycle(const Ref<Scene>& scene, const Vector<ScriptInvocation>& invocations, ScriptEventKind kind,
-                               float deltaTime)
+        void DispatchLifecycle(const Ref<Scene>& scene, const Vector<ScriptInvocation>& invocations, ScriptEventKind kind, float deltaTime)
         {
             for (const ScriptInvocation& invocation : invocations)
             {
@@ -133,10 +141,11 @@ namespace Crowny
 
         void CollectSubtreeScripts(const Entity& entity, Vector<ScriptInvocation>& invocations)
         {
-            if (!entity || !entity.HasComponent<ManagedScriptComponent>())
+            if (!entity)
                 return;
-            for (const ManagedScript& script : entity.GetComponent<ManagedScriptComponent>().Scripts)
-                invocations.push_back({ entity.GetUuid(), script.InstanceId });
+            if (entity.HasComponent<ManagedScriptComponent>())
+                for (const ManagedScript& script : entity.GetComponent<ManagedScriptComponent>().Scripts)
+                    invocations.push_back({ entity.GetUuid(), script.InstanceId });
             for (const Entity& child : entity.GetChildren())
                 CollectSubtreeScripts(child, invocations);
         }
@@ -148,8 +157,10 @@ namespace Crowny
     bool ScriptRuntime::CreateScript(Entity entity, ManagedScript& script, bool dispatchStart)
     {
         ManagedScripting* managed = GetManagedScripting();
-        if (managed == nullptr || !managed->IsStarted() || script.GetRuntimeHandle().IsValid())
-            return script.GetRuntimeHandle().IsValid();
+        if (HasLiveInstance(managed, script))
+            return true;
+        if (managed == nullptr || !managed->IsStarted())
+            return false;
 
         ScriptCreateRequest request;
         request.Identity = script.GetTypeIdentity();
@@ -184,7 +195,7 @@ namespace Crowny
 
     void ScriptRuntime::StartScript(Entity entity, ManagedScript& script)
     {
-        if (!script.GetRuntimeHandle().IsValid() || !AwakeScripts().insert(script.InstanceId).second)
+        if (!HasLiveInstance(GetManagedScripting(), script) || !AwakeScripts().insert(script.InstanceId).second)
             return;
         const uint64_t instanceId = script.InstanceId;
         Dispatch(script, ScriptEvent::Lifecycle(ScriptEventKind::Awake));
@@ -194,7 +205,11 @@ namespace Crowny
             Dispatch(*current, ScriptEvent::Lifecycle(ScriptEventKind::Start));
     }
 
-    bool ScriptRuntime::IsScriptAwake(const ManagedScript& script) { return AwakeScripts().contains(script.InstanceId); }
+    bool ScriptRuntime::IsScriptAwake(const ManagedScript& script)
+    {
+        ManagedScripting* managed = GetManagedScripting();
+        return managed != nullptr && managed->IsInstanceAlive(script.GetRuntimeHandle()) && AwakeScripts().contains(script.InstanceId);
+    }
 
     void ScriptRuntime::OnEntityTreeCreated(const Entity& root)
     {
@@ -245,45 +260,75 @@ namespace Crowny
         const bool awake = AwakeScripts().erase(script.InstanceId) != 0;
         if (!handle.IsValid())
             return;
+        const uint64_t instanceId = script.InstanceId;
+        const ScriptTypeIdentity identity = script.GetTypeIdentity();
+        const UUID entityId = entity.GetUuid();
+        // A destroy callback can remove itself or grow the component's script vector. Retire the scene-side
+        // handle before invoking user code so recursive removal cannot destroy the managed instance twice.
+        script.ClearRuntimeHandle();
         ManagedScripting* managed = GetManagedScripting();
-        if (managed != nullptr && managed->IsStarted())
+        if (managed != nullptr && managed->IsInstanceAlive(handle))
         {
             if (dispatchDestroy && awake)
             {
                 ManagedOperationResult dispatched = managed->Dispatch(handle, ScriptEvent::Lifecycle(ScriptEventKind::Destroy));
                 if (!dispatched.Succeeded)
-                    LogDiagnostics(dispatched, script.GetTypeIdentity(), entity.GetUuid());
+                    LogDiagnostics(dispatched, identity, entityId);
             }
-            CaptureState(script);
+            if (!managed->IsInstanceAlive(handle))
+                return;
+            if (FindScript(entity, instanceId) != nullptr)
+            {
+                ScriptStateResult captured = managed->CaptureState(handle);
+                if (!captured.Result.Succeeded)
+                    LogDiagnostics(captured.Result, identity, entityId);
+                else if (ManagedScript* current = FindScript(entity, instanceId))
+                    current->SetState(captured.State);
+            }
             ManagedOperationResult destroyed = managed->DestroyScript(handle);
             if (!destroyed.Succeeded)
-                LogDiagnostics(destroyed, script.GetTypeIdentity(), entity.GetUuid());
+                LogDiagnostics(destroyed, identity, entityId);
         }
-        script.ClearRuntimeHandle();
+    }
+
+    void ScriptRuntime::Dispatch(Entity entity, const ScriptEvent& event)
+    {
+        if (!entity || !entity.HasComponent<ManagedScriptComponent>())
+            return;
+        Vector<uint64_t> instances;
+        const auto& scripts = entity.GetComponent<ManagedScriptComponent>().Scripts;
+        instances.reserve(scripts.size());
+        for (const ManagedScript& script : scripts)
+            instances.push_back(script.InstanceId);
+        for (uint64_t instanceId : instances)
+            if (ManagedScript* script = FindScript(entity, instanceId))
+                Dispatch(*script, event);
     }
 
     void ScriptRuntime::Dispatch(ManagedScript& script, const ScriptEvent& event)
     {
         ManagedScripting* managed = GetManagedScripting();
-        if (managed == nullptr || !managed->IsStarted() || !script.GetRuntimeHandle().IsValid())
+        if (!HasLiveInstance(managed, script))
             return;
+        const ScriptTypeIdentity identity = script.GetTypeIdentity();
+        const ScriptInstanceHandle handle = script.GetRuntimeHandle();
         ManagedOperationResult result = [&]() {
             if (!UsesFixedDeltaTime(event.Kind))
-                return managed->Dispatch(script.GetRuntimeHandle(), event);
+                return managed->Dispatch(handle, event);
 
             Time& time = Application::Get().GetTime();
             const float callbackDelta = event.DeltaTime > 0.0f ? event.DeltaTime : time.GetFixedDeltaTime();
             Time::CallbackScope callbackTime(time, callbackDelta);
-            return managed->Dispatch(script.GetRuntimeHandle(), event);
+            return managed->Dispatch(handle, event);
         }();
         if (!result.Succeeded)
-            LogDiagnostics(result, script.GetTypeIdentity(), event.OtherEntity);
+            LogDiagnostics(result, identity, event.OtherEntity);
     }
 
     ScriptState ScriptRuntime::CaptureState(ManagedScript& script)
     {
         ManagedScripting* managed = GetManagedScripting();
-        if (managed == nullptr || !managed->IsStarted() || !script.GetRuntimeHandle().IsValid())
+        if (!HasLiveInstance(managed, script))
             return script.GetState();
         ScriptStateResult captured = managed->CaptureState(script.GetRuntimeHandle());
         if (!captured.Result.Succeeded)
@@ -298,7 +343,7 @@ namespace Crowny
     bool ScriptRuntime::ApplyState(ManagedScript& script, const ScriptState& state)
     {
         ManagedScripting* managed = GetManagedScripting();
-        if (managed != nullptr && managed->IsStarted() && script.GetRuntimeHandle().IsValid())
+        if (HasLiveInstance(managed, script))
         {
             ManagedOperationResult applied = managed->ApplyState(script.GetRuntimeHandle(), state);
             if (!applied.Succeeded)

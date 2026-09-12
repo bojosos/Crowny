@@ -1,9 +1,10 @@
-﻿#include "cwepch.h"
+#include "cwepch.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Application/EngineRuntime.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Common/Constants.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Ecs/Components.h"
@@ -11,17 +12,21 @@
 #include "Crowny/Renderer/BuiltInShaderCatalog.h"
 #include "Crowny/Renderer/GpuMaterial.h"
 #include "Crowny/Renderer/MaterialPreset.h"
+#include "Crowny/Renderer/MeshFactory.h"
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Scene/SceneManager.h"
+#include "Editor/MaterialEditing.h"
+#include "Panels/MaterialParameterPresentation.h"
 
 #include "Panels/EntityInspector.h"
-#include "Panels/ScriptComponentInspector.h"
 #include "Panels/InspectorPanel.h"
+#include "Panels/ScriptComponentInspector.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
 #include "UI/Properties.h"
+#include "UI/SelectionProperties.h"
 #include "UI/UIUtils.h"
 
 #include "Crowny/Import/AudioClipImporter.h"
@@ -118,12 +123,17 @@ namespace Crowny
         m_EntityInspector.PushComponentGroup("Rendering");
         m_EntityInspector.RegisterComponent<CameraComponent>("Camera");
         m_EntityInspector.RegisterComponent<LightComponent>("Light");
+        m_EntityInspector.RegisterComponent<DecalComponent>("Decal");
         m_EntityInspector.RegisterComponent<MeshRendererComponent>("Mesh Filter");
         m_EntityInspector.RegisterComponent<AnimationComponent>("Animation");
         m_EntityInspector.RegisterComponent<TextComponent>("Text");
         m_EntityInspector.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
         m_EntityInspector.RegisterComponent<ProceduralMeshComponent>("Procedural Mesh", [this](Entity entity) {
             auto& comp = entity.GetComponent<ProceduralMeshComponent>();
+            const Entity receiverEntities[] = { entity };
+            const auto receiverProperties = InspectorSelection(receiverEntities, "Procedural Mesh").Components<ProceduralMeshComponent>();
+            UI::Property("Receive decals", receiverProperties.Bind("ReceiveDecals", &ProceduralMeshComponent::ReceiveDecals));
+            UI::Property("Decal layers", receiverProperties.Bind("DecalLayers", &ProceduralMeshComponent::DecalLayers));
 
             AssetHandle<Asset> graphAsset = static_asset_cast<Asset>(comp.Graph);
             if (UIUtils::AssetReference("Graph", graphAsset, AssetType::NodeGraph))
@@ -270,6 +280,7 @@ namespace Crowny
         m_EntityInspector.RegisterComponent<BoxCollider3DComponent>("Box Collider 3D");
         m_EntityInspector.RegisterComponent<SphereCollider3DComponent>("Sphere Collider 3D");
         m_EntityInspector.RegisterComponent<CapsuleCollider3DComponent>("Capsule Collider 3D");
+        m_EntityInspector.RegisterComponent<MeshCollider3DComponent>("Mesh Collider 3D");
         m_EntityInspector.PopComponentGroup();
 
         // Audio
@@ -284,7 +295,8 @@ namespace Crowny
 
     InspectorPanel::~InspectorPanel()
     {
-        ResetPhysicsMaterialUndoTransaction(true);
+        ResetMaterialPreview();
+        ResetAssetUndoTransactions(true);
         FlushPendingAssetSaves();
     }
 
@@ -398,8 +410,7 @@ namespace Crowny
             m_EntityInspector.Render(m_InspectedEntity, m_InspectedEntities);
             break;
         case InspectorMode::Material:
-            if (m_ImportOptions)
-                RenderMaterialInspector();
+            RenderMaterialInspector();
             break;
         case InspectorMode::PhysicsMaterial:
             RenderPhysicsMaterialInspector();
@@ -450,13 +461,100 @@ namespace Crowny
         EndPanel();
     }
 
+    void InspectorPanel::ResetMaterialPreview()
+    {
+        for (const auto& texture : m_MaterialThumbnails)
+            ImGuiVulkanTexture::Release(texture);
+        m_MaterialThumbnails.clear();
+        ImGuiVulkanTexture::Release(m_MaterialPreviewImage);
+        m_MaterialPreviewImage = nullptr;
+        m_MaterialPreview.reset();
+        m_MaterialDefaults = nullptr;
+    }
+
+    void InspectorPanel::DrawMaterialPreview(const AssetHandle<Material>& material)
+    {
+        if (!material->GetShader() || !ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
+            return;
+        ImGui::SetNextItemWidth(110.0f);
+        if (ImGui::Combo("##PreviewShape", &m_PreviewShape, "Sphere\0Cube\0"))
+            ResetMaterialPreview();
+        UI::SetTooltip("Choose the shape used to preview this material.");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Reset view"))
+        {
+            m_PreviewYaw = 0.4f;
+            m_PreviewPitch = 0.2f;
+            m_PreviewDistance = 1.8f;
+            m_PreviewViewChanged = true;
+        }
+        UI::SetTooltip("Restore the preview camera. Material parameters are unchanged.");
+
+        if (!m_MaterialPreview || m_PreviewMaterialId != material.GetUUID() || m_PreviewLayout != material->GetLayoutVersion())
+        {
+            ResetMaterialPreview();
+            const Ref<Mesh> mesh = m_PreviewShape == 0 ? MeshFactory::CreateSphere(0.5f, 48, 24) : MeshFactory::CreateCube(0.7f);
+            const auto meshHandle = static_asset_cast<Mesh>(AssetManager::Get().CreateAssetHandle(mesh));
+            m_MaterialPreview = CreateScope<PreviewMaterialRenderer>(material, meshHandle);
+            m_MaterialPreviewImage = nullptr;
+            m_MaterialPreview->Setup(256, 256);
+            m_PreviewMaterialId = material.GetUUID();
+            m_PreviewLayout = material->GetLayoutVersion();
+            m_PreviewViewChanged = true;
+        }
+        const double now = ImGui::GetTime();
+        if ((m_PreviewViewChanged || m_PreviewParameters != material->GetParamVersion()) &&
+            (m_PreviewViewChanged || now - m_LastPreviewRender >= 1.0 / 15.0))
+        {
+            m_MaterialPreview->SetView(m_PreviewYaw, m_PreviewPitch, m_PreviewDistance);
+            m_MaterialPreviewImage = m_MaterialPreview->RenderPreview();
+            m_PreviewParameters = material->GetParamVersion();
+            m_PreviewViewChanged = false;
+            m_LastPreviewRender = now;
+        }
+        const float size = std::max(64.0f, std::min(256.0f, ImGui::GetContentRegionAvail().x));
+        if (m_MaterialPreviewImage)
+        {
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (ImGui::GetContentRegionAvail().x - size) * 0.5f));
+            const ImVec2 previewPosition = ImGui::GetCursorScreenPos();
+            ImGui::Image(ImGuiVulkanTexture::Get(m_MaterialPreviewImage), ImVec2(size, size), ImVec2(0, 1), ImVec2(1, 0));
+            ImGui::SetCursorScreenPos(previewPosition);
+            ImGui::InvisibleButton("##MaterialPreviewOrbit", ImVec2(size, size));
+            ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
+            UI::SetTooltip("Drag to rotate the preview. Scroll to zoom. Changes here affect only the preview camera.");
+            if (ImGui::IsItemHovered() && ImGui::GetIO().MouseWheel != 0.0f)
+            {
+                m_PreviewDistance = glm::clamp(m_PreviewDistance - ImGui::GetIO().MouseWheel * 0.15f, 1.1f, 4.0f);
+                m_PreviewViewChanged = true;
+            }
+            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            {
+                m_PreviewYaw -= ImGui::GetIO().MouseDelta.x * 0.01f;
+                m_PreviewPitch = glm::clamp(m_PreviewPitch - ImGui::GetIO().MouseDelta.y * 0.01f, -1.4f, 1.4f);
+                m_PreviewViewChanged = true;
+            }
+        }
+        else
+            ImGui::TextDisabled("Preview unavailable for this material.");
+    }
+
     void InspectorPanel::RenderMaterialInspector()
     {
-        AssetHandle<Material> mat = AssetManager::TryGet()->Load<Material>(m_InspectedAssetPath);
+        AssetHandle<Material> mat = static_asset_cast<Material>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
         if (!mat)
+        {
+            ResetMaterialUndoTransaction(false);
+            ResetMaterialPreview();
+            ImGui::TextWrapped("The material is not available yet. Check the import errors in the Console.");
             return;
+        }
+
+        DrawMaterialPreview(mat);
 
         const Ref<Asset> inspectedAsset = StaticRefCast<Asset>(mat.GetInternalPtr());
+        UndoRedo& undoRedo = UndoRedo::Get();
+        if (undoRedo.BeginComponentScope(m_MaterialUndo))
+            m_MaterialUndo->Capture(m_InspectedAssetPath, mat.GetInternalPtr(), m_AssetSaveTracker);
         const auto applyEdit = [this, &inspectedAsset](bool changed, auto&& apply) {
             if (changed)
                 apply();
@@ -466,12 +564,17 @@ namespace Crowny
         UI::BeginPropertyGrid();
 
         // Shader selector: built-in engine shaders and shaders imported into the project.
-        applyEdit(DrawMaterialShaderPicker(*mat), []() {});
+        {
+            UI::ScopedPropertyTooltip tooltip("Choose a shader. Compatible parameters and textures are retained when switching.");
+            applyEdit(DrawMaterialShaderPicker(*mat), []() {});
+        }
 
         if (!mat->GetShader())
         {
+            ResetMaterialPreview();
             UI::EndPropertyGrid();
             ImGui::TextDisabled("This material has no shader. Pick one above to edit its parameters.");
+            undoRedo.EndComponentScope();
             SaveReadyAssets();
             return;
         }
@@ -487,82 +590,229 @@ namespace Crowny
         });
 
         applyEdit(DrawMaterialPresetRow(*mat), []() {});
-
-        ImGui::Separator();
-
-        const Vector<ShaderParameterDesc>& params = m_MaterialSchemaCache.Resolve(*mat);
-
-        for (const auto& param : params)
+        if (mat->GetDomain() == MaterialDomain::Decal)
         {
-            switch (param.Type)
+            const char* channels[] = { "Base color",        "Normal",   "Roughness",   "Metallic",
+                                       "Ambient occlusion", "Emission", "Corrections", "Opaque coating" };
+            for (uint32_t channel = 0; channel < 8; ++channel)
             {
-            case ShaderParamType::Float: {
-                float value = mat->GetDataParam<float>(param.Identifier);
-                bool modified = param.HasRange ? UI::PropertySlider(param.DisplayName.c_str(), value, param.RangeMin, param.RangeMax)
-                                               : UI::Property(param.DisplayName.c_str(), value);
-                applyEdit(modified, [&]() { mat->SetFloat(param.Identifier, value); });
-                break;
+                int32_t mask = mat->GetDataParam<int32_t>("decalChannels");
+                bool enabled = (mask & (1 << channel)) != 0;
+                applyEdit(UI::Property(channels[channel], enabled),
+                          [&]() { mat->SetInt("decalChannels", enabled ? mask | (1 << channel) : mask & ~(1 << channel)); });
+                if (enabled)
+                {
+                    const char* parameter = channel < 4 ? "decalStrengths" : "decalStrengths2";
+                    glm::vec4 strengths = mat->GetDataParam<glm::vec4>(parameter);
+                    String label = String(channels[channel]) + " strength";
+                    applyEdit(UI::Property(label.c_str(), strengths[channel % 4], 0.01f, 0.0f, 1.0f), [&]() { mat->SetColor(parameter, strengths); });
+                }
             }
-            case ShaderParamType::Float2: {
-                glm::vec2 value = mat->GetDataParam<glm::vec2>(param.Identifier);
-                const bool modified = UI::Property(param.DisplayName.c_str(), value);
-                applyEdit(modified, [&]() { mat->SetFloat2(param.Identifier, value); });
-                break;
-            }
-            case ShaderParamType::Float3: {
-                glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
-                const bool modified = UI::Property(param.DisplayName.c_str(), value);
-                applyEdit(modified, [&]() { mat->SetVector3(param.Identifier, value); });
-                break;
-            }
-            case ShaderParamType::Float4: {
-                glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
-                const bool modified = UI::Property(param.DisplayName.c_str(), value);
-                applyEdit(modified, [&]() { mat->SetColor(param.Identifier, value); });
-                break;
-            }
-            case ShaderParamType::Color3: {
-                // Read as vec3, display with color picker
-                glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
-                ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
-                const bool modified = UI::PropertyColor(param.DisplayName.c_str(), value, flags);
-                applyEdit(modified, [&]() { mat->SetVector3(param.Identifier, value); });
-                break;
-            }
-            case ShaderParamType::Color4: {
-                // Read as vec4, display with color picker
-                glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
-                ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
-                const bool modified = UI::PropertyColor(param.DisplayName.c_str(), value, flags);
-                applyEdit(modified, [&]() { mat->SetColor(param.Identifier, value); });
-                break;
-            }
-            case ShaderParamType::Int: {
-                int value = mat->GetDataParam<int>(param.Identifier);
-                const bool modified = UI::Property(param.DisplayName.c_str(), value);
-                applyEdit(modified, [&]() { mat->SetInt(param.Identifier, value); });
-                break;
-            }
-            case ShaderParamType::Bool: {
-                bool value = mat->GetDataParam<bool>(param.Identifier);
-                const bool modified = UI::Property(param.DisplayName.c_str(), value);
-                applyEdit(modified, [&]() { mat->SetBool(param.Identifier, value); });
-                break;
-            }
-            case ShaderParamType::Texture2D:
-            case ShaderParamType::Texture3D:
-            case ShaderParamType::TextureCube: {
-                AssetHandle<Texture> texHandle = mat->GetTextureHandle(param.Identifier);
-                const bool modified = UIUtils::AssetSearch<Texture>(param.DisplayName, texHandle);
-                applyEdit(modified, [&]() { mat->SetTexture(param.Identifier, texHandle); });
-                break;
-            }
-            default:
-                break;
+        }
+        if (mat->GetDomain() == MaterialDomain::Surface)
+        {
+            bool supported = false;
+            for (uint32_t pass = 0; pass < mat->GetPassCount(); ++pass)
+                if (const auto pipeline = mat->GetGraphicsPipeline(pass))
+                    supported |= pipeline->GetParamInfo()->HasBinding(UniformParamInfo::ParamType::Buffer, 2, 1);
+            if (!supported)
+                ImGui::TextWrapped("This surface shader has no decal response interface.");
+            const char* responses[] = { "Decal color", "Decal normal",   "Decal roughness",   "Decal metallic",
+                                        "Decal AO",    "Decal emission", "Decal corrections", "Decal coating" };
+            for (uint32_t channel = 0; channel < 8; ++channel)
+            {
+                const uint32_t mask = mat->GetDecalResponseMask();
+                bool enabled = (mask & (1u << channel)) != 0;
+                applyEdit(UI::Property(responses[channel], enabled),
+                          [&]() { mat->SetDecalResponseMask(enabled ? mask | (1u << channel) : mask & ~(1u << channel)); });
             }
         }
 
         UI::EndPropertyGrid();
+        ImGui::SetNextItemWidth(-1.0f);
+        ImGui::PushID("MaterialParameterSearch");
+        UIUtils::SearchWidget(m_MaterialParameterSearch, "Search parameters...");
+        ImGui::PopID();
+        if (!m_MaterialDefaults || m_DefaultsLayout != mat->GetLayoutVersion())
+        {
+            m_MaterialDefaults = Material::Create(mat->GetShader());
+            m_MaterialDefaults->ApplyModelDefaults();
+            m_DefaultsLayout = mat->GetLayoutVersion();
+        }
+        const Vector<ShaderParameterDesc>& params = m_MaterialSchemaCache.Resolve(*mat);
+        Vector<Ref<Texture>> visibleThumbnails;
+        size_t visibleCount = 0;
+        for (const char* group : { "Surface", "Toon shading", "Emission", "Transparency", "Outline", "Textures" })
+        {
+            const auto matches = [&](const ShaderParameterDesc& parameter) {
+                // Alpha has a typed control above; environment use is supplied by the renderer.
+                return parameter.Identifier != "alphaMode" && parameter.Identifier != "useIBL" && parameter.Identifier != "decalChannels" &&
+                       parameter.Identifier != "decalStrengths" && parameter.Identifier != "decalStrengths2" &&
+                       StringView(MaterialParameterGroup(parameter)) == group &&
+                       (m_MaterialParameterSearch.empty() || StringUtils::IsSearchMathing(parameter.DisplayName, m_MaterialParameterSearch) ||
+                        StringUtils::IsSearchMathing(parameter.Identifier, m_MaterialParameterSearch));
+            };
+            const size_t count = std::count_if(params.begin(), params.end(), matches);
+            visibleCount += count;
+            if (count == 0 || !ImGui::CollapsingHeader(group, ImGuiTreeNodeFlags_DefaultOpen))
+                continue;
+            ImGui::PushID(group);
+            const bool resetGroup = ImGui::SmallButton("Reset group");
+            undoRedo.OnItemInteract(resetGroup);
+            UI::SetTooltip("Restore the shader defaults for the visible parameters in this group.");
+            applyEdit(resetGroup, [&]() {
+                for (const auto& parameter : params)
+                    if (matches(parameter))
+                        ResetMaterialParameter(*mat, *m_MaterialDefaults, parameter);
+            });
+            UI::BeginPropertyGrid();
+            for (const auto& param : params)
+            {
+                if (!matches(param))
+                    continue;
+                ImGui::PushID(param.Identifier.c_str());
+                const String help = MaterialParameterTooltip(param);
+                UI::ScopedPropertyTooltip tooltip(help);
+                const auto drawIntegerVector = [&](auto value, auto setter) {
+                    UI::Pre(param.DisplayName.c_str());
+                    const bool changed = ImGui::DragScalarN("##Value", ImGuiDataType_S32, glm::value_ptr(value), value.length(), 1.0f);
+                    undoRedo.OnItemInteract(changed);
+                    UI::Post();
+                    applyEdit(changed, [&]() { (mat.GetInternalPtr().get()->*setter)(param.Identifier, value); });
+                };
+                const auto drawMatrix = [&](auto value, auto setter) {
+                    UI::Pre(param.DisplayName.c_str());
+                    bool changed = false;
+                    ImGui::BeginGroup();
+                    for (int column = 0; column < value.length(); ++column)
+                    {
+                        ImGui::PushID(column);
+                        const bool columnChanged =
+                          ImGui::DragScalarN("##Column", ImGuiDataType_Float, glm::value_ptr(value[column]), value.length(), 0.01f);
+                        undoRedo.OnItemInteract(columnChanged);
+                        changed |= columnChanged;
+                        ImGui::PopID();
+                    }
+                    ImGui::EndGroup();
+                    UI::Post();
+                    applyEdit(changed, [&]() { (mat.GetInternalPtr().get()->*setter)(param.Identifier, value); });
+                };
+                switch (param.Type)
+                {
+                case ShaderParamType::Int2:
+                    drawIntegerVector(mat->GetDataParam<glm::ivec2>(param.Identifier), &Material::SetInt2);
+                    break;
+                case ShaderParamType::Int3:
+                    drawIntegerVector(mat->GetDataParam<glm::ivec3>(param.Identifier), &Material::SetInt3);
+                    break;
+                case ShaderParamType::Int4:
+                    drawIntegerVector(mat->GetDataParam<glm::ivec4>(param.Identifier), &Material::SetInt4);
+                    break;
+                case ShaderParamType::Mat3:
+                    drawMatrix(mat->GetDataParam<glm::mat3>(param.Identifier), &Material::SetMat3);
+                    break;
+                case ShaderParamType::Mat4:
+                    drawMatrix(mat->GetDataParam<glm::mat4>(param.Identifier),
+                               static_cast<void (Material::*)(const String&, const glm::mat4&)>(&Material::SetMatrix));
+                    break;
+                case ShaderParamType::Float: {
+                    float value = mat->GetDataParam<float>(param.Identifier);
+                    bool modified = param.HasRange ? UI::PropertySlider(param.DisplayName.c_str(), value, param.RangeMin, param.RangeMax)
+                                                   : UI::Property(param.DisplayName.c_str(), value);
+                    applyEdit(modified, [&]() { mat->SetFloat(param.Identifier, value); });
+                    break;
+                }
+                case ShaderParamType::Float2: {
+                    glm::vec2 value = mat->GetDataParam<glm::vec2>(param.Identifier);
+                    const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                    applyEdit(modified, [&]() { mat->SetFloat2(param.Identifier, value); });
+                    break;
+                }
+                case ShaderParamType::Float3: {
+                    glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
+                    const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                    applyEdit(modified, [&]() { mat->SetVector3(param.Identifier, value); });
+                    break;
+                }
+                case ShaderParamType::Float4: {
+                    glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
+                    const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                    applyEdit(modified, [&]() { mat->SetColor(param.Identifier, value); });
+                    break;
+                }
+                case ShaderParamType::Color3: {
+                    // Read as vec3, display with color picker
+                    glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
+                    ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
+                    const bool modified = UI::PropertyColor(param.DisplayName.c_str(), value, flags);
+                    applyEdit(modified, [&]() { mat->SetVector3(param.Identifier, value); });
+                    break;
+                }
+                case ShaderParamType::Color4: {
+                    // Read as vec4, display with color picker
+                    glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
+                    ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
+                    const bool modified = UI::PropertyColor(param.DisplayName.c_str(), value, flags);
+                    applyEdit(modified, [&]() { mat->SetColor(param.Identifier, value); });
+                    break;
+                }
+                case ShaderParamType::Int: {
+                    int value = mat->GetDataParam<int>(param.Identifier);
+                    const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                    applyEdit(modified, [&]() { mat->SetInt(param.Identifier, value); });
+                    break;
+                }
+                case ShaderParamType::Bool: {
+                    bool value = mat->GetDataParam<bool>(param.Identifier);
+                    const bool modified = UI::Property(param.DisplayName.c_str(), value);
+                    applyEdit(modified, [&]() { mat->SetBool(param.Identifier, value); });
+                    break;
+                }
+                case ShaderParamType::Texture2D:
+                case ShaderParamType::Texture3D:
+                case ShaderParamType::TextureCube: {
+                    AssetHandle<Texture> texHandle = mat->GetTextureHandle(param.Identifier);
+                    const bool modified = UIUtils::AssetSearch<Texture>(param.DisplayName, texHandle);
+                    // The asset picker can finish on a popup item or drag target with no item ID.
+                    if (modified)
+                        undoRedo.OnItemInteract({ ImGui::GetID("##TextureAssignment"), false, false, false, true });
+                    applyEdit(modified, [&]() { mat->SetTexture(param.Identifier, texHandle); });
+                    if (param.Type == ShaderParamType::Texture2D)
+                    {
+                        const Ref<Texture> texture = mat->GetTexture(param.Set, param.Slot);
+                        if (texture)
+                        {
+                            if (std::find(visibleThumbnails.begin(), visibleThumbnails.end(), texture) == visibleThumbnails.end())
+                                visibleThumbnails.push_back(texture);
+                            UI::Pre("");
+                            ImGui::Image(ImGuiVulkanTexture::Get(texture), ImVec2(48, 48), ImVec2(0, 1), ImVec2(1, 0));
+                            UI::Post();
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+                if (ImGui::BeginPopupContextItem("##ResetMaterialParameter"))
+                {
+                    const bool reset = ImGui::MenuItem("Reset to shader default");
+                    undoRedo.OnItemInteract(reset);
+                    applyEdit(reset, [&]() { ResetMaterialParameter(*mat, *m_MaterialDefaults, param); });
+                    ImGui::EndPopup();
+                }
+                ImGui::PopID();
+            }
+            UI::EndPropertyGrid();
+            ImGui::PopID();
+        }
+        if (visibleCount == 0)
+            ImGui::TextDisabled("No matching parameters.");
+        for (const auto& texture : m_MaterialThumbnails)
+            if (std::find(visibleThumbnails.begin(), visibleThumbnails.end(), texture) == visibleThumbnails.end())
+                ImGuiVulkanTexture::Release(texture);
+        m_MaterialThumbnails = std::move(visibleThumbnails);
+        undoRedo.EndComponentScope();
     }
 
     namespace
@@ -612,7 +862,7 @@ namespace Crowny
             for (const BuiltInShaderEntry& entry : BuiltInShaderCatalog::Enumerate())
             {
                 MaterialShaderOption option;
-                option.Name = entry.Name;
+                option.Name = entry.AssetPath == Path(PBRIBL_SHADER_PATH) ? "PBR (Standard)" : entry.Name;
                 option.Uuid = entry.Uuid;
                 option.AssetPath = entry.AssetPath;
                 option.BuiltIn = true;
@@ -635,6 +885,8 @@ namespace Crowny
                     continue;
                 option.Uuid = uuid;
                 option.BuiltIn = false;
+                const AssetHandle<Shader> shader = assetManager->LoadFromUUID<Shader>(uuid);
+                option.MaterialCapable = shader && BuiltInShaderCatalog::IsMaterialShader(shader->GetName(), *shader);
                 m_MaterialPicker.ShaderOptions.push_back(std::move(option));
             }
         }
@@ -642,6 +894,13 @@ namespace Crowny
 
     bool InspectorPanel::DrawMaterialShaderPicker(Material& material)
     {
+        if (material.GetDomain() == MaterialDomain::Decal)
+        {
+            UI::Pre("Domain");
+            ImGui::TextUnformatted("Decal");
+            UI::Post();
+            return false;
+        }
         bool changed = false;
         const AssetHandle<Shader> currentShader = material.GetShader();
 
@@ -667,9 +926,7 @@ namespace Crowny
                 const AssetHandle<Shader> dropped = static_asset_cast<Shader>(ProjectLibrary::Get().Load(fileEntry));
                 if (dropped)
                 {
-                    material.SetShader(dropped);
-                    material.ApplyModelDefaults();
-                    changed = true;
+                    changed = ChangeMaterialShader(material, dropped);
                 }
             }
             ImGui::EndDragDropTarget();
@@ -708,19 +965,20 @@ namespace Crowny
 
                     const bool selected = currentShader.HasUUID() && currentShader.GetUUID() == option->Uuid;
                     String label = option->Name;
-                    if (option->BuiltIn && !option->MaterialCapable)
+                    if (!option->MaterialCapable)
                         label += "  (internal)";
-                    ImGui::PushID(option);
+                    ImGui::PushID(option->Uuid.ToString().c_str());
+                    ImGui::BeginDisabled(!option->MaterialCapable);
                     if (ImGui::Selectable(label.c_str(), selected))
                     {
                         AssetHandle<Shader> picked;
                         if (AssetManager* assetManager = AssetManager::TryGet())
-                            picked = option->BuiltIn ? assetManager->Load<Shader>(option->AssetPath) : assetManager->LoadFromUUID<Shader>(option->Uuid);
+                            picked =
+                              option->BuiltIn ? assetManager->Load<Shader>(option->AssetPath) : assetManager->LoadFromUUID<Shader>(option->Uuid);
                         if (picked)
                         {
-                            material.SetShader(picked);
-                            material.ApplyModelDefaults();
-                            changed = true;
+                            UndoRedo::Get().OnItemInteract(true);
+                            changed = ChangeMaterialShader(material, picked);
                         }
                         else
                         {
@@ -730,6 +988,7 @@ namespace Crowny
                         }
                         ImGui::CloseCurrentPopup();
                     }
+                    ImGui::EndDisabled();
                     ImGui::PopID();
                     if (selected)
                         ImGui::SetItemDefaultFocus();
@@ -774,7 +1033,8 @@ namespace Crowny
         if (library == nullptr || m_InspectedAssetPath.empty())
             return;
         const String materialName = m_InspectedAssetPath.stem().string();
-        const Path presetPath = EditorUtils::GetUniquePath(m_InspectedAssetPath.parent_path() / (materialName + " Preset" + MaterialPresetLibrary::PRESET_EXTENSION));
+        const Path presetPath =
+          EditorUtils::GetUniquePath(m_InspectedAssetPath.parent_path() / (materialName + " Preset" + MaterialPresetLibrary::PRESET_EXTENSION));
         const Ref<MaterialPreset> preset = MaterialPreset::CaptureFromMaterial(material, presetPath.stem().string());
         library->CreateEntry(preset, presetPath);
         const bool saved = fs::is_regular_file(presetPath);
@@ -830,6 +1090,7 @@ namespace Crowny
                     ImGui::PushID(&entry);
                     if (ImGui::Selectable(entry.Name.c_str(), false))
                     {
+                        UndoRedo::Get().OnItemInteract(true);
                         String error;
                         if (entry.Preset != nullptr && entry.Preset->Validate(material.GetBindings(), &error) && material.ApplyPreset(*entry.Preset))
                         {
@@ -874,7 +1135,7 @@ namespace Crowny
         AssetHandle<Asset> asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
         if (!asset)
         {
-            ResetPhysicsMaterialUndoTransaction(false);
+            ResetAssetUndoTransactions(false);
             ImGui::TextDisabled("The physics material could not be loaded.");
             return;
         }
@@ -945,8 +1206,9 @@ namespace Crowny
         SaveReadyAssets();
     }
 
-    void InspectorPanel::ResetPhysicsMaterialUndoTransaction(bool finishInteraction)
+    void InspectorPanel::ResetAssetUndoTransactions(bool finishInteraction)
     {
+        ResetMaterialUndoTransaction(finishInteraction);
         if (UndoRedo* undoRedo = UndoRedo::TryGet())
         {
             if (finishInteraction)
@@ -955,6 +1217,18 @@ namespace Crowny
                 undoRedo->CancelComponentScope(m_PhysicsMaterialUndo);
         }
         m_PhysicsMaterialUndo->Reset();
+    }
+
+    void InspectorPanel::ResetMaterialUndoTransaction(bool finishInteraction)
+    {
+        if (UndoRedo* undoRedo = UndoRedo::TryGet())
+        {
+            if (finishInteraction)
+                undoRedo->FinishComponentScope(m_MaterialUndo);
+            else
+                undoRedo->CancelComponentScope(m_MaterialUndo);
+        }
+        m_MaterialUndo->Reset();
     }
 
     void InspectorPanel::RenderAudioClipImportInspector()
@@ -1223,6 +1497,7 @@ namespace Crowny
             }
         }
         m_HasPropertyChanged |= UI::Property("Generate mipmaps", opts->GenerateMips);
+        m_HasPropertyChanged |= UI::Property("Generate Environment Map", opts->GenerateEnvironmentMap);
         {
             UI::ScopedDisable disabled(!opts->GenerateMips);
             m_HasPropertyChanged |= UI::Property("Max mip level", opts->MaxMip);
@@ -1238,6 +1513,9 @@ namespace Crowny
         m_HasPropertyChanged |= UI::Property("Keep CPU copy", opts->CpuCached);
         m_HasPropertyChanged |= UI::Property("sRGB color space", opts->SRGB);
         m_HasPropertyChanged |= UI::PropertyDropdown("Compression", { "None", "ETC1S (smaller)", "UASTC (higher quality)" }, opts->DiskFormat);
+        if (opts->DiskFormat == TextureDiskFormat::UASTC)
+            m_HasPropertyChanged |=
+              UI::PropertyDropdown("Compression effort", { "Fastest", "Fast", "Balanced", "Thorough", "Maximum" }, opts->UASTCEffort);
 
         EndImportInspector(0, ImGui::GetColumnWidth());
     }
@@ -1366,12 +1644,35 @@ namespace Crowny
         m_HasPropertyChanged |= UI::Property("Optimize", opts->Optimize);
         m_HasPropertyChanged |= UI::Property("Compress", opts->Compress);
         m_HasPropertyChanged |= UI::Property("Import Materials", opts->ImportMaterials);
+        if (opts->ImportMaterials)
+        {
+            UI::ScopedPropertyTooltip tooltip("Cook material textures faster, using more disk space and potentially more GPU memory. "
+                                              "Disable for smaller color textures and more thorough normal-map compression.");
+            m_HasPropertyChanged |= UI::Property("Fast Texture Compression", opts->FastTextureCompression);
+        }
+        m_HasPropertyChanged |= UI::Property("Generate Prefab", opts->GeneratePrefab);
+        if (opts->GeneratePrefab)
+        {
+            m_HasPropertyChanged |= UI::Property("Import Lights", opts->ImportLights);
+            m_HasPropertyChanged |= UI::Property("Import Cameras", opts->ImportCameras);
+        }
         m_HasPropertyChanged |= UI::Property("Import Vertex Colors", opts->ImportVertexColors);
         m_HasPropertyChanged |= UI::Property("Import Morph Targets", opts->ImportMorphMeshes);
         m_HasPropertyChanged |= UI::Property("Import Bone Weights", opts->ImportBones);
         m_HasPropertyChanged |= UI::Property("Import Animations", opts->ImportAnimations);
         m_HasPropertyChanged |= UI::Property("Flip UVs", opts->FlipUVs);
         m_HasPropertyChanged |= UI::Property("Flip Winding Order", opts->FlipWindingOrder);
+        m_HasPropertyChanged |= UI::Property("Generate Collision", opts->GenerateCollision);
+        if (opts->GenerateCollision)
+        {
+            constexpr uint32_t minConvexPoints = 8u;
+            constexpr uint32_t maxConvexPoints = 4096u;
+            if (UI::Property("Convex Point Limit", opts->CollisionMaxConvexPoints, minConvexPoints, maxConvexPoints))
+            {
+                opts->CollisionMaxConvexPoints = std::clamp(opts->CollisionMaxConvexPoints, minConvexPoints, maxConvexPoints);
+                m_HasPropertyChanged = true;
+            }
+        }
 
         EndImportInspector(0, ImGui::GetColumnWidth());
     }
@@ -1516,7 +1817,9 @@ namespace Crowny
         const bool selectionChanged = m_InspectedAssetPath != filepath;
         if (selectionChanged)
         {
-            ResetPhysicsMaterialUndoTransaction(true);
+            ResetMaterialPreview();
+            m_MaterialParameterSearch.clear();
+            ResetAssetUndoTransactions(true);
             FlushPendingAssetSaves();
             m_MaterialSchemaCache.Reset();
         }
@@ -1527,7 +1830,7 @@ namespace Crowny
             {
                 if (!selectionChanged)
                 {
-                    ResetPhysicsMaterialUndoTransaction(true);
+                    ResetAssetUndoTransactions(true);
                     FlushPendingAssetSaves();
                 }
                 m_EntityInspector.ResetUndoTransactions(true);
@@ -1619,7 +1922,8 @@ namespace Crowny
         const bool sameSelection = m_InspectedEntity == primary && m_InspectedEntities == entities;
         if (m_InspectorMode != InspectorMode::GameObject || !sameSelection)
         {
-            ResetPhysicsMaterialUndoTransaction(true);
+            ResetMaterialPreview();
+            ResetAssetUndoTransactions(true);
             FlushPendingAssetSaves();
         }
         if (!sameSelection)
@@ -1635,7 +1939,8 @@ namespace Crowny
     {
         if (m_InspectorMode != mode)
         {
-            ResetPhysicsMaterialUndoTransaction(true);
+            ResetMaterialPreview();
+            ResetAssetUndoTransactions(true);
             FlushPendingAssetSaves();
             m_EntityInspector.ResetUndoTransactions(true);
             m_MaterialSchemaCache.Reset();
@@ -1644,6 +1949,10 @@ namespace Crowny
         m_HasPropertyChanged = false;
     }
 
-    void InspectorPanel::ResetUndoTransactions(bool finishInteraction) { m_EntityInspector.ResetUndoTransactions(finishInteraction); }
+    void InspectorPanel::ResetUndoTransactions(bool finishInteraction)
+    {
+        ResetAssetUndoTransactions(finishInteraction);
+        m_EntityInspector.ResetUndoTransactions(finishInteraction);
+    }
 
 } // namespace Crowny

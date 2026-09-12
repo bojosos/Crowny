@@ -6,7 +6,7 @@ namespace Crowny
 {
     VulkanGenericGpuBuffer::VulkanGenericGpuBuffer(uint32_t elementCount, uint32_t elementSize, GpuBufferType type, GpuBufferFormat format,
                                                    BufferUsage usage)
-      : m_Usage(usage), m_BufferType(type), m_BufferFormat(format)
+      : GenericGpuBuffer(elementCount * elementSize, usage), m_BufferType(type), m_BufferFormat(format)
     {
         VulkanGpuBuffer::BufferType bufferType = VulkanGpuBuffer::BUFFER_GENERIC;
         if (type == GpuBufferType::Structured)

@@ -1,10 +1,11 @@
 #include "cwepch.h"
 
-#include "Editor/AssetLibraryServices.h"
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorLayer.h"
 #include "Editor/ProjectLibrary.h"
+#include "Editor/ViewportMaterialHighlight.h"
+#include "Editor/ViewportPicking.h"
 #include "Editor/ViewportTransformInteraction.h"
 
 #include "Crowny/Application/Application.h"
@@ -30,53 +31,11 @@ namespace Crowny
 
     namespace
     {
-        // Mesh sources (.obj/.gltf/.glb/.fbx/...) that have not produced metadata yet, e.g. because the
-        // library has not imported them, are still accepted: the drop triggers the import and then spawns.
-        bool IsPendingMeshSource(const FileEntry* fileEntry)
-        {
-            return fileEntry != nullptr && fileEntry->Metadata == nullptr && IsViewportMeshExtension(fileEntry->Filepath.extension().string());
-        }
-
-        bool IsSupportedViewportAsset(const FileEntry* fileEntry)
-        {
-            if (fileEntry == nullptr)
-                return false;
-            if (fileEntry->Metadata == nullptr)
-                return IsPendingMeshSource(fileEntry);
-
-            const AssetType assetType = fileEntry->Metadata->Type;
-            return assetType == AssetType::Scene || assetType == AssetType::Material || assetType == AssetType::Mesh ||
-                   assetType == AssetType::AudioClip || assetType == AssetType::Prefab;
-        }
-
-        const char* GetViewportDropLabel(const FileEntry* fileEntry)
-        {
-            if (!IsSupportedViewportAsset(fileEntry))
-                return "This asset cannot be used in the viewport";
-            if (fileEntry->Metadata == nullptr)
-                return "Drop to import and create mesh entity";
-
-            switch (fileEntry->Metadata->Type)
-            {
-            case AssetType::Scene:
-                return "Drop to open scene";
-            case AssetType::Material:
-                return "Drop to apply material";
-            case AssetType::Mesh:
-                return "Drop to create mesh entity";
-            case AssetType::AudioClip:
-                return "Drop to create audio source";
-            case AssetType::Prefab:
-                return "Drop to instantiate prefab";
-            default:
-                return "This asset cannot be used in the viewport";
-            }
-        }
-
         const FileEntry* GetDraggedAsset()
         {
             const ImGuiPayload* payload = ImGui::GetDragDropPayload();
-            if (payload == nullptr || !payload->IsDataType(ID_ASSET_ITEM_PAYLOAD) || payload->Data == nullptr)
+            if (payload == nullptr || !payload->IsDataType(ID_ASSET_ITEM_PAYLOAD) || payload->Data == nullptr ||
+                payload->DataSize != sizeof(const LibraryEntry*))
                 return nullptr;
 
             const LibraryEntry* entry = *static_cast<const LibraryEntry* const*>(payload->Data);
@@ -242,7 +201,8 @@ namespace Crowny
                 else
                     width = height * aspect;
                 const ImVec2 center = iconBounds.GetCenter();
-                iconBounds = ImRect(ImVec2(center.x - width * 0.5f, center.y - height * 0.5f), ImVec2(center.x + width * 0.5f, center.y + height * 0.5f));
+                iconBounds =
+                  ImRect(ImVec2(center.x - width * 0.5f, center.y - height * 0.5f), ImVec2(center.x + width * 0.5f, center.y + height * 0.5f));
             }
             UI::DrawButtonImage(icon, active ? UI::Colors::Accent : neutralTint, active ? UI::Colors::AccentHover : hoverTint,
                                 UI::Colors::AccentPress, iconBounds);
@@ -318,7 +278,8 @@ namespace Crowny
         if (viewportWidth < 420.0f)
             return;
 
-        const bool canToggleWireframe = static_cast<bool>(m_RenderOverlayBinding.IsWireframe) && static_cast<bool>(m_RenderOverlayBinding.SetWireframe);
+        const bool canToggleWireframe =
+          static_cast<bool>(m_RenderOverlayBinding.IsWireframe) && static_cast<bool>(m_RenderOverlayBinding.SetWireframe);
         const bool wireframe = canToggleWireframe && m_RenderOverlayBinding.IsWireframe();
         const bool showStatistics = IsShowingStatistics();
 
@@ -329,8 +290,11 @@ namespace Crowny
         const char* renderModeLabel = wireframe ? "Wireframe" : "Shaded";
         const float renderModeWidth = ImGui::CalcTextSize(renderModeLabel).x + ImGui::CalcTextSize(" v").x + textPadding * 2.0f;
         const float statisticsWidth = ImGui::CalcTextSize("Stats").x + textPadding * 2.0f;
+        const float gizmosWidth = ImGui::CalcTextSize("Gizmos v").x + textPadding * 2.0f;
         const float separatorGap = 5.0f;
-        const float toolbarWidth = padding * 2.0f + renderModeWidth + separatorGap + statisticsWidth;
+        const float toolbarWidth = padding * 2.0f + renderModeWidth + separatorGap * 2.0f + statisticsWidth + gizmosWidth;
+        if (viewportWidth < toolbarWidth + 200.0f)
+            return;
         const ImVec2 toolbarMin(imageMax.x - toolbarWidth - 8.0f, imageMin.y + 5.0f);
         const ImVec2 toolbarMax(toolbarMin.x + toolbarWidth, toolbarMin.y + buttonSize + padding * 2.0f);
         m_TopRightOverlayBottom = toolbarMax.y;
@@ -379,11 +343,29 @@ namespace Crowny
         drawList->AddLine(ImVec2(separatorTop.x - separatorGap * 0.5f, separatorTop.y + 3.0f),
                           ImVec2(separatorTop.x - separatorGap * 0.5f, separatorTop.y + buttonSize - 3.0f), IM_COL32(104, 94, 85, 150));
         if (drawTextButton("Statistics", "Stats", statisticsWidth, showStatistics, true,
-                           showStatistics ? "Hide rendering statistics (also in Settings > Viewport)" : "Show rendering statistics (also in Settings > Viewport)"))
+                           showStatistics ? "Hide rendering statistics (also in Settings > Viewport)"
+                                          : "Show rendering statistics (also in Settings > Viewport)"))
         {
             if (m_RenderOverlayBinding.SetShowStatistics)
                 m_RenderOverlayBinding.SetShowStatistics(!showStatistics);
             m_ShowStatistics = !showStatistics;
+        }
+
+        ImGui::SameLine(0.0f, separatorGap);
+        if (drawTextButton("Gizmos", "Gizmos v", gizmosWidth, m_SceneGizmos.Enabled, true, "Scene icons and selected-object guides"))
+            ImGui::OpenPopup("##SceneGizmos");
+        if (ImGui::BeginPopup("##SceneGizmos"))
+        {
+            m_MouseOverHud = true;
+            ImGui::Checkbox("Show gizmos", &m_SceneGizmos.Enabled);
+            ImGui::Separator();
+            ImGui::Checkbox("Lights", &m_SceneGizmos.Lights);
+            ImGui::Checkbox("Cameras", &m_SceneGizmos.Cameras);
+            ImGui::Checkbox("Audio sources and listeners", &m_SceneGizmos.Audio);
+            ImGui::Checkbox("Selected-object guides", &m_SceneGizmos.SelectionGuides);
+            ImGui::SliderFloat("Icon size", &m_SceneGizmos.IconSize, 16.0f, 40.0f, "%.0f px");
+            ImGui::TextDisabled("Icons show through geometry. Guides use scene depth.");
+            ImGui::EndPopup();
         }
 
         ImGui::SetNextWindowPos(ImVec2(renderModeButtonMin.x, toolbarMax.y + 2.0f));
@@ -394,6 +376,15 @@ namespace Crowny
                 m_RenderOverlayBinding.SetWireframe(false);
             if (ImGui::MenuItem("Wireframe", nullptr, wireframe) && canToggleWireframe)
                 m_RenderOverlayBinding.SetWireframe(true);
+            if (m_RenderOverlayBinding.GetDecalDebugView && m_RenderOverlayBinding.SetDecalDebugView && ImGui::BeginMenu("Decals"))
+            {
+                const char* modes[] = { "Shaded", "Projection UV", "Coverage", "Receiver filtering", "Overlap count" };
+                const uint32_t current = m_RenderOverlayBinding.GetDecalDebugView();
+                for (uint32_t mode = 0; mode < 5; ++mode)
+                    if (ImGui::MenuItem(modes[mode], nullptr, current == mode))
+                        m_RenderOverlayBinding.SetDecalDebugView(mode);
+                ImGui::EndMenu();
+            }
             ImGui::EndPopup();
         }
 
@@ -419,14 +410,16 @@ namespace Crowny
             FormatStatisticCount(vertexCount, sizeof(vertexCount), vertices);
             FormatStatisticCount(triangleCount, sizeof(triangleCount), triangles);
 
-            char lines[4][112];
+            char lines[5][112];
             snprintf(lines[0], sizeof(lines[0]), "%.0f FPS   %.2f ms", frame.FramesPerSecond, frame.FrameTimeMs);
             snprintf(lines[1], sizeof(lines[1]), "Draws %llu   Verts %s   Tris %s", static_cast<unsigned long long>(frame.DrawCalls), vertexCount,
                      triangleCount);
             snprintf(lines[2], sizeof(lines[2]), "Visible %u / %u   Lights %u", scene.VisibleInstances, scene.ActiveInstances, scene.ActiveLights);
             snprintf(lines[3], sizeof(lines[3]), "Passes %u   RG CPU %.2f ms", scene.RenderPasses, scene.RenderGraphCpuTimeMs);
+            snprintf(lines[4], sizeof(lines[4]), "Decals %u   Textures %u   Overflow %u   Rejected %u", scene.Decals.Visible,
+                     scene.Decals.TextureCount, scene.Decals.OverflowClusters, scene.Decals.RejectedMaterials);
 
-            const uint32_t lineCount = viewportWidth >= 430.0f ? 4u : 3u;
+            const uint32_t lineCount = viewportWidth >= 430.0f ? 5u : 3u;
             float textWidth = 0.0f;
             for (uint32_t line = 0; line < lineCount; line++)
                 textWidth = std::max(textWidth, ImGui::CalcTextSize(lines[line]).x);
@@ -468,7 +461,9 @@ namespace Crowny
     void ViewportPanel::Render()
     {
         m_MouseOverHud = false;
-        ProcessPendingDropSpawns();
+        SceneManager* dropSceneManager = SceneManager::TryGet();
+        m_AssetDrops.Update(dropSceneManager ? dropSceneManager->GetActiveScene() : nullptr,
+                            dropSceneManager && dropSceneManager->GetExecutionState() == SceneExecutionState::Edit, ImGui::GetTime());
 
         // While the game runs, scripts observe mouse positions in game-view space (Input.mousePosition).
         const SceneExecutionState executionState =
@@ -491,15 +486,15 @@ namespace Crowny
         {
             if (!Input::IsMouseButtonPressed(Mouse::ButtonRight)) // && m_CurrentScene != m_RuntimeScene)
             {
-                if (Input::IsKeyPressed(Key::Q))
+                if (Input::IsKeyDown(Key::Q))
                     m_GizmoMode = GizmoEditMode::None;
-                if (Input::IsKeyPressed(Key::W))
+                if (Input::IsKeyDown(Key::W))
                     m_GizmoMode = GizmoEditMode::Translate;
-                if (Input::IsKeyPressed(Key::E))
+                if (Input::IsKeyDown(Key::E))
                     m_GizmoMode = GizmoEditMode::Rotate;
-                if (Input::IsKeyPressed(Key::R))
+                if (Input::IsKeyDown(Key::R))
                     m_GizmoMode = GizmoEditMode::Scale;
-                if (Input::IsKeyPressed(Key::T))
+                if (Input::IsKeyDown(Key::T))
                     m_GizmoMode = GizmoEditMode::Bounds;
                 if (Input::IsKeyDown(Key::X))
                     m_LocalMode = !m_LocalMode;
@@ -540,44 +535,74 @@ namespace Crowny
         if (gameViewActive && m_RenderTarget)
         {
             const auto& properties = m_RenderTarget->GetProperties();
-            Input::SetGameViewRegion(true, glm::vec2(imageMin.x, imageMin.y),
-                                     glm::vec2(imageMax.x - imageMin.x, imageMax.y - imageMin.y),
+            Input::SetGameViewRegion(true, glm::vec2(imageMin.x, imageMin.y), glm::vec2(imageMax.x - imageMin.x, imageMax.y - imageMin.y),
                                      glm::vec2(static_cast<float>(properties.Width), static_cast<float>(properties.Height)));
         }
 
         if (texture && ImGui::BeginDragDropTarget())
         {
             const FileEntry* draggedAsset = GetDraggedAsset();
-            const bool validAsset = IsSupportedViewportAsset(draggedAsset);
+            const auto acceptsDrop = [this](const FileEntry* file) {
+                const SceneManager* manager = SceneManager::TryGet();
+                return file && manager && manager->GetExecutionState() == SceneExecutionState::Edit &&
+                       m_AssetDrops.Describe(file->Filepath) != nullptr;
+            };
+            bool validAsset = acceptsDrop(draggedAsset);
+            const bool materialDrop = draggedAsset && draggedAsset->Metadata && draggedAsset->Metadata->Type == AssetType::Material;
+            Entity materialTarget;
+            AssetHandle<Mesh> targetMesh;
+            if (validAsset && materialDrop)
+            {
+                const ImVec2 mouse = ImGui::GetMousePos();
+                materialTarget = m_PickDropEntity ? m_PickDropEntity(glm::vec2(mouse.x, mouse.y)) : Entity{};
+                targetMesh = GetMaterialDropMesh(materialTarget);
+                validAsset = static_cast<bool>(targetMesh);
+            }
             ImDrawList* drawList = ImGui::GetWindowDrawList();
-            drawList->AddRectFilled(imageMin, imageMax, validAsset ? IM_COL32(32, 102, 66, 58) : IM_COL32(135, 42, 42, 58));
+            if (!materialDrop)
+                drawList->AddRectFilled(imageMin, imageMax, validAsset ? IM_COL32(32, 102, 66, 58) : IM_COL32(135, 42, 42, 58));
             drawList->AddRect(imageMin, imageMax, validAsset ? IM_COL32(83, 190, 123, 255) : IM_COL32(220, 84, 84, 255), 0.0f, 0, 3.0f);
 
-            const char* dropLabel = GetViewportDropLabel(draggedAsset);
+            if (validAsset && targetMesh)
+            {
+                const AABox& box = targetMesh->GetBounds();
+                const glm::mat4 transform = EditorLayer::GetEditorCamera().GetViewProjection() * materialTarget.GetWorldMatrix();
+                Array<glm::vec4, 8> corners;
+                for (uint32_t corner = 0; corner < 8; ++corner)
+                    corners[corner] =
+                      transform * glm::vec4((corner & 1u) ? box.GetMax().x : box.GetMin().x, (corner & 2u) ? box.GetMax().y : box.GetMin().y,
+                                            (corner & 4u) ? box.GetMax().z : box.GetMin().z, 1.0f);
+                drawList->PushClipRect(imageMin, imageMax, true);
+                for (uint32_t corner = 0; corner < 8; ++corner)
+                    for (uint32_t axis = 0; axis < 3; ++axis)
+                        if ((corner & (1u << axis)) == 0)
+                            if (const auto edge = ProjectMaterialHighlightEdge(corners[corner], corners[corner | (1u << axis)], m_ViewportBounds))
+                            {
+                                const ImVec2 first(edge->first.x, edge->first.y), second(edge->second.x, edge->second.y);
+                                drawList->AddLine(first, second, IM_COL32(15, 25, 22, 240), 5.0f);
+                                drawList->AddLine(first, second, IM_COL32(105, 245, 174, 255), 2.0f);
+                            }
+                drawList->PopClipRect();
+            }
+
+            const String materialLabel = materialTarget && validAsset ? "Assign to " + materialTarget.GetName() + " (all material slots)"
+                                                                      : "Move over a mesh to assign the material";
+            const char* dropLabel = materialDrop ? materialLabel.c_str()
+                                    : validAsset ? m_AssetDrops.Describe(draggedAsset->Filepath)
+                                                 : "This asset cannot be used in the viewport";
             if (ImGui::CalcTextSize(dropLabel).x > imageMax.x - imageMin.x - 24.0f)
                 dropLabel = validAsset ? "Drop asset" : "Unsupported asset";
             const ImVec2 labelSize = ImGui::CalcTextSize(dropLabel);
-            const ImVec2 labelMin((imageMin.x + imageMax.x - labelSize.x) * 0.5f - 12.0f, (imageMin.y + imageMax.y - labelSize.y) * 0.5f - 8.0f);
+            const ImVec2 labelMin((imageMin.x + imageMax.x - labelSize.x) * 0.5f - 12.0f, imageMax.y - labelSize.y - 32.0f);
             const ImVec2 labelMax(labelMin.x + labelSize.x + 24.0f, labelMin.y + labelSize.y + 16.0f);
             drawList->AddRectFilled(labelMin, labelMax, IM_COL32(24, 22, 20, 235), 5.0f);
             drawList->AddText(ImVec2(labelMin.x + 12.0f, labelMin.y + 8.0f), IM_COL32(235, 232, 228, 255), dropLabel);
 
-            if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(IsSupportedViewportAsset))
+            ImGui::SetMouseCursor(validAsset ? ImGuiMouseCursor_Arrow : ImGuiMouseCursor_NotAllowed);
+            if (const ImGuiPayload* accepted = ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD); accepted && accepted->IsDelivery() && validAsset)
             {
                 const ImVec2 mousePosition = ImGui::GetMousePos();
-                if (IsPendingMeshSource(fileEntry))
-                {
-                    // Not imported yet (e.g. a .gltf/.glb the library skipped): import now, spawn once metadata exists.
-                    if (ProjectLibrary::TryGet() != nullptr)
-                        ProjectLibrary::Get().Reimport(fileEntry->Filepath);
-                    QueueDropSpawn(fileEntry->Filepath, glm::vec2(mousePosition.x, mousePosition.y));
-                }
-                else
-                {
-                    ImGuiViewportSceneDraggedEvent fileDragEvent(fileEntry, glm::vec2(mousePosition.x, mousePosition.y));
-                    if (OnEvent)
-                        OnEvent(fileDragEvent);
-                }
+                SubmitDrop(draggedAsset->Filepath, glm::vec2(mousePosition.x, mousePosition.y));
             }
             ImGui::EndDragDropTarget();
         }
@@ -585,6 +610,13 @@ namespace Crowny
         Entity selected = m_SelectedEntity ? m_SelectedEntity() : Entity{};
         const Vector<Entity>& selectedEntities = RefreshSelectionScratch(selected);
 
+        if (!gameViewActive && SceneManager::TryGet() != nullptr)
+        {
+            const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
+            if (scene)
+                SceneGizmos::DrawIcons(*scene, EditorLayer::GetEditorCamera().GetProjection() * EditorLayer::GetEditorCamera().GetViewMatrix(),
+                                       m_ViewportBounds, m_SceneGizmos, selectedEntities);
+        }
         DrawViewportHud(imageMin, imageMax, selected, selectedEntities);
 
         EditorCamera& camera = EditorLayer::GetEditorCamera();
@@ -594,7 +626,16 @@ namespace Crowny
         ImGuizmo::SetOrthographic(false);
         ImGuizmo::SetDrawlist();
 
-        if (selected && m_GizmoMode != GizmoEditMode::None)
+        const bool decalBounds = !gameViewActive && selectedEntities.size() == 1 && selected && selected.HasComponent<DecalComponent>() &&
+                                 m_GizmoMode == GizmoEditMode::Bounds;
+        m_DecalHovered =
+          !gameViewActive &&
+          m_DecalBounds.Draw(selected, proj * view, m_ViewportBounds, decalBounds,
+                             (m_SnapEnabled || ImGui::GetIO().KeyCtrl) ? std::max(Editor::Get().GetEditorSettings()->GridScaleSnap, 0.001f) : 0.0f,
+                             (m_SnapEnabled || ImGui::GetIO().KeyCtrl) ? std::max(Editor::Get().GetEditorSettings()->GridRotateSnap, 0.001f) : 0.0f);
+        if (gameViewActive)
+            m_DecalBounds.Cancel();
+        if (selected && m_GizmoMode != GizmoEditMode::None && !decalBounds)
         {
             const Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
             const bool snap = m_SnapEnabled || Input::IsKeyPressed(Key::LeftControl) || Input::IsKeyPressed(Key::RightControl);
@@ -720,55 +761,22 @@ namespace Crowny
         ImGui::PopStyleVar();
     }
 
-    void ViewportPanel::SetEventCallback(const EventCallbackFn& onEvent) { OnEvent = onEvent; }
-
-    void ViewportPanel::QueueDropSpawn(const Path& assetPath, const glm::vec2& screenPosition)
+    void ViewportPanel::SubmitDrop(const Path& path, const glm::vec2& screenPosition)
     {
-        m_PendingDropSpawns.push_back(PendingDropSpawn{ assetPath.lexically_normal(), screenPosition, ImGui::GetTime() });
+        SceneManager* manager = SceneManager::TryGet();
+        if (manager == nullptr || !manager->GetActiveScene() || manager->GetExecutionState() != SceneExecutionState::Edit)
+            return;
+        const ViewportDropContext context{ manager->GetActiveScene(), m_PickDropEntity ? m_PickDropEntity(screenPosition) : Entity{},
+                                           GetDropPosition(screenPosition) };
+        if (!m_AssetDrops.Submit(path, context, ImGui::GetTime()))
+            CW_ENGINE_WARN("Dropped file '{}' could not be used in the viewport.", path);
     }
 
-    void ViewportPanel::ProcessPendingDropSpawns()
+    std::optional<glm::vec3> ViewportPanel::GetDropPosition(const glm::vec2& screenPosition) const
     {
-        if (m_PendingDropSpawns.empty())
-            return;
-        if (ProjectLibrary::TryGet() == nullptr)
-        {
-            m_PendingDropSpawns.clear();
-            return;
-        }
-
-        constexpr double ImportTimeoutSeconds = 60.0;
-        const double now = ImGui::GetTime();
-        const bool importing = ProjectLibrary::Get().IsImporting();
-        for (size_t index = 0; index < m_PendingDropSpawns.size();)
-        {
-            const PendingDropSpawn& pending = m_PendingDropSpawns[index];
-            const Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(pending.AssetPath);
-            const FileEntry* fileEntry =
-              entry != nullptr && entry->Type == LibraryEntryType::File ? static_cast<const FileEntry*>(entry.get()) : nullptr;
-            if (fileEntry != nullptr && fileEntry->Metadata != nullptr)
-            {
-                if (IsSupportedViewportAsset(fileEntry))
-                {
-                    ImGuiViewportSceneDraggedEvent fileDragEvent(fileEntry, pending.ScreenPosition);
-                    if (OnEvent)
-                        OnEvent(fileDragEvent);
-                }
-                m_PendingDropSpawns.erase(m_PendingDropSpawns.begin() + static_cast<std::ptrdiff_t>(index));
-                continue;
-            }
-
-            const double waited = now - pending.QueuedAt;
-            // Give the scheduler a moment to pick the file up; afterwards an idle importer means the import failed.
-            const bool importFailed = !importing && waited > 2.0 && fileEntry != nullptr;
-            if (importFailed || waited > ImportTimeoutSeconds)
-            {
-                CW_ENGINE_WARN("Dropped file '{}' was not imported; nothing was added to the scene.", pending.AssetPath);
-                m_PendingDropSpawns.erase(m_PendingDropSpawns.begin() + static_cast<std::ptrdiff_t>(index));
-                continue;
-            }
-            index++;
-        }
+        const EditorCamera& camera = EditorLayer::GetEditorCamera();
+        return ResolveViewportDropPosition(screenPosition, m_ViewportBounds, camera.GetViewProjection(), camera.GetPosition(),
+                                           camera.GetForwardDirection(), camera.GetDistance());
     }
 
     bool ViewportPanel::OnWindowFileDrop(WindowFileDropEvent& fileDrop)
@@ -791,24 +799,8 @@ namespace Crowny
             return true;
         }
 
-        const Path& assetFolder = ProjectLibrary::Get().GetAssetFolder();
-        bool imported = false;
         for (const Path& source : fileDrop.GetPaths())
-        {
-            if (ClassifyViewportDropFile(source) == ViewportDropFileKind::Unsupported)
-            {
-                CW_ENGINE_WARN("Dropped file '{}' is not a supported asset type.", source);
-                continue;
-            }
-            const Path destination = ImportExternalDropFile(source, assetFolder);
-            if (destination.empty())
-                continue;
-            QueueDropSpawn(destination, screenPosition);
-            imported = true;
-        }
-
-        if (imported)
-            ProjectLibrary::Get().RefreshAsync(assetFolder);
+            SubmitDrop(source, screenPosition);
         return true;
     }
 

@@ -14,10 +14,7 @@ namespace Crowny
 {
     namespace
     {
-        bool IsValidCombineMode(PhysicsCombineMode value)
-        {
-            return static_cast<uint8_t>(value) <= static_cast<uint8_t>(PhysicsCombineMode::Maximum);
-        }
+        bool IsValidCombineMode(PhysicsCombineMode value) { return static_cast<uint8_t>(value) <= static_cast<uint8_t>(PhysicsCombineMode::Maximum); }
 
         template <typename Material> void Refresh2DUsers(Material* changed)
         {
@@ -63,6 +60,7 @@ namespace Crowny
             Refresh3DUsers<BoxCollider3DComponent>(*scene, changed);
             Refresh3DUsers<SphereCollider3DComponent>(*scene, changed);
             Refresh3DUsers<CapsuleCollider3DComponent>(*scene, changed);
+            Refresh3DUsers<MeshCollider3DComponent>(*scene, changed);
         }
 
         bool MaterialDataEqual(const PhysicsMaterialData& first, const PhysicsMaterialData& second)
@@ -112,8 +110,7 @@ namespace Crowny
         return normalized;
     }
 
-    PhysicsMaterialData ResolvePhysicsMaterialData(const PhysicsMaterialData& baseMaterial,
-                                                   const PhysicsMaterialOverride& materialOverride)
+    PhysicsMaterialData ResolvePhysicsMaterialData(const PhysicsMaterialData& baseMaterial, const PhysicsMaterialOverride& materialOverride)
     {
         PhysicsMaterialData resolved = NormalizePhysicsMaterialData(baseMaterial);
         const PhysicsMaterialOverride normalized = NormalizePhysicsMaterialOverride(materialOverride);

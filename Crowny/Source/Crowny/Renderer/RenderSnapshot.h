@@ -5,13 +5,16 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Memory/FrameVector.h"
 #include "Crowny/RenderAPI/RenderTarget.h"
+#include "Crowny/Renderer/DecalRenderer.h"
 #include "Crowny/Renderer/DirectionalShadowCascades.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Mesh.h"
+#include "Crowny/Renderer/RenderOrder2D.h"
 #include "Crowny/Renderer/RenderResourceChanges.h"
 #include "Crowny/Renderer/RenderTypes.h"
 #include "Crowny/Renderer/RenderWorld.h"
+#include "Crowny/Renderer/RenderWorld2D.h"
 #include "Crowny/Renderer/ShadowAtlas.h"
 
 #include <glm/glm.hpp>
@@ -20,6 +23,7 @@
 
 namespace Crowny
 {
+    class OwnedTextLayout;
 
     struct GridSettings
     {
@@ -32,6 +36,7 @@ namespace Crowny
 
     struct RenderableObject
     {
+        uint32_t ObjectID = 0;
         glm::mat4 WorldMatrix = glm::mat4(1.0f);
         // Negative radius means an externally-produced legacy snapshot did not
         // provide culling bounds and must remain visible for compatibility.
@@ -49,6 +54,7 @@ namespace Crowny
         Ref<Texture> Texture;
         glm::vec4 Color;
         int32_t EntityId;
+        RenderHandle2D Handle;
     };
 
     struct RenderableText
@@ -56,35 +62,8 @@ namespace Crowny
         TextComponent TextData;
         glm::mat4 WorldMatrix;
         int32_t EntityId;
+        Ref<const OwnedTextLayout> Layout;
     };
-
-    enum class Renderable2DType : uint8_t
-    {
-        Sprite,
-        Text
-    };
-
-    struct Renderable2DOrder
-    {
-        Renderable2DType Type = Renderable2DType::Sprite;
-        uint32_t Index = 0;
-        int32_t SortingLayer = 0;
-        int32_t OrderInLayer = 0;
-        uint32_t StableOrder = 0;
-    };
-
-    inline bool Renderable2DOrderLess(const Renderable2DOrder& first, const Renderable2DOrder& second)
-    {
-        if (first.SortingLayer != second.SortingLayer)
-            return first.SortingLayer < second.SortingLayer;
-        if (first.OrderInLayer != second.OrderInLayer)
-            return first.OrderInLayer < second.OrderInLayer;
-        if (first.StableOrder != second.StableOrder)
-            return first.StableOrder < second.StableOrder;
-        if (first.Type != second.Type)
-            return first.Type < second.Type;
-        return first.Index < second.Index;
-    }
 
     struct DirectionalShadowRenderData
     {
@@ -111,6 +90,8 @@ namespace Crowny
 
         // 3D objects
         FrameVector<RenderableObject> MeshObjects;
+        FrameVector<RenderableDecal> Decals;
+        FrameVector<glm::uvec4> DecalReceivers;
         // Flat snapshot-owned material storage avoids one heap allocation per
         // renderable while preserving render-thread ownership of the handles.
         FrameVector<AssetHandle<Material>> LegacyMaterials;
@@ -118,6 +99,8 @@ namespace Crowny
         // Incremental persistent-scene changes consumed by the new renderer.
         // MeshObjects remains the legacy adapter until feature parity is reached.
         FrameVector<RenderWorldChange> RenderWorldChanges;
+        FrameVector<RenderChange2D> RenderWorld2DChanges;
+        std::shared_ptr<const uint8_t> World2DLifetime;
         FrameVector<RenderLightChange> RenderLightChanges;
         FrameVector<RenderMeshResourceChange> MeshResourceChanges;
         FrameVector<RenderMaterialResourceChange> MaterialResourceChanges;
@@ -142,6 +125,7 @@ namespace Crowny
         uint64_t HistoryNamespace = 0;
         bool CameraCut = true;
         bool EnableObjectID = false;
+        bool ValidateDecalLists = false;
         bool EnableMotionVectors = true;
         bool DrawGrid = false;
         GridSettings Grid;
@@ -198,11 +182,20 @@ namespace Crowny
             {
                 text.TextData.Text.clear();
                 text.TextData.Font = {};
+                text.Layout.Reset();
             }
 
             MeshObjects.Reset();
+            for (auto& decal : Decals)
+                decal.Textures = {};
+            Decals.Reset();
+            DecalReceivers.Reset();
             LegacyMaterials.Reset();
             RenderWorldChanges.Reset();
+            for (RenderChange2D& change : RenderWorld2DChanges)
+                change.TextureResource.Reset();
+            RenderWorld2DChanges.Reset();
+            World2DLifetime.reset();
             RenderLightChanges.Reset();
             for (RenderMeshResourceChange& change : MeshResourceChanges)
                 change.Resource = {};
@@ -224,6 +217,7 @@ namespace Crowny
             HistoryNamespace = 0;
             CameraCut = true;
             EnableObjectID = false;
+            ValidateDecalLists = false;
             EnableMotionVectors = true;
             PreviousViewProjection = glm::mat4(1.0f);
             DrawGrid = false;

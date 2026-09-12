@@ -4,11 +4,12 @@
 #version 460 core
 #pragma cull false
 
-layout(location = 0) in vec4 a_Position;
-layout(location = 1) in vec4 a_Color;
-layout(location = 2) in vec2 a_Uvs;
-layout(location = 3) in float a_Tid;
-layout(location = 4) in int a_ObjectId;
+layout(location = 0) in vec4 a_AxisX;
+layout(location = 1) in vec4 a_AxisY;
+layout(location = 2) in vec4 a_Origin;
+layout(location = 3) in vec4 a_Color;
+layout(location = 4) in vec4 a_UvRect;
+layout(location = 5) in ivec4 a_Metadata;
 
 layout(binding = 0) uniform cw_VP
 {
@@ -25,11 +26,14 @@ layout(location = 0) out DATA
 
 void main()
 {
-	gl_Position = vp.u_ViewProjection * a_Position;
-	vs_out.uv = a_Uvs;
-	vs_out.tid = a_Tid;
+    const vec2 corners[6] = vec2[6](vec2(0, 0), vec2(1, 0), vec2(1, 1),
+                                   vec2(1, 1), vec2(0, 1), vec2(0, 0));
+    vec2 corner = corners[gl_VertexIndex];
+	gl_Position = vp.u_ViewProjection * (a_Origin + a_AxisX * (corner.x - 0.5) + a_AxisY * (corner.y - 0.5));
+	vs_out.uv = mix(a_UvRect.xy, a_UvRect.zw, corner);
+	vs_out.tid = float(a_Metadata.x);
 	vs_out.color = a_Color;
-	vs_out.objectId = a_ObjectId;
+	vs_out.objectId = a_Metadata.y;
 }
 
 #type fragment
@@ -60,7 +64,7 @@ layout(binding = 8) uniform sampler2D u_Texture8;
 
 void main() {
 
-    vec4 texColor;
+    vec4 texColor = vec4(0.0);
     switch (int(fs_in.tid))
     {
     case 0: texColor = fs_in.color * texture(u_Texture1, fs_in.uv); break;
@@ -73,6 +77,8 @@ void main() {
     case 7: texColor = fs_in.color * texture(u_Texture8, fs_in.uv); break;
     }
 
-    color1 = texColor;
+    if (texColor.a <= 0.0)
+        discard;
+    color1 = vec4(texColor.rgb * texColor.a, texColor.a);
     color2 = int(fs_in.objectId);
 }

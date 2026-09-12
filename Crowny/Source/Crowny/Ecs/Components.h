@@ -1,4 +1,5 @@
 #pragma once
+#include "Crowny/Renderer/Decal.h"
 
 #include "Crowny/Scripting/Managed/ManagedTypes.h"
 
@@ -396,6 +397,17 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<SpriteRendererComponent>(Entity e);
 
+    struct DecalComponent : public ComponentBase, public DecalSettings
+    {
+        AssetHandle<Crowny::Material> Material;
+        float Age = 0.0f;
+        bool LifetimeRunning = true;
+        void RestartLifetime() { Age = 0.0f; Enabled = true; LifetimeRunning = true; }
+        void StopLifetime() { LifetimeRunning = false; }
+    };
+
+    template <> void ComponentEditorWidget<DecalComponent>(Entity e);
+
     struct MeshRendererComponent : public ComponentBase
     {
         AssetHandle<Mesh> MeshHandle;
@@ -407,6 +419,8 @@ namespace Crowny
         bool CastShadows = true;
         bool ReceiveShadows = true;
         bool MotionVectors = true;
+        bool ReceiveDecals = true;
+        uint32_t DecalLayers = 0xffffffffu;
 
         AssetHandle<Material> GetMaterial(uint32_t index = 0) const
         {
@@ -419,6 +433,8 @@ namespace Crowny
 
         void SetMaterial(uint32_t index, const AssetHandle<Material>& material)
         {
+            if (material && material->GetDomain() == MaterialDomain::Decal)
+                return;
             if (index >= Materials.size())
                 Materials.resize(index + 1);
             Materials[index] = material;
@@ -434,6 +450,8 @@ namespace Crowny
 
     struct ProceduralMeshComponent : public ComponentBase
     {
+        bool ReceiveDecals = true;
+        uint32_t DecalLayers = 0xffffffffu;
         AssetHandle<NodeGraphAsset> Graph;        // The node graph to evaluate
         Vector<AssetHandle<Material>> Materials;  // Materials for rendering (same as MeshRendererComponent)
         UnorderedMap<UUID, PinValue> InputValues; // Values for graph inputs
@@ -465,6 +483,8 @@ namespace Crowny
     private:
         void CopySettings(const ProceduralMeshComponent& other)
         {
+            ReceiveDecals = other.ReceiveDecals;
+            DecalLayers = other.DecalLayers;
             Graph = other.Graph;
             Materials = other.Materials;
             InputValues = other.InputValues;
@@ -1013,6 +1033,33 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<CapsuleCollider3DComponent>(Entity e);
 
+    /**
+     * Collider built from a mesh asset. Convex builds one convex hull and works on any body type; non-convex uses
+     * the exact triangle mesh and is limited to static bodies by every supported physics SDK.
+     */
+    struct MeshCollider3DComponent : public Collider3D
+    {
+        static constexpr bool in_place_delete = true;
+
+        MeshCollider3DComponent() = default;
+        MeshCollider3DComponent(const MeshCollider3DComponent& other);
+        MeshCollider3DComponent& operator=(const MeshCollider3DComponent& other);
+
+        const AssetHandle<Mesh>& GetMesh() const { return m_Mesh; }
+        bool IsConvex() const { return m_Convex; }
+        void SetMesh(const AssetHandle<Mesh>& mesh, Entity entity);
+        void SetConvex(bool convex, Entity entity);
+
+        // Runtime-only: the scene logs why a shape was skipped once, then clears this when a shape is created.
+        bool RuntimeSkipLogged = false;
+
+    private:
+        AssetHandle<Mesh> m_Mesh;
+        bool m_Convex = false;
+    };
+
+    template <> void ComponentEditorWidget<MeshCollider3DComponent>(Entity e);
+
     static_assert(entt::component_traits<Rigidbody2DComponent>::in_place_delete);
     static_assert(entt::component_traits<BoxCollider2DComponent>::in_place_delete);
     static_assert(entt::component_traits<CircleCollider2DComponent>::in_place_delete);
@@ -1020,6 +1067,7 @@ namespace Crowny
     static_assert(entt::component_traits<BoxCollider3DComponent>::in_place_delete);
     static_assert(entt::component_traits<SphereCollider3DComponent>::in_place_delete);
     static_assert(entt::component_traits<CapsuleCollider3DComponent>::in_place_delete);
+    static_assert(entt::component_traits<MeshCollider3DComponent>::in_place_delete);
     static_assert(entt::component_traits<AudioSourceComponent>::in_place_delete);
     static_assert(entt::component_traits<AudioListenerComponent>::in_place_delete);
 
@@ -1140,10 +1188,10 @@ namespace Crowny
     template <> void ComponentEditorWidget<AnimationComponent>(Entity e);
 
     using AllComponents =
-      ComponentGroup<TransformComponent, CameraComponent, LightComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
+      ComponentGroup<TransformComponent, CameraComponent, LightComponent, DecalComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
                      ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent, RelationshipComponent, ManagedScriptComponent,
                      Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent, Rigidbody3DComponent, BoxCollider3DComponent,
-                     SphereCollider3DComponent, CapsuleCollider3DComponent, AnimationComponent, PrefabComponent>;
+                     SphereCollider3DComponent, CapsuleCollider3DComponent, MeshCollider3DComponent, AnimationComponent, PrefabComponent>;
 
     using TransformChangedNotifyComponents = ComponentGroup<AudioListenerComponent, AudioSourceComponent>;
 } // namespace Crowny

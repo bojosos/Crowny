@@ -118,6 +118,53 @@ TEST_CASE("Preview cache reserves a bounded amount for every supported asset kin
     CHECK(canceled.Running == 0);
 }
 
+TEST_CASE("Material previews use the bounded cache and refresh after saving", "[Editor][Assets][Preview]")
+{
+    constexpr uint32_t previewSize = 64;
+    constexpr size_t previewBytes = static_cast<size_t>(previewSize) * previewSize * 4u;
+    AssetPreviewService previews(previewBytes);
+    FileEntry material = MakePreviewEntry(AssetType::Material, "never-read-preview.cwmat");
+
+    REQUIRE(AssetPreviewService::Supports(AssetType::Material));
+    const AssetPreviewResult* preview = previews.Request(material, previewSize);
+    REQUIRE(preview != nullptr);
+    CHECK(preview->Status == AssetPreviewStatus::Queued);
+    CHECK(previews.Request(material, previewSize) == preview);
+    CHECK(previews.GetStats().Pending == 1);
+    CHECK(previews.GetStats().ReservedBytes == previewBytes);
+
+    ++material.Revision;
+    REQUIRE(previews.Request(material, previewSize) != nullptr);
+    CHECK(previews.GetStats().Pending == 1);
+    CHECK(previews.GetStats().ReservedBytes == previewBytes);
+    previews.Invalidate(material.Metadata->Uuid);
+    CHECK(previews.GetStats().Entries == 0);
+    CHECK(previews.GetStats().ReservedBytes == 0);
+}
+
+TEST_CASE("Material preview failures are reported one per update without worker tasks", "[Editor][Assets][Preview]")
+{
+    AssetPreviewService previews;
+    const FileEntry first = MakePreviewEntry(AssetType::Material, "missing-first.cwmat");
+    const FileEntry second = MakePreviewEntry(AssetType::Material, "missing-second.cwmat");
+    const AssetPreviewResult* firstPreview = previews.Request(first, 64);
+    const AssetPreviewResult* secondPreview = previews.Request(second, 64);
+    REQUIRE(firstPreview != nullptr);
+    REQUIRE(secondPreview != nullptr);
+
+    previews.Update();
+    CHECK(firstPreview->Status == AssetPreviewStatus::Failed);
+    CHECK_FALSE(firstPreview->Error.empty());
+    CHECK(secondPreview->Status == AssetPreviewStatus::Queued);
+    CHECK(previews.GetStats().Running == 0);
+    CHECK(previews.GetStats().Pending == 1);
+
+    previews.Update();
+    CHECK(secondPreview->Status == AssetPreviewStatus::Failed);
+    CHECK_FALSE(secondPreview->Error.empty());
+    CHECK(previews.GetStats().Pending == 0);
+}
+
 TEST_CASE("Preview invalidation and clear release cache reservations", "[Editor][Assets][Preview]")
 {
     constexpr uint32_t PREVIEW_SIZE = 32;

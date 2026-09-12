@@ -12,9 +12,11 @@
 namespace Crowny
 {
 
-    PrefabSerializer::PrefabSerializer(const Ref<Prefab>& prefab) : m_Prefab(prefab) {}
+    PrefabSerializer::PrefabSerializer(const Ref<Prefab>& prefab) : m_Owner(prefab), m_Prefab(prefab.get()) {}
 
-    void PrefabSerializer::Serialize(const Path& filepath)
+    PrefabSerializer::PrefabSerializer(Prefab& prefab) : m_Prefab(&prefab) {}
+
+    String PrefabSerializer::SerializeToString()
     {
         YAML::Emitter out;
         out << YAML::Comment("Crowny Prefab");
@@ -44,15 +46,21 @@ namespace Crowny
 
         out << YAML::EndMap;
 
-        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
-        const char* str = out.c_str();
-        stream->Write(str, std::strlen(str));
-        stream->Close();
+        return out.c_str();
     }
 
-    void PrefabSerializer::Deserialize(const Path& filepath)
+    void PrefabSerializer::Serialize(const Path& filepath)
     {
-        String text = FileSystem::OpenFile(filepath)->GetAsString();
+        const String text = SerializeToString();
+        String error;
+        if (!FileSystem::WriteFileAtomic(filepath, reinterpret_cast<const byte*>(text.data()), text.size(), &error))
+            throw std::runtime_error(error);
+    }
+
+    void PrefabSerializer::Deserialize(const Path& filepath) { DeserializeFromString(FileSystem::OpenFile(filepath)->GetAsString()); }
+
+    void PrefabSerializer::DeserializeFromString(const String& text)
+    {
         YAML::Node data = YAML::Load(text);
 
         const YAML::Node& prefabName = data["PrefabName"];

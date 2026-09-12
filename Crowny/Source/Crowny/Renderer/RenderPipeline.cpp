@@ -147,6 +147,30 @@ namespace Crowny
         if (!desc.OutputTarget.IsValid())
             return output;
 
+        if (desc.Only2D)
+        {
+            blackboard.Clear();
+            blackboard.Set("OutputTarget", desc.OutputTarget);
+            blackboard.Set("SceneColor", desc.OutputTarget);
+            output.FinalTarget = output.ResolvedColor = desc.OutputTarget;
+            graph.AddPass(
+              "Clear2DTarget", RenderGraphQueue::Graphics,
+              [&](RenderGraphPassBuilder& builder) {
+                  if (desc.Prerequisite.IsValid())
+                      builder.DependsOn(desc.Prerequisite);
+                  builder.Write(desc.OutputTarget, RenderGraphResourceState::ColorAttachment);
+              },
+              desc.Clear2DTarget);
+            graph.AddPass(
+              "World2D", RenderGraphQueue::Graphics,
+              [&](RenderGraphPassBuilder& builder) {
+                  builder.Write(desc.OutputTarget, RenderGraphResourceState::ColorAttachmentReadWrite);
+                  builder.SetSideEffect();
+              },
+              desc.FinalComposition);
+            return output;
+        }
+
         const uint32_t width = std::max(desc.Width, 1u);
         const uint32_t height = std::max(desc.Height, 1u);
         const ClusteredLightGridDesc clusterDesc = ClusteredLightBuilder::ResolveDesc(m_Settings, width, height);
@@ -252,9 +276,12 @@ namespace Crowny
           desc.EnablePostProcessing && m_Settings.EnableGtao
             ? graph.CreateTexture("AmbientOcclusion", Texture2D((width + 1u) / 2u, (height + 1u) / 2u, TextureFormat::R8))
             : RenderGraphResourceHandle{};
-        const RenderGraphResourceHandle materialId = m_Settings.EnableToonOutlines && desc.EnableToonOutlines
-                                                       ? graph.CreateTexture("MaterialID", Texture2D(width, height, TextureFormat::R32I))
-                                                       : RenderGraphResourceHandle{};
+        // Forward+ writes HDR, material ID, and picking ID at locations 0, 1, and 2.
+        // Picking therefore needs the middle attachment even without toon outlines.
+        const bool needsMaterialId =
+          (m_Settings.EnableToonOutlines && desc.EnableToonOutlines) || (desc.Path == RenderingPath::ForwardPlus && output.ObjectID.IsValid());
+        const RenderGraphResourceHandle materialId =
+          needsMaterialId ? graph.CreateTexture("MaterialID", Texture2D(width, height, TextureFormat::R32I)) : RenderGraphResourceHandle{};
 
         blackboard.Clear();
         blackboard.Set("OutputTarget", desc.OutputTarget);
@@ -351,6 +378,7 @@ namespace Crowny
           "ReverseZDepthVelocity", RenderGraphQueue::Graphics,
           [&](RenderGraphPassBuilder& builder) {
               builder.Read(instances);
+              builder.Read(materials);
               builder.Read(depthInstanceIds);
               builder.Read(depthCommands, RenderGraphResourceState::IndirectArgument);
               builder.Write(output.SceneDepth, RenderGraphResourceState::DepthWrite);
@@ -515,6 +543,7 @@ namespace Crowny
             graph.AddPass(
               "DeferredPlusLighting8x8", RenderGraphQueue::Compute,
               [&](RenderGraphPassBuilder& builder) {
+                  builder.Read(output.SceneDepth, RenderGraphResourceState::DepthRead);
                   builder.Read(gbufferBaseColor);
                   builder.Read(gbufferNormal);
                   builder.Read(gbufferEmissive);

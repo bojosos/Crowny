@@ -1,12 +1,14 @@
 #pragma once
 
-#include "EntityInspector.h"
 #include "EditorPanelRegistration.h"
+#include "EntityInspector.h"
 #include "ImGuiPanel.h"
 #include "MaterialInspectorSchemaCache.h"
 
 #include "Editor/AssetSaveTracker.h"
+#include "Editor/MaterialInspectorTransaction.h"
 #include "Editor/PhysicsMaterialInspectorTransaction.h"
+#include "Editor/PreviewRenderer.h"
 
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/NodeGraph/NodeGraph.h"
@@ -57,6 +59,8 @@ namespace Crowny
 
     private:
         void RenderMaterialInspector();
+        void DrawMaterialPreview(const AssetHandle<Material>& material);
+        void ResetMaterialPreview();
         bool DrawMaterialShaderPicker(Material& material);
         bool DrawMaterialPresetRow(Material& material);
         void RefreshMaterialShaderOptions();
@@ -82,7 +86,8 @@ namespace Crowny
         void ObserveAssetEdit(const Ref<Asset>& asset, bool changed);
         void SaveReadyAssets();
         void FlushPendingAssetSaves();
-        void ResetPhysicsMaterialUndoTransaction(bool finishInteraction);
+        void ResetAssetUndoTransactions(bool finishInteraction);
+        void ResetMaterialUndoTransaction(bool finishInteraction);
 
     private:
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
@@ -104,6 +109,21 @@ namespace Crowny
         EntityInspector m_EntityInspector; // Renders the header, component list and Add Component popup for entities
 
         MaterialInspectorSchemaCache m_MaterialSchemaCache;
+        Scope<PreviewMaterialRenderer> m_MaterialPreview;
+        Ref<Texture> m_MaterialPreviewImage;
+        Vector<Ref<Texture>> m_MaterialThumbnails;
+        Ref<Material> m_MaterialDefaults;
+        UUID m_PreviewMaterialId;
+        uint64_t m_PreviewLayout = 0;
+        uint64_t m_PreviewParameters = 0;
+        uint64_t m_DefaultsLayout = 0;
+        int32_t m_PreviewShape = 0;
+        float m_PreviewYaw = 0.4f;
+        float m_PreviewPitch = 0.2f;
+        float m_PreviewDistance = 1.8f;
+        double m_LastPreviewRender = 0.0;
+        bool m_PreviewViewChanged = true;
+        String m_MaterialParameterSearch;
 
         struct MaterialPickerState
         {
@@ -119,7 +139,8 @@ namespace Crowny
             double StatusExpiry = 0.0;
         } m_MaterialPicker;
         Ref<AssetSaveTracker> m_AssetSaveTracker = CreateRef<AssetSaveTracker>();
-    Ref<PhysicsMaterialInspectorTransaction> m_PhysicsMaterialUndo = CreateRef<PhysicsMaterialInspectorTransaction>();
+        Ref<MaterialInspectorTransaction> m_MaterialUndo = CreateRef<MaterialInspectorTransaction>();
+        Ref<PhysicsMaterialInspectorTransaction> m_PhysicsMaterialUndo = CreateRef<PhysicsMaterialInspectorTransaction>();
 
         std::function<void(AssetHandle<NodeGraphAsset>)> m_OpenNodeEditorCallback;
     };

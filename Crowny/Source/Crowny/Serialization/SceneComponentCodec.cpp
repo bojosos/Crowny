@@ -100,13 +100,12 @@ namespace Crowny
         }
 
         template <typename T>
-        void WritePhysicsMaterialYaml(YAML::Emitter& out, const AssetHandle<T>& material,
-                                      const PhysicsMaterialOverride& configuredOverride, const PhysicsMaterialData& resolvedMaterial)
+        void WritePhysicsMaterialYaml(YAML::Emitter& out, const AssetHandle<T>& material, const PhysicsMaterialOverride& configuredOverride,
+                                      const PhysicsMaterialData& resolvedMaterial)
         {
             if (ShouldSerializeMaterialReference(material))
                 SerializeValueYAML(out, "Material", material.GetUUID());
-            WritePhysicsMaterialOverrideYaml(out,
-                                             MakeSerializedPhysicsMaterialOverride(material, configuredOverride, resolvedMaterial));
+            WritePhysicsMaterialOverrideYaml(out, MakeSerializedPhysicsMaterialOverride(material, configuredOverride, resolvedMaterial));
         }
 
         template <typename T>
@@ -114,12 +113,11 @@ namespace Crowny
                                         const PhysicsMaterialOverride& configuredOverride, const PhysicsMaterialData& resolvedMaterial)
         {
             const UUID materialId = ShouldSerializeMaterialReference(material) ? material.GetUUID() : UUID::EMPTY;
-            const PhysicsMaterialOverride materialOverride =
-              MakeSerializedPhysicsMaterialOverride(material, configuredOverride, resolvedMaterial);
+            const PhysicsMaterialOverride materialOverride = MakeSerializedPhysicsMaterialOverride(material, configuredOverride, resolvedMaterial);
             const PhysicsMaterialData& values = materialOverride.Values;
             archive(materialId, static_cast<uint32_t>(materialOverride.Fields));
-            archive(values.Density, values.Friction, values.Restitution, values.RestitutionThreshold,
-                    static_cast<uint8_t>(values.FrictionCombine), static_cast<uint8_t>(values.RestitutionCombine));
+            archive(values.Density, values.Friction, values.Restitution, values.RestitutionThreshold, static_cast<uint8_t>(values.FrictionCombine),
+                    static_cast<uint8_t>(values.RestitutionCombine));
         }
 
         template <typename T> struct PhysicsMaterialBinding
@@ -385,6 +383,8 @@ namespace Crowny
                 SerializeValueYAML(out, "CastShadows", mesh.CastShadows);
                 SerializeValueYAML(out, "ReceiveShadows", mesh.ReceiveShadows);
                 SerializeValueYAML(out, "MotionVectors", mesh.MotionVectors);
+                SerializeValueYAML(out, "ReceiveDecals", mesh.ReceiveDecals);
+                SerializeValueYAML(out, "DecalLayers", mesh.DecalLayers);
                 out << YAML::Key << "Materials" << YAML::Value << YAML::BeginSeq;
                 for (const auto& material : mesh.Materials)
                     out << material.GetUUID();
@@ -402,6 +402,8 @@ namespace Crowny
                 mesh.CastShadows = node["CastShadows"].as<bool>(true);
                 mesh.ReceiveShadows = node["ReceiveShadows"].as<bool>(true);
                 mesh.MotionVectors = node["MotionVectors"].as<bool>(true);
+                mesh.ReceiveDecals = node["ReceiveDecals"].as<bool>(true);
+                mesh.DecalLayers = node["DecalLayers"].as<uint32_t>(0xffffffffu);
                 const YAML::Node& materials = node["Materials"];
                 if (materials && materials.IsSequence())
                 {
@@ -416,12 +418,13 @@ namespace Crowny
                 archive(mesh.MeshHandle.GetUUID());
                 archive(mesh.VisibilityLayers.Value, mesh.LodBias, mesh.RenderLayerOrder, mesh.Visible, mesh.CastShadows, mesh.ReceiveShadows,
                         mesh.MotionVectors);
+                archive(mesh.ReceiveDecals, mesh.DecalLayers);
                 archive(static_cast<uint32_t>(mesh.Materials.size()));
                 for (const auto& material : mesh.Materials)
                     archive(material.GetUUID());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
             {
                 auto& mesh = entity.AddComponent<MeshRendererComponent>();
                 UUID meshUuid;
@@ -429,6 +432,8 @@ namespace Crowny
                 mesh.MeshHandle = LoadAssetReference<Mesh>(meshUuid);
                 archive(mesh.VisibilityLayers.Value, mesh.LodBias, mesh.RenderLayerOrder, mesh.Visible, mesh.CastShadows, mesh.ReceiveShadows,
                         mesh.MotionVectors);
+                if (context.FormatVersion >= 14)
+                    archive(mesh.ReceiveDecals, mesh.DecalLayers);
                 uint32_t materialCount = 0;
                 archive(materialCount);
                 mesh.Materials.reserve(materialCount);
@@ -996,6 +1001,8 @@ namespace Crowny
             {
                 const auto& mesh = entity.GetComponent<ProceduralMeshComponent>();
                 SerializeValueYAML(out, "Graph", mesh.Graph.GetUUID());
+                SerializeValueYAML(out, "ReceiveDecals", mesh.ReceiveDecals);
+                SerializeValueYAML(out, "DecalLayers", mesh.DecalLayers);
                 out << YAML::Key << "InputValues" << YAML::Value << YAML::BeginSeq;
                 for (const auto& [id, value] : mesh.InputValues)
                 {
@@ -1035,6 +1042,8 @@ namespace Crowny
             {
                 auto& mesh = entity.AddComponent<ProceduralMeshComponent>();
                 const UUID graph = node["Graph"].as<UUID>(UUID::EMPTY);
+                mesh.ReceiveDecals = node["ReceiveDecals"].as<bool>(true);
+                mesh.DecalLayers = node["DecalLayers"].as<uint32_t>(0xffffffffu);
                 mesh.Graph = LoadAssetReference<NodeGraphAsset>(graph);
                 const YAML::Node& inputs = node["InputValues"];
                 if (inputs && inputs.IsSequence())
@@ -1060,6 +1069,7 @@ namespace Crowny
             static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
             {
                 const auto& mesh = entity.GetComponent<ProceduralMeshComponent>();
+                archive(mesh.ReceiveDecals, mesh.DecalLayers);
                 archive(mesh.Graph.GetUUID(), static_cast<uint32_t>(mesh.InputValues.size()));
                 for (const auto& [id, value] : mesh.InputValues)
                 {
@@ -1091,9 +1101,11 @@ namespace Crowny
                     archive(material.GetUUID());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
             {
                 auto& mesh = entity.AddComponent<ProceduralMeshComponent>();
+                if (context.FormatVersion >= 14)
+                    archive(mesh.ReceiveDecals, mesh.DecalLayers);
                 UUID graph;
                 uint32_t inputCount;
                 archive(graph, inputCount);
@@ -1404,6 +1416,45 @@ namespace Crowny
             }
         };
 
+        template <> struct ComponentIO<MeshCollider3DComponent>
+        {
+            static void WriteYaml(YAML::Emitter& out, Entity entity)
+            {
+                const auto& collider = entity.GetComponent<MeshCollider3DComponent>();
+                WriteCollider3DYaml(out, collider);
+                SerializeValueYAML(out, "Mesh", collider.GetMesh().GetUUID());
+                SerializeValueYAML(out, "Convex", collider.IsConvex());
+            }
+
+            static void ReadYaml(const YAML::Node& node, Entity entity, SceneComponentReadContext&)
+            {
+                auto& collider = entity.AddComponent<MeshCollider3DComponent>();
+                ReadCollider3DYaml(node, collider, entity);
+                collider.SetMesh(LoadAssetReference<Mesh>(node["Mesh"].as<UUID>(UUID::EMPTY)), entity);
+                collider.SetConvex(node["Convex"].as<bool>(false), entity);
+            }
+
+            static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
+            {
+                const auto& collider = entity.GetComponent<MeshCollider3DComponent>();
+                WriteCollider3DBinary(archive, collider);
+                archive(collider.GetMesh().GetUUID());
+                archive(collider.IsConvex());
+            }
+
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
+            {
+                auto& collider = entity.AddComponent<MeshCollider3DComponent>();
+                ReadCollider3DBinary(archive, collider, entity);
+                UUID meshUuid;
+                archive(meshUuid);
+                collider.SetMesh(LoadAssetReference<Mesh>(meshUuid), entity);
+                bool convex = false;
+                archive(convex);
+                collider.SetConvex(convex, entity);
+            }
+        };
+
         template <> struct ComponentIO<AnimationComponent>
         {
             static void WriteYaml(YAML::Emitter& out, Entity entity)
@@ -1521,6 +1572,59 @@ namespace Crowny
             }
         };
 
+        template <> struct ComponentIO<DecalComponent>
+        {
+            static void WriteYaml(YAML::Emitter& out, Entity entity)
+            {
+                auto settings = static_cast<const DecalSettings&>(entity.GetComponent<DecalComponent>());
+                SerializeValueYAML(out, "Material", entity.GetComponent<DecalComponent>().Material.GetUUID());
+                settings.Visit([&](const char* name, auto& value) {
+                    using T = std::decay_t<decltype(value)>;
+                    if constexpr (std::is_enum_v<T>)
+                        SerializeValueYAML(out, name, static_cast<uint32_t>(value));
+                    else
+                        SerializeValueYAML(out, name, value);
+                });
+            }
+            static void ReadYaml(const YAML::Node& node, Entity entity, SceneComponentReadContext&)
+            {
+                auto& decal = entity.AddComponent<DecalComponent>();
+                decal.Material = LoadAssetReference<Material>(node["Material"].as<UUID>(UUID::EMPTY));
+                decal.Visit([&](const char* name, auto& value) {
+                    using T = std::decay_t<decltype(value)>;
+                    if constexpr (std::is_enum_v<T>)
+                        value = static_cast<T>(node[name].as<uint32_t>(static_cast<uint32_t>(value)));
+                    else
+                        value = node[name].as<T>(value);
+                });
+            }
+            template <typename Archive> static void Fields(Archive& archive, DecalSettings& settings)
+            {
+                settings.Visit([&](const char*, auto& value) {
+                    using T = std::decay_t<decltype(value)>;
+                    if constexpr (std::is_same_v<T, glm::vec2> || std::is_same_v<T, glm::vec3> || std::is_same_v<T, glm::vec4>)
+                        for (int i = 0; i < value.length(); ++i)
+                            archive(value[i]);
+                    else
+                        archive(value);
+                });
+            }
+            static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
+            {
+                auto settings = static_cast<const DecalSettings&>(entity.GetComponent<DecalComponent>());
+                archive(entity.GetComponent<DecalComponent>().Material.GetUUID());
+                Fields(archive, settings);
+            }
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
+            {
+                auto& decal = entity.AddComponent<DecalComponent>();
+                UUID material;
+                archive(material);
+                decal.Material = LoadAssetReference<Material>(material);
+                Fields(archive, decal);
+            }
+        };
+
         template <typename T>
         constexpr SceneComponentCodec MakeCodec(SceneComponentId id, const char* yamlName, const char* prefabPath, const char* editorName,
                                                 SceneComponentYamlType yamlType = SceneComponentYamlType::Map,
@@ -1539,7 +1643,7 @@ namespace Crowny
                      editorName };
         }
 
-        static constexpr std::array<SceneComponentCodec, 21> COMPONENT_CODECS = {
+        static constexpr std::array<SceneComponentCodec, 23> COMPONENT_CODECS = {
             MakeCodec<TagComponent>(SceneComponentId::Tag, "TagComponent", nullptr, "Tag"),
             MakeCodec<TransformComponent>(SceneComponentId::Transform, "TransformComponent", "Transform", "Transform"),
             MakeCodec<CameraComponent>(SceneComponentId::Camera, "CameraComponent", "Camera", "Camera"),
@@ -1565,7 +1669,9 @@ namespace Crowny
             MakeCodec<CapsuleCollider3DComponent>(SceneComponentId::CapsuleCollider3D, "CapsuleCollider3DComponent", "Capsule Collider 3D",
                                                   "Capsule Collider 3D"),
             MakeCodec<AnimationComponent>(SceneComponentId::Animation, "AnimationComponent", "Animation", "Animation"),
-            MakeCodec<LightComponent>(SceneComponentId::Light, "LightComponent", "Light", "Light")
+            MakeCodec<LightComponent>(SceneComponentId::Light, "LightComponent", "Light", "Light"),
+            MakeCodec<MeshCollider3DComponent>(SceneComponentId::MeshCollider3D, "MeshCollider3DComponent", "Mesh Collider 3D", "Mesh Collider 3D"),
+            MakeCodec<DecalComponent>(SceneComponentId::Decal, "DecalComponent", "Decal", "Decal")
         };
 
         constexpr bool HasStableIds()

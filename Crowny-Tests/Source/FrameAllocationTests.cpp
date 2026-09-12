@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Ecs/Entity.h"
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
-#include "Crowny/Ecs/Entity.h"
 #include "Crowny/Physics/PhysicsCollision.h"
 #include "Crowny/Renderer/RenderPipeline.h"
 #include "Crowny/Scene/SceneRenderer.h"
@@ -138,6 +138,24 @@ TEST_CASE("Scene snapshot extraction preserves the frame-context number", "[Memo
     snapshot.FrameNumber = 74;
     renderer.ExtractSnapshot(snapshot, camera, glm::mat4(1.0f), false);
     CHECK(snapshot.FrameNumber == 74);
+}
+
+TEST_CASE("Scene snapshots convert camera clip depths for reverse Z rendering", "[Renderer][SceneSync][Depth]")
+{
+    const Ref<Scene> scene = CreateRef<Scene>(false);
+    SceneRenderer renderer(scene, nullptr);
+    RenderSnapshot snapshot;
+    glm::mat4 projection;
+    SECTION("Perspective") { projection = glm::perspectiveRH_NO(glm::radians(60.0f), 1.5f, 0.1f, 100.0f); }
+    SECTION("Orthographic") { projection = glm::orthoRH_NO(-2.0f, 2.0f, -2.0f, 2.0f, 0.1f, 100.0f); }
+    Camera camera(projection);
+    renderer.ExtractSnapshot(snapshot, camera, glm::mat4(1.0f), false);
+    const glm::vec4 nearClip = snapshot.ProjectionMatrix * glm::vec4(0, 0, -0.1f, 1);
+    const glm::vec4 farClip = snapshot.ProjectionMatrix * glm::vec4(0, 0, -100.0f, 1);
+    CHECK(nearClip.z / nearClip.w == Catch::Approx(1.0f).margin(0.0001f));
+    CHECK(farClip.z / farClip.w == Catch::Approx(0.0f).margin(0.0001f));
+    CHECK(snapshot.PreviousViewProjection == snapshot.ProjectionMatrix);
+    CHECK(camera.GetProjection() == projection);
 }
 
 TEST_CASE("RenderWorld transform settling reuses its change queues", "[Memory][Frame][Renderer][MotionVectors]")
@@ -560,8 +578,7 @@ TEST_CASE("Hierarchy transform propagation allocates nothing after warm-up", "[M
 
         const auto propagate = [&](uint32_t frame) {
             auto scope = scene->DeferTransformChanges();
-            root.SetLocalTransform(Transform({ static_cast<float>(frame), 0.0f, 0.0f }, glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                                               { 1.0f, 1.0f, 1.0f }),
+            root.SetLocalTransform(Transform({ static_cast<float>(frame), 0.0f, 0.0f }, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), { 1.0f, 1.0f, 1.0f }),
                                    false);
         };
         propagate(0u);

@@ -1,7 +1,9 @@
-﻿#include "cwepch.h"
+#include "cwepch.h"
 
 #include "Editor/AssetPreviewService.h"
+#include "Editor/PreviewRenderer.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioClip.h"
 #include "Crowny/Audio/AudioDecoder.h"
 #include "Crowny/Audio/OggVorbisDecoder.h"
@@ -11,6 +13,7 @@
 #include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include "Crowny/Import/ImageLoader.h"
 #include "Crowny/Import/MeshImporter.h"
+#include "Crowny/Renderer/Material.h"
 #include "Crowny/Threading/TaskSystem.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -445,7 +448,7 @@ namespace Crowny
     bool AssetPreviewService::Supports(AssetType type)
     {
         return type == AssetType::Texture || type == AssetType::EnvironmentMap || type == AssetType::Mesh || type == AssetType::MeshSource ||
-               type == AssetType::AudioClip;
+               type == AssetType::AudioClip || type == AssetType::Material;
     }
 
     AssetPreviewCacheStats AssetPreviewService::GetStats() const
@@ -573,6 +576,39 @@ namespace Crowny
             if (work->Cancellation.load(std::memory_order_acquire))
                 continue;
             work->Result.Status = AssetPreviewStatus::Loading;
+            if (work->Type == AssetType::Material)
+            {
+                // Material rendering uses GPU state and must stay on the main thread. Limit it to one thumbnail per update.
+                try
+                {
+                    AssetManager* assets = AssetManager::TryGet();
+                    if (assets == nullptr)
+                        throw std::logic_error("Asset manager is unavailable");
+                    const auto material = assets->LoadFromUUID<Material>(work->Uuid, false);
+                    if (!material)
+                        throw std::runtime_error("Material could not be loaded");
+                    PreviewMaterialRenderer renderer(material);
+                    if (!renderer.Setup(work->PreviewSize, work->PreviewSize))
+                        throw std::runtime_error("Material preview renderer could not be initialized");
+                    work->Result.Image = renderer.RenderPreview();
+                    if (!work->Result.Image)
+                        throw std::runtime_error("Material preview rendering returned no texture");
+                    work->Result.Status = AssetPreviewStatus::Ready;
+                }
+                catch (const std::exception& exception)
+                {
+                    work->Result.Image = nullptr;
+                    work->Result.Status = AssetPreviewStatus::Failed;
+                    work->Result.Error = exception.what();
+                }
+                catch (...)
+                {
+                    work->Result.Image = nullptr;
+                    work->Result.Status = AssetPreviewStatus::Failed;
+                    work->Result.Error = "Material preview rendering failed";
+                }
+                break;
+            }
             work->TaskHandle = Task::Create("Asset preview", [work]() { ExecutePreviewWork(work); }, TaskPriority::Low);
             m_Running.push_back(work);
             try

@@ -4,6 +4,7 @@
 #include "Crowny/Build/PlayerTemplate.h"
 
 #include <fstream>
+#include <thread>
 
 #ifdef CW_PLATFORM_WIN32
 #include <Windows.h>
@@ -190,6 +191,58 @@ namespace Crowny
         CHECK(ReadTemplateFile(stage / "Existing.bin") == "preserved");
         CHECK_FALSE(fs::exists(stage / "Player.bin"));
     }
+
+    TEST_CASE("Player template staging copies runtime libraries beyond Windows MAX_PATH", "[Build][PlayerTemplate]")
+    {
+        TemplateTestDirectory temporary;
+        const Path source = temporary.Root / "Source";
+        const Path relative =
+          "Mono/lib/mono/gac/System.Runtime.Serialization.Formatters.Soap/4.0.0.0__b03f5f7f11d50a3a/System.Runtime.Serialization.Formatters.Soap.dll";
+        WriteTemplateFile(source / "runtime.dll", "runtime library");
+        const String hash = ComputeFileSha256(source / "runtime.dll");
+        REQUIRE_FALSE(hash.empty());
+        fs::create_directories((source / relative).parent_path());
+        fs::copy_file(BuildFileIoPath(source / "runtime.dll"), BuildFileIoPath(source / relative));
+        const PlayerTemplateManifest manifest = MakeTemplateManifest(source, { relative });
+        const Path stage = temporary.Root / String(80, 'd') / "Game";
+        REQUIRE((stage / relative).native().size() > 260);
+        const String error = StagePlayerTemplate(source, manifest, stage);
+        INFO(error);
+        REQUIRE(error.empty());
+        CHECK(ComputeFileSha256(stage / relative) == hash);
+        const BuildValidation validation = ValidatePlayerTemplate(stage, manifest, MakeTemplateRequest());
+        CAPTURE(validation.GetErrors());
+        CHECK(validation.IsValid());
+    }
+
+#ifdef CW_PLATFORM_WIN32
+    TEST_CASE("Player template staging tolerates a transient Windows directory lock", "[Build][PlayerTemplate]")
+    {
+        TemplateTestDirectory temporary;
+        const Path source = temporary.Root / "Source";
+        const Path stage = temporary.Root / "Player";
+        WriteTemplateFile(source / "Player.bin", "new player");
+        WriteTemplateFile(stage / "Existing.bin", "previous player");
+        const PlayerTemplateManifest manifest = MakeTemplateManifest(source, { "Player.bin" });
+        const Path lockedFile = stage / "Existing.bin";
+        const HANDLE handle =
+          CreateFileW(lockedFile.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        REQUIRE(handle != INVALID_HANDLE_VALUE);
+        std::error_code blocked;
+        fs::rename(stage, temporary.Root / "BlockedRename", blocked);
+        std::jthread releaseLock([handle] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            CloseHandle(handle);
+        });
+        REQUIRE(blocked);
+        const String error = StagePlayerTemplate(source, manifest, stage);
+        releaseLock.join();
+        INFO(error);
+        CHECK(error.empty());
+        CHECK(ReadTemplateFile(stage / "Player.bin") == "new player");
+        CHECK_FALSE(fs::exists(stage / "Existing.bin"));
+    }
+#endif
 
     TEST_CASE("Player template staging rejects overlapping source and destination trees", "[Build][Security]")
     {

@@ -489,6 +489,15 @@ namespace Crowny
         if (!IsPathWithin(assetRoot, diff.ScanRoot))
             return diff;
 
+        // Index entries made absolute from an empty relative path (the asset root) carry a trailing separator that
+        // lexically_normal() keeps, so compare every path with trailing separators removed.
+        const auto normalizeKey = [](const Path& path) {
+            Path normalized = path.lexically_normal();
+            if (normalized.has_filename() || normalized.parent_path().empty() || normalized == normalized.root_path())
+                return normalized;
+            return normalized.parent_path();
+        };
+
         UnorderedMap<Path, LibraryEntryType, HashPath> diskEntries;
         auto inspectFile = [&](const Path& path) {
             if (IsMetadataBackup(path))
@@ -503,7 +512,7 @@ namespace Crowny
             }
             if (!IsMetadata(path))
             {
-                diskEntries[path.lexically_normal()] = LibraryEntryType::File;
+                diskEntries[normalizeKey(path)] = LibraryEntryType::File;
                 return;
             }
             Path sourcePath = path;
@@ -516,7 +525,7 @@ namespace Crowny
             inspectFile(diff.ScanRoot);
         else if (fs::is_directory(diff.ScanRoot))
         {
-            diskEntries[diff.ScanRoot] = LibraryEntryType::Directory;
+            diskEntries[normalizeKey(diff.ScanRoot)] = LibraryEntryType::Directory;
             std::error_code error;
             fs::recursive_directory_iterator iterator(diff.ScanRoot, fs::directory_options::skip_permission_denied, error);
             const fs::recursive_directory_iterator end;
@@ -531,7 +540,7 @@ namespace Crowny
                 }
                 const fs::directory_entry& entry = *iterator;
                 if (entry.is_directory(error))
-                    diskEntries[entry.path().lexically_normal()] = LibraryEntryType::Directory;
+                    diskEntries[normalizeKey(entry.path())] = LibraryEntryType::Directory;
                 else if (entry.is_regular_file(error))
                     inspectFile(entry.path().lexically_normal());
                 iterator.increment(error);
@@ -548,7 +557,7 @@ namespace Crowny
             {
                 Ref<LibraryEntry> entry = pending.top();
                 pending.pop();
-                indexedEntries[entry->Filepath.lexically_normal()] = entry;
+                indexedEntries[normalizeKey(entry->Filepath)] = entry;
                 if (entry->Type == LibraryEntryType::Directory)
                 {
                     for (const Ref<LibraryEntry>& child : StaticRefCast<DirectoryEntry>(entry)->Children)
@@ -566,7 +575,8 @@ namespace Crowny
         }
         for (const auto& [path, entry] : indexedEntries)
         {
-            if (missingIndexedPaths.find(path) != missingIndexedPaths.end() && !HasMissingParent(missingIndexedPaths, path))
+            if (missingIndexedPaths.find(path) != missingIndexedPaths.end() && !HasMissingParent(missingIndexedPaths, path) &&
+                path != normalizeKey(assetRoot))
                 diff.RemovedEntries.push_back(entry);
         }
 
@@ -575,7 +585,7 @@ namespace Crowny
             const auto indexed = indexedEntries.find(path);
             if (indexed == indexedEntries.end() || indexed->second->Type != type)
             {
-                if (type == LibraryEntryType::Directory && path != assetRoot.lexically_normal())
+                if (type == LibraryEntryType::Directory && path != normalizeKey(assetRoot))
                     diff.AddedDirectories.push_back(path);
                 else if (type == LibraryEntryType::File)
                     diff.AddedFiles.push_back(path);

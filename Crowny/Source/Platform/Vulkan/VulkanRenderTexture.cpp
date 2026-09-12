@@ -55,7 +55,7 @@ namespace Crowny
             fbDesc.Color[i].Image = image;
             fbDesc.Color[i].Surface = surface;
             rpDesc.Color[i].Enabled = true;
-            rpDesc.Color[i].Format = VulkanUtils::GetTextureFormat(texture->GetDesc().Format, false);
+            rpDesc.Color[i].Format = VulkanUtils::GetTextureFormat(texture->GetDesc().Format, texture->GetDesc().sRGB);
         }
 
         if (m_DepthStencilSurface != nullptr)

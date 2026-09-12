@@ -7,6 +7,7 @@ namespace Crowny
 {
     class Font;
     struct TextComponent;
+    class OwnedTextLayout;
     /**
      * @brief General purpose renderer for rendering 2D objects (text, quads).
      *
@@ -118,7 +119,8 @@ namespace Crowny
          * @param font Font to use.
          * @param color Color to draw with.
          */
-        static void DrawString(const TextComponent& textComponent, const glm::mat4& transform, int32_t entityId);
+        static void DrawString(const TextComponent& textComponent, const glm::mat4& transform, int32_t entityId,
+                               const OwnedTextLayout* layout = nullptr);
 
         /**
          * @brief Begin a batch.
@@ -129,7 +131,7 @@ namespace Crowny
          */
         static void Begin(const Camera& camera, const glm::mat4& viewMatrix);
 
-        static void Begin(const glm::mat4& projection, const glm::mat4& view);
+        static void Begin(const glm::mat4& projection, const glm::mat4& view, bool reverseDepth = false);
 
         /**
          * @brief Ends a batch.

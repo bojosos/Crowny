@@ -8,8 +8,7 @@ namespace Crowny
 
     struct VulkanLayoutKey
     {
-        VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags,
-                        uint32_t numBindings);
+        VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags, uint32_t numBindings);
 
         struct EqualsFunction
         {
@@ -53,6 +52,8 @@ namespace Crowny
 
         VkDescriptorSet GetHandle() const { return m_Set; }
         void Write(VkWriteDescriptorSet* entries, uint32_t count);
+        static void AppendImageWrites(const VkWriteDescriptorSet& binding, Vector<VkDescriptorImageInfo>& previous,
+                                      Vector<VkWriteDescriptorSet>& writes);
 
     private:
         VkDescriptorSet m_Set;
@@ -63,8 +64,8 @@ namespace Crowny
     class VulkanDescriptorLayout
     {
     public:
-        VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings,
-                               const VkDescriptorBindingFlags* bindingFlags, uint32_t numBindings);
+        VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags,
+                               uint32_t numBindings);
         ~VulkanDescriptorLayout();
 
         VkDescriptorSetLayout GetHandle() const { return m_Layout; }
@@ -89,7 +90,7 @@ namespace Crowny
 
     private:
         static const uint32_t s_MaxSets = 2048;
-        static const uint32_t s_MaxSampledImages = 1024;
+        static constexpr uint32_t s_MaxSampledImages = 1024;
         static const uint32_t s_MaxImages = 512;
         static const uint32_t s_MaxSampledBuffers = 512;
         static const uint32_t s_MaxBuffers = 512;

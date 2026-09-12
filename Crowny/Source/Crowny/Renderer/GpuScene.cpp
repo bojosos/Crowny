@@ -82,11 +82,14 @@ namespace Crowny
         }
     } // namespace
 
-    GpuScene::GpuScene(bool enableGpuBuffers) : m_EnableGpuBuffers(enableGpuBuffers), m_DrawBuffers(enableGpuBuffers)
+    GpuScene::GpuScene(bool enableGpuBuffers, uint32_t textureCapacity)
+      : m_EnableGpuBuffers(enableGpuBuffers), m_RequestedTextureCapacity(textureCapacity), m_DrawBuffers(enableGpuBuffers)
     {
         m_DirtyInstanceIndices.reserve(1024);
         m_DirtyLightIndices.reserve(256);
         m_DirtyMeshIndices.reserve(64);
+        m_DirtyMaterialIndices.reserve(64);
+        m_MaterialRanges.reserve(32);
         m_InstanceRanges.reserve(64);
         m_LightRanges.reserve(32);
         m_MeshRanges.reserve(32);
@@ -112,6 +115,7 @@ namespace Crowny
         m_Stats.ShadowRanges = 0;
         m_Stats.MeshRanges = 0;
         m_Stats.MaterialRanges = 0;
+        m_Stats.MaterialRecordsUpdated = 0;
         m_Stats.GeometryUploadBytes = 0;
         m_DirtyInstanceIndices.clear();
         m_DirtyLightIndices.clear();
@@ -222,6 +226,7 @@ namespace Crowny
         bool materialsDirty = false;
         bool meshesDirty = false;
         m_DirtyMeshIndices.clear();
+        m_DirtyMaterialIndices.clear();
         m_MeshRanges.clear();
         m_MeshLodRanges.clear();
         m_MeshletRanges.clear();
@@ -265,7 +270,8 @@ namespace Crowny
             {
                 if (!state.Resource && state.Version == 0)
                     continue;
-                state = {};
+                state.Resource = nullptr;
+                state.Version = 0;
             }
             else
             {
@@ -275,12 +281,15 @@ namespace Crowny
                 state.Version = change.Version;
             }
             materialsDirty = true;
+            m_DirtyMaterialIndices.push_back(change.Index);
         }
 
         FlushGeometryTables();
         UpdateGeometryHeapStats();
-        if (materialsDirty)
-            RebuildMaterialTable();
+        // The table also has to exist before the first material change arrives: meshes without an assigned material
+        // draw with record 0, and without a built table the forward passes bind an empty buffer and no textures.
+        if (materialsDirty || m_Materials.empty())
+            UpdateMaterialTable();
         if (meshesDirty || materialsDirty)
             m_DrawBinsDirty = true;
     }
@@ -306,6 +315,11 @@ namespace Crowny
         m_MeshIndexBuffers.clear();
         m_BindlessTextureResources.clear();
         m_BindlessTextures.reset();
+        m_TextureReferences.clear();
+        m_DecalTextures.clear();
+        m_OverflowMaterials.clear();
+        m_DirtyMaterialIndices.clear();
+        m_MaterialRanges.clear();
         m_DrawCandidates.clear();
         m_DrawBuffers.Reset();
         m_DrawBinLayout.Reset();
@@ -966,151 +980,325 @@ namespace Crowny
 
     uint32_t GpuScene::GetPerMeshGeometryIndex(uint32_t geometryBinding) { return geometryBinding & ~PerMeshGeometryBindingBit; }
 
-    void GpuScene::RebuildMaterialTable()
+    void GpuScene::SetDecalTextures(const Vector<Ref<Texture>>& textures, Vector<uint32_t>& indices)
     {
-        m_Materials.clear();
-        m_Materials.resize(std::max<size_t>(m_MaterialResources.size(), 1u));
-        m_MaterialClassifications.clear();
-        m_MaterialClassifications.resize(m_Materials.size());
-        m_ForwardOnlyOpaqueMaterialCount = 0;
-        m_ToonOutlineMaterialCount = 0;
-        m_ToonSilhouetteMaterialCount = 0;
+        if (!m_BindlessTextures)
+            UpdateMaterialTable();
+        bool changed = false;
+        UnorderedMap<const Texture*, uint32_t> requested;
+        for (const auto& texture : textures)
+            if (texture)
+                ++requested[texture.get()];
+        for (const auto& texture : m_DecalTextures)
+            if (auto found = m_TextureReferences.find(texture.get()); found != m_TextureReferences.end())
+                --found->second.Count;
+        m_DecalTextures.clear();
+        // Keep reused descriptors alive while retiring textures absent from this view.
+        for (const auto& texture : textures)
+            if (auto found = m_TextureReferences.find(texture.get()); found != m_TextureReferences.end())
+                ++found->second.Count;
         const Ref<Texture> fallback = Texture::MISSING ? Texture::MISSING : Texture::WHITE;
-        const uint32_t capacity = std::min<uint32_t>(BindlessResourceHandle::MaxResources,
-                                                     std::max<uint32_t>(1024u, static_cast<uint32_t>(m_MaterialResources.size() * 5u + 4u)));
-        m_BindlessTextures = CreateScope<BindlessResourceTable>(capacity, reinterpret_cast<uint64_t>(fallback.get()));
-        m_BindlessTextureResources.clear();
-        m_BindlessTextureResources.resize(1u, fallback);
-        UnorderedMap<const Texture*, uint32_t> textureIndices;
-        if (fallback)
-            textureIndices.emplace(fallback.get(), 0u);
-
-        auto registerTexture = [&](const Ref<Texture>& texture, const Ref<Texture>& defaultTexture) {
-            const Ref<Texture> resolved = texture ? texture : defaultTexture;
-            if (!resolved)
-                return 0u;
-            const auto existing = textureIndices.find(resolved.get());
-            if (existing != textureIndices.end())
-                return existing->second;
-            const BindlessResourceHandle handle = m_BindlessTextures->Allocate(reinterpret_cast<uint64_t>(resolved.get()));
-            if (!handle)
-                return 0u;
-            const uint32_t index = handle.GetIndex();
-            if (index >= m_BindlessTextureResources.size())
-                m_BindlessTextureResources.resize(index + 1u);
-            m_BindlessTextureResources[index] = resolved;
-            textureIndices.emplace(resolved.get(), index);
-            return index;
-        };
-
-        for (uint32_t materialIndex = 1; materialIndex < m_MaterialResources.size(); materialIndex++)
+        for (auto it = m_TextureReferences.begin(); it != m_TextureReferences.end();)
         {
-            const AssetHandle<Material>& materialHandle = m_MaterialResources[materialIndex].Resource;
-            if (!materialHandle)
-                continue;
-            const Material& material = *materialHandle;
-            MaterialRenderClassification classification = MaterialRenderClassifier::Classify(material);
-            if (classification.UsesStandardGpuRecord() && material.GetVariation().Has("TOON") && material.GetVariation().GetBool("TOON"))
-                classification.Model = MaterialModel::Toon;
-            m_MaterialClassifications[materialIndex] = classification;
-            if (classification.IsForwardOnlyOpaque())
-                m_ForwardOnlyOpaqueMaterialCount++;
-            if (!classification.UsesStandardGpuRecord())
+            if (it->second.Count || it->second.Handle.GetIndex() == 0)
             {
-                m_Materials[materialIndex] = GpuMaterialPacker::PackUnsupported();
+                ++it;
                 continue;
             }
-            StandardMaterialDesc desc;
-            desc.Model = classification.Model;
-            desc.Alpha = classification.Alpha;
-            ReadMaterialValue(material, { "baseColor", "albedo", "tint" }, desc.BaseColor);
-            if (!ReadMaterialValue(material, { "emissive", "emissionColor" }, desc.Emissive))
+            m_BindlessTextures->Release(it->second.Handle, 0);
+            m_BindlessTextureResources[it->second.Handle.GetIndex()] = fallback;
+            it = m_TextureReferences.erase(it);
+            changed = true;
+        }
+        m_BindlessTextures->Collect(0);
+        indices.assign(textures.size(), UINT32_MAX);
+        for (size_t i = 0; i < textures.size(); ++i)
+        {
+            const auto& texture = textures[i];
+            if (!texture)
+                continue;
+            auto found = m_TextureReferences.find(texture.get());
+            if (found == m_TextureReferences.end())
             {
-                glm::vec4 emissive(0.0f);
-                if (ReadMaterialValue(material, { "emissive", "emissionColor" }, emissive))
-                    desc.Emissive = glm::vec3(emissive);
+                const auto handle = m_BindlessTextures->Allocate(reinterpret_cast<uint64_t>(texture.get()));
+                if (!handle)
+                    continue;
+                const uint32_t index = handle.GetIndex();
+                m_BindlessTextureResources.resize(std::max<size_t>(m_BindlessTextureResources.size(), index + 1u), fallback);
+                m_BindlessTextureResources[index] = texture;
+                found = m_TextureReferences.emplace(texture.get(), TextureReference{ handle, requested.at(texture.get()) }).first;
+                changed = true;
             }
-            ReadMaterialValue(material, { "emissiveIntensity", "emissionIntensity" }, desc.EmissiveIntensity);
-            ReadMaterialValue(material, { "alphaCutoff", "cutoff" }, desc.AlphaCutoff);
-            ReadMaterialValue(material, { "metallic", "metalness" }, desc.Metallic);
-            ReadMaterialValue(material, { "roughness" }, desc.Roughness);
-            ReadMaterialValue(material, { "normalScale", "normalStrength" }, desc.NormalScale);
-            ReadMaterialValue(material, { "ambientOcclusion", "ao" }, desc.AmbientOcclusion);
+            indices[i] = found->second.Handle.GetIndex();
+            m_DecalTextures.push_back(texture);
+        }
+        if (changed && ++m_BindlessTextureVersion == 0)
+            m_BindlessTextureVersion = 1;
+        m_Stats.BindlessTextureCount = m_BindlessTextures->GetActiveCount() + 1u;
+    }
 
-            desc.BaseColorTexture =
-              registerTexture(FindMaterialTexture(material, { "baseColorTexture", "baseColorMap", "albedoMap", "mainTexture" }), Texture::WHITE);
-            desc.NormalTexture = registerTexture(FindMaterialTexture(material, { "normalTexture", "normalMap" }), Texture::NORMAL);
-            desc.MetallicRoughnessTexture =
-              registerTexture(FindMaterialTexture(material, { "metallicRoughnessTexture", "metallicRoughnessMap", "metallicMap" }), Texture::WHITE);
-            desc.AmbientOcclusionTexture =
-              registerTexture(FindMaterialTexture(material, { "ambientOcclusionTexture", "ambientOcclusionMap", "aoMap" }), Texture::WHITE);
-            desc.EmissiveTexture =
-              registerTexture(FindMaterialTexture(material, { "emissiveTexture", "emissiveMap", "emissionMap" }), Texture::BLACK);
-            if (desc.Model == MaterialModel::Toon)
+    void GpuScene::UpdateMaterialTable()
+    {
+        const Ref<Texture> fallback = Texture::MISSING ? Texture::MISSING : Texture::WHITE;
+        bool texturesChanged = false;
+        if (!m_BindlessTextures)
+        {
+            // OpenGL uses conventional material bindings; its CPU table has no Vulkan descriptor budget.
+            uint32_t capacity = CanCreateGpuBuffers() && RenderAPI::GetAPI() == RenderAPI::API::Vulkan
+                                  ? RenderAPI::TryGet()->GetCapabilities().GetBindlessTextureCapacity()
+                                  : RenderCapabilities::BindlessTextureLimit;
+            if (m_RequestedTextureCapacity != 0)
+                capacity = std::min(capacity, m_RequestedTextureCapacity);
+            m_BindlessTextures = CreateScope<BindlessResourceTable>(capacity, reinterpret_cast<uint64_t>(fallback.get()));
+            m_BindlessTextureResources.resize(1u, fallback);
+            if (fallback)
+                m_TextureReferences.emplace(fallback.get(), TextureReference{ m_BindlessTextures->GetFallbackHandle(), 0 });
+            m_Stats.BindlessTextureCapacity = capacity;
+            m_DirtyMaterialIndices.push_back(0);
+            texturesChanged = true;
+        }
+        m_MaterialResources.resize(std::max<size_t>(m_MaterialResources.size(), 1u));
+        const uint32_t oldSize = static_cast<uint32_t>(m_Materials.size());
+        m_Materials.resize(m_MaterialResources.size());
+        m_MaterialClassifications.resize(m_Materials.size());
+        m_DirtyMaterialIndices.insert(m_DirtyMaterialIndices.end(), m_OverflowMaterials.begin(), m_OverflowMaterials.end());
+        BuildDirtyRanges(m_DirtyMaterialIndices, m_MaterialRanges);
+        m_OverflowMaterials.clear();
+
+        Vector<GpuMaterialData> records;
+        records.reserve(m_DirtyMaterialIndices.size());
+        UnorderedMap<const Texture*, uint32_t> requestedReferences;
+        for (uint32_t materialIndex : m_DirtyMaterialIndices)
+        {
+            MaterialResourceState& state = m_MaterialResources[materialIndex];
+            for (const Ref<Texture>& texture : state.Textures)
             {
-                glm::vec4 color(desc.ToonShadowColor, 1.0f);
-                if (ReadMaterialValue(material, { "toonShadowColor", "shadowColor", "shadowTint" }, color))
-                    desc.ToonShadowColor = glm::vec3(color);
-                color = glm::vec4(desc.ToonSpecularColor, 1.0f);
-                if (ReadMaterialValue(material, { "toonSpecularColor", "specularColor" }, color))
-                    desc.ToonSpecularColor = glm::vec3(color);
-                color = glm::vec4(desc.ToonRimColor, 1.0f);
-                if (ReadMaterialValue(material, { "toonRimColor", "rimColor" }, color))
-                    desc.ToonRimColor = glm::vec3(color);
-                ReadMaterialValue(material, { "toonBands", "bands" }, desc.ToonBands);
-                ReadMaterialValue(material, { "toonBandSmoothness", "bandSmoothness", "stepSmoothness" }, desc.ToonBandSmoothness);
-                ReadMaterialValue(material, { "toonSpecularThreshold", "specularThreshold", "specularSize" }, desc.ToonSpecularThreshold);
-                ReadMaterialValue(material, { "toonSpecularSmoothness", "specularSmoothness" }, desc.ToonSpecularSmoothness);
-                ReadMaterialValue(material, { "toonSpecularStrength", "specularStrength" }, desc.ToonSpecularStrength);
-                ReadMaterialValue(material, { "toonRimThreshold", "rimThreshold", "rimWidth" }, desc.ToonRimThreshold);
-                ReadMaterialValue(material, { "toonRimSmoothness", "rimSmoothness" }, desc.ToonRimSmoothness);
-                ReadMaterialValue(material, { "toonRimPower", "rimPower" }, desc.ToonRimPower);
-                ReadMaterialValue(material, { "toonRimStrength", "rimStrength" }, desc.ToonRimStrength);
-                ReadMaterialValue(material, { "toonRimShadowMask", "rimShadowMask" }, desc.ToonRimShadowMask);
-                ReadMaterialValue(material, { "toonIndirectStrength", "indirectStrength" }, desc.ToonIndirectStrength);
-                ReadMaterialValue(material, { "toonPatternScale", "patternScale", "patternTiling" }, desc.ToonPatternScale);
-                ReadMaterialValue(material, { "toonPatternStrength", "patternStrength", "patternAmount" }, desc.ToonPatternStrength);
-                ReadMaterialValue(material, { "toonPatternSmoothness", "patternSmoothness" }, desc.ToonPatternSmoothness);
-                ReadMaterialValue(material, { "toonPatternDistanceFade", "patternDistanceFade" }, desc.ToonPatternDistanceFade);
-                ReadMaterialValue(material, { "toonRampStrength", "rampStrength" }, desc.ToonRampStrength);
-                ReadMaterialValue(material, { "toonRampOffset", "rampOffset" }, desc.ToonRampOffset);
-                ReadMaterialValue(material, { "toonMatcapStrength", "matcapStrength" }, desc.ToonMatcapStrength);
-                ReadMaterialValue(material, { "toonMatcapRotation", "matcapRotation" }, desc.ToonMatcapRotation);
-                int patternMapping = static_cast<int>(desc.ToonPatternMappingMode);
-                if (ReadMaterialValue(material, { "toonPatternMapping", "patternMapping", "patternUvMode" }, patternMapping))
-                    desc.ToonPatternMappingMode = static_cast<ToonPatternMapping>(
-                      glm::clamp(patternMapping, 0, static_cast<int>(ToonPatternMapping::ProceduralHatch)));
-                color = desc.ToonOutlineColor;
-                if (ReadMaterialValue(material, { "toonOutlineColor", "outlineColor" }, color))
-                    desc.ToonOutlineColor = color;
-                ReadMaterialValue(material, { "toonOutlineWidth", "outlineWidth", "thickness" }, desc.ToonOutlineWidth);
-                ReadMaterialValue(material, { "toonOutlineDepthThreshold", "outlineDepthThreshold" }, desc.ToonOutlineDepthThreshold);
-                ReadMaterialValue(material, { "toonOutlineNormalThreshold", "outlineNormalThreshold" }, desc.ToonOutlineNormalThreshold);
-                ReadMaterialValue(material, { "toonOutlineDistanceFade", "outlineDistanceFade" }, desc.ToonOutlineDistanceFade);
-                ReadMaterialValue(material, { "toonSilhouetteWidth", "silhouetteWidth", "invertedHullWidth" }, desc.ToonSilhouetteWidth);
-                desc.ToonPatternTexture = registerTexture(
-                  FindMaterialTexture(material, { "toonPatternTexture", "patternTexture", "hatchingTexture", "scratchTexture" }), Texture::WHITE);
-                desc.ToonRampTexture =
-                  registerTexture(FindMaterialTexture(material, { "toonRampTexture", "rampTexture", "diffuseRamp" }), Texture::WHITE);
-                desc.ToonMatcapTexture =
-                  registerTexture(FindMaterialTexture(material, { "toonMatcapTexture", "matcapTexture", "matcap" }), Texture::WHITE);
-                const bool drawsInOpaquePass = classification.Alpha == AlphaMode::Opaque || classification.Alpha == AlphaMode::Mask;
-                if (drawsInOpaquePass && desc.ToonOutlineWidth > 0.0f && desc.ToonOutlineColor.a > 0.0f)
-                    m_ToonOutlineMaterialCount++;
-                if (drawsInOpaquePass && desc.ToonSilhouetteWidth > 0.0f && desc.ToonOutlineColor.a > 0.0f)
-                    m_ToonSilhouetteMaterialCount++;
+                const auto entry = m_TextureReferences.find(texture.get());
+                if (entry != m_TextureReferences.end())
+                    entry->second.Count--;
             }
-            m_Materials[materialIndex] = GpuMaterialPacker::Pack(desc);
+            records.push_back(PackMaterialRecord(materialIndex));
+            for (const Ref<Texture>& texture : state.Textures)
+                if (texture)
+                    requestedReferences[texture.get()]++;
+        }
+        for (const auto& [texture, count] : requestedReferences)
+        {
+            const auto entry = m_TextureReferences.find(texture);
+            if (entry != m_TextureReferences.end())
+                entry->second.Count += count;
+        }
+        for (auto entry = m_TextureReferences.begin(); entry != m_TextureReferences.end();)
+        {
+            const uint32_t index = entry->second.Handle.GetIndex();
+            if (index == 0 || entry->second.Count != 0)
+            {
+                ++entry;
+                continue;
+            }
+            // Uniform parameters retain resource references, and Vulkan replaces an in-use descriptor set before writing it.
+            // Reusing this CPU slot therefore cannot overwrite descriptors consumed by an earlier draw.
+            m_BindlessTextures->Release(entry->second.Handle, 0);
+            m_BindlessTextureResources[index] = fallback;
+            entry = m_TextureReferences.erase(entry);
+            texturesChanged = true;
+        }
+        m_BindlessTextures->Collect(0);
+        for (uint32_t materialIndex : m_DirtyMaterialIndices)
+        {
+            for (const Ref<Texture>& texture : m_MaterialResources[materialIndex].Textures)
+            {
+                if (!texture || m_TextureReferences.contains(texture.get()))
+                    continue;
+                const BindlessResourceHandle handle = m_BindlessTextures->Allocate(reinterpret_cast<uint64_t>(texture.get()));
+                if (!handle)
+                    continue;
+                const uint32_t index = handle.GetIndex();
+                m_BindlessTextureResources.resize(std::max<size_t>(m_BindlessTextureResources.size(), index + 1u), fallback);
+                m_BindlessTextureResources[index] = texture;
+                m_TextureReferences.emplace(texture.get(), TextureReference{ handle, requestedReferences.at(texture.get()) });
+                texturesChanged = true;
+            }
         }
 
+        Vector<uint32_t> changedRecords;
+        for (uint32_t pending = 0; pending < m_DirtyMaterialIndices.size(); pending++)
+        {
+            const uint32_t materialIndex = m_DirtyMaterialIndices[pending];
+            GpuMaterialData& record = records[pending];
+            const auto& textures = m_MaterialResources[materialIndex].Textures;
+            bool overflow = false;
+            auto descriptorIndex = [&](uint32_t field) {
+                const auto entry = m_TextureReferences.find(textures[field].get());
+                if (entry != m_TextureReferences.end())
+                    return entry->second.Handle.GetIndex();
+                overflow = overflow || textures[field] != nullptr;
+                return 0u;
+            };
+            record.TextureIndices0 = { descriptorIndex(0), descriptorIndex(1), descriptorIndex(2), descriptorIndex(3) };
+            record.TextureIndices1.x = descriptorIndex(4);
+            record.TextureIndices2.x = descriptorIndex(5);
+            record.TextureIndices2.y = descriptorIndex(6);
+            record.TextureIndices2.z = descriptorIndex(7);
+            if (overflow)
+                m_OverflowMaterials.push_back(materialIndex);
+            if (materialIndex >= oldSize || std::memcmp(&m_Materials[materialIndex], &record, sizeof(record)) != 0)
+            {
+                m_Materials[materialIndex] = record;
+                changedRecords.push_back(materialIndex);
+            }
+        }
+        const uint32_t overflowCount = static_cast<uint32_t>(m_OverflowMaterials.size());
+        if (overflowCount != 0 && overflowCount != m_Stats.BindlessTextureOverflowMaterials)
+            CW_ENGINE_WARN("Bindless texture capacity {} exhausted; {} materials use the missing texture until slots become available",
+                           m_Stats.BindlessTextureCapacity, overflowCount);
+        m_Stats.BindlessTextureOverflowMaterials = overflowCount;
+        m_Stats.BindlessTextureCount = m_BindlessTextures->GetActiveCount() + 1u;
+        m_Stats.MaterialRecordsUpdated += static_cast<uint32_t>(changedRecords.size());
+        BuildDirtyRanges(changedRecords, m_MaterialRanges);
+        // Newly grown holes must also be initialized, even when only a distant sparse material index changed.
+        if (m_Materials.size() > oldSize)
+            m_MaterialRanges.push_back({ oldSize, static_cast<uint32_t>(m_Materials.size()) - oldSize });
+        MergeDirtyRanges(m_MaterialRanges);
         uint32_t materialCapacity = m_Stats.MaterialCapacity;
-        UploadTable(m_MaterialBuffer, m_Materials.data(), static_cast<uint32_t>(m_Materials.size()), sizeof(GpuMaterialData), 256u, materialCapacity,
-                    m_Stats.MaterialRanges);
+        UploadTableRanges(m_MaterialBuffer, m_Materials.data(), static_cast<uint32_t>(m_Materials.size()), sizeof(GpuMaterialData), 256u,
+                          materialCapacity, m_MaterialRanges, m_Stats.MaterialRanges);
         m_Stats.MaterialCapacity = CanCreateGpuBuffers() ? materialCapacity : static_cast<uint32_t>(m_Materials.size());
-        m_Stats.BindlessTextureCount = static_cast<uint32_t>(m_BindlessTextureResources.size());
-        m_BindlessTextureVersion++;
-        if (m_BindlessTextureVersion == 0)
+        if (texturesChanged && ++m_BindlessTextureVersion == 0)
             m_BindlessTextureVersion = 1;
+    }
+
+    GpuMaterialData GpuScene::PackMaterialRecord(uint32_t materialIndex)
+    {
+        MaterialResourceState& state = m_MaterialResources[materialIndex];
+        if (m_MaterialClassifications[materialIndex].IsForwardOnlyOpaque())
+            m_ForwardOnlyOpaqueMaterialCount--;
+        m_ToonOutlineMaterialCount -= state.ToonOutline;
+        m_ToonSilhouetteMaterialCount -= state.ToonSilhouette;
+        state.ToonOutline = false;
+        state.ToonSilhouette = false;
+        state.Textures = {};
+        m_MaterialClassifications[materialIndex] = {};
+        uint32_t textureField = 0;
+        auto registerTexture = [&](const Ref<Texture>& texture, const Ref<Texture>& defaultTexture) {
+            state.Textures[textureField++] = texture ? texture : defaultTexture;
+            return 0u; // Assigned after all changed materials have released their unused texture references.
+        };
+
+        // Record 0 backs meshes that have no material assigned (material handle 0). Give it the standard
+        // white material with neutral textures so those meshes render instead of sampling an empty table.
+        if (materialIndex == 0)
+        {
+            StandardMaterialDesc fallbackDesc;
+            fallbackDesc.BaseColorTexture = registerTexture(nullptr, Texture::WHITE);
+            fallbackDesc.NormalTexture = registerTexture(nullptr, Texture::NORMAL);
+            fallbackDesc.MetallicRoughnessTexture = registerTexture(nullptr, Texture::WHITE);
+            fallbackDesc.AmbientOcclusionTexture = registerTexture(nullptr, Texture::WHITE);
+            fallbackDesc.EmissiveTexture = registerTexture(nullptr, Texture::BLACK);
+            return GpuMaterialPacker::Pack(fallbackDesc);
+        }
+
+        const AssetHandle<Material>& materialHandle = m_MaterialResources[materialIndex].Resource;
+        if (!materialHandle)
+            return {};
+        const Material& material = *materialHandle;
+        MaterialRenderClassification classification = MaterialRenderClassifier::Classify(material);
+        if (classification.UsesStandardGpuRecord() && material.GetVariation().Has("TOON") && material.GetVariation().GetBool("TOON"))
+            classification.Model = MaterialModel::Toon;
+        m_MaterialClassifications[materialIndex] = classification;
+        if (classification.IsForwardOnlyOpaque())
+            m_ForwardOnlyOpaqueMaterialCount++;
+        if (!classification.UsesStandardGpuRecord())
+        {
+            return GpuMaterialPacker::PackUnsupported();
+        }
+        StandardMaterialDesc desc;
+        desc.Model = classification.Model;
+        desc.DecalResponseMask = material.GetDecalResponseMask();
+        desc.Alpha = classification.Alpha;
+        ReadMaterialValue(material, { "baseColor", "albedo", "tint" }, desc.BaseColor);
+        if (!ReadMaterialValue(material, { "emissive", "emissionColor" }, desc.Emissive))
+        {
+            glm::vec4 emissive(0.0f);
+            if (ReadMaterialValue(material, { "emissive", "emissionColor" }, emissive))
+                desc.Emissive = glm::vec3(emissive);
+        }
+        ReadMaterialValue(material, { "emissiveIntensity", "emissionIntensity" }, desc.EmissiveIntensity);
+        ReadMaterialValue(material, { "alphaCutoff", "cutoff" }, desc.AlphaCutoff);
+        ReadMaterialValue(material, { "metallic", "metalness" }, desc.Metallic);
+        ReadMaterialValue(material, { "roughness" }, desc.Roughness);
+        ReadMaterialValue(material, { "normalScale", "normalStrength" }, desc.NormalScale);
+        ReadMaterialValue(material, { "ambientOcclusion", "ao" }, desc.AmbientOcclusion);
+
+        desc.BaseColorTexture =
+          registerTexture(FindMaterialTexture(material, { "baseColorTexture", "baseColorMap", "albedoMap", "mainTexture" }), Texture::WHITE);
+        desc.NormalTexture = registerTexture(FindMaterialTexture(material, { "normalTexture", "normalMap" }), Texture::NORMAL);
+        desc.MetallicRoughnessTexture =
+          registerTexture(FindMaterialTexture(material, { "metallicRoughnessTexture", "metallicRoughnessMap", "metallicMap" }), Texture::WHITE);
+        desc.AmbientOcclusionTexture =
+          registerTexture(FindMaterialTexture(material, { "ambientOcclusionTexture", "ambientOcclusionMap", "aoMap" }), Texture::WHITE);
+        desc.EmissiveTexture = registerTexture(FindMaterialTexture(material, { "emissiveTexture", "emissiveMap", "emissionMap" }), Texture::BLACK);
+        if (desc.Model == MaterialModel::Toon)
+        {
+            glm::vec4 color(desc.ToonShadowColor, 1.0f);
+            if (ReadMaterialValue(material, { "toonShadowColor", "shadowColor", "shadowTint" }, color))
+                desc.ToonShadowColor = glm::vec3(color);
+            color = glm::vec4(desc.ToonSpecularColor, 1.0f);
+            if (ReadMaterialValue(material, { "toonSpecularColor", "specularColor" }, color))
+                desc.ToonSpecularColor = glm::vec3(color);
+            color = glm::vec4(desc.ToonRimColor, 1.0f);
+            if (ReadMaterialValue(material, { "toonRimColor", "rimColor" }, color))
+                desc.ToonRimColor = glm::vec3(color);
+            ReadMaterialValue(material, { "toonBands", "bands" }, desc.ToonBands);
+            ReadMaterialValue(material, { "toonBandSmoothness", "bandSmoothness", "stepSmoothness" }, desc.ToonBandSmoothness);
+            ReadMaterialValue(material, { "toonSpecularThreshold", "specularThreshold", "specularSize" }, desc.ToonSpecularThreshold);
+            ReadMaterialValue(material, { "toonSpecularSmoothness", "specularSmoothness" }, desc.ToonSpecularSmoothness);
+            ReadMaterialValue(material, { "toonSpecularStrength", "specularStrength" }, desc.ToonSpecularStrength);
+            ReadMaterialValue(material, { "toonRimThreshold", "rimThreshold", "rimWidth" }, desc.ToonRimThreshold);
+            ReadMaterialValue(material, { "toonRimSmoothness", "rimSmoothness" }, desc.ToonRimSmoothness);
+            ReadMaterialValue(material, { "toonRimPower", "rimPower" }, desc.ToonRimPower);
+            ReadMaterialValue(material, { "toonRimStrength", "rimStrength" }, desc.ToonRimStrength);
+            ReadMaterialValue(material, { "toonRimShadowMask", "rimShadowMask" }, desc.ToonRimShadowMask);
+            ReadMaterialValue(material, { "toonIndirectStrength", "indirectStrength" }, desc.ToonIndirectStrength);
+            ReadMaterialValue(material, { "toonPatternScale", "patternScale", "patternTiling" }, desc.ToonPatternScale);
+            ReadMaterialValue(material, { "toonPatternStrength", "patternStrength", "patternAmount" }, desc.ToonPatternStrength);
+            ReadMaterialValue(material, { "toonPatternSmoothness", "patternSmoothness" }, desc.ToonPatternSmoothness);
+            ReadMaterialValue(material, { "toonPatternDistanceFade", "patternDistanceFade" }, desc.ToonPatternDistanceFade);
+            ReadMaterialValue(material, { "toonRampStrength", "rampStrength" }, desc.ToonRampStrength);
+            ReadMaterialValue(material, { "toonRampOffset", "rampOffset" }, desc.ToonRampOffset);
+            ReadMaterialValue(material, { "toonMatcapStrength", "matcapStrength" }, desc.ToonMatcapStrength);
+            ReadMaterialValue(material, { "toonMatcapRotation", "matcapRotation" }, desc.ToonMatcapRotation);
+            int patternMapping = static_cast<int>(desc.ToonPatternMappingMode);
+            if (ReadMaterialValue(material, { "toonPatternMapping", "patternMapping", "patternUvMode" }, patternMapping))
+                desc.ToonPatternMappingMode =
+                  static_cast<ToonPatternMapping>(glm::clamp(patternMapping, 0, static_cast<int>(ToonPatternMapping::ProceduralHatch)));
+            color = desc.ToonOutlineColor;
+            if (ReadMaterialValue(material, { "toonOutlineColor", "outlineColor" }, color))
+                desc.ToonOutlineColor = color;
+            ReadMaterialValue(material, { "toonOutlineWidth", "outlineWidth", "thickness" }, desc.ToonOutlineWidth);
+            ReadMaterialValue(material, { "toonOutlineDepthThreshold", "outlineDepthThreshold" }, desc.ToonOutlineDepthThreshold);
+            ReadMaterialValue(material, { "toonOutlineNormalThreshold", "outlineNormalThreshold" }, desc.ToonOutlineNormalThreshold);
+            ReadMaterialValue(material, { "toonOutlineDistanceFade", "outlineDistanceFade" }, desc.ToonOutlineDistanceFade);
+            ReadMaterialValue(material, { "toonSilhouetteWidth", "silhouetteWidth", "invertedHullWidth" }, desc.ToonSilhouetteWidth);
+            desc.ToonPatternTexture = registerTexture(
+              FindMaterialTexture(material, { "toonPatternTexture", "patternTexture", "hatchingTexture", "scratchTexture" }), Texture::WHITE);
+            desc.ToonRampTexture =
+              registerTexture(FindMaterialTexture(material, { "toonRampTexture", "rampTexture", "diffuseRamp" }), Texture::WHITE);
+            desc.ToonMatcapTexture =
+              registerTexture(FindMaterialTexture(material, { "toonMatcapTexture", "matcapTexture", "matcap" }), Texture::WHITE);
+            const bool drawsInOpaquePass = classification.Alpha == AlphaMode::Opaque || classification.Alpha == AlphaMode::Mask;
+            if (drawsInOpaquePass && desc.ToonOutlineWidth > 0.0f && desc.ToonOutlineColor.a > 0.0f)
+            {
+                m_ToonOutlineMaterialCount++;
+                state.ToonOutline = true;
+            }
+            if (drawsInOpaquePass && desc.ToonSilhouetteWidth > 0.0f && desc.ToonOutlineColor.a > 0.0f)
+            {
+                m_ToonSilhouetteMaterialCount++;
+                state.ToonSilhouette = true;
+            }
+        }
+        return GpuMaterialPacker::Pack(desc);
     }
 
     void GpuScene::UploadTable(Ref<GenericGpuBuffer>& buffer, const void* data, uint32_t elementCount, uint32_t elementSize, uint32_t minimumCapacity,

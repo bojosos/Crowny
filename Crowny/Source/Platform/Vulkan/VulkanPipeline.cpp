@@ -122,7 +122,9 @@ namespace Crowny
         m_RasterizationInfo.rasterizerDiscardEnable = VK_FALSE; // TODO: ?????
         m_RasterizationInfo.polygonMode = VulkanUtils::GetPolygonMode(rasterizerState->PolygonDrawMode);
         m_RasterizationInfo.cullMode = VulkanUtils::GetCullMode(rasterizerState->CullMode);
-        m_RasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // TODO:
+        // Positive-height Vulkan viewports invert the framebuffer winding of the
+        // engine's counter-clockwise model-space front faces.
+        m_RasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
         m_RasterizationInfo.depthBiasEnable = rasterizerState->DepthBias != 0.0f;
         m_RasterizationInfo.depthBiasConstantFactor = rasterizerState->DepthBias;
         m_RasterizationInfo.depthBiasSlopeFactor = rasterizerState->DepthBiasSlope;

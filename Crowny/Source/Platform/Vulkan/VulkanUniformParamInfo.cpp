@@ -58,10 +58,10 @@ namespace Crowny
         stageFlagsLookup[MISS_SHADER] = VK_SHADER_STAGE_MISS_BIT_KHR;
 
         const RenderCapabilities& capabilities = gVulkanRenderAPI().GetCapabilities();
-        const bool descriptorArrays = capabilities.HasCapability(CW_DESCRIPTOR_INDEXING) &&
-                                      capabilities.HasCapability(CW_NON_UNIFORM_TEXTURE_INDEXING);
+        const bool descriptorArrays =
+          capabilities.HasCapability(CW_DESCRIPTOR_INDEXING) && capabilities.HasCapability(CW_NON_UNIFORM_TEXTURE_INDEXING);
         const bool updateAfterBind = descriptorArrays && capabilities.HasCapability(CW_UPDATE_AFTER_BIND);
-        const uint32_t runtimeArraySize = std::max(1u, std::min(capabilities.MaxBindlessSampledImages, 4096u));
+        const uint32_t runtimeArraySize = capabilities.GetBindlessTextureCapacity();
 
         for (uint32_t i = 0; i < m_ParamDescs.size(); i++)
         {
@@ -91,8 +91,7 @@ namespace Crowny
                     binding.descriptorType = descType;
                     binding.stageFlags |= stageFlagsLookup[i];
                     if (descriptorCount > 1 && updateAfterBind)
-                        layout.BindingFlags[bindingIdx] |= VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-                                                           VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+                        layout.BindingFlags[bindingIdx] |= VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
                     layout.Types[bindingIdx] = entry.second.Type;
                     layout.ElementTypes[bindingIdx] = entry.second.ElementType;
                 }
@@ -111,8 +110,7 @@ namespace Crowny
                 const uint32_t descriptorCount = desc.RuntimeArray ? runtimeArraySize : std::max(desc.ArraySize, 1u);
                 binding.descriptorCount = std::max(binding.descriptorCount, descriptorCount);
                 if (descriptorCount > 1 && updateAfterBind)
-                    layout.BindingFlags[bindingIdx] |= VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-                                                       VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+                    layout.BindingFlags[bindingIdx] |= VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
 
                 if (binding.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -153,8 +151,7 @@ namespace Crowny
         VulkanDescriptorManager& descManager = device.GetDescriptorManager();
         m_Layouts = new VulkanDescriptorLayout*[m_NumSets];
         for (uint32_t i = 0; i < m_NumSets; i++)
-            m_Layouts[i] = descManager.GetLayout(m_LayoutInfos[i].Bindings, m_LayoutInfos[i].NumBindings,
-                                                 m_LayoutInfos[i].BindingFlags);
+            m_Layouts[i] = descManager.GetLayout(m_LayoutInfos[i].Bindings, m_LayoutInfos[i].NumBindings, m_LayoutInfos[i].BindingFlags);
     }
 
     VulkanUniformParamInfo::~VulkanUniformParamInfo()

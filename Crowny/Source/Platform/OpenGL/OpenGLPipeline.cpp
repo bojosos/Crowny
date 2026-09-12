@@ -50,7 +50,17 @@ namespace Crowny
             return program;
         }
 
-        void ConfigureBindings(GLuint program, const Ref<ShaderStage>& stage)
+        void ValidateStorageBindings(const Ref<UniformParamInfo>& params)
+        {
+            if (!GLAD_GL_VERSION_4_3 || params->GetNumElements(UniformParamInfo::ParamType::Buffer) == 0)
+                return;
+            GLint maximum = 0;
+            glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &maximum);
+            if (params->GetNumElements(UniformParamInfo::ParamType::Buffer) > static_cast<uint32_t>(std::max(maximum, 0)))
+                throw std::runtime_error("OpenGL pipeline exceeds the available storage-buffer bindings");
+        }
+
+        void ConfigureBindings(GLuint program, const Ref<ShaderStage>& stage, const Ref<UniformParamInfo>& params)
         {
             if (!stage || !stage->GetUniformDesc())
                 return;
@@ -80,9 +90,11 @@ namespace Crowny
             {
                 for (const auto& [name, buffer] : desc->Buffers)
                 {
-                    const GLuint index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, name.c_str());
+                    const String blockName = static_cast<const OpenGLShader*>(stage.get())->GetStorageBlockName(buffer.Set, buffer.Slot);
+                    const GLuint index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, blockName.c_str());
                     if (index != GL_INVALID_INDEX)
-                        glShaderStorageBlockBinding(program, index, OpenGLUtils::FlattenBinding(buffer.Set, buffer.Slot));
+                        glShaderStorageBlockBinding(program, index,
+                                                    params->GetSequentialSlot(UniformParamInfo::ParamType::Buffer, buffer.Set, buffer.Slot));
                 }
             }
             glUseProgram(static_cast<GLuint>(previousProgram));
@@ -96,12 +108,13 @@ namespace Crowny
         if (desc.HullShader || desc.DomainShader)
             CW_ENGINE_ASSERT(desc.HullShader && desc.DomainShader, "OpenGL tessellation control and evaluation shaders must be paired");
 
+        ValidateStorageBindings(GetParamInfo());
         m_Program = LinkProgram({ desc.VertexShader, desc.FragmentShader, desc.GeometryShader, desc.HullShader, desc.DomainShader });
-        ConfigureBindings(m_Program, desc.VertexShader);
-        ConfigureBindings(m_Program, desc.FragmentShader);
-        ConfigureBindings(m_Program, desc.GeometryShader);
-        ConfigureBindings(m_Program, desc.HullShader);
-        ConfigureBindings(m_Program, desc.DomainShader);
+        ConfigureBindings(m_Program, desc.VertexShader, GetParamInfo());
+        ConfigureBindings(m_Program, desc.FragmentShader, GetParamInfo());
+        ConfigureBindings(m_Program, desc.GeometryShader, GetParamInfo());
+        ConfigureBindings(m_Program, desc.HullShader, GetParamInfo());
+        ConfigureBindings(m_Program, desc.DomainShader, GetParamInfo());
     }
 
     OpenGLGraphicsPipeline::~OpenGLGraphicsPipeline()
@@ -114,8 +127,9 @@ namespace Crowny
     {
         if (!GLAD_GL_VERSION_4_3)
             throw std::runtime_error("OpenGL compute shaders require OpenGL 4.3 or newer");
+        ValidateStorageBindings(GetParamInfo());
         m_Program = LinkProgram({ shader });
-        ConfigureBindings(m_Program, shader);
+        ConfigureBindings(m_Program, shader, GetParamInfo());
     }
 
     OpenGLComputePipeline::~OpenGLComputePipeline()

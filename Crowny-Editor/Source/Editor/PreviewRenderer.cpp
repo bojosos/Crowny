@@ -7,6 +7,7 @@
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/MeshFactory.h"
 
 namespace Crowny
@@ -27,6 +28,10 @@ namespace Crowny
 
             RenderTextureDesc renderTextureParams;
             renderTextureParams.ColorSurfaces[0].Texture = texture;
+            textureParams.Format = TextureFormat::DEPTH32F;
+            textureParams.Usage = TEXTURE_DEPTHSTENCIL;
+            textureParams.DebugName = String(debugName) + " depth";
+            renderTextureParams.DepthSurface.Texture = Texture::Create(textureParams);
             renderTextureParams.Width = width;
             renderTextureParams.Height = height;
             return RenderTexture::Create(renderTextureParams);
@@ -110,7 +115,7 @@ namespace Crowny
             return nullptr;
 
         EditorCamera camera;
-        camera.SetViewportSize(m_Width, m_Height);
+        camera.SetViewportSize(static_cast<float>(m_Width), static_cast<float>(m_Height));
         camera.SetDistance(5);
         camera.Focus(glm::vec3(0.0f));
         m_SceneRenderer->RenderEditor(camera, false);
@@ -126,9 +131,18 @@ namespace Crowny
     PreviewMaterialRenderer::PreviewMaterialRenderer(const AssetHandle<Material>& material, const AssetHandle<Mesh>& previewMesh)
       : m_Material(material), m_PreviewMesh(previewMesh)
     {
+        SetView(0.4f, 0.2f, 1.8f);
     }
 
     PreviewMaterialRenderer::~PreviewMaterialRenderer() { Shutdown(); }
+
+    void PreviewMaterialRenderer::SetView(float yaw, float pitch, float distance)
+    {
+        m_Camera.SetYaw(yaw);
+        m_Camera.SetPitch(pitch);
+        m_Camera.SetDistance(distance);
+        m_Camera.Focus(glm::vec3(0.0f));
+    }
 
     bool PreviewMaterialRenderer::Setup(uint32_t width, uint32_t height)
     {
@@ -197,11 +211,15 @@ namespace Crowny
         if (!m_SceneRenderer || !m_RenderTexture || m_Width == 0 || m_Height == 0 || renderAPI == nullptr)
             return nullptr;
 
-        EditorCamera camera;
-        camera.SetViewportSize(m_Width, m_Height);
-        camera.SetDistance(3);
-        camera.Focus(glm::vec3(0.0f));
-        m_SceneRenderer->RenderEditor(camera, false);
+        m_Camera.SetViewportSize(static_cast<float>(m_Width), static_cast<float>(m_Height));
+        RenderLightData keyLight;
+        keyLight.DirectionOuterCosine = glm::vec4(glm::normalize(glm::vec3(-0.6f, -0.8f, -1.0f)), -1.0f);
+        keyLight.ColorIntensity = glm::vec4(1.0f, 0.96f, 0.9f, 10000.0f);
+        keyLight.Metadata =
+          glm::uvec4(static_cast<uint32_t>(LightType::Directional),
+                     static_cast<uint32_t>(RenderLightFlags::Enabled | RenderLightFlags::AffectDiffuse | RenderLightFlags::AffectSpecular), 0u, 0u);
+        ForwardRenderer::SetLights(&keyLight, 1);
+        m_SceneRenderer->RenderEditor(m_Camera, false);
         renderAPI->SubmitCommandBuffer(nullptr);
         renderAPI->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);

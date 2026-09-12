@@ -4,6 +4,8 @@
 
 namespace Crowny
 {
+    uint32_t RenderCapabilities::GetBindlessTextureCapacity() const { return std::clamp(MaxBindlessSampledImages, 1u, BindlessTextureLimit); }
+
     char const* const RenderCapabilities::GPU_VENDOR_STRINGS[GPU_VENDOR_COUNT] = { "unknown", "nvidia", "amd", "intel" };
 
     GPUVendor RenderCapabilities::VendorFromString(const String& vendorString)
@@ -27,10 +29,9 @@ namespace Crowny
 
     RenderFeatureTier RenderCapabilities::GetFeatureTier() const
     {
-        const bool baseline = HasCapability(CW_COMPUTE_SHADER) && HasCapability(CW_MULTI_DRAW_INDIRECT) &&
-                              HasCapability(CW_SHADER_DRAW_PARAMETERS);
-        const bool gpuDriven = baseline && HasCapability(CW_DESCRIPTOR_INDEXING) &&
-                               HasCapability(CW_NON_UNIFORM_TEXTURE_INDEXING) && HasCapability(CW_DRAW_INDIRECT_COUNT);
+        const bool baseline = HasCapability(CW_COMPUTE_SHADER) && HasCapability(CW_MULTI_DRAW_INDIRECT) && HasCapability(CW_SHADER_DRAW_PARAMETERS);
+        const bool gpuDriven = baseline && HasCapability(CW_DESCRIPTOR_INDEXING) && HasCapability(CW_NON_UNIFORM_TEXTURE_INDEXING) &&
+                               HasCapability(CW_DRAW_INDIRECT_COUNT);
 
         if (gpuDriven && HasCapability(CW_MESH_SHADER) && HasCapability(CW_RAY_TRACING))
             return RenderFeatureTier::Future;

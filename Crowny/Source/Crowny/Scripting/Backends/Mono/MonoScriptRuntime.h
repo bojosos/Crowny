@@ -11,18 +11,18 @@ namespace Crowny
     class MonoScriptRuntime
     {
     public:
-        bool Bind(MonoObject* instance, MonoClass* scriptClass);
+        bool Bind(uint64_t runtimeInstanceId, MonoClass* scriptClass);
         void Clear();
 
-        MonoObject* GetInstance() const { return m_Instance; }
+        MonoObject* GetInstance() const;
         MonoClass* GetScriptClass() const { return m_ScriptClass; }
-        void Dispatch(Entity self, Entity other, const ScriptEvent& event) const;
+        MonoObject* Dispatch(Entity self, Entity other, const ScriptEvent& event) const;
 
     private:
         using LifecycleThunk = void(CW_THUNKCALL*)(MonoObject*, MonoException**);
         using EventThunk = void(CW_THUNKCALL*)(MonoObject*, MonoObject*, MonoException**);
 
-        MonoObject* m_Instance = nullptr;
+        uint64_t m_RuntimeInstanceId = 0;
         MonoClass* m_ScriptClass = nullptr;
         LifecycleThunk m_OnAwake = nullptr;
         LifecycleThunk m_OnStart = nullptr;

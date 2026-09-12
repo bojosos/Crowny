@@ -20,6 +20,8 @@ namespace Crowny
         ManagedOperationResult Start(const ManagedScriptingConfig& config);
         void Shutdown();
         bool IsStarted() const { return m_Backend != nullptr; }
+        // A nonzero handle may have been invalidated by shutdown or a failed reload rollback.
+        bool IsInstanceAlive(ScriptInstanceHandle handle) const;
 
         const ManagedCapabilities& GetCapabilities() const { return m_Capabilities; }
         const ScriptCatalog& GetScriptCatalog() const;

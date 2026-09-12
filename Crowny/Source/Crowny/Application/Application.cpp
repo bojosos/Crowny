@@ -31,8 +31,7 @@ namespace Crowny
         (*func)();
     }
 
-    Application::Application(const ApplicationDesc& applicationDesc)
-      : m_TimeSettings(CreateRef<TimeSettings>()), m_ApplicationDesc(applicationDesc)
+    Application::Application(const ApplicationDesc& applicationDesc) : m_TimeSettings(CreateRef<TimeSettings>()), m_ApplicationDesc(applicationDesc)
     {
         m_LayerStack = new LayerStack();
     }
@@ -146,7 +145,11 @@ namespace Crowny
         layer->OnAttach();
     }
 
-    void Application::Exit() { m_Running = false; }
+    void Application::Exit(int exitCode)
+    {
+        s_ExitCode = exitCode;
+        m_Running = false;
+    }
 
     void Application::OnEvent(Event& e)
     {
@@ -166,10 +169,7 @@ namespace Crowny
             OnWindowClose(static_cast<WindowCloseEvent&>(e));
     }
 
-    Ref<TimeSettings> Application::GetTimeSettings() const
-    {
-        return m_TimeSettings;
-    }
+    Ref<TimeSettings> Application::GetTimeSettings() const { return m_TimeSettings; }
     void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings)
     {
         m_TimeSettings = timeSettings != nullptr ? timeSettings : CreateRef<TimeSettings>();

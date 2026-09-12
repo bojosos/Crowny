@@ -147,6 +147,26 @@ TEST_CASE("Material shader picker filters and orders options", "[Editor][Materia
     CHECK(filtered[0]->Name == "GpuCullInstances");
 
     filtered = FilterMaterialShaderOptions(options, "T", false);
-    REQUIRE(filtered.size() == 4u);
+    REQUIRE(filtered.size() == 3u);
     CHECK(filtered[0]->Name == "Toon");
+    CHECK(filtered[1]->Name == "Unlit");
+    CHECK(filtered[2]->Name == "Water");
+}
+
+TEST_CASE("Material shader picker sorts names without case and preserves equivalent options", "[Editor][Material][Shader]")
+{
+    Vector<MaterialShaderOption> options(5);
+    options[0].Name = "Zebra";
+    options[1].Name = "alpine";
+    options[2].Name = "ALPHA";
+    options[3].Name = "alpha";
+    options[4].Name = "Al";
+
+    const Vector<const MaterialShaderOption*> filtered = FilterMaterialShaderOptions(options, "", false);
+    REQUIRE(filtered.size() == options.size());
+    CHECK(filtered[0] == &options[4]);
+    CHECK(filtered[1] == &options[2]);
+    CHECK(filtered[2] == &options[3]);
+    CHECK(filtered[3] == &options[1]);
+    CHECK(filtered[4] == &options[0]);
 }

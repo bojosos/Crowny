@@ -1,0 +1,24 @@
+Version: 1
+Name: Emissive Mark
+Target: Decal
+Parameters:
+  - {Name: decalChannels, Type: Int, Value: 32}
+  - {Name: decalColor, Type: Color, Value: [1,1,1,1]}
+  - {Name: decalEmission, Type: Color, Value: [1,1,1,1]}
+  - {Name: decalStrengths, Type: Color, Value: [1,1,1,1]}
+  - {Name: decalStrengths2, Type: Color, Value: [1,1,1,1]}
+  - {Name: decalCorrectionTint, Type: Color, Value: [1,1,1,1]}
+  - {Name: decalColorBlend, Type: Int, Value: 0}
+  - {Name: decalRoughnessBlend, Type: Int, Value: 0}
+  - {Name: decalEmissionBlend, Type: Int, Value: 2}
+  - {Name: decalReplaceNormal, Type: Int, Value: 0}
+  - {Name: decalRoughness, Type: Float, Value: 0.5}
+  - {Name: decalMetallic, Type: Float, Value: 0}
+  - {Name: decalAO, Type: Float, Value: 1}
+  - {Name: decalCoating, Type: Float, Value: 1}
+  - {Name: decalExposure, Type: Float, Value: 0}
+  - {Name: decalHue, Type: Float, Value: 0}
+  - {Name: decalSaturation, Type: Float, Value: 1}
+  - {Name: decalContrast, Type: Float, Value: 1}
+  - {Name: decalMaskThreshold, Type: Float, Value: 0}
+  - {Name: decalMaskSoftness, Type: Float, Value: 0}

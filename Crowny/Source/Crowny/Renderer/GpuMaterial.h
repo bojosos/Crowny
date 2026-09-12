@@ -90,6 +90,7 @@ namespace Crowny
         MaterialModel Model = MaterialModel::Standard;
         AlphaMode Alpha = AlphaMode::Opaque;
         GpuMaterialFlags Flags = GpuMaterialFlags::ReceiveShadows;
+        uint32_t DecalResponseMask = 255u;
 
         glm::vec3 ToonShadowColor = glm::vec3(0.2f, 0.22f, 0.3f);
         float ToonBands = 3.0f;

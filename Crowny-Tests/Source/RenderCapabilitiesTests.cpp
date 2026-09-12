@@ -4,6 +4,16 @@
 
 using namespace Crowny;
 
+TEST_CASE("Bindless texture capacity includes fallback and respects the renderer ceiling", "[Renderer][Capabilities][Bindless]")
+{
+    RenderCapabilities capabilities;
+    CHECK(capabilities.GetBindlessTextureCapacity() == 1);
+    capabilities.MaxBindlessSampledImages = 117;
+    CHECK(capabilities.GetBindlessTextureCapacity() == 117);
+    capabilities.MaxBindlessSampledImages = 100000;
+    CHECK(capabilities.GetBindlessTextureCapacity() == RenderCapabilities::BindlessTextureLimit);
+}
+
 TEST_CASE("RenderCapabilities reports only discovered features", "[Renderer][Capabilities]")
 {
     RenderCapabilities capabilities;

@@ -9,6 +9,7 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Physics/Physics3D.h"
+#include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Serialization/SceneComponentCodec.h"
 #include "Crowny/Serialization/SettingsSerializer.h"
@@ -38,10 +39,7 @@ namespace Crowny
             return AssetManager::TryGet() != nullptr && AssetManager::TryGet()->IsAssetRegistered(material.GetUUID());
         }
 
-        YAML::Node FindComponentNode(const YAML::Node& entityNode, const SceneComponentCodec& codec)
-        {
-            return entityNode[codec.YamlName];
-        }
+        YAML::Node FindComponentNode(const YAML::Node& entityNode, const SceneComponentCodec& codec) { return entityNode[codec.YamlName]; }
 
         void ResolveRelationships(Scene& scene, UnorderedMap<Entity, Vector<UUID>>& relationships)
         {
@@ -126,7 +124,7 @@ namespace Crowny
         m_Scene->MarkHierarchyTopologyDirty();
     }
 
-    void SceneSerializer::Serialize(const Path& filepath)
+    bool SceneSerializer::Serialize(const Path& filepath)
     {
         YAML::Emitter out;
         out << YAML::Comment("Crowny Scene");
@@ -134,6 +132,7 @@ namespace Crowny
         SerializeValueYAML(out, "Version", FORMAT_VERSION);
         SerializeValueYAML(out, "Scene", m_Scene->GetName());
         SerializeValueYAML(out, "ImGuiLayout", m_Scene->GetImGuiLayout());
+        SerializeValueYAML(out, "Environment", m_Scene->GetEnvironmentAsset().GetUUID());
         SerializeValueYAML(out, "Entities", YAML::BeginSeq);
         m_Scene->m_Registry.sort<IDComponent>([](const IDComponent& lhs, const IDComponent& rhs) { return lhs.Uuid < rhs.Uuid; });
         m_Scene->m_Registry.each([&](auto entityId) { SerializeEntity(out, { entityId, m_Scene.get() }); });
@@ -144,11 +143,15 @@ namespace Crowny
             Physics3DSettingsSerializer::Serialize(Physics3D::Get().GetSettings(), out);
         out << YAML::EndMap;
 
-        m_Scene->m_Filepath = filepath;
-        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
         const char* text = out.c_str();
-        stream->Write(text, std::strlen(text));
-        stream->Close();
+        String error;
+        if (!FileSystem::WriteTextFileAtomic(filepath, text, &error))
+        {
+            CW_ENGINE_ERROR("Could not save scene '{}': {}", filepath, error);
+            return false;
+        }
+        m_Scene->m_Filepath = filepath;
+        return true;
     }
 
     void SceneSerializer::SerializeBinary(const Path& filepath)
@@ -158,6 +161,7 @@ namespace Crowny
 
         archive(static_cast<uint32_t>(FORMAT_VERSION));
         archive(m_Scene->GetName(), m_Scene->GetImGuiLayout());
+        archive(m_Scene->GetEnvironmentAsset().GetUUID());
 
         m_Scene->m_Registry.sort<IDComponent>([](const IDComponent& lhs, const IDComponent& rhs) { return lhs.Uuid < rhs.Uuid; });
         uint32_t entityCount = 0;
@@ -226,7 +230,7 @@ namespace Crowny
             if (!data["Scene"])
                 return false;
             const uint32_t version = data["Version"].as<uint32_t>(0);
-            if (version != FORMAT_VERSION)
+            if (version != FORMAT_VERSION && version != 13 && version != 12)
             {
                 CW_ENGINE_ERROR("Scene '{}' uses version {}, but this build requires version {}.", filepath, version, FORMAT_VERSION);
                 return false;
@@ -240,6 +244,7 @@ namespace Crowny
             m_Scene->m_RootEntity = nullptr;
             m_Scene->m_Name = data["Scene"].as<String>();
             m_Scene->m_ImGuiLayout = data["ImGuiLayout"].as<String>("");
+            m_Scene->SetEnvironmentAsset(LoadAssetReference<EnvironmentMap>(data["Environment"].as<UUID>(UUID::EMPTY)));
             m_Scene->m_Filepath = filepath;
             if (data["Entities"])
                 DeserializeEntities(data["Entities"]);
@@ -301,7 +306,7 @@ namespace Crowny
         {
             uint32_t version;
             archive(version);
-            if (version != FORMAT_VERSION)
+            if (version != FORMAT_VERSION && version != 13 && version != 12)
             {
                 CW_ENGINE_ERROR("Binary scene '{}' uses version {}, but this build requires version {}.", filepath, version, FORMAT_VERSION);
                 stream->Close();
@@ -311,6 +316,9 @@ namespace Crowny
             String sceneName;
             String layout;
             archive(sceneName, layout);
+            UUID environmentUuid;
+            if (version >= 13)
+                archive(environmentUuid);
             sceneMutationStarted = true;
             m_Scene->ResetTransformHierarchyCache();
             m_Scene->m_Registry.clear();
@@ -319,12 +327,13 @@ namespace Crowny
             m_Scene->m_RootEntity = nullptr;
             m_Scene->m_Name = sceneName;
             m_Scene->m_ImGuiLayout = layout;
+            m_Scene->SetEnvironmentAsset(LoadAssetReference<EnvironmentMap>(environmentUuid));
             m_Scene->m_Filepath = filepath;
 
             uint32_t entityCount;
             archive(entityCount);
             UnorderedMap<Entity, Vector<UUID>> relationships;
-            SceneComponentReadContext context{ m_Scene.get(), &relationships };
+            SceneComponentReadContext context{ m_Scene.get(), &relationships, version };
             for (uint32_t entityIndex = 0; entityIndex < entityCount; entityIndex++)
             {
                 UUID uuid;

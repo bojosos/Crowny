@@ -144,6 +144,7 @@ namespace Crowny
         SerializeValueYAML(out, "Name", m_Material->GetName());
         const String alphaMode = String(m_Material->HasAlphaModeOverride() ? AlphaModeName(m_Material->GetAlphaMode()) : StringView("Inferred"));
         SerializeValueYAML(out, "AlphaMode", alphaMode);
+        SerializeValueYAML(out, "DecalResponseMask", m_Material->GetDecalResponseMask());
 
         // Data parameters — only user-editable ones (skip cw_ blocks)
         out << YAML::Key << "Parameters" << YAML::Value << YAML::BeginSeq;
@@ -163,7 +164,7 @@ namespace Crowny
             if (name.rfind("cw_", 0) == 0)
                 continue;
             AssetHandle<Texture> texHandle = m_Material->GetTextureHandle(name);
-            UUID texUuid = texHandle ? texHandle.GetUUID() : UUID::EMPTY;
+            UUID texUuid = texHandle.GetUUID();
             out << YAML::BeginMap;
             out << YAML::Key << "Name" << YAML::Value << name;
             out << YAML::Key << "UUID" << YAML::Value << texUuid;
@@ -239,6 +240,7 @@ namespace Crowny
             return false;
         }
 
+        m_Material->SetDecalResponseMask(data["DecalResponseMask"].as<uint32_t>(255u));
         if (data["AlphaMode"])
         {
             const String alphaModeName = data["AlphaMode"].as<String>();
@@ -267,6 +269,7 @@ namespace Crowny
             if (shader)
             {
                 m_Material->SetShader(shader);
+                m_Material->ApplyModelDefaults();
             }
             else
             {
@@ -316,13 +319,16 @@ namespace Crowny
                 UUID texUuid = texNode["UUID"].as<UUID>();
                 if (!texUuid.Empty())
                 {
-                    AssetHandle<Texture> tex = static_asset_cast<Texture>(AssetManager::TryGet()->LoadFromUUID(texUuid));
-                    if (tex)
-                        m_Material->SetTexture(name, tex);
+                    AssetHandle<Texture> tex = AssetManager::Get().LoadFromUUID<Texture>(texUuid);
+                    if (!tex)
+                        tex = static_asset_cast<Texture>(AssetManager::Get().GetAssetHandle(texUuid));
+                    m_Material->SetTexture(name, tex);
                 }
             }
         }
 
+        if (m_Material->HasAlphaModeOverride())
+            m_Material->SetFloat("alphaMode", static_cast<float>(m_Material->GetAlphaMode()));
         return true;
     }
 

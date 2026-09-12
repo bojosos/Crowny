@@ -746,30 +746,34 @@ TEST_CASE("Masked depth shader compiles all animation and output-layout variants
     for (const ShaderDiagnostic& diagnostic : result.Diagnostics)
         INFO(diagnostic.Message);
     REQUIRE(result.Succeeded());
-    REQUIRE(result.Description.Techniques.size() == 4);
+    REQUIRE(result.Description.Techniques.size() == 8);
 
     for (const bool animated : { false, true })
     {
         for (const bool objectIDOnly : { false, true })
         {
-            CAPTURE(animated, objectIDOnly);
-            ShaderVariation expected;
-            expected.Set("CW_DEPTH_ANIMATED", animated);
-            expected.Set("CW_DEPTH_OBJECT_ID_ONLY", objectIDOnly);
-            const auto technique =
-              std::find_if(result.Description.Techniques.begin(), result.Description.Techniques.end(),
-                           [&](const Ref<ShaderTechnique>& candidate) { return candidate && candidate->GetVariation().Matches(expected); });
-            REQUIRE(technique != result.Description.Techniques.end());
-            REQUIRE((*technique)->GetRenderPasses().size() == 1);
-            const ShaderRenderPassDesc& pass = (*technique)->GetRenderPasses().front()->GetPassDesc();
-            REQUIRE(pass.FragmentShader);
-            REQUIRE(pass.FragmentShader->Description);
-            const auto materialTable =
-              std::find_if(pass.FragmentShader->Description->Buffers.begin(), pass.FragmentShader->Description->Buffers.end(),
-                           [](const auto& entry) { return entry.second.Set == 1 && entry.second.Slot == 0; });
-            REQUIRE(materialTable != pass.FragmentShader->Description->Buffers.end());
-            REQUIRE(pass.FragmentShader->Description->Textures.contains("cwTextures"));
-            CHECK(pass.FragmentShader->Description->Textures.at("cwTextures").RuntimeArray);
+            for (const bool coating : { false, true })
+            {
+                CAPTURE(animated, objectIDOnly, coating);
+                ShaderVariation expected;
+                expected.Set("CW_DEPTH_ANIMATED", animated);
+                expected.Set("CW_DEPTH_OBJECT_ID_ONLY", objectIDOnly);
+                expected.Set("CW_DEPTH_COATING", coating);
+                const auto technique =
+                  std::find_if(result.Description.Techniques.begin(), result.Description.Techniques.end(),
+                               [&](const Ref<ShaderTechnique>& candidate) { return candidate && candidate->GetVariation().Matches(expected); });
+                REQUIRE(technique != result.Description.Techniques.end());
+                REQUIRE((*technique)->GetRenderPasses().size() == 1);
+                const ShaderRenderPassDesc& pass = (*technique)->GetRenderPasses().front()->GetPassDesc();
+                REQUIRE(pass.FragmentShader);
+                REQUIRE(pass.FragmentShader->Description);
+                const auto materialTable =
+                  std::find_if(pass.FragmentShader->Description->Buffers.begin(), pass.FragmentShader->Description->Buffers.end(),
+                               [](const auto& entry) { return entry.second.Set == 1 && entry.second.Slot == 0; });
+                REQUIRE(materialTable != pass.FragmentShader->Description->Buffers.end());
+                REQUIRE(pass.FragmentShader->Description->Textures.contains("cwTextures"));
+                CHECK(pass.FragmentShader->Description->Textures.at("cwTextures").RuntimeArray);
+            }
         }
     }
 }

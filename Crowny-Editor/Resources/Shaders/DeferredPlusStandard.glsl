@@ -129,6 +129,8 @@ layout(location = 2) out vec4 cwEmissive;
 layout(location = 3) out int cwMaterialFlags;
 layout(location = 4) out int cwObjectId;
 
+#include "CrownyDecals.glslinc"
+
 vec2 encodeOctahedral(vec3 normal)
 {
     normal /= abs(normal.x) + abs(normal.y) + abs(normal.z);
@@ -170,6 +172,8 @@ float sampleToonPattern(CwMaterialRecord material, vec3 worldPosition, vec3 norm
 void main()
 {
     CwMaterialRecord material = materials[inputData.materialIndex];
+    vec3 decalDx = dFdx(inputData.worldPosition);
+    vec3 decalDy = dFdy(inputData.worldPosition);
     vec4 baseColor = texture(cwTextures[nonuniformEXT(material.textureIndices0.x)], inputData.uv) *
                      material.baseColor * inputData.color;
     uint alphaMode = (material.textureIndices1.w >> 8u) & 0xffu;
@@ -186,14 +190,20 @@ void main()
     float ao = texture(cwTextures[nonuniformEXT(material.textureIndices0.w)], inputData.uv).r *
                material.metallicRoughnessNormalAo.w;
 
+    float roughness = clamp(metallicRoughness.g * material.metallicRoughnessNormalAo.y, 0.045, 1.0);
+    float metallic = clamp(metallicRoughness.b * material.metallicRoughnessNormalAo.x, 0.0, 1.0);
+    vec3 emissive = texture(cwTextures[nonuniformEXT(material.textureIndices1.x)], inputData.uv).rgb * material.emissiveAlphaCutoff.rgb;
+    float receiverOpacity = baseColor.a;
+    cwApplyDecals(inputData.objectId, ~(material.textureIndices1.z >> 8u) & 255u, inputData.worldPosition, geometricNormal, decalDx, decalDy,
+                  length(cwView.cameraPositionPreExposure.xyz - inputData.worldPosition), 1.0,
+                  baseColor.rgb, normal, roughness, metallic, ao, emissive, baseColor.a);
+    if (cwDecalConstants.counts.w == 1u && !cwDecalCoatingCore(receiverOpacity, baseColor.a)) discard;
     cwBaseColorAo = vec4(max(baseColor.rgb, vec3(0.0)), clamp(ao, 0.0, 1.0));
     cwNormalRoughnessMetallic = vec4(encodeOctahedral(normal),
-        clamp(metallicRoughness.g * material.metallicRoughnessNormalAo.y, 0.045, 1.0),
-        clamp(metallicRoughness.b * material.metallicRoughnessNormalAo.x, 0.0, 1.0));
+        roughness, metallic);
     float patternSignal = (material.textureIndices1.w & 0xffu) == 2u ?
         sampleToonPattern(material, inputData.worldPosition, normal) : 0.5;
-    cwEmissive = vec4(texture(cwTextures[nonuniformEXT(material.textureIndices1.x)], inputData.uv).rgb *
-                      material.emissiveAlphaCutoff.rgb, patternSignal);
+    cwEmissive = vec4(emissive, patternSignal);
     cwMaterialFlags = int(inputData.materialIndex);
     cwObjectId = int(inputData.objectId);
 }

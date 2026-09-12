@@ -32,11 +32,14 @@ namespace Crowny
         return m_CachedParams[idx];
     }
 
-    MonoObject* MonoMethod::Invoke(MonoObject* instance, void** params)
+    MonoObject* MonoMethod::Invoke(MonoObject* instance, void** params, MonoObject** exception)
     {
-        MonoObject* exception = nullptr;
-        MonoObject* ret = mono_runtime_invoke(m_Method, instance, params, &exception);
-        MonoUtils::CheckException(exception);
+        MonoObject* caught = nullptr;
+        MonoObject* ret = mono_runtime_invoke(m_Method, instance, params, &caught);
+        if (exception != nullptr)
+            *exception = caught;
+        else
+            MonoUtils::CheckException(caught);
         return ret;
     }
 

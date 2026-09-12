@@ -48,12 +48,15 @@ namespace Crowny
         PreviewMaterialRenderer(const AssetHandle<Material>& material, const AssetHandle<Mesh>& previewMesh = {});
         ~PreviewMaterialRenderer() override;
 
+        void SetView(float yaw, float pitch, float distance);
+
         bool Setup(uint32_t width, uint32_t height) override;
         void Shutdown() override;
         Ref<Texture> RenderPreview() override;
 
     private:
         AssetHandle<Material> m_Material;
+        EditorCamera m_Camera;
         AssetHandle<Mesh> m_PreviewMesh;
         AssetHandle<Mesh> m_RenderMesh;
         Ref<Scene> m_Scene;

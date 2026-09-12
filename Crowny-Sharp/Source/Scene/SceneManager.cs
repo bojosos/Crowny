@@ -83,8 +83,21 @@ namespace Crowny
         public static SceneOperationStatus SetActive(UUID scene) { return (SceneOperationStatus)ManagedRuntimeContext.SceneSetActive(scene); }
         public static SceneOperationStatus SetActive(SceneReference scene) { return SetActive(scene.uuid); }
 
+        internal static void ClearEventHandlers()
+        {
+            // CrownySharp survives a game assembly reload, so its events must release game delegates first.
+            sceneLoaded = null;
+            sceneUnloaded = null;
+            sceneReloaded = null;
+            activeSceneChanged = null;
+            executionStateChanged = null;
+        }
+
         internal static void NotifySceneEvent(SceneLifecycleEventType type, UUID scene, SceneExecutionState state)
         {
+            if (type == SceneLifecycleEventType.Unloaded || type == SceneLifecycleEventType.Reloaded ||
+                type == SceneLifecycleEventType.ActiveChanged)
+                ManagedRuntimeContext.InvalidateComponentCaches();
             switch (type)
             {
                 case SceneLifecycleEventType.Loaded:

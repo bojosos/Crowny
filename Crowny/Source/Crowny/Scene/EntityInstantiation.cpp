@@ -50,6 +50,32 @@ namespace Crowny
         }
     } // namespace
 
+    void EntityInstantiator::RemapCopiedReferences(Entity source, Entity destination)
+    {
+        UnorderedMap<UUID, UUID> remap;
+        Vector<Entity> copies;
+        std::function<void(Entity, Entity)> collect = [&](Entity original, Entity copy) {
+            remap[original.GetUuid()] = copy.GetUuid();
+            copies.push_back(copy);
+            const auto& originals = original.GetChildren();
+            const auto& children = copy.GetChildren();
+            for (size_t i = 0; i < std::min(originals.size(), children.size()); ++i)
+                collect(originals[i], children[i]);
+        };
+        collect(source, destination);
+        for (Entity copy : copies)
+        {
+            if (!copy.HasComponent<DecalComponent>())
+                continue;
+            auto& decal = copy.GetComponent<DecalComponent>();
+            const auto target = remap.find(decal.Target);
+            if (target != remap.end())
+                decal.Target = target->second;
+            decal.Age = 0.0f;
+            decal.LifetimeRunning = true;
+        }
+    }
+
     Entity EntityInstantiator::InstantiatePrefab(Scene& targetScene, const AssetHandle<Prefab>& prefab, const EntityInstantiateOptions& options)
     {
         if (!prefab.IsLoaded())
@@ -65,6 +91,7 @@ namespace Crowny
 
         const UUID prefabAssetUuid = prefab.GetUUID();
         Entity root = InstantiateRecursive(targetScene, prefabRoot, options.Parent, &prefabAssetUuid);
+        RemapCopiedReferences(prefabRoot, root);
         return FinalizeInstantiation(targetScene, root, options);
     }
 
@@ -78,6 +105,7 @@ namespace Crowny
             return Entity::Invalid;
 
         Entity root = InstantiateRecursive(targetScene, source, options.Parent, nullptr);
+        RemapCopiedReferences(source, root);
         return FinalizeInstantiation(targetScene, root, options);
     }
 } // namespace Crowny

@@ -268,15 +268,32 @@ def sharp_transport_delegates(functions: dict) -> str:
 
 def sharp_transport_bindings(functions: dict) -> str:
     delegate_types = sharp_transport_delegate_types(functions)
-    return "\n".join(
+    mono_bindings = "\n".join(
         f"            {name}Callback = Marshal.GetDelegateForFunctionPointer<{delegate_types[name]}>(value.{name});"
         for name in functions
     )
+    coreclr_bindings = "\n".join(
+        f"            {name}Callback = ({cs_function_pointer(function, SHARP_CS_TYPES, 'int')})value.{name};"
+        for name, function in functions.items()
+    )
+    return f"#if CROWNY_MONO\n{mono_bindings}\n#else\n{coreclr_bindings}\n#endif"
+
+
+def sharp_transport_callbacks(functions: dict) -> str:
+    coreclr_callbacks = "\n".join(
+        f"        private static {cs_function_pointer(function, SHARP_CS_TYPES, 'int')} {name}Callback;"
+        for name, function in functions.items()
+    )
+    return f"#if CROWNY_MONO\n{sharp_transport_delegates(functions)}\n#else\n{coreclr_callbacks}\n#endif"
 
 
 def sharp_transport_validation(functions: dict) -> str:
     conditions = " &&\n                   ".join(f"value.{name} != IntPtr.Zero" for name in functions)
     return f"            bool complete =\n                {conditions};"
+
+
+def sharp_transport_clear_bindings(functions: dict) -> str:
+    return "\n".join(f"                {name}Callback = null;" for name in functions)
 
 
 def sharp_transport_methods(functions: dict) -> str:
@@ -1038,6 +1055,7 @@ namespace Crowny
             if (value.Context == IntPtr.Zero)
             {{
                 api = value;
+{sharp_transport_clear_bindings(functions)}
                 return;
             }}
             if (value.AbiVersion != {manifest['abiVersion']} || value.Size < (uint)Marshal.SizeOf(typeof(ManagedNativeHostApi)))
@@ -1049,7 +1067,7 @@ namespace Crowny
             api = value;
         }}
 
-{sharp_transport_delegates(functions)}
+{sharp_transport_callbacks(functions)}
 
 {sharp_transport_methods(functions)}
     }}
