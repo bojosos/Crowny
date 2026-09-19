@@ -1,0 +1,12 @@
+diff --git a/src/liboslexec/llvm_instance.cpp b/src/liboslexec/llvm_instance.cpp
+--- a/src/liboslexec/llvm_instance.cpp
++++ b/src/liboslexec/llvm_instance.cpp
+@@ -2419,6 +2419,8 @@ BackendLLVM::run()
+         if (out) {
+             out << ll.bitcode_string(ll.module());
+             shadingsys().infofmt("Wrote pre-optimized bitcode to '{}'", name);
++            // Crowny experiment: preserve types/metadata for an offline target adapter.
++            ll.write_bitcode_file((safegroup + ".bc").c_str());
+         } else {
+             shadingsys().errorfmt("Could not write to '{}'", name);
+         }

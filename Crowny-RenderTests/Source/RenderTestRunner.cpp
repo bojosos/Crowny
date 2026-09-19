@@ -1,6 +1,8 @@
 #include "RenderTestRunner.h"
 
 #include "DecalShowcase.h"
+#include "OslTextureTests.h"
+#include "ProceduralMaterialTests.h"
 #include "RenderTestImage.h"
 #include "Sprite2DRenderTests.h"
 
@@ -3269,6 +3271,27 @@ void main() { color = paint.value; }
                     return false;
                 options.BenchmarkTexture = value;
             }
+            else if (argument == "--procedural-package" || argument == "--procedural-reference")
+            {
+                const char* value = readValue(argument);
+                if (!value)
+                    return false;
+                (argument == "--procedural-package" ? options.ProceduralPackage : options.ProceduralReference) = value;
+            }
+            else if (argument == "--procedural-preview")
+            {
+                const char* value = readValue(argument);
+                if (!value)
+                    return false;
+                options.ProceduralPreview = value;
+            }
+            else if (argument == "--osl-package")
+            {
+                const char* value = readValue(argument);
+                if (!value)
+                    return false;
+                options.OslPackage = value;
+            }
             else if (argument == "--backend")
             {
                 const char* value = readValue(argument);
@@ -3350,6 +3373,10 @@ void main() { color = paint.value; }
                   << "  --export-decal-scenes PATH  Export decal source scenes to an empty editor project\n"
                   << "  --filter TEXT            Run cases whose names contain TEXT\n"
                   << "  --validate-importers     Check texture and model import contracts\n"
+                  << "  --osl-package PATH       Compare GPU OSL evaluation with an offline CPU reference\n"
+                  << "  --procedural-package PATH --procedural-reference PATH\n"
+                  << "                           Compare live PBR procedural shading with CPU texture results\n"
+                  << "  --procedural-preview PATH Capture a procedural package on a flat plane at its default settings\n"
                   << "  --benchmark-sprites    100,000 moving ECS sprites, 300 warm-up + 1,800 measured frames\n"
                   << "  --benchmark-sprites-smoke    Same workload, 5 warm-up + 10 measured frames; not an acceptance run\n"
                   << "  --benchmark-texture PATH [--benchmark-texture-normal]\n"
@@ -3368,6 +3395,12 @@ void main() { color = paint.value; }
     {
         const Path backendArtifacts = options.Artifacts / BackendName(options.Backend);
         fs::create_directories(backendArtifacts);
+        if (!options.ProceduralPreview.empty())
+            return CaptureProceduralPlane(options.ProceduralPreview, backendArtifacts / "procedural-preview");
+        if (!options.ProceduralPackage.empty())
+            return RunProceduralMaterialTest(options.ProceduralPackage, options.ProceduralReference, backendArtifacts / "procedural");
+        if (!options.OslPackage.empty())
+            return RunOslTextureTest(options.OslPackage, backendArtifacts / "osl");
         if (options.BenchmarkSprites)
             return RunSprite2DBenchmark(backendArtifacts, options.BenchmarkSpritesSmoke);
         if (!options.BenchmarkTexture.empty())

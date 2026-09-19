@@ -15,6 +15,115 @@
 
 namespace Crowny
 {
+    const SpriteAnimationClip* SpriteAnimatorComponent::ResolveClip() const
+    {
+        const auto& handle = Clip.GetHandleData();
+        return handle && handle->m_Ptr && handle->m_Ptr->GetAssetType() == AssetType::SpriteAnimationClip ? Clip.operator->() : nullptr;
+    }
+
+    void SpriteAnimatorComponent::SynchronizeClip()
+    {
+        if (!m_Initialized || m_BoundClip != Clip.GetUUID())
+        {
+            m_Playback.Stop();
+            m_BoundClip = Clip.GetUUID();
+            m_Initialized = true;
+            if (PlayOnAwake)
+                m_Playback.Play();
+        }
+    }
+
+    void SpriteAnimatorComponent::Play()
+    {
+        SynchronizeClip();
+        m_Playback.Play();
+    }
+    void SpriteAnimatorComponent::Pause()
+    {
+        SynchronizeClip();
+        m_Playback.Pause();
+    }
+    void SpriteAnimatorComponent::Stop()
+    {
+        SynchronizeClip();
+        m_Playback.Stop();
+    }
+    void SpriteAnimatorComponent::Seek(float time)
+    {
+        SynchronizeClip();
+        if (const auto* clip = ResolveClip())
+            m_Playback.Seek(time, *clip);
+    }
+    void SpriteAnimatorComponent::Advance(double delta)
+    {
+        SynchronizeClip();
+        if (const auto* clip = ResolveClip())
+            m_Playback.Advance(delta, Speed, *clip);
+    }
+    uint32_t SpriteAnimatorComponent::GetFrameIndex() const
+    {
+        const auto* clip = ResolveClip();
+        return clip ? clip->Sample(m_Playback.GetTime()) : UINT32_MAX;
+    }
+    UUID SpriteAnimatorComponent::GetFrameSpriteId() const
+    {
+        const auto frame = GetFrameIndex();
+        return frame == UINT32_MAX ? UUID::EMPTY : ResolveClip()->GetData().Frames[frame].SpriteId;
+    }
+    const AssetHandle<Crowny::Sprite>& SpriteAnimatorComponent::ResolveFrame() const
+    {
+        static const AssetHandle<Crowny::Sprite> missing;
+        const auto* clip = ResolveClip();
+        return clip ? clip->ResolveFrame(GetFrameIndex()) : missing;
+    }
+    void SpriteAnimatorComponent::ResetRuntime()
+    {
+        m_Playback.Stop();
+        m_BoundClip = UUID::EMPTY;
+        m_Initialized = false;
+    }
+
+    bool SpriteRendererComponent::HasValidGeometry() const { return ResolveGeometry().IsValid(); }
+
+    SpriteGeometry SpriteRendererComponent::ResolveGeometry() const
+    {
+        if (!Sprite.HasUUID() && !Atlas.HasUUID())
+            return { Size, Pivot, UvRect };
+        if (!GetTexture())
+            return { glm::vec2(0), Pivot, UvRect };
+        const auto* atlas = ResolveAtlas();
+        auto geometry = atlas ? atlas->Find(Sprite.GetUUID())->Geometry : Sprite->GetGeometry();
+        if (!UseSpriteSize)
+            geometry.Size = Size;
+        if (!UseSpritePivot)
+            geometry.Pivot = Pivot;
+        return geometry;
+    }
+
+    const AssetHandle<Texture>& SpriteRendererComponent::GetTexture() const
+    {
+        static const AssetHandle<Crowny::Texture> missing;
+        if (Atlas.HasUUID())
+        {
+            const auto* atlas = ResolveAtlas();
+            return atlas ? atlas->GetTexture(Sprite.GetUUID()) : missing;
+        }
+        if (!Sprite.HasUUID())
+            return Texture;
+        const auto& handle = Sprite.GetHandleData();
+        return handle->m_Ptr && handle->m_Ptr->GetAssetType() == AssetType::Sprite ? Sprite->GetTexture() : missing;
+    }
+
+    const SpriteAtlas* SpriteRendererComponent::ResolveAtlas() const
+    {
+        const auto& handle = Atlas.GetHandleData();
+        return handle && handle->m_Ptr && handle->m_Ptr->GetAssetType() == AssetType::SpriteAtlas ? Atlas.operator->() : nullptr;
+    }
+
+    glm::mat4 SpriteRendererComponent::GetQuadTransform(const glm::mat4& world) const { return ResolveGeometry().QuadTransform(world, FlipX, FlipY); }
+
+    glm::vec4 SpriteRendererComponent::GetQuadUvRect() const { return ResolveGeometry().QuadUvRect(FlipX, FlipY); }
+
     namespace
     {
         ScriptState MakeEmptyScriptState(const ScriptTypeIdentity& identity)

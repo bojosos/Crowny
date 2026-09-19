@@ -55,6 +55,8 @@ namespace Crowny
         glm::vec4 Color;
         int32_t EntityId;
         RenderHandle2D Handle;
+        glm::vec4 UvRect{ 0, 0, 1, 1 };
+        bool Visible = true;
     };
 
     struct RenderableText

@@ -17,7 +17,7 @@ namespace Crowny
     class SceneSerializer
     {
     public:
-        static constexpr uint32_t FORMAT_VERSION = 14;
+        static constexpr uint32_t FORMAT_VERSION = 17;
 
         SceneSerializer(const Ref<Scene>& scene);
 
@@ -37,6 +37,7 @@ namespace Crowny
 
         // Reads scene or prefab source without loading assets or constructing a runtime scene.
         static Vector<UUID> GatherDecalMaterialDependencies(const YAML::Node& source);
+        static Vector<UUID> GatherSpriteDependencies(const YAML::Node& source);
 
     private:
         Ref<Scene> m_Scene;

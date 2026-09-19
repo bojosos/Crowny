@@ -67,5 +67,7 @@ namespace Crowny
         Vector<VkCommandBuffer> m_CmdBuffersScratch;
         Vector<VkSemaphore> m_SignalSemaphoresScratch;
         Vector<VkSemaphore> m_WaitSemaphoresScratch;
+        Vector<VulkanSemaphore*> m_CompletedSemaphores;
+        Vector<VulkanCmdBuffer*> m_CompletedBuffers;
     };
 } // namespace Crowny

@@ -80,7 +80,8 @@ namespace Crowny
             const auto technique = m_Shader->GetTechnique(m_Variation);
             if (technique)
                 for (const auto& tag : technique->GetTags())
-                    if (tag == "material_model=decal") return MaterialDomain::Decal;
+                    if (tag == "material_model=decal")
+                        return MaterialDomain::Decal;
         }
         return MaterialDomain::Surface;
     }
@@ -90,7 +91,8 @@ namespace Crowny
         BuiltInShaderCatalog::EnsureRegistered();
         auto* manager = AssetManager::TryGet();
         const auto shader = manager ? manager->Load<Shader>("Resources/Shaders/Decal.asset") : AssetHandle<Shader>{};
-        if (!shader) return nullptr;
+        if (!shader)
+            return nullptr;
         auto material = Create(shader);
         material->SetTexture("decalColorMap", Texture::WHITE);
         material->SetTexture("decalNormalMap", Texture::NORMAL);
@@ -151,6 +153,12 @@ namespace Crowny
     {
         if (!m_Shader)
             return;
+        const auto technique = m_Shader->GetTechnique(m_Variation);
+        if (technique && std::find(technique->GetTags().begin(), technique->GetTags().end(), "procedural_texture") != technique->GetTags().end())
+        {
+            ApplyStandardDefaults();
+            return;
+        }
         const MaterialRenderClassification classification = MaterialRenderClassifier::Classify(*this);
         if (classification.IsUnsupported())
             return;
@@ -214,6 +222,77 @@ namespace Crowny
     {
         m_Shader = shader;
         ReloadParams();
+        MarkAssetsDirty();
+    }
+
+    void Material::NotifyAssetChanged(const AssetHandle<Asset>& asset)
+    {
+        if (!asset || asset->GetAssetType() != AssetType::Shader || asset.GetUUID() != m_Shader.GetUUID())
+            return;
+        const auto technique = m_Shader->GetTechnique(m_Variation);
+        if (!technique || technique->GetRenderPasses().empty())
+            return;
+        if (std::any_of(technique->GetRenderPasses().begin(), technique->GetRenderPasses().end(),
+                        [](const auto& pass) { return !pass || pass->IsCompute() || pass->IsRayTrace(); }))
+            return;
+        // First-load notifications also reach already initialized materials.
+        if (!m_Passes.empty() && m_Passes.front().Pipeline == technique->GetRenderPasses().front()->GetGraphicsPipeline())
+            return;
+        struct Value
+        {
+            String Name;
+            ShaderDataType Type;
+            Vector<uint8_t> Bytes;
+        };
+        Vector<Value> values;
+        for (const auto& [name, binding] : m_Bindings)
+        {
+            if (binding.BufferName.starts_with("cw_"))
+                continue;
+            for (const auto& pass : m_Passes)
+            {
+                const auto block = pass.UniformBlocks.find(binding.BufferID);
+                if (block == pass.UniformBlocks.end())
+                    continue;
+                Value value{ name, binding.DataType, Vector<uint8_t>(ShaderDataTypeSize(binding.DataType)) };
+                block->second->Read(binding.Offset, value.Bytes.data(), static_cast<uint32_t>(value.Bytes.size()));
+                values.push_back(std::move(value));
+                break;
+            }
+        }
+        const auto textureHandles = m_TextureHandles;
+        UnorderedMap<String, Pair<UniformResourceType, Ref<Texture>>> textures;
+        for (const auto& [name, descriptor] : m_TextureDescriptors)
+            if (!name.starts_with("cw_"))
+                textures.emplace(name, Pair{ descriptor.Type, GetTexture(descriptor.Set, descriptor.Slot) });
+        ReloadParams();
+        ApplyModelDefaults();
+        for (const auto& value : values)
+        {
+            const auto binding = m_Bindings.find(value.Name);
+            if (binding == m_Bindings.end() || binding->second.DataType != value.Type)
+                continue;
+            for (const auto& pass : m_Passes)
+            {
+                const auto block = pass.UniformBlocks.find(binding->second.BufferID);
+                if (block != pass.UniformBlocks.end())
+                    block->second->Write(binding->second.Offset, value.Bytes.data(), static_cast<uint32_t>(value.Bytes.size()));
+            }
+        }
+        for (const auto& [name, previous] : textures)
+        {
+            const auto descriptor = m_TextureDescriptors.find(name);
+            if (descriptor == m_TextureDescriptors.end() || descriptor->second.Type != previous.first)
+                continue;
+            const auto handle = textureHandles.find(name);
+            if (handle != textureHandles.end())
+                SetTexture(name, handle->second);
+            else
+                SetTexture(name, previous.second);
+        }
+        if (m_HasAlphaModeOverride)
+            SetFloat("alphaMode", static_cast<float>(m_AlphaMode));
+        MarkAssetsDirty();
     }
 
     void Material::SetVariation(const ShaderVariation& variation)
@@ -265,7 +344,10 @@ namespace Crowny
 
         for (uint32_t p = 0; p < renderPasses.size(); p++)
         {
-            renderPasses[p]->Compile();
+            // A shader pass owns its pipeline; material instances only own
+            // parameter buffers. Replacing the shader supplies fresh passes.
+            if (!renderPasses[p]->GetGraphicsPipeline())
+                renderPasses[p]->Compile();
             m_Passes[p].Pipeline = renderPasses[p]->GetGraphicsPipeline();
             CreateAndAppendUniforms(p);
         }

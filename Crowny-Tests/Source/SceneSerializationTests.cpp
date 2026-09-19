@@ -21,6 +21,7 @@
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
+#include "Crowny/Serialization/PrefabSerializer.h"
 #include "Crowny/Serialization/SceneComponentCodec.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 #include "ManagedTestPaths.h"
@@ -502,6 +503,11 @@ TEST_CASE("Complex Scene Serialization", "[Serialization]")
 
     auto& sprite = child1.AddComponent<SpriteRendererComponent>();
     sprite.Color = { 0.25f, 0.5f, 0.75f, 1.0f };
+    sprite.Size = { 3, 2 };
+    sprite.Pivot = { 0, 0.25f };
+    sprite.UvRect = { 0.25f, 0.125f, 0.5f, 0.875f };
+    sprite.FlipX = sprite.FlipY = true;
+    sprite.Visible = false;
     sprite.SortingLayer = 4;
     sprite.OrderInLayer = -9;
 
@@ -592,6 +598,12 @@ TEST_CASE("Complex Scene Serialization", "[Serialization]")
         REQUIRE(dChild1.HasComponent<SpriteRendererComponent>());
         const auto& dSprite = dChild1.GetComponent<SpriteRendererComponent>();
         CHECK(dSprite.Color == glm::vec4(0.25f, 0.5f, 0.75f, 1.0f));
+        CHECK(dSprite.Size == glm::vec2(3, 2));
+        CHECK(dSprite.Pivot == glm::vec2(0, 0.25f));
+        CHECK(dSprite.UvRect == glm::vec4(0.25f, 0.125f, 0.5f, 0.875f));
+        CHECK(dSprite.FlipX);
+        CHECK(dSprite.FlipY);
+        CHECK_FALSE(dSprite.Visible);
         CHECK(dSprite.SortingLayer == 4);
         CHECK(dSprite.OrderInLayer == -9);
 
@@ -1053,7 +1065,7 @@ TEST_CASE("Text layout ellipsizes hidden lines and fits font size", "[Text][Layo
 TEST_CASE("Scene component codecs have stable complete registrations", "[Serialization][Scene]")
 {
     const auto codecs = GetSceneComponentCodecs();
-    REQUIRE(codecs.size() == 23);
+    REQUIRE(codecs.size() == 24);
 
     for (size_t index = 0; index < codecs.size(); index++)
     {
@@ -1076,7 +1088,8 @@ TEST_CASE("Scene component codecs have stable complete registrations", "[Seriali
     CHECK(static_cast<uint32_t>(SceneComponentId::Light) == 20);
     CHECK(static_cast<uint32_t>(SceneComponentId::MeshCollider3D) == 21);
     CHECK(static_cast<uint32_t>(SceneComponentId::Decal) == 22);
-    CHECK(FindSceneComponentCodec(23) == nullptr);
+    CHECK(static_cast<uint32_t>(SceneComponentId::SpriteAnimator) == 23);
+    CHECK(FindSceneComponentCodec(24) == nullptr);
     CHECK(FindSceneComponentCodec(SceneComponentId::Transform)->PrefabPath != nullptr);
     CHECK(FindSceneComponentCodec(SceneComponentId::Transform)->EditorName != nullptr);
 }
@@ -1105,6 +1118,135 @@ TEST_CASE("Scene environment references survive both scene formats and scene cop
     CHECK(loaded->GetEnvironmentAsset().GetUUID() == environmentId);
     CHECK_FALSE(loaded->GetEnvironmentAsset().IsLoaded());
     fs::remove(path);
+}
+
+TEST_CASE("Sprite geometry survives scene and prefab persistence", "[Serialization][Scene][2D]")
+{
+    SerializationTestFixture fixture;
+    const auto scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Sprite geometry");
+    auto& sprite = entity.AddComponent<SpriteRendererComponent>();
+    sprite.Size = { 5, 3 };
+    sprite.Pivot = { -0.5f, 1.25f };
+    sprite.UvRect = { 0.125f, 0.25f, 0.5f, 0.75f };
+    sprite.FlipX = sprite.FlipY = true;
+    sprite.Visible = false;
+    sprite.SortingLayer = -5;
+    sprite.OrderInLayer = 7;
+    sprite.Sprite = static_asset_cast<Sprite>(AssetManager::Get().GetAssetHandle(UuidGenerator::Generate()));
+    sprite.Atlas = static_asset_cast<SpriteAtlas>(AssetManager::Get().GetAssetHandle(UuidGenerator::Generate()));
+    auto& animation = entity.AddComponent<SpriteAnimatorComponent>();
+    animation.Clip = static_asset_cast<SpriteAnimationClip>(AssetManager::Get().GetAssetHandle(UuidGenerator::Generate()));
+    animation.Speed = -2.0f;
+    animation.PlayOnAwake = false;
+    sprite.UseSpriteSize = false;
+    sprite.UseSpritePivot = false;
+    Entity loaded;
+    Ref<Scene> loadedScene;
+    Ref<Prefab> loadedPrefab;
+    SECTION("Binary scene")
+    {
+        const Path path = fs::temp_directory_path() / ("crowny-sprite-" + UuidGenerator::Generate().ToString());
+        SceneSerializer(scene).SerializeBinary(path);
+        loadedScene = CreateRef<Scene>(false);
+        REQUIRE(SceneSerializer(loadedScene).DeserializeBinary(path));
+        fs::remove(path);
+        loaded = loadedScene->GetEntityFromUuid(entity.GetUuid());
+    }
+    SECTION("Prefab")
+    {
+        auto prefab = CreateRef<Prefab>();
+        prefab->CaptureFromEntity(*scene, entity);
+        const String yaml = PrefabSerializer(prefab).SerializeToString();
+        loadedPrefab = CreateRef<Prefab>();
+        PrefabSerializer(loadedPrefab).DeserializeFromString(yaml);
+        loaded = loadedPrefab->GetRootEntity();
+    }
+    REQUIRE(loaded);
+    const auto& result = loaded.GetComponent<SpriteRendererComponent>();
+    CHECK(result.Size == sprite.Size);
+    CHECK(result.Pivot == sprite.Pivot);
+    CHECK(result.UvRect == sprite.UvRect);
+    CHECK(result.FlipX);
+    CHECK(result.FlipY);
+    CHECK_FALSE(result.Visible);
+    CHECK(result.SortingLayer == -5);
+    CHECK(result.OrderInLayer == 7);
+    CHECK(result.Sprite.GetUUID() == sprite.Sprite.GetUUID());
+    CHECK(result.Atlas.GetUUID() == sprite.Atlas.GetUUID());
+    REQUIRE(loaded.HasComponent<SpriteAnimatorComponent>());
+    const auto& animator = loaded.GetComponent<SpriteAnimatorComponent>();
+    CHECK(animator.Clip.GetUUID() == animation.Clip.GetUUID());
+    CHECK(animator.Speed == -2.0f);
+    CHECK_FALSE(animator.PlayOnAwake);
+    CHECK(animator.GetTime() == 0);
+    CHECK_FALSE(result.Sprite.IsLoaded());
+    CHECK_FALSE(result.UseSpriteSize);
+    CHECK_FALSE(result.UseSpritePivot);
+}
+
+TEST_CASE("Legacy sprite records retain full centered unit quads", "[Serialization][Scene][2D]")
+{
+    const auto scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Legacy sprite");
+    const auto* codec = FindSceneComponentCodec(SceneComponentId::SpriteRenderer);
+    REQUIRE(codec != nullptr);
+    SceneComponentReadContext context{ scene.Get(), nullptr, 14 };
+    SECTION("YAML") { codec->ReadYaml(YAML::Load("Color: [1, 1, 1, 1]\nSortingLayer: -2\nOrderInLayer: 9"), entity, context); }
+    SECTION("Binary version 14")
+    {
+        auto stream = CreateRef<MemoryDataStream>();
+        BinaryDataStreamOutputArchive output(stream);
+        output(1.0f, 1.0f, 1.0f, 1.0f, UUID::EMPTY, int32_t(-2), int32_t(9));
+        const auto size = stream->Tell();
+        stream->Seek(0);
+        BinaryDataStreamInputArchive input(stream);
+        codec->ReadBinary(input, entity, context);
+        CHECK(stream->Tell() == size);
+    }
+    const auto& sprite = entity.GetComponent<SpriteRendererComponent>();
+    CHECK(sprite.Size == glm::vec2(1));
+    CHECK(sprite.Pivot == glm::vec2(0.5f));
+    CHECK(sprite.UvRect == glm::vec4(0, 0, 1, 1));
+    CHECK_FALSE(sprite.FlipX);
+    CHECK_FALSE(sprite.FlipY);
+    CHECK(sprite.Visible);
+    CHECK(sprite.SortingLayer == -2);
+    CHECK(sprite.OrderInLayer == 9);
+    CHECK_FALSE(sprite.Sprite.HasUUID());
+    CHECK(sprite.UseSpriteSize);
+    CHECK(sprite.UseSpritePivot);
+}
+
+TEST_CASE("Legacy sprite records stop before the next binary component", "[Serialization][Scene][2D]")
+{
+    const auto scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Version fifteen sprite");
+    const auto* codec = FindSceneComponentCodec(SceneComponentId::SpriteRenderer);
+    REQUIRE(codec);
+    SceneComponentReadContext context{ scene.Get(), nullptr, 15 };
+    SECTION("Version fifteen") { context.FormatVersion = 15; }
+    SECTION("Version sixteen") { context.FormatVersion = 16; }
+    auto stream = CreateRef<MemoryDataStream>();
+    BinaryDataStreamOutputArchive output(stream);
+    output(1.0f, 1.0f, 1.0f, 1.0f, UUID::EMPTY, int32_t(-2), int32_t(9));
+    output(2.0f, 3.0f, 0.25f, 0.75f, 0.125f, 0.25f, 0.75f, 1.0f, true, false, true);
+    if (context.FormatVersion >= 16)
+        output(UUID::EMPTY, true, true);
+    const auto end = stream->Tell();
+    output(uint32_t(0x12345678));
+    stream->Seek(0);
+    BinaryDataStreamInputArchive input(stream);
+    codec->ReadBinary(input, entity, context);
+    CHECK(stream->Tell() == end);
+    const auto& sprite = entity.GetComponent<SpriteRendererComponent>();
+    CHECK(sprite.Size == glm::vec2(2, 3));
+    CHECK(sprite.Pivot == glm::vec2(0.25f, 0.75f));
+    CHECK(sprite.FlipX);
+    CHECK_FALSE(sprite.Sprite.HasUUID());
+    CHECK(sprite.UseSpriteSize);
+    CHECK(sprite.UseSpritePivot);
+    CHECK_FALSE(sprite.Atlas.HasUUID());
 }
 
 TEST_CASE("Scenes resolve replaced environment assets without reopening", "[Serialization][Scene][Environment]")

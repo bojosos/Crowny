@@ -1,0 +1,4 @@
+shader unsupported_shadeop(output color Cout = 0)
+{
+    Cout = color(exp(u));
+}

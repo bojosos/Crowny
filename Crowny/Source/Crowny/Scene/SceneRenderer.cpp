@@ -1856,7 +1856,13 @@ namespace Crowny
                     const auto& spriteStats = world->second.World.GetStatistics();
                     statistics.SubmittedSprites2D = spriteStats.Submitted;
                     statistics.VisibleSprites2D = spriteStats.Visible;
+                    statistics.SpriteVisibilitySampleValid = spriteStats.VisibilitySampleValid;
+                    statistics.SpriteVisibilityFrameNumber = spriteStats.VisibilityFrameNumber;
                     statistics.SpriteBatches2D = spriteStats.Batches;
+                    statistics.SpriteDrawListCacheHits2D = spriteStats.DrawListCacheHits;
+                    statistics.SpriteUploadCpuTimeMs = spriteStats.UploadCpuTimeMs;
+                    statistics.SpritePrepareCpuTimeMs = spriteStats.PrepareCpuTimeMs;
+                    statistics.SpriteSubmissionCpuTimeMs = spriteStats.SubmissionCpuTimeMs;
                     statistics.UploadedBytes2D = spriteStats.UploadedBytes;
                     statistics.UploadedBytes += spriteStats.UploadedBytes;
                 }
@@ -2102,8 +2108,9 @@ namespace Crowny
             {
                 auto [sprite, transform, relationship] =
                   spriteRendererComponents.get<SpriteRendererComponent, TransformComponent, RelationshipComponent>(ee);
-                Renderer2D::FillRect(transform.GetWorldMatrix(relationship.Parent), sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr,
-                                     sprite.Color, ((int32_t)ee) + 1);
+                if (sprite.Visible && sprite.HasValidGeometry())
+                    Renderer2D::FillRect(sprite.GetQuadTransform(transform.GetWorldMatrix(relationship.Parent)), sprite.GetTexture().GetInternalPtr(),
+                                         sprite.Color, ((int32_t)ee) + 1, sprite.GetQuadUvRect());
             }
             const auto textComponents = m_Scene->m_Registry.view<TextComponent, TransformComponent, RelationshipComponent>();
             for (const entt::entity ee : textComponents)
@@ -2483,14 +2490,33 @@ namespace Crowny
             const auto spriteRendererComponents = m_Scene->m_Registry.view<SpriteRendererComponent, TransformComponent, RelationshipComponent>();
             snapshot.SpriteHandles.Reserve(spriteRendererComponents.size_hint());
             snapshot.Ordered2D.Reserve(spriteRendererComponents.size_hint());
+            // Keep a bounded set of resource owners for this extraction. Moving
+            // sprites sharing a texture do not need a temporary Ref per object.
+            Array<RenderInstance2DDesc, 8> descriptors;
+            size_t nextDescriptor = 0;
             for (const entt::entity ee : spriteRendererComponents)
             {
                 auto [sprite, transform, relationship] =
                   spriteRendererComponents.get<SpriteRendererComponent, TransformComponent, RelationshipComponent>(ee);
-                RenderInstance2DDesc desc;
-                desc.Transform = transform.GetWorldMatrix(relationship.Parent);
+                const auto& sourceTexture = sprite.GetTexture();
+                const Texture* texture = sourceTexture.Get();
+                size_t descriptorIndex = 0;
+                while (descriptorIndex < descriptors.size() && descriptors[descriptorIndex].TextureResource.Get() != texture)
+                    ++descriptorIndex;
+                if (descriptorIndex == descriptors.size())
+                {
+                    descriptorIndex = nextDescriptor;
+                    nextDescriptor = (nextDescriptor + 1) % descriptors.size();
+                    descriptors[descriptorIndex].TextureResource = sourceTexture.GetInternalPtr();
+                }
+                RenderInstance2DDesc& desc = descriptors[descriptorIndex];
+                const SpriteGeometry geometry = sprite.ResolveGeometry();
+                const bool validGeometry = geometry.IsValid();
+                desc.Transform =
+                  validGeometry ? geometry.QuadTransform(transform.GetWorldMatrix(relationship.Parent), sprite.FlipX, sprite.FlipY) : glm::mat4(1.0f);
+                desc.UvRect = validGeometry ? geometry.QuadUvRect(sprite.FlipX, sprite.FlipY) : glm::vec4(0, 0, 1, 1);
+                desc.Visible = sprite.Visible && validGeometry;
                 desc.Color = sprite.Color;
-                desc.TextureResource = sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr;
                 desc.ObjectID = { static_cast<uint32_t>(entt::to_integral(ee)) + 1u };
                 desc.SortingLayer = sprite.SortingLayer;
                 desc.OrderInLayer = sprite.OrderInLayer;
@@ -3063,7 +3089,8 @@ namespace Crowny
             Renderer2D::Begin(snapshot.ProjectionMatrix, snapshot.ViewMatrix,
                               RenderAPI::TryGet()->GetCapabilities().GetFeatureTier() != RenderFeatureTier::Compatibility);
             const auto drawSprite = [&](const RenderableSprite& sprite) {
-                Renderer2D::FillRect(sprite.WorldMatrix, sprite.Texture, sprite.Color, sprite.EntityId);
+                if (sprite.Visible)
+                    Renderer2D::FillRect(sprite.WorldMatrix, sprite.Texture, sprite.Color, sprite.EntityId, sprite.UvRect);
             };
             const auto drawRetainedSprite = [&](RenderHandle2D handle) {
                 RenderableSprite sprite;

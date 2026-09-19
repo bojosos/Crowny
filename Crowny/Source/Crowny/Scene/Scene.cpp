@@ -1166,7 +1166,10 @@ namespace Crowny
     void Scene::OnRuntimeStart()
     {
         m_RuntimeActive = true;
-        m_Registry.view<DecalComponent>().each([](DecalComponent& decal) { decal.Age = 0.0f; decal.LifetimeRunning = true; });
+        m_Registry.view<DecalComponent>().each([](DecalComponent& decal) {
+            decal.Age = 0.0f;
+            decal.LifetimeRunning = true;
+        });
         if (Physics2D::TryGet() != nullptr)
         {
             Physics2D::TryGet()->BeginSimulation(this);
@@ -1193,11 +1196,13 @@ namespace Crowny
             m_Registry.view<AudioSourceComponent>().each([](AudioSourceComponent& source) { source.OnInitialize(); });
         }
         m_Registry.view<AnimationComponent>().each([](AnimationComponent& animation) { animation.ResetRuntime(); });
+        m_Registry.view<SpriteAnimatorComponent>().each([](SpriteAnimatorComponent& animation) { animation.ResetRuntime(); });
     }
 
     void Scene::OnSimulationStart()
     {
         m_SimulationActive = true;
+        m_Registry.view<SpriteAnimatorComponent>().each([](SpriteAnimatorComponent& animation) { animation.ResetRuntime(); });
         if (Physics2D::TryGet() != nullptr)
         {
             Physics2D::TryGet()->BeginSimulation(this);
@@ -1215,6 +1220,7 @@ namespace Crowny
             Physics2D::TryGet()->StopSimulation(this);
         m_Physics2DActive = false;
         m_SimulationActive = false;
+        m_Registry.view<SpriteAnimatorComponent>().each([](SpriteAnimatorComponent& animation) { animation.ResetRuntime(); });
     }
 
     void Scene::OnRuntimePause()
@@ -1270,11 +1276,32 @@ namespace Crowny
         }
         m_Registry.view<AnimationComponent>().each([](AnimationComponent& animation) { animation.ResetRuntime(); });
         m_RuntimeActive = false;
+        m_Registry.view<SpriteAnimatorComponent>().each([](SpriteAnimatorComponent& animation) { animation.ResetRuntime(); });
     }
 
     void Scene::OnUpdateEditor(Timestep ts) {}
 
-    void Scene::OnUpdateRuntime(Timestep ts) {}
+    void Scene::OnUpdateRuntime(Timestep ts)
+    {
+        m_Registry.view<SpriteAnimatorComponent>().each([&](entt::entity entity, SpriteAnimatorComponent& animation) {
+            animation.Advance(static_cast<float>(ts));
+            auto* sprite = m_Registry.try_get<SpriteRendererComponent>(entity);
+            if (!sprite || animation.GetFrameIndex() == UINT32_MAX)
+                return;
+            const UUID frame = animation.GetFrameSpriteId();
+            if (sprite->Sprite.GetUUID() == frame)
+                return;
+            if (sprite->Atlas.HasUUID())
+            {
+                if (auto* manager = AssetManager::TryGet())
+                    sprite->Sprite = static_asset_cast<Sprite>(manager->GetAssetHandle(frame));
+                return;
+            }
+            const auto& asset = animation.ResolveFrame();
+            if (asset.GetUUID() == frame)
+                sprite->Sprite = asset;
+        });
+    }
 
     void Scene::OnFixedUpdate(Timestep ts)
     {
@@ -1289,15 +1316,19 @@ namespace Crowny
             for (auto handle : m_Registry.view<DecalComponent>())
             {
                 auto& decal = m_Registry.get<DecalComponent>(handle);
-                if (!decal.Enabled || !decal.LifetimeRunning) continue;
+                if (!decal.Enabled || !decal.LifetimeRunning)
+                    continue;
                 decal.Age += std::max(static_cast<float>(ts), 0.0f);
                 if (decal.Lifetime > 0.0f && decal.Age >= decal.Lifetime + std::max(decal.FadeOut, 0.0f))
                 {
                     decal.Enabled = false;
-                    if (decal.DestroyOwnerOnExpiry) expired.emplace_back(handle, this);
+                    if (decal.DestroyOwnerOnExpiry)
+                        expired.emplace_back(handle, this);
                 }
             }
-            for (Entity entity : expired) if (entity) DestroyEntity(entity);
+            for (Entity entity : expired)
+                if (entity)
+                    DestroyEntity(entity);
         }
     }
 

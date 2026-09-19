@@ -16,6 +16,10 @@ namespace Crowny
             VulkanBufferReadback(VulkanBuffer* buffer, uint32_t size) : m_Buffer(buffer), m_Size(size) {}
             ~VulkanBufferReadback() override { m_Buffer->Destroy(); }
 
+            VulkanBuffer* GetBuffer() const { return m_Buffer; }
+            uint32_t GetSize() const { return m_Size; }
+            bool IsIdle() const { return !m_Buffer->IsBound() && !m_Buffer->IsUsed(); }
+
             bool TryRead(void* destination, uint32_t length) override
             {
                 if (!destination || length != m_Size || m_Buffer->IsBound() || m_Buffer->IsUsed())
@@ -41,7 +45,32 @@ namespace Crowny
         auto* command = gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal();
         if (command->IsInRenderPass())
             command->EndRenderPass();
-        VulkanBuffer* staging = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice(), length, true, true);
+        // Only recycle requests with no external owner and no recorded or
+        // submitted copy. Overflow requests remain independently owned.
+        constexpr size_t maxCachedReadbacks = 4;
+        size_t replace = m_Readbacks.size();
+        Ref<GpuBufferReadback> result;
+        for (size_t index = 0; index < m_Readbacks.size(); ++index)
+        {
+            auto* request = static_cast<VulkanBufferReadback*>(m_Readbacks[index].get());
+            if (request->GetRefCount() != 1 || !request->IsIdle())
+                continue;
+            if (request->GetSize() == length)
+            {
+                result = m_Readbacks[index];
+                break;
+            }
+            replace = index;
+        }
+        if (!result)
+        {
+            result = CreateRef<VulkanBufferReadback>(CreateBuffer(*gVulkanRenderAPI().GetPresentDevice(), length, true, true), length);
+            if (replace < m_Readbacks.size())
+                m_Readbacks[replace] = result;
+            else if (m_Readbacks.size() < maxCachedReadbacks)
+                m_Readbacks.push_back(result);
+        }
+        VulkanBuffer* staging = static_cast<VulkanBufferReadback*>(result.get())->GetBuffer();
         command->MemoryBarrier(m_Buffer->GetHandle(), VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
                                VK_PIPELINE_STAGE_TRANSFER_BIT);
         m_Buffer->Copy(command, staging, offset, 0, length);
@@ -51,7 +80,7 @@ namespace Crowny
                                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
         command->RegisterBuffer(m_Buffer, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Read);
         command->RegisterBuffer(staging, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Write);
-        return CreateRef<VulkanBufferReadback>(staging, length);
+        return result;
     }
 
     VulkanBuffer::VulkanBuffer(VulkanResourceManager* owner, VkBuffer buffer, VmaAllocation allocation, uint32_t rowPitch, uint32_t slicePitch)
@@ -243,7 +272,37 @@ namespace Crowny
         m_Buffer = CreateBuffer(*device, size, false, true);
     }
 
-    VulkanGpuBuffer::~VulkanGpuBuffer() { m_Buffer->Destroy(); }
+    VulkanGpuBuffer::~VulkanGpuBuffer()
+    {
+        m_Buffer->Destroy();
+        for (VulkanBuffer* buffer : m_WriteVersions)
+            buffer->Destroy();
+    }
+
+    VulkanBuffer* VulkanGpuBuffer::AcquireWriteBuffer()
+    {
+        for (size_t index = 0; index < m_WriteVersions.size(); ++index)
+        {
+            VulkanBuffer* buffer = m_WriteVersions[index];
+            if (buffer->IsBound() || buffer->IsUsed())
+                continue;
+            m_WriteVersions[index] = m_WriteVersions.back();
+            m_WriteVersions.pop_back();
+            return buffer;
+        }
+        return CreateBuffer(*gVulkanRenderAPI().GetPresentDevice(), m_Size, false, true);
+    }
+
+    void VulkanGpuBuffer::RetireWriteBuffer(VulkanBuffer* buffer)
+    {
+        // Dynamic buffers retain versions until all recorded and submitted uses
+        // retire. Texel buffers keep their existing view ownership/destruction path.
+        const VkBufferUsageFlags texelUsage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+        if (m_DirectlyMappable && (m_BufferCreateInfo.usage & texelUsage) == 0)
+            m_WriteVersions.push_back(buffer);
+        else
+            buffer->Destroy();
+    }
 
     VulkanBuffer* VulkanGpuBuffer::CreateBuffer(VulkanDevice& device, uint32_t size, bool staging, bool readable)
     {
@@ -335,8 +394,8 @@ namespace Crowny
                 // A queue wait cannot finish a command buffer that is still being
                 // recorded. Preserve its bytes, including per-dispatch constants,
                 // even when this allocation is also used by a submitted frame.
-                VulkanBuffer* replacement = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice(), m_Size, false, true);
-                m_Buffer->Destroy();
+                VulkanBuffer* replacement = AcquireWriteBuffer();
+                RetireWriteBuffer(m_Buffer);
                 m_Buffer = replacement;
                 return m_Buffer->Map(offset, length);
             }
@@ -348,7 +407,7 @@ namespace Crowny
             {
                 if (m_Buffer->IsBound())
                 {
-                    VulkanBuffer* newBuffer = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), m_Size, false, true);
+                    VulkanBuffer* newBuffer = AcquireWriteBuffer();
 
                     if (options != GpuLockOptions::WRITE_DISCARD)
                     {
@@ -361,7 +420,7 @@ namespace Crowny
                         newBuffer->Unmap();
                     }
 
-                    m_Buffer->Destroy();
+                    RetireWriteBuffer(m_Buffer);
                     m_Buffer = newBuffer;
                 }
                 return m_Buffer->Map(offset, length);
@@ -369,10 +428,14 @@ namespace Crowny
 
             if (options == GpuLockOptions::WRITE_DISCARD)
             {
-                // Wait for GPU to finish using this buffer rather than allocating a new one each frame
-                VulkanTransferBuffer* transferCB = vtm.GetTransferBuffer(queueType, localQueueIdx);
-                transferCB->AppendMask(useMask);
-                transferCB->Flush(true);
+                // Discard does not need the previous bytes. Rotate to an idle
+                // version instead of synchronously waiting for submitted reads.
+                if (m_Buffer->IsBound() || m_Buffer->IsUsed())
+                {
+                    VulkanBuffer* replacement = AcquireWriteBuffer();
+                    RetireWriteBuffer(m_Buffer);
+                    m_Buffer = replacement;
+                }
                 return m_Buffer->Map(offset, length);
             }
 
@@ -397,7 +460,7 @@ namespace Crowny
                 transferCB->Flush(true);
                 if (options == GpuLockOptions::READ_WRITE && m_Buffer->IsBound())
                 {
-                    VulkanBuffer* newBuffer = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), m_Size, false, true);
+                    VulkanBuffer* newBuffer = AcquireWriteBuffer();
 
                     uint8_t* src = m_Buffer->Map(offset, length);
                     uint8_t* dst = newBuffer->Map(offset, length);
@@ -405,7 +468,7 @@ namespace Crowny
                     std::memcpy(dst, src, length);
                     m_Buffer->Unmap();
                     newBuffer->Unmap();
-                    m_Buffer->Destroy();
+                    RetireWriteBuffer(m_Buffer);
                     m_Buffer = newBuffer;
                 }
                 return m_Buffer->Map(offset, length);
@@ -446,8 +509,6 @@ namespace Crowny
         if (!m_IsMapped)
             return;
 
-        VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
-
         if (m_StagingMemory == nullptr && m_StagingBuffer == nullptr) // directly mapped
             m_Buffer->Unmap();
         else // we are using staging buffer/memory
@@ -476,8 +537,9 @@ namespace Crowny
                     }
                     else if (m_MappedLockOptions == GpuLockOptions::WRITE_DISCARD)
                     {
-                        m_Buffer->Destroy();
-                        m_Buffer = CreateBuffer(device, m_Size, false, true);
+                        VulkanBuffer* replacement = AcquireWriteBuffer();
+                        RetireWriteBuffer(m_Buffer);
+                        m_Buffer = replacement;
                     }
                     else // need to issue queue dependency
                     {
@@ -495,7 +557,7 @@ namespace Crowny
                     bool isBoundWithoutUse = boundCount > useCount;
                     if (isBoundWithoutUse)
                     {
-                        VulkanBuffer* newBuffer = CreateBuffer(device, m_Size, false, true);
+                        VulkanBuffer* newBuffer = AcquireWriteBuffer();
                         if (m_MappedOffset > 0 || m_MappedSize != m_Size)
                         {
                             transferCB->MemoryBarrier(m_Buffer->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
@@ -506,7 +568,7 @@ namespace Crowny
                                                       VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                         }
 
-                        m_Buffer->Destroy();
+                        RetireWriteBuffer(m_Buffer);
                         m_Buffer = newBuffer;
                     }
                 }

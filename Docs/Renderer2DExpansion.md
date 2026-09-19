@@ -26,6 +26,16 @@ records. The standard-vector adapter remains available. Tests cover cancellation
 motion settling, warm capacity, and earlier snapshots surviving subsequent drains
 and slot reuse.
 
+Texture bindings are now explicit snapshot deltas. Creates publish an owned
+texture reference; updates publish one only when the binding changes. A flagged
+null clears the binding, while an unflagged update retains the renderer's current
+resource. Transform and tint changes no longer add a texture owner per snapshot
+record. Native callers constructing complete changes retain the previous default
+behavior. Extraction also keeps eight temporary resource owners shared across
+sprites, with bounded replacement for fragmented textures. Tests cover more
+textures than the cache holds, direct edits, reimport under the same asset identity,
+slot reuse, clears, and old snapshots retaining their concrete resources.
+
 Sprite synchronization now uses lazily allocated 1,024-slot tracking pages keyed
 by ECS entity index. It keeps a dense list of active indices for retirement, so
 sparse entity ranges do not require scanning unused pages. Component identities
@@ -43,6 +53,43 @@ of each sprite's transform, color, and texture reference. The render-thread mirr
 supplies culling transforms and can reconstruct full payloads for compatibility
 drawing. Legacy native producers can still populate the existing `Sprites` array.
 Scene-produced ordered sprite indices address `SpriteHandles`.
+
+Capable Vulkan views now cull sprites and compact their ordered candidates on the
+GPU, followed by indexed indirect instanced draws. Two dispatches compute local
+prefixes and group counts, then scatter survivors to their stable positions. Each
+submission is bounded at 65,536 entries and still respects texture, instance-page,
+order-page and sprite/text boundaries. Per-view scratch buffers grow and remain
+resident. Dispatch/draw transitions use the existing resource hazard tracking and
+restore the target with attachment loads. OpenGL and an explicit native CPU override
+retain CPU culling and direct instancing. Producers without a snapshot target also
+use that compatibility path.
+
+The GPU path caches candidate order independently of camera visibility. It reports
+completed visibility samples with their frame number and validity, using at most
+four pending readbacks per view. No visibility readback determines a draw or waits
+inside rendering. Vulkan buffers retain up to four reusable readback requests.
+Only requests with no external owner and no recorded or submitted GPU use can be
+recycled. Additional requests remain independently owned, so cache pressure never
+drops copies or overwrites retained results.
+
+Vulkan command buffers now retain allocation storage for resource-tracking nodes.
+Clearing a command buffer still releases the tracked resources. Dynamic buffers
+retain idle backing versions for discard writes, preserving earlier recorded and
+submitted uses without waiting for them. Texel buffers keep their existing view
+ownership rules. Full active sprite pages use discard uploads; partial updates
+preserve untouched records. These caches retain their high-water capacity until
+their owning buffer or command buffer is destroyed.
+Presentation reuses an exclusively owned main command-buffer wrapper and retains
+the arrays used to retire completed queue work. Cleanup still runs outside the
+submission lock; concurrent refreshes borrow separate arrays.
+
+Sprite-only Vulkan views also retain their CPU draw lists. They compare ordered
+generational handles and invalidate batch bindings when instances are created,
+destroyed, hidden, shown, or assigned another texture. Transform and paint changes
+still upload instance data and run GPU visibility, but reuse the candidate list.
+CPU culling and mixed text prepare each view normally. Scene statistics and the
+benchmark CSV expose draw-list cache hits and upload/preparation/submission CPU
+times. Each view retains an extra array of four-byte candidate handles.
 
 Text snapshots own their layout arrays and pin their concrete font objects.
 Layout caching separates layout fields from paint fields. Scene text now uses
@@ -66,8 +113,8 @@ custom render features now use two explicit graph passes to clear and draw the
 output. They allocate no 3D graph textures or buffers and release obsolete 3D view
 history. Shared scene tables are still synchronized before selecting this path;
 2D buffers are still bound inside the draw callback rather than imported into the
-graph. These paths, full scene-pass integration, GPU
-visibility compaction, and the remaining milestone 1 contracts are unfinished.
+graph. These paths, full scene-pass integration, and the remaining milestone 1
+contracts are unfinished. Text still uses CPU visibility testing.
 
 ### Sprite benchmark
 
@@ -200,6 +247,177 @@ The final compact captures are byte-identical to the preceding tracking captures
 on each backend. The performance gate remains unmet. Full records and images are
 under `compact-main-benchmark/` and `compact-main-repeat/` in the main artifact
 directory; the control is under the isolated checkout's `tracking-control/`.
+
+### GPU sprite compaction validation on September 12, 2026
+
+Release All builds pass, including the new cooked compute shader, the built-in
+resource pack and staged player template. The focused native suite passes 35
+cases and 1,994 assertions; the full native suite passes 974 cases and 113,916
+assertions, with one skipped case. All 39 renderer cases pass on Vulkan and
+OpenGL, and all 39 cross-backend comparisons pass. The persistent sprite/text
+captures were visually inspected. The Python tooling suite passes all 65 tests.
+
+The new GPU/forced-CPU comparison checks 1,031 ordered sprites across partial
+128-thread workgroups, different storage/order page sizes, texture boundaries,
+negative scale and shear, camera changes, an entirely culled view, and delayed
+visibility counts. Color and picking agree. GPU camera movement does not reupload
+candidate order. Existing mixed text/sprite checks also use the GPU path.
+
+The first Vulkan run caught missing draws because compute dispatch unbinds the
+framebuffer. Restoring the snapshot target with attachment loads fixed both the
+sprite comparison and text interleaving without changing image references.
+No temporary instrumentation remains.
+
+The full 100,000-sprite diagnostic records Vulkan p95 45.5409 ms and OpenGL p95
+46.0857 ms. Both used 300 warm-up plus 1,800 measured frames, retained 100,000
+visible sprites and three draws, and returned every GPU timing sample. Vulkan
+visibility samples were consistently two frames behind; the CSV now records their
+frame identity and validity. OpenGL visibility is current-frame CPU data.
+
+Vulkan median extraction is 23.2763 ms, rendering 10.2409 ms, and GPU time
+10.1604 ms. Uploads are 14,400,912 bytes per frame, including 672 extra bytes of
+compaction constants. Vulkan now records 201 renderer C++ allocations per frame,
+up from 93 on the preceding CPU path. OpenGL still records zero rendering
+allocations, and both record zero extraction allocations. The visibility feature
+is correct, but this allocation increase and the 16.67 ms gate remain unfinished.
+Snapshot extraction alone exceeds the frame budget under these run conditions.
+The final captures are byte-identical to each backend's preceding compact-snapshot
+capture; the Vulkan GPU-rendered benchmark image was visually inspected. Records
+and captures are in `artifacts/2d-expansion/gpu-compaction-benchmark/`.
+
+Logs are under `artifacts/2d-expansion/`: `gpu-compaction-final-all.log`,
+`gpu-compaction-native-focused.log`, `gpu-compaction-native-full.log`,
+`gpu-compaction-render.log` and `gpu-compaction-tooling.log`. Full renderer
+captures are in `gpu-compaction-render/`. Linux and Windows editor interaction
+checks remain open. This completes a part of milestone 1, not the full milestone
+or expansion.
+
+### Texture extraction validation on September 19, 2026
+
+Release All and the focused 2D/math suite pass, including 38 cases and 2,320
+assertions. The full native suite passes 977 cases and 114,242 assertions, with
+one skipped case. All 39 Vulkan cases, 39 OpenGL cases and 39 cross-backend image
+comparisons pass without reference updates. Vulkan text and OpenGL sprite
+captures were visually inspected. All 65 tooling tests, generated interop,
+542-function managed parity, and header checks pass.
+
+The full diagnostic after texture deltas and the extraction resource cache records
+Vulkan p95 52.3721 ms and OpenGL p95 34.3967 ms. Both retain all 100,000 visible
+sprites in three draws, report no missing GPU timer samples, and allocate nothing
+during extraction. Vulkan still makes 201 renderer allocations per frame; OpenGL
+makes none. Each backend used 300 warm-up and 1,800 measured frames. The target
+remains unmet. These results precede the additional CPU draw-list cache.
+
+Artifacts and logs are under `artifacts/2d-expansion/texture-extraction-*`.
+Short diagnostic probes were removed before the full build and benchmark.
+The native regression also covers 37 sprites using 12 textures, direct assignment,
+clearing, and reimport while the previous snapshot remains alive.
+
+### Draw-list cache validation on September 19, 2026
+
+Release All passes with the editor, player template and render harness. The
+focused native suite still passes 38 cases and 2,320 assertions; the full suite
+passes 977 cases and 114,242 assertions, with one skipped case. All 39 Vulkan,
+39 OpenGL and 39 cross-backend comparisons pass without reference changes.
+The expanded CPU/GPU regression compares color and picking over 15 frames. It
+checks expected cache hits during movement and paint changes, invalidation for
+textures, visibility, reversed order, remapped handles and recycled slots, plus
+camera switching and view retirement. Header checks and native formatting pass.
+
+Both full sprite runs again use 300 warm-up plus 1,800 measured frames. Every
+record reports 100,000 visible sprites, three draws and a valid visibility sample;
+all GPU timing samples complete. Vulkan hits the CPU draw-list cache on every
+measured frame. OpenGL continues to prepare CPU visibility each frame.
+
+| Measurement | Vulkan | OpenGL |
+| --- | ---: | ---: |
+| p95 frame time | 29.0718 ms | 32.6772 ms |
+| Median snapshot extraction | 12.3552 ms | 12.1063 ms |
+| Median rendering CPU time | 5.6327 ms | 7.5294 ms |
+| Median instance upload CPU time | 1.7790 ms | 2.5057 ms |
+| Median draw preparation CPU time | 0.1795 ms | 1.8511 ms |
+| Median draw submission CPU time | 1.6588 ms | 0.0361 ms |
+| Median GPU time | 10.8987 ms | 14.3980 ms |
+| Renderer C++ allocations per frame | 201 | 0 |
+| Extraction C++ allocations per frame | 0 | 0 |
+
+The 16.67 ms gate and zero-allocation Vulkan gate remain unmet. Timing variation
+also affects extraction, which the draw-list cache does not change, so the entire
+frame-time difference from the preceding run cannot be attributed to this cache.
+Uploads remain 14,400,912 bytes per frame on Vulkan and 14,400,240 on OpenGL.
+The final images are byte-identical to their preceding backend captures. The
+Vulkan benchmark image and persistent text/sprite captures were visually inspected.
+
+Logs and artifacts are in `artifacts/2d-expansion/draw-list-cache-*`. The missing
+`Scripts/run-render-tests.ps1` entrypoint is covered by `crowny render-tests`.
+Linux, interactive Windows editor workflows, standalone benchmark integration,
+and the remaining roadmap contracts are still open.
+
+### Vulkan buffer reuse validation on September 19, 2026
+
+Command-buffer tracking now pools its CPU nodes. Dynamic buffer discard writes
+reuse idle backing allocations, and full active sprite pages discard their old
+contents. A bounded readback cache reuses requests only after external owners and
+GPU uses have retired. Partial writes still preserve untouched bytes. Presentation
+also retains queue cleanup arrays and reuses an exclusively owned command wrapper.
+
+The Vulkan regression records different values before submission, checks both
+copies after completion, and requires allocation-free writes and readbacks after
+warm-up. It retains an earlier result across later frames, verifies that pending
+copies are not ready, and checks different request lengths and six outstanding
+requests against the four-request cache. The allocation assertion failed before
+readback pooling and passes afterward. Existing ranged-write, mixed rendering,
+capacity split, picking, and GPU/forced-CPU comparisons continue to pass.
+
+Release All passes, including the editor and staged player template. The focused
+native suite passes 38 cases and 2,320 assertions. The final full suite passes 979
+cases and 114,265 assertions, with one skipped case and exit 0. Its existing SEH
+filter warning still appears during shutdown. All 39 Vulkan cases, 39 OpenGL
+cases, and 39 cross-backend capture comparisons pass without reference updates.
+Sprite and text captures were visually inspected; final captures match those
+inspected images byte for byte. All 65 tooling tests, generated interop, managed
+parity for 542 host functions, header checks, and native formatting pass.
+
+The final benchmark uses 300 warm-up and 1,800 measured frames on both backends.
+Every measured frame retains all 100,000 visible sprites in three draws with valid
+visibility data, and no GPU timing samples are missing. Final images match each
+backend's preceding benchmark image byte for byte.
+
+| Measurement | Vulkan | OpenGL |
+| --- | ---: | ---: |
+| p95 frame time | 16.2707 ms | 21.5810 ms |
+| Median snapshot extraction | 8.9444 ms | 10.1251 ms |
+| Median rendering CPU time | 3.0128 ms | 5.1897 ms |
+| Median instance upload CPU time | 1.2262 ms | 1.5490 ms |
+| Median draw preparation CPU time | 0.1393 ms | 1.4819 ms |
+| Median draw submission CPU time | 0.0874 ms | 0.0292 ms |
+| Median GPU time | 10.0395 ms | 13.5288 ms |
+| Renderer C++ allocations, all measured frames | 84 | 0 |
+| Extraction C++ allocations, all measured frames | 0 | 0 |
+| Presentation C++ allocations, all measured frames | 5,402 | 0 |
+
+Vulkan rendering allocates nothing on 1,799 measured frames, but measured frame
+460 allocates 84 times. Its presentation count also rises from three to five.
+The source of that isolated burst remains to be traced. The three recurring
+presentation allocations are the binary synchronization semaphores recreated by
+`VulkanCmdBuffer::AllocateSemaphores`. Their reuse must distinguish consumed waits
+from unused, still-signaled semaphores; idle resource checks alone are insufficient.
+The broader zero-allocation gate therefore remains unfinished.
+
+This final Vulkan diagnostic meets the 16.67 ms timing threshold for this run.
+The preceding full run recorded 18.9457 ms, with zero rendering allocations and
+four presentation allocations per frame, before removing a temporary command
+wrapper reference. CPU extraction also varies between runs, so the timing
+difference is not attributed entirely to wrapper reuse. This does not certify
+the standalone player, authored-atlas workload, or the complete performance gate.
+Standalone integration, Linux validation, interactive editor checks, and the
+remaining roadmap contracts are still open.
+
+Final logs and captures are under `artifacts/2d-expansion/allocation-final-*`.
+The focused native and tooling logs are `allocation-native-focused.log`,
+`allocation-tooling.log`, `allocation-managed-parity.log`, and
+`allocation-interop.log`. Earlier diagnostic logs use `allocation-*`; all tagged
+allocation probes were removed from engine code before final validation.
 
 ### Retained text validation on September 12, 2026
 
@@ -353,6 +571,168 @@ normal Editor/Tests builds for editor/test-only dependency libraries skipped by
 the first `build All`. These context fixes must not overwrite newer main-checkout
 changes.
 
+### Sprite component geometry on September 19, 2026
+
+Texture-backed sprites now expose local `Size`, normalized `Pivot`, texture
+endpoint `UvRect`, `FlipX`, `FlipY`, and `Visible` through native components,
+the inspector, and the generated managed contract. The inspector previews the
+selected region with its flips and aspect ratio. Flips mirror artwork around
+the pivot without changing the entity transform or its colliders. Empty,
+reversed, out-of-range or non-finite geometry suppresses drawing and picking.
+
+Extraction folds the geometry into retained quad transforms and UV records.
+Bounds, previous transforms, GPU compaction, the CPU baseline, and the legacy
+rendering adapter consume those values. Direct component edits retain handles;
+unchanged geometry does not generate updates after motion history settles.
+Prefab syncing includes these properties and both sorting keys, respecting
+individual overrides. Scene format 15 stores the added fields; versions 12–14
+keep centered, full-texture unit quads with no flips and visibility enabled.
+Prefab persistence, undo/redo, duplication and play copies use the same fields.
+
+Validation: Release All passes, including managed assemblies, editor, render
+harness and the staged player template. The focused 2D suite passes 35 cases
+and 868 assertions; the full native suite passes 984 cases and 114,369 assertions
+with one skipped case. All 39 Vulkan tests, 39 OpenGL tests and 39 cross-backend
+capture comparisons pass without reference updates. Added pixel/ID assertions
+exercise cropping, pivot reflection, hiding, invalid geometry and restoration
+through GPU compaction, forced CPU draws and the compatibility adapter. Sprite
+and text captures were visually inspected. The 65 tooling tests, generated
+interop, parity for 554 host functions, header checks and native formatting pass.
+
+Logs use `artifacts/2d-expansion/sprite-geometry-*`. The first All attempt met a
+missing include in the concurrently added procedural-material test; that work
+corrected it before the successful final build. An initial broad focused run
+exited in a managed constructor before the interrupted All build had refreshed
+the managed assemblies. Final focused and full runs pass after rebuilding them.
+The pre-existing `complex_scene.yaml` content was restored byte for byte after
+test execution. Interactive editor checks and Linux validation remain open.
+The performance workload has not been rerun after adding geometry controls.
+
+Sprite/atlas assets, slicing, packing, animation, nine-slice/tiled modes,
+materials, visibility layers and scene compositing remain open, along with
+international text, canvases, masks and tilemaps. Vulkan allocation work is
+deferred at the user's request; the outstanding measurements above still apply.
+
+### Authored sprite assets on September 19, 2026
+
+The first sprite asset increment adds `.cwsprite` sources and a versioned cooked
+`Sprite` asset containing a texture UUID, normalized region, pivot, original
+pixel dimensions, pixels-per-unit and border metadata. Zero original dimensions
+derive from the texture region. Defaults are a centered pivot and 100 pixels
+per unit. Invalid edits leave metadata unchanged; missing references retain
+their UUIDs. Borders are stored but nine-slice rendering is not implemented yet.
+
+`SpriteRendererComponent.Sprite` selects an authored asset. `UseSpriteSize` and
+`UseSpritePivot` default to true and allow per-instance overrides when disabled.
+Asset edits and replacement under the same UUID update retained instances
+without rewriting entities or changing their renderer handles. Missing or
+mistyped sprite/texture references suppress authored-sprite drawing. Legacy
+texture-only geometry remains unchanged. Scene format 16 appends the asset
+reference and override flags; versions 12–15 remain readable. Prefabs, scene
+copies and component undo retain these fields.
+
+The asset browser can create sprites; the asset inspector edits their metadata
+with retained undo, pending saves and a cropped preview. Sprite assets and image
+files can be dropped into the viewport through its existing placement/undo
+workflow. The component inspector offers asset selection and geometry overrides.
+Source saves update the compiled cache immediately. Build dependency discovery
+includes sprite assets, their textures and retained legacy texture references.
+The shared managed ABI is version 21 with 567 functions, including a `Sprite`
+wrapper, metadata access and component asset/override properties.
+
+Validation: Release All passes, including managed assemblies, editor, render
+harness and the staged player template. The focused suite passes 63 cases and
+1,215 assertions. The full native suite passes 997 cases and 114,546 assertions;
+the optional installed-OSL-compiler and CoreCLR-package cases are skipped.
+All 39 Vulkan tests, 39 OpenGL tests and 39 capture comparisons pass without
+reference changes. Sprite captures were visually inspected. The render
+regression loads a sprite and texture from a cooked game package after deleting
+its loose inputs, then checks pixels and picking through the CPU baseline,
+GPU compaction and compatibility paths. Generated interop, parity for 567 host
+functions, header checks, native formatting and all 65 tooling tests pass.
+
+Logs use `artifacts/2d-expansion/sprite-assets-*`; final runs are
+`build-verified`, `focused-verified`, `native`, and `render-verified`. Focused
+tests caught YAML's fallback conversion accepting malformed optional fields;
+the parser now distinguishes absent fields from invalid values and rejects
+invalid edits transactionally. Cold texture references also reject known
+non-texture asset headers before loading dependencies, preventing sprite cycles.
+Earlier build attempts encountered an include-order error (fixed), a concurrent
+OSL importer absent from generated projects, and DLL copy contention with
+another native test process. The final All build and tests pass. The pre-existing
+`complex_scene.yaml` was restored byte for byte. Windows placement/undo and
+package loading have automated coverage; interactive editor and Linux validation
+remain open. The primary performance workload has not been rerun for this change.
+
+This does not complete milestone 2: stable sliced subassets, atlas packing,
+slicing tools, sprite animation, nine-slice/tiled drawing, sampler controls,
+pixel snapping and sprite materials remain open. Scene compositing and the
+remaining renderer contracts, international text, canvases/masks and tilemaps
+also remain open. Vulkan allocation tuning stays deferred.
+
+### Atlas and sprite animation increment on September 19, 2026
+
+`.cwatlas` sources now select existing Sprite UUIDs, a power-of-two page size,
+and a mip count. Packing is deterministic, uses multiple pages, separates sRGB
+and linear images, and retains pivots, original dimensions and border metadata.
+It does not trim or rotate entries. Every sprite rectangle is extruded and
+filtered separately at each configured mip level. Invalid input, missing
+sources, oversized rectangles and page/memory limits fail explicitly without
+replacing the previous packed result. Source regions must align to image pixels.
+The authoring path reads RGBA pixels or decodes retained/cooked Basis payloads.
+
+`SpriteAtlas` embeds its page textures in the cooked asset. The optional
+`SpriteRendererComponent.Atlas` resolves the original Sprite identity to an
+entry; missing atlases or entries suppress drawing. Repacking retains scene
+and animation identities. Scene loading and atlas animation avoid loading the
+original sprite textures merely to select an atlas entry. Scene format 17 adds
+the atlas reference; formats 12–16 remain readable.
+
+`.cwspriteanim` sources contain Sprite UUIDs, positive frame durations and
+loop/once/ping-pong behavior. `SpriteAnimatorComponent` advances in scene
+simulation between script Update and LateUpdate, independently of visibility
+or camera extraction. It supports speed (including reverse), play/pause/stop,
+seek, frame queries and consumable completion counts. Large time steps skip
+cycles arithmetically. Frame sampling uses cached cumulative durations; looping
+non-atlas playback retains resolved frame assets. Copies reset playback, while
+ECS moves preserve it. Simulation start/stop resets runtime state.
+
+The asset browser creates both asset types. Inspectors provide atlas source
+selection, page previews and repacking, plus animation frame editing, ordering,
+duration controls and playback preview. Edits use retained undo and existing
+pending-save handling. Viewport drops create atlas sprites or animated sprite
+entities with placement and undo. Native/managed component and asset access,
+scene/prefab persistence, duplication, play isolation, source import, cooked
+serialization and build dependency discovery are connected. Managed ABI 22
+currently exposes 588 shared functions. Completion notifications are polled
+through `ConsumeCompletions()` rather than dispatched as callbacks.
+
+Validation: the Release All build passes. The focused suite passes 73 cases
+and 1,433 assertions; the full native suite passes 1,007 cases and 114,797
+assertions. Three optional cases are skipped: the two installed-OSL-compiler
+fixtures and the published CoreCLR program package. All 39 Vulkan tests, 39
+OpenGL tests and 39 backend capture comparisons pass without reference updates.
+Sprite captures were visually inspected. The renderer regression builds an
+atlas, imports its source description, saves/loads its embedded cooked pages,
+then checks color and picking through CPU baseline, GPU compaction and the
+compatibility renderer. Missing atlas entries suppress color and picking.
+
+Managed generation/parity (588 functions), added-header checks, native formatting
+and all 65 tooling tests pass. Logs use
+`artifacts/2d-expansion/atlas-animation-*`. The pre-existing `complex_scene.yaml`
+was restored byte for byte. The primary performance workload has not been rerun.
+Windows editor placement/undo and cooked loading have automated coverage;
+interactive editor and Linux validation remain open. The final All build
+(`atlas-animation-build-staged.log`) passed and refreshed the editor/player
+binaries and staged player template after the playback fix.
+
+This increment does not complete the 2D roadmap. Automatic/grid slicing and
+stable sliced subassets, trimming, nine-slice/tiled drawing, sampler controls,
+pixel snapping, sprite materials, scene compositing, international text,
+canvases/masks and tilemaps still require work. Source changes can be incorporated
+with Repack Sources; automatic dependent-atlas reimport is not implemented here.
+Vulkan allocation tuning remains deferred at the user's request.
+
 ## Contracts
 
 - Renderer-owned persistent generational 2D instances, immutable snapshot changes,
@@ -379,14 +759,16 @@ changes.
   instances, renderer-owned contexts, and legacy Renderer2D adapters.
 - [ ] Retained radix ordering, sorting groups, custom-axis sorting, bounds culling.
 - [ ] GPU stable visibility compaction/indirect instancing and CPU fallback.
+  Sprite paths are implemented; shared-stream integration remains.
 - [ ] Explicit render-graph passes, mixed 3D transparency, depth/ID/velocity,
   reactive TAA, and no unused 3D resources for 2D-only views.
 - [ ] Per-view batches/break reasons, instances, glyphs, bytes, cache, and timings.
 
 ## Milestone 2: sprites
 
-- [ ] Sprite/SpriteAtlas assets: stable slice IDs, texture regions, original size,
-  pivot, 100 pixels/unit, nine-slice borders, and reimport identity preservation.
+- [x] Individual Sprite assets: texture regions, original size, pivot,
+  100 pixels/unit and border metadata, with editor, persistence and managed access.
+- [ ] SpriteAtlas assets, stable sliced subasset identities and slice reimport.
 - [ ] Full-image, manual/grid/alpha slicing; deterministic multi-page packing,
   compatible sampling groups, trimming, extruded borders and isolated mipmaps.
   No rotated packing; do not trim nine-sliced images.

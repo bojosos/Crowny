@@ -1,0 +1,4 @@
+shader unsupported_parameter(string name = "", output color Cout = 0)
+{
+    Cout = color(u, v, 0);
+}

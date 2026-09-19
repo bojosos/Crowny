@@ -195,7 +195,7 @@ TEST_CASE("Managed backend presets resolve without exposing runtime objects", "[
 
 TEST_CASE("Managed ABI rejects incompatible tables before invoking them", "[Scripting][Managed][Contract]")
 {
-    CHECK(CW_MANAGED_ABI_VERSION == 20);
+    CHECK(CW_MANAGED_ABI_VERSION == 22);
 
     cw_managed_program_api api{};
     api.size = sizeof(api);
@@ -227,6 +227,50 @@ TEST_CASE("Managed host ABI exposes complete typed bindings and stable value lay
     CHECK(offsetof(cw_managed_font_character_info, source_font) == 0);
     CHECK(offsetof(cw_managed_font_character_info, advance) == 32);
     CHECK(offsetof(cw_managed_font_character_info, valid) == 105);
+}
+
+TEST_CASE("Managed sprite overrides share native component state", "[Scripting][Managed][Contract][2D]")
+{
+    const UUID id("11111111-1111-1111-1111-111111111111");
+    cw_managed_uuid managedId{};
+    std::fill(std::begin(managedId.bytes), std::end(managedId.bytes), uint8_t(0x11));
+    const auto scene = CreateRef<Scene>(false);
+    ScopedActiveScene activeScene(scene);
+    Entity entity = scene->CreateEntityWithUuid(id, "Managed sprite");
+    auto& sprite = entity.AddComponent<SpriteRendererComponent>();
+    cw_managed_host_api api{};
+    PopulateManagedHostBindings(api);
+    int context = 0;
+    uint8_t value = 0;
+    CHECK(api.sprite_renderer_get_use_sprite_size(&context, managedId, &value) == CW_MANAGED_STATUS_OK);
+    CHECK(value == 1);
+    CHECK(api.sprite_renderer_set_use_sprite_size(&context, managedId, 0) == CW_MANAGED_STATUS_OK);
+    CHECK_FALSE(sprite.UseSpriteSize);
+    CHECK(api.sprite_renderer_set_use_sprite_pivot(&context, managedId, 0) == CW_MANAGED_STATUS_OK);
+    CHECK_FALSE(sprite.UseSpritePivot);
+    sprite.UseSpritePivot = true;
+    CHECK(api.sprite_renderer_get_use_sprite_pivot(&context, managedId, &value) == CW_MANAGED_STATUS_OK);
+    CHECK(value == 1);
+    CHECK(api.sprite_renderer_set_sprite(&context, managedId, {}) == CW_MANAGED_STATUS_OK);
+    CHECK_FALSE(sprite.Sprite.HasUUID());
+    CHECK(api.sprite_renderer_get_sprite(&context, managedId, nullptr) == CW_MANAGED_STATUS_INVALID_ARGUMENT);
+    auto& animation = entity.AddComponent<SpriteAnimatorComponent>();
+    CHECK(api.sprite_animator_set_speed(&context, managedId, -2.0f) == CW_MANAGED_STATUS_OK);
+    CHECK(animation.Speed == -2.0f);
+    CHECK(api.sprite_animator_set_speed(&context, managedId, std::numeric_limits<float>::infinity()) == CW_MANAGED_STATUS_INVALID_ARGUMENT);
+    CHECK(animation.Speed == -2.0f);
+    CHECK(api.sprite_animator_play(&context, managedId) == CW_MANAGED_STATUS_OK);
+    CHECK(animation.IsPlaying());
+    CHECK(api.sprite_animator_pause(&context, managedId) == CW_MANAGED_STATUS_OK);
+    CHECK_FALSE(animation.IsPlaying());
+    CHECK(api.sprite_animator_set_play_on_awake(&context, managedId, 0) == CW_MANAGED_STATUS_OK);
+    CHECK_FALSE(animation.PlayOnAwake);
+    CHECK(api.sprite_animator_stop(&context, managedId) == CW_MANAGED_STATUS_OK);
+    uint64_t completions = 1;
+    CHECK(api.sprite_animator_consume_completions(&context, managedId, &completions) == CW_MANAGED_STATUS_OK);
+    CHECK(completions == 0);
+    CHECK(api.sprite_renderer_set_atlas(&context, managedId, {}) == CW_MANAGED_STATUS_OK);
+    CHECK_FALSE(sprite.Atlas.HasUUID());
 }
 
 TEST_CASE("Managed entity parent accepts the empty UUID as unparent", "[Scripting][Managed][Contract][Hierarchy]")

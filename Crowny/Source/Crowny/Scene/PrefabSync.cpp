@@ -48,6 +48,18 @@ namespace Crowny
             inst.Camera.SetBackgroundColor(pref.Camera.GetBackgroundColor());
     }
 
+    template <> void PrefabSync::SyncComponent<SpriteAnimatorComponent>(Entity instance, Entity prefab, const PrefabComponent& pc)
+    {
+        auto& target = instance.GetComponent<SpriteAnimatorComponent>();
+        const auto& source = prefab.GetComponent<SpriteAnimatorComponent>();
+        if (!pc.IsPropertyOverridden("Sprite Animator.Clip"_hstr))
+            target.Clip = source.Clip;
+        if (!pc.IsPropertyOverridden("Sprite Animator.Speed"_hstr))
+            target.Speed = source.Speed;
+        if (!pc.IsPropertyOverridden("Sprite Animator.PlayOnAwake"_hstr))
+            target.PlayOnAwake = source.PlayOnAwake;
+    }
+
     template <> void PrefabSync::SyncComponent<SpriteRendererComponent>(Entity instance, Entity prefab, const PrefabComponent& pc)
     {
         auto& inst = instance.GetComponent<SpriteRendererComponent>();
@@ -57,6 +69,30 @@ namespace Crowny
             inst.Color = pref.Color;
         if (!pc.IsPropertyOverridden("Sprite Renderer.Texture"_hstr))
             inst.Texture = pref.Texture;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.Sprite"_hstr))
+            inst.Sprite = pref.Sprite;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.Atlas"_hstr))
+            inst.Atlas = pref.Atlas;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.UseSpriteSize"_hstr))
+            inst.UseSpriteSize = pref.UseSpriteSize;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.UseSpritePivot"_hstr))
+            inst.UseSpritePivot = pref.UseSpritePivot;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.Size"_hstr))
+            inst.Size = pref.Size;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.Pivot"_hstr))
+            inst.Pivot = pref.Pivot;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.UvRect"_hstr))
+            inst.UvRect = pref.UvRect;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.FlipX"_hstr))
+            inst.FlipX = pref.FlipX;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.FlipY"_hstr))
+            inst.FlipY = pref.FlipY;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.Visible"_hstr))
+            inst.Visible = pref.Visible;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.SortingLayer"_hstr))
+            inst.SortingLayer = pref.SortingLayer;
+        if (!pc.IsPropertyOverridden("Sprite Renderer.OrderInLayer"_hstr))
+            inst.OrderInLayer = pref.OrderInLayer;
     }
 
     template <> void PrefabSync::SyncComponent<MeshRendererComponent>(Entity instance, Entity prefab, const PrefabComponent& pc)

@@ -186,6 +186,7 @@ namespace Crowny
     template <> void ComponentSelectionEditorWidget<SpriteRendererComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<MeshRendererComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<AnimationComponent>(Entity primary, const Vector<Entity>& entities);
+    template <> void ComponentSelectionEditorWidget<SpriteAnimatorComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<Rigidbody2DComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<BoxCollider2DComponent>(Entity primary, const Vector<Entity>& entities);
     template <> void ComponentSelectionEditorWidget<CircleCollider2DComponent>(Entity primary, const Vector<Entity>& entities);

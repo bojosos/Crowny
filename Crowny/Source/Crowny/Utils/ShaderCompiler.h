@@ -61,6 +61,10 @@ namespace Crowny
         static ShaderCompilerCacheStats GetCacheStats();
         static uint64_t HashSource(StringView source);
         static void RestoreVertexLayout(BinaryShaderData& shader);
+        // Load compiler-produced SPIR-V already validated for the target Vulkan environment.
+        // Checks the requested entry point stage and reflects resources; does not replace spirv-val.
+        static Ref<BinaryShaderData> LoadSpirv(const Vector<uint8_t>& data, ShaderType stage, String& error);
+        static Ref<BinaryShaderData> LoadComputeSpirv(const Vector<uint8_t>& data, String& error);
 
     private:
         static Ref<BlendStateDesc> ParseBlendState(const Path& path, String& inOutShader, Vector<ShaderDiagnostic>& diagnostics);

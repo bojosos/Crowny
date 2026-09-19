@@ -11,6 +11,10 @@ namespace Crowny::RenderTests
         Path References = "Crowny-RenderTests/References";
         Path Artifacts = "artifacts/render-tests";
         Path DecalShowcase;
+        Path OslPackage;
+        Path ProceduralPackage;
+        Path ProceduralReference;
+        Path ProceduralPreview;
         String Filter;
         bool BenchmarkSprites = false;
         bool BenchmarkSpritesSmoke = false;

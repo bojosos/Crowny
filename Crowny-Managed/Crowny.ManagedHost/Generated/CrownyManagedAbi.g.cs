@@ -329,6 +329,17 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> AudioClipGetFormat;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AudioClipGetIs3D;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextureGetWidth;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> SpriteGetTexture;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> SpriteAtlasGetPageCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> SpriteAtlasGetEntryCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> SpriteRendererGetAtlas;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SpriteRendererSetAtlas;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> SpriteGetPixelsPerUnit;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> SpriteGetPivot;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> SpriteGetOriginalSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> SpriteGetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteGetUvRect;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteGetBorders;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> TextureGetHeight;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AudioMixerSetActive;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStringView, float*, NativeStatus> AudioMixerGetBusVolume;
@@ -378,6 +389,13 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AnimationClipGetSampleRate;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> AnimationClipGetIsAdditive;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AnimationComponentPlay;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> SpriteAnimatorPlay;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> SpriteAnimatorPause;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> SpriteAnimatorStop;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, ulong*, NativeStatus> SpriteAnimatorConsumeCompletions;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> SpriteAnimationClipGetDuration;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> SpriteAnimationClipGetFrameCount;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SpriteAnimationClipGetMode;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AnimationComponentPause;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeStatus> AnimationComponentStop;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, uint*, NativeStatus> TextHitTest;
@@ -423,9 +441,27 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid*, NativeStatus> CameraGetPrimary;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeMatrix4*, NativeStatus> CameraGetProjectionMatrix;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> SpriteRendererGetTexture;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> SpriteRendererGetSprite;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SpriteRendererSetSprite;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> SpriteRendererGetUseSpriteSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> SpriteRendererSetUseSpriteSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> SpriteRendererGetUseSpritePivot;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> SpriteRendererSetUseSpritePivot;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SpriteRendererSetTexture;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteRendererGetColor;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteRendererSetColor;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> SpriteRendererGetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> SpriteRendererSetSize;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> SpriteRendererGetPivot;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec2*, NativeStatus> SpriteRendererSetPivot;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteRendererGetUvRect;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeVec4*, NativeStatus> SpriteRendererSetUvRect;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> SpriteRendererGetFlipX;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> SpriteRendererSetFlipX;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> SpriteRendererGetFlipY;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> SpriteRendererSetFlipY;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> SpriteRendererGetVisible;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> SpriteRendererSetVisible;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SpriteRendererGetSortingLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> SpriteRendererSetSortingLayer;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> SpriteRendererGetOrderInLayer;
@@ -645,6 +681,16 @@ namespace Crowny.ManagedHost.Interop
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> PhysicsMaterial3DSetFrictionCombine;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int*, NativeStatus> PhysicsMaterial3DGetRestitutionCombine;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, int, NativeStatus> PhysicsMaterial3DSetRestitutionCombine;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> SpriteAnimatorGetClip;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> SpriteAnimatorSetClip;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> SpriteAnimatorGetSpeed;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> SpriteAnimatorSetSpeed;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> SpriteAnimatorGetPlayOnAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte, NativeStatus> SpriteAnimatorSetPlayOnAwake;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> SpriteAnimatorGetTime;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, float, NativeStatus> SpriteAnimatorSetTime;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, byte*, NativeStatus> SpriteAnimatorGetIsPlaying;
+        public delegate* unmanaged[Cdecl]<void*, NativeUuid, uint*, NativeStatus> SpriteAnimatorGetFrameIndex;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid*, NativeStatus> AnimationComponentGetClip;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, NativeUuid, NativeStatus> AnimationComponentSetClip;
         public delegate* unmanaged[Cdecl]<void*, NativeUuid, float*, NativeStatus> AnimationComponentGetSpeed;
@@ -873,6 +919,17 @@ namespace Crowny.ManagedHost.Interop
                    AudioClipGetFormat != null &&
                    AudioClipGetIs3D != null &&
                    TextureGetWidth != null &&
+                   SpriteGetTexture != null &&
+                   SpriteAtlasGetPageCount != null &&
+                   SpriteAtlasGetEntryCount != null &&
+                   SpriteRendererGetAtlas != null &&
+                   SpriteRendererSetAtlas != null &&
+                   SpriteGetPixelsPerUnit != null &&
+                   SpriteGetPivot != null &&
+                   SpriteGetOriginalSize != null &&
+                   SpriteGetSize != null &&
+                   SpriteGetUvRect != null &&
+                   SpriteGetBorders != null &&
                    TextureGetHeight != null &&
                    AudioMixerSetActive != null &&
                    AudioMixerGetBusVolume != null &&
@@ -922,6 +979,13 @@ namespace Crowny.ManagedHost.Interop
                    AnimationClipGetSampleRate != null &&
                    AnimationClipGetIsAdditive != null &&
                    AnimationComponentPlay != null &&
+                   SpriteAnimatorPlay != null &&
+                   SpriteAnimatorPause != null &&
+                   SpriteAnimatorStop != null &&
+                   SpriteAnimatorConsumeCompletions != null &&
+                   SpriteAnimationClipGetDuration != null &&
+                   SpriteAnimationClipGetFrameCount != null &&
+                   SpriteAnimationClipGetMode != null &&
                    AnimationComponentPause != null &&
                    AnimationComponentStop != null &&
                    TextHitTest != null &&
@@ -967,9 +1031,27 @@ namespace Crowny.ManagedHost.Interop
                    CameraGetPrimary != null &&
                    CameraGetProjectionMatrix != null &&
                    SpriteRendererGetTexture != null &&
+                   SpriteRendererGetSprite != null &&
+                   SpriteRendererSetSprite != null &&
+                   SpriteRendererGetUseSpriteSize != null &&
+                   SpriteRendererSetUseSpriteSize != null &&
+                   SpriteRendererGetUseSpritePivot != null &&
+                   SpriteRendererSetUseSpritePivot != null &&
                    SpriteRendererSetTexture != null &&
                    SpriteRendererGetColor != null &&
                    SpriteRendererSetColor != null &&
+                   SpriteRendererGetSize != null &&
+                   SpriteRendererSetSize != null &&
+                   SpriteRendererGetPivot != null &&
+                   SpriteRendererSetPivot != null &&
+                   SpriteRendererGetUvRect != null &&
+                   SpriteRendererSetUvRect != null &&
+                   SpriteRendererGetFlipX != null &&
+                   SpriteRendererSetFlipX != null &&
+                   SpriteRendererGetFlipY != null &&
+                   SpriteRendererSetFlipY != null &&
+                   SpriteRendererGetVisible != null &&
+                   SpriteRendererSetVisible != null &&
                    SpriteRendererGetSortingLayer != null &&
                    SpriteRendererSetSortingLayer != null &&
                    SpriteRendererGetOrderInLayer != null &&
@@ -1189,6 +1271,16 @@ namespace Crowny.ManagedHost.Interop
                    PhysicsMaterial3DSetFrictionCombine != null &&
                    PhysicsMaterial3DGetRestitutionCombine != null &&
                    PhysicsMaterial3DSetRestitutionCombine != null &&
+                   SpriteAnimatorGetClip != null &&
+                   SpriteAnimatorSetClip != null &&
+                   SpriteAnimatorGetSpeed != null &&
+                   SpriteAnimatorSetSpeed != null &&
+                   SpriteAnimatorGetPlayOnAwake != null &&
+                   SpriteAnimatorSetPlayOnAwake != null &&
+                   SpriteAnimatorGetTime != null &&
+                   SpriteAnimatorSetTime != null &&
+                   SpriteAnimatorGetIsPlaying != null &&
+                   SpriteAnimatorGetFrameIndex != null &&
                    AnimationComponentGetClip != null &&
                    AnimationComponentSetClip != null &&
                    AnimationComponentGetSpeed != null &&
@@ -1307,7 +1399,7 @@ namespace Crowny.ManagedHost.Interop
 
     public static class NativeAbi
     {
-        public const uint Version = 20;
+        public const uint Version = 22;
         public const string EntryPoint = "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi";
     }
 }

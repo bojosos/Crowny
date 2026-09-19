@@ -1,5 +1,6 @@
 #include "cwepch.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/EntityInstantiation.h"
 #include "Crowny/Scene/Prefab.h"
@@ -27,6 +28,31 @@ namespace Crowny
                 return {};
             Entity entity = context.TargetScene->CreateEntity(file.Filepath.filename().string());
             entity.AddComponent<MeshRendererComponent>().MeshHandle = static_asset_cast<Mesh>(asset);
+            return entity;
+        }
+
+        Entity DropSprite(const AssetHandle<Asset>& asset, const FileEntry& file, const ViewportDropContext& context)
+        {
+            if (!context.WorldPosition)
+                return {};
+            Entity entity = context.TargetScene->CreateEntity(file.Filepath.stem().string());
+            auto& renderer = entity.AddComponent<SpriteRendererComponent>();
+            if (asset->GetAssetType() == AssetType::Sprite)
+                renderer.Sprite = static_asset_cast<Sprite>(asset);
+            else if (asset->GetAssetType() == AssetType::SpriteAnimationClip)
+            {
+                auto& animation = entity.AddComponent<SpriteAnimatorComponent>();
+                animation.Clip = static_asset_cast<SpriteAnimationClip>(asset);
+                renderer.Sprite = animation.ResolveFrame();
+            }
+            else if (asset->GetAssetType() == AssetType::SpriteAtlas)
+            {
+                renderer.Atlas = static_asset_cast<SpriteAtlas>(asset);
+                if (!renderer.Atlas->GetEntries().empty())
+                    renderer.Sprite = static_asset_cast<Sprite>(AssetManager::Get().GetAssetHandle(renderer.Atlas->GetEntries()[0].SpriteId));
+            }
+            else
+                renderer.Texture = static_asset_cast<Texture>(asset);
             return entity;
         }
 
@@ -58,6 +84,10 @@ namespace Crowny
             { AssetType::Material, ViewportDropFileKind::Material, "Drop to apply material", DropMaterial },
             { AssetType::AudioClip, ViewportDropFileKind::AudioClip, "Drop to create audio source", DropAudio },
             { AssetType::Prefab, ViewportDropFileKind::Prefab, "Drop to instantiate prefab", DropPrefab },
+            { AssetType::Sprite, ViewportDropFileKind::Sprite, "Drop to create sprite entity", DropSprite },
+            { AssetType::SpriteAnimationClip, ViewportDropFileKind::SpriteAnimation, "Drop to create animated sprite", DropSprite },
+            { AssetType::SpriteAtlas, ViewportDropFileKind::SpriteAtlas, "Drop to create atlas sprite", DropSprite },
+            { AssetType::Texture, ViewportDropFileKind::Texture, "Drop to create sprite entity", DropSprite },
         };
 
         const Handler* FindHandler(const Path& path, const FileEntry* file)

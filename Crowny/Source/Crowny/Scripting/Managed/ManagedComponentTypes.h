@@ -3,6 +3,7 @@
 // Managed name, native ECS component, Mono adapter wrapper. This is the single
 // built-in component registry used by the shared host ABI and Mono wrapper dispatch.
 #define CW_MANAGED_COMPONENT_TYPES(X)                                                                                                                \
+    X("Crowny.SpriteAnimatorComponent", SpriteAnimatorComponent, ScriptSpriteAnimator)                                                               \
     X("Crowny.AnimationComponent", AnimationComponent, ScriptAnimation)                                                                              \
     X("Crowny.Transform", TransformComponent, ScriptTransform)                                                                                       \
     X("Crowny.Camera", CameraComponent, ScriptCamera)                                                                                                \
@@ -21,5 +22,5 @@
     X("Crowny.MeshCollider3D", MeshCollider3DComponent, ScriptMeshCollider3D)                                                                        \
     X("Crowny.SpriteRendererComponent", SpriteRendererComponent, ScriptSpriteRenderer)                                                               \
     X("Crowny.MeshRenderer", MeshRendererComponent, ScriptMeshComponent)                                                                             \
-    X("Crowny.Text", TextComponent, ScriptText) \
+    X("Crowny.Text", TextComponent, ScriptText)                                                                                                      \
     X("Crowny.DecalComponent", DecalComponent, ScriptDecal)

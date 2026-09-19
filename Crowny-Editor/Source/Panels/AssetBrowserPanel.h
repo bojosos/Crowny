@@ -30,7 +30,11 @@ namespace Crowny
         PhysicsMaterial2D,
         PhysicsMaterial3D,
         NodeGraph,
-        DecalMaterial
+        DecalMaterial,
+        Sprite,
+        SpriteAnimation,
+        SpriteAtlas,
+        OslTexture
     };
 
     enum class FileSortingMode

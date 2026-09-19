@@ -103,6 +103,32 @@ TEST_CASE("Asset metadata keeps a last-good identity document", "[Assets][Metada
     CHECK(recovered.Dependents.front()->Uuid == walkId);
 }
 
+TEST_CASE("Sprite metadata preserves its identity across saves and recovery", "[Assets][Metadata][2D]")
+{
+    TemporaryMetadataDirectory temporary;
+    const Path path = temporary.Root / "region.cwsprite.meta";
+    AssetMetadataStore store;
+    const UUID id = UuidGenerator::Generate();
+    AssetType type = AssetType::Sprite;
+    SECTION("Sprite") { type = AssetType::Sprite; }
+    SECTION("Atlas") { type = AssetType::SpriteAtlas; }
+    SECTION("Animation") { type = AssetType::SpriteAnimationClip; }
+    const auto metadata = MakeMetadata(id, type);
+    REQUIRE(store.Save(path, metadata));
+    metadata->IncludeInBuild = true;
+    REQUIRE(store.Save(path, metadata));
+    const auto loaded = store.Load(path);
+    REQUIRE(loaded);
+    CHECK(loaded.Metadata->Uuid == id);
+    CHECK(loaded.Metadata->Type == type);
+    CHECK(loaded.Metadata->IncludeInBuild);
+    WriteText(path, "broken: [");
+    const auto recovered = store.Load(path);
+    REQUIRE(recovered.Status == AssetMetadataLoadStatus::Recovered);
+    CHECK(recovered.Metadata->Uuid == id);
+    CHECK(recovered.Metadata->Type == type);
+}
+
 TEST_CASE("Asset metadata reports corruption without manufacturing UUIDs", "[Assets][Metadata]")
 {
     TemporaryMetadataDirectory temporary;
@@ -311,7 +337,8 @@ TEST_CASE("Asset search candidates list each imported asset once with its own ty
     const UUID bodyMaterial2 = UuidGenerator::Generate();
     const UUID skinTexture = UuidGenerator::Generate();
     pirate->Metadata = MakeMetadata(pirateMesh, AssetType::Mesh);
-    pirate->DependentMetadata = { MakeMetadata(skinTexture, AssetType::Texture, "2:Skin#0"), MakeMetadata(bodyMaterial, AssetType::Material, "4:Body#0"),
+    pirate->DependentMetadata = { MakeMetadata(skinTexture, AssetType::Texture, "2:Skin#0"),
+                                  MakeMetadata(bodyMaterial, AssetType::Material, "4:Body#0"),
                                   MakeMetadata(bodyMaterial2, AssetType::Material, "4:Body#1") };
     models->Children.push_back(pirate);
 
@@ -367,16 +394,14 @@ TEST_CASE("Asset search candidates list each imported asset once with its own ty
         CHECK(available[0].Uuid == pirateMesh);
     }
 
-    SECTION("a missing root yields nothing")
-    {
-        CHECK(UI::CollectAssetSearchCandidates(nullptr, AssetType::Mesh).empty());
-    }
+    SECTION("a missing root yields nothing") { CHECK(UI::CollectAssetSearchCandidates(nullptr, AssetType::Mesh).empty()); }
 }
 
 TEST_CASE("Sub-asset display names strip importer key noise", "[Editor][Assets][Search]")
 {
     CHECK(UI::FormatSubassetName("pirate.obj", *MakeMetadata(UuidGenerator::Generate(), AssetType::Material, "4:Body#0"), 0) == "pirate.obj / Body");
-    CHECK(UI::FormatSubassetName("pirate.obj", *MakeMetadata(UuidGenerator::Generate(), AssetType::Material, "4:Body#2"), 0) == "pirate.obj / Body#2");
+    CHECK(UI::FormatSubassetName("pirate.obj", *MakeMetadata(UuidGenerator::Generate(), AssetType::Material, "4:Body#2"), 0) ==
+          "pirate.obj / Body#2");
     CHECK(UI::FormatSubassetName("pirate.obj", *MakeMetadata(UuidGenerator::Generate(), AssetType::Material, "4:Hull/Deck#0"), 0) ==
           "pirate.obj / Hull/Deck");
     // Version-one metadata has no key; fall back to the dependent's position.

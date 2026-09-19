@@ -1,8 +1,14 @@
 #include "Sprite2DRenderTests.h"
 
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Build/ContentPack.h"
+#include "Crowny/Build/GamePackage.h"
 
 #include "Crowny/Common/Constants.h"
+#include "Crowny/Common/FileSystem.h"
+#include "Crowny/Common/Version.h"
+#include "Crowny/Memory/AllocationCounter.h"
+#include "Crowny/RenderAPI/GenericGpuBuffer.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderCapabilities.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
@@ -11,11 +17,231 @@
 #include "Crowny/Renderer/GpuWorld2D.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
 #include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Scene/Scene.h"
 #include "Crowny/Scene/SceneRenderer.h"
+#include "Crowny/Serialization/SpriteAtlasSerializer.h"
 #include "Crowny/Utils/PixelUtils.h"
 
 namespace Crowny::RenderTests
 {
+    static AssetHandle<Sprite> LoadPackagedSprite(const Ref<Texture>& texture, SpriteData data, String& error)
+    {
+        struct TemporaryPackage
+        {
+            Path Root = fs::temp_directory_path() / ("crowny-sprite-render-" + UuidGenerator::Generate().ToString());
+            ~TemporaryPackage()
+            {
+                std::error_code ignored;
+                fs::remove_all(Root, ignored);
+            }
+        } temporary;
+        fs::create_directories(temporary.Root);
+        const UUID sceneId = UuidGenerator::Generate(), spriteId = UuidGenerator::Generate();
+        // A fresh texture identity makes this exercise dependency loading from the pack.
+        data.TextureId = UuidGenerator::Generate();
+        const auto sprite = CreateRef<Sprite>();
+        auto& assets = AssetManager::Get();
+        if (!sprite->SetData(data) || !assets.Save(texture, temporary.Root / "texture.asset") ||
+            !assets.Save(sprite, temporary.Root / "sprite.asset") ||
+            !FileSystem::WriteTextFileAtomic(temporary.Root / "scene.yaml", "Version: 16\nScene: Sprite\nEntities: []\n"))
+        {
+            error = "Could not cook sprite package inputs";
+            return {};
+        }
+        BuildManifest manifest;
+        manifest.ProductName = manifest.ArtifactName = "SpriteTest";
+        manifest.ProductVersion = "1.0.0";
+        manifest.EngineVersion = CROWNY_VERSION_STRING;
+        manifest.MonoVersion = "6.12";
+#ifndef CW_PLATFORM_WIN32
+        manifest.Platform = BuildPlatform::LinuxX64;
+#endif
+        manifest.StartupScene = sceneId;
+        manifest.Scenes = { { 0, sceneId, "Assets/Start.cwscene" } };
+        manifest.Paths.ContentPack = "Content/main.cwpack";
+        ContentPackDescriptor descriptor;
+        descriptor.EngineVersion = CROWNY_VERSION_STRING;
+        error = ContentPackWriter::Write(temporary.Root / manifest.Paths.ContentPack, descriptor,
+                                         { { sceneId, "Assets/Start.cwscene", temporary.Root / "scene.yaml" },
+                                           { spriteId, "Assets/Region.cwsprite", temporary.Root / "sprite.asset" },
+                                           { data.TextureId, "Assets/Texture.png", temporary.Root / "texture.asset" } });
+        if (!error.empty())
+            return {};
+        error = BuildManifestStore::Save(temporary.Root / "BuildManifest.yaml", manifest);
+        if (!error.empty())
+            return {};
+        fs::remove(temporary.Root / "sprite.asset");
+        fs::remove(temporary.Root / "texture.asset");
+        fs::remove(temporary.Root / "scene.yaml");
+        GamePackage package;
+        error = package.Open(temporary.Root);
+        if (!error.empty())
+            return {};
+        assets.RegisterAssetManifest(package.GetAssets());
+        const auto loaded = assets.LoadFromUUID<Sprite>(spriteId, false);
+        assets.UnregisterAssetManifest(package.GetAssets());
+        if (!loaded || !loaded->GetTexture() || loaded->GetData() != data)
+        {
+            error = "Packaged sprite did not resolve its cooked texture or metadata";
+            return {};
+        }
+        return loaded;
+    }
+
+    static bool CheckSpriteGeometry(const Ref<RenderTexture>& target, const Ref<Texture>& color, const Ref<Texture>& ids, String& error)
+    {
+        TextureDesc desc;
+        desc.Width = 8;
+        desc.Height = 1;
+        desc.sRGB = false;
+        const auto texture = Texture::Create(desc);
+        PixelData pixels(8, 1, 1, TextureFormat::RGBA8);
+        pixels.AllocateInternalBuffer();
+        const uint8_t texels[] = { 0,   0, 255, 255, 0,   0, 255, 255, 0, 0,   255, 255, 0, 0,   255, 255,
+                                   255, 0, 0,   255, 255, 0, 0,   255, 0, 255, 0,   255, 0, 255, 0,   255 };
+        std::memcpy(pixels.GetData(), texels, sizeof(texels));
+        texture->WriteData(pixels);
+        const auto scene = CreateRef<Scene>(false);
+        Entity entity = scene->CreateEntity("Sprite region");
+        entity.GetTransform().SetPosition({ -0.25f, 0, 0.5f });
+        auto& sprite = entity.AddComponent<SpriteRendererComponent>();
+        sprite.Texture = static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(texture));
+        sprite.Pivot = { 0.25f, 0.5f };
+        sprite.UvRect = { 0.5f, 0, 1, 1 };
+        SceneRenderer extraction(scene, nullptr);
+        Camera camera;
+        RenderSnapshot snapshot;
+        GpuWorld2D baseline(65536, 65536, false), compute;
+        Renderer2D::Init();
+        struct Cleanup
+        {
+            ~Cleanup() { Renderer2D::Shutdown(); }
+        } cleanup;
+        auto& api = RenderAPI::Get();
+        SpriteData data;
+        data.TextureId = sprite.Texture.GetUUID();
+        data.UvRect = sprite.UvRect;
+        data.Pivot = sprite.Pivot;
+        data.OriginalSize = { 100, 100 };
+        const auto authored = LoadPackagedSprite(texture, data, error);
+        if (!authored)
+            return false;
+        const auto atlas = CreateRef<SpriteAtlas>();
+        SpriteAtlasInput atlasInput;
+        atlasInput.SpriteId = authored.GetUUID();
+        atlasInput.Metadata = data;
+        atlasInput.SRGB = false;
+        atlasInput.Pixels = PixelData::Create(4, 1, TextureFormat::RGBA8);
+        std::memcpy(atlasInput.Pixels->GetData(), pixels.GetData() + 16, 16);
+        SpriteAtlasSettings atlasSettings;
+        atlasSettings.PageSize = 32;
+        atlasSettings.MipLevels = 3;
+        if (!atlas->Build(atlasSettings, { atlasInput }, &error))
+            return false;
+        SpriteAtlasData atlasSource;
+        atlasSource.PageSize = atlasSettings.PageSize;
+        atlasSource.MipLevels = atlasSettings.MipLevels;
+        atlasSource.Sprites = { authored.GetUUID() };
+        const auto sourceAtlas = CreateRef<SpriteAtlas>();
+        if (!sourceAtlas->SetData(atlasSource))
+        {
+            error = "Atlas source crop failed: " + sourceAtlas->GetLastError();
+            return false;
+        }
+        const auto importedAtlas = CreateRef<SpriteAtlas>();
+        if (!SpriteAtlasSerializer(importedAtlas).DeserializeFromString(SpriteAtlasSerializer(sourceAtlas).SerializeToString()))
+        {
+            error = "Atlas source serialization failed: " + importedAtlas->GetLastError();
+            return false;
+        }
+        const Path atlasPath = fs::temp_directory_path() / ("crowny-atlas-" + UuidGenerator::Generate().ToString() + ".asset");
+        if (!AssetManager::Get().Save(importedAtlas, atlasPath))
+        {
+            error = "Could not cook the sprite atlas";
+            return false;
+        }
+        const auto cookedAtlas = AssetManager::Get().Load<SpriteAtlas>(atlasPath, false);
+        fs::remove(atlasPath);
+        if (!cookedAtlas || cookedAtlas->GetEntries().size() != 1 || cookedAtlas->GetPages().size() != 1)
+        {
+            error = "Could not load the cooked sprite atlas";
+            return false;
+        }
+        for (uint32_t frame = 0; frame < 9; ++frame)
+        {
+            if (frame == 5)
+            {
+                sprite.Sprite = authored;
+                // Asset geometry wins over deliberately different component overrides.
+                sprite.Pivot = glm::vec2(0);
+                sprite.UvRect = { 0, 0, 0.5f, 1 };
+            }
+            if (frame == 6)
+                sprite.Sprite = static_asset_cast<Sprite>(AssetManager::Get().GetAssetHandle(UuidGenerator::Generate()));
+            if (frame == 7)
+            {
+                sprite.Sprite = authored;
+                sprite.Atlas = cookedAtlas;
+            }
+            if (frame == 8)
+                sprite.Sprite = static_asset_cast<Sprite>(AssetManager::Get().GetAssetHandle(UuidGenerator::Generate()));
+            sprite.FlipX = frame == 1;
+            sprite.Visible = frame != 2;
+            sprite.Size.x = frame == 3 ? 0.0f : 1.0f;
+            snapshot.FrameNumber = frame + 1;
+            extraction.ExtractSnapshot(snapshot, camera, glm::mat4(1), false);
+            snapshot.ProjectionMatrix = snapshot.ViewMatrix = glm::mat4(1);
+            snapshot.Target = target;
+            const std::span<const RenderChange2D> changes(snapshot.RenderWorld2DChanges.begin(), snapshot.RenderWorld2DChanges.Size());
+            baseline.Apply(changes);
+            compute.Apply(changes);
+            for (uint32_t path = 0; path < 3; ++path)
+            {
+                api.SetRenderTarget(target);
+                api.SetViewport(0, 0, 1, 1);
+                api.ClearRenderTarget(FBT_COLOR, glm::vec4(0, 0, 0, 1), 1, 0, 0x01);
+                api.ClearRenderTarget(FBT_COLOR, glm::vec4(0), 1, 0, 0x02);
+                if (path < 2)
+                {
+                    if (!(path == 0 ? baseline : compute).Render(snapshot))
+                    {
+                        error = "Sprite geometry could not render";
+                        return false;
+                    }
+                }
+                else
+                {
+                    RenderableSprite resolved;
+                    if (!baseline.GetSprite(snapshot.SpriteHandles[0], resolved))
+                        return false;
+                    Renderer2D::Begin(glm::mat4(1), glm::mat4(1));
+                    if (resolved.Visible)
+                        Renderer2D::FillRect(resolved.WorldMatrix, resolved.Texture, resolved.Color, resolved.EntityId, resolved.UvRect);
+                    Renderer2D::End();
+                }
+                api.SubmitCommandBuffer(nullptr);
+                for (uint32_t sample = 0; sample < 3; ++sample)
+                {
+                    const uint32_t x = frame == 1 ? 8 + sample * 16 : 24 + sample * 16;
+                    const bool drawn = frame != 2 && frame != 3 && frame != 6 && frame != 8 && sample < 2;
+                    const bool red = (sample == 0) != (frame == 1);
+                    Array<uint8_t, 4> actual{};
+                    int32_t picked = -1;
+                    const int32_t expectedId = drawn ? int32_t(entt::to_integral(entity.GetHandle())) + 1 : 0;
+                    if (!color->ReadPixel(x, 32, actual.data(), actual.size()) || !ids->ReadPixel(x, 32, &picked, sizeof(picked)) ||
+                        std::abs(int(actual[0]) - (drawn && red ? 255 : 0)) > 2 || std::abs(int(actual[1]) - (drawn && !red ? 255 : 0)) > 2 ||
+                        actual[2] || picked != expectedId)
+                    {
+                        error = "Sprite region, pivot, flip or hidden picking mismatch on path " + std::to_string(path) + ", frame " +
+                                std::to_string(frame) + ", sample " + std::to_string(sample);
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     bool RenderIntegerClearDraw(Image& image, String& error)
     {
         Renderer2D::Init();
@@ -293,6 +519,7 @@ namespace Crowny::RenderTests
             RenderSnapshot snapshot;
             snapshot.ProjectionMatrix = projection;
             snapshot.ViewMatrix = glm::mat4(1);
+            snapshot.Target = target;
             snapshot.Texts.Acquire() = text;
             auto& order = snapshot.Ordered2D.Acquire();
             order = {};
@@ -530,8 +757,94 @@ namespace Crowny::RenderTests
             return false;
         }
 
+        if (RenderAPI::GetAPI() == RenderAPI::API::Vulkan)
+        {
+            const auto versioned =
+              GenericGpuBuffer::Create({ 1, sizeof(glm::uvec4), GpuBufferType::Structured, BF_UNKNOWN, BufferUsage::BU_DYNAMIC_DRAW });
+            Ref<GpuBufferReadback> heldReadback;
+            for (uint32_t frame = 0; frame < 8; ++frame)
+            {
+                const glm::uvec4 first(frame, 11, 22, 33), second(frame + 100, 44, 55, 66);
+                versioned->WriteData(0, sizeof(first), &first, BWT_DISCARD);
+                const auto beforeReadback = Memory::GetThreadAllocationSnapshot();
+                const auto firstRead = versioned->QueueReadback(0, sizeof(first));
+                const auto readbackAllocations = Memory::GetThreadAllocationDelta(beforeReadback, Memory::GetThreadAllocationSnapshot());
+                if (frame == 0)
+                    heldReadback = firstRead;
+                const auto before = Memory::GetThreadAllocationSnapshot();
+                // The earlier copy is recorded but not submitted. Reusing its
+                // allocation would corrupt that immutable readback.
+                versioned->WriteData(0, sizeof(second), &second, BWT_DISCARD);
+                const auto allocations = Memory::GetThreadAllocationDelta(before, Memory::GetThreadAllocationSnapshot());
+                const auto beforeSecondReadback = Memory::GetThreadAllocationSnapshot();
+                const auto secondRead = versioned->QueueReadback(0, sizeof(second));
+                const auto secondReadbackAllocations = Memory::GetThreadAllocationDelta(beforeSecondReadback, Memory::GetThreadAllocationSnapshot());
+                glm::uvec4 premature;
+                if (!firstRead || !secondRead || firstRead->TryRead(&premature, sizeof(premature)) ||
+                    secondRead->TryRead(&premature, sizeof(premature)))
+                {
+                    error = "A queued readback became ready before its copy was submitted";
+                    return false;
+                }
+                RenderAPI::Get().SetRenderTarget(target);
+                RenderAPI::Get().ClearRenderTarget(FBT_COLOR, glm::vec4(0));
+                RenderAPI::Get().SubmitCommandBuffer(nullptr);
+                uint32_t completion = 0;
+                glm::uvec4 actualFirst, actualSecond;
+                if (!color->ReadPixel(0, 0, &completion, sizeof(completion)) || !firstRead || !secondRead ||
+                    !firstRead->TryRead(&actualFirst, sizeof(actualFirst)) || !secondRead->TryRead(&actualSecond, sizeof(actualSecond)) ||
+                    actualFirst != first || actualSecond != second)
+                {
+                    error = "Dynamic buffer versions corrupted recorded data";
+                    return false;
+                }
+                if (frame >= 4 &&
+                    (allocations.AllocationCount != 0 || readbackAllocations.AllocationCount != 0 || secondReadbackAllocations.AllocationCount != 0))
+                {
+                    error = "Dynamic buffers allocated after warm-up: write=" + std::to_string(allocations.AllocationCount) +
+                            ", readbacks=" + std::to_string(readbackAllocations.AllocationCount + secondReadbackAllocations.AllocationCount);
+                    return false;
+                }
+            }
+            glm::uvec4 heldValue;
+            if (!heldReadback || !heldReadback->TryRead(&heldValue, sizeof(heldValue)) || heldValue != glm::uvec4(0, 11, 22, 33))
+            {
+                error = "Reusing a readback overwrote a result still owned by its caller";
+                return false;
+            }
+            // Exceed the bounded cache and vary lengths. Outstanding results
+            // must survive both cache replacement and uncached overflow copies.
+            std::array<Ref<GpuBufferReadback>, 6> outstanding;
+            for (uint32_t index = 0; index < outstanding.size(); ++index)
+            {
+                const glm::uvec4 value(index + 200, 66, 77, 88);
+                versioned->WriteData(0, sizeof(value), &value, BWT_DISCARD);
+                outstanding[index] = versioned->QueueReadback(0, index % 2 ? sizeof(value) : sizeof(glm::uvec2));
+            }
+            RenderAPI::Get().SetRenderTarget(target);
+            RenderAPI::Get().ClearRenderTarget(FBT_COLOR, glm::vec4(0));
+            RenderAPI::Get().SubmitCommandBuffer(nullptr);
+            uint32_t completion = 0;
+            if (!color->ReadPixel(0, 0, &completion, sizeof(completion)))
+            {
+                error = "Could not complete readback cache pressure test";
+                return false;
+            }
+            for (uint32_t index = 0; index < outstanding.size(); ++index)
+            {
+                const glm::uvec4 expected(index + 200, 66, 77, 88);
+                glm::uvec4 actual(0);
+                const uint32_t length = index % 2 ? sizeof(expected) : sizeof(glm::uvec2);
+                if (!outstanding[index] || !outstanding[index]->TryRead(&actual, length) || std::memcmp(&actual, &expected, length) != 0)
+                {
+                    error = "Readback cache pressure lost or overwrote an outstanding result";
+                    return false;
+                }
+            }
+        }
+
         RenderWorld2D world;
-        GpuWorld2D gpu;
+        GpuWorld2D gpu(65536, 65536, false); // Explicit CPU baseline, including on capable Vulkan devices.
         Vector<RenderChange2D> changes;
         RenderSnapshot snapshot;
         snapshot.ProjectionMatrix = glm::mat4(1);
@@ -629,7 +942,7 @@ namespace Crowny::RenderTests
         api.SubmitCommandBuffer(nullptr);
         // Different storage/order page sizes force draws to cross order pages
         // within one storage page, including partially filled final pages.
-        GpuWorld2D paged(4, 3);
+        GpuWorld2D paged(4, 3, false);
         paged.Apply(changes);
         api.SetRenderTarget(target);
         api.ClearRenderTarget(FBT_COLOR, glm::vec4(0, 0, 0, 1));
@@ -772,6 +1085,132 @@ namespace Crowny::RenderTests
                 error = "Order-page boundaries changed transparent sprite composition";
                 return false;
             }
-        return true;
+        // Compare GPU stable compaction with forced CPU culling. Partial workgroups,
+        // storage/order boundaries, negative scale, texture tables and camera changes
+        // must produce identical color and picking, including an entirely empty view.
+        RenderWorld2D compactionWorld;
+        RenderSnapshot compactionSnapshot;
+        compactionSnapshot.ProjectionMatrix = compactionSnapshot.ViewMatrix = glm::mat4(1);
+        compactionSnapshot.Target = target;
+        Vector<RenderInstance2DDesc> entries;
+        for (uint32_t i = 0; i < 1031; ++i)
+        {
+            RenderInstance2DDesc entry;
+            entry.Transform[0].x = i % 2 ? -0.8f : 0.8f;
+            entry.Transform[1] = { 0.15f, 0.8f, 0, 0 };
+            entry.Transform[3] = { i % 3 ? float(i % 7) * 0.03f : 10.0f, 0, 0.5f, 1 };
+            entry.Color = { float(i % 5) * 0.2f, 0.6f, 0.9f, 0.2f };
+            entry.ObjectID = { i + 1 };
+            entry.TextureResource = snapshot.Sprites[(i / 53) % 10].Texture;
+            entries.push_back(entry);
+            compactionSnapshot.SpriteHandles.Acquire() = compactionWorld.Create(entry);
+            auto& order = compactionSnapshot.Ordered2D.Acquire();
+            order = {};
+            order.Index = i;
+        }
+        compactionWorld.DrainChanges(changes);
+        GpuWorld2D reference(512, 521, false), compute(512, 521);
+        reference.Apply(changes);
+        compute.Apply(changes);
+        PixelData referenceColor(size, size, 1, TextureFormat::RGBA8), actualColor(size, size, 1, TextureFormat::RGBA8);
+        PixelData referenceIds(size, size, 1, TextureFormat::R32I), actualIds(size, size, 1, TextureFormat::R32I);
+        referenceColor.AllocateInternalBuffer();
+        actualColor.AllocateInternalBuffer();
+        referenceIds.AllocateInternalBuffer();
+        actualIds.AllocateInternalBuffer();
+        uint32_t previousVisible = 0;
+        for (uint32_t frame = 0; frame < 15; ++frame)
+        {
+            compactionSnapshot.FrameNumber = frame + 1;
+            compactionWorld.BeginFrame(compactionSnapshot.FrameNumber);
+            compactionSnapshot.HistoryNamespace = frame == 3 ? 1 : 0;
+            compactionSnapshot.ViewMatrix[3].x = frame == 1 ? 100.0f : frame == 3 ? -0.2f : 0.0f;
+            // Movement and paint retain the candidate list; resource/visibility
+            // edits, order edits, handle remapping and replacement invalidate it.
+            if (frame >= 5 && frame <= 9)
+            {
+                auto& entry = entries.back();
+                if (frame == 5)
+                    entry.Transform[3].x = 10.0f;
+                else if (frame == 6)
+                {
+                    entry.Transform[3].x = 0.0f;
+                    entry.Color = { 1, 0.3f, 0.8f, 1 };
+                }
+                else if (frame == 7)
+                    entry.TextureResource = snapshot.Sprites[0].Texture;
+                else
+                    entry.Visible = frame == 9;
+                compactionWorld.Update(compactionSnapshot.SpriteHandles[1030], entry);
+            }
+            else if (frame == 10)
+                std::reverse(compactionSnapshot.Ordered2D.begin(), compactionSnapshot.Ordered2D.end());
+            else if (frame == 11)
+                std::swap(compactionSnapshot.SpriteHandles[200], compactionSnapshot.SpriteHandles[900]);
+            else if (frame == 12)
+            {
+                const auto old = compactionSnapshot.SpriteHandles[0];
+                compactionWorld.Destroy(old);
+                compactionWorld.DrainChanges(changes);
+                reference.Apply(changes);
+                compute.Apply(changes);
+                entries[0].Transform[3].x = 0;
+                compactionSnapshot.SpriteHandles[0] = compactionWorld.Create(entries[0]);
+                if (compactionSnapshot.SpriteHandles[0] == old || compactionSnapshot.SpriteHandles[0].GetIndex() != old.GetIndex())
+                {
+                    error = "Sprite cache replacement did not exercise a recycled slot";
+                    return false;
+                }
+            }
+            else if (frame == 13)
+            {
+                reference.ReleaseView(0);
+                compute.ReleaseView(0);
+            }
+            compactionWorld.DrainChanges(changes);
+            reference.Apply(changes);
+            compute.Apply(changes);
+            const auto render = [&](GpuWorld2D& renderer, PixelData& pixels, PixelData& picking) {
+                api.SetRenderTarget(target);
+                api.SetViewport(0, 0, 1, 1);
+                api.ClearRenderTarget(FBT_COLOR, glm::vec4(0, 0, 0, 1), 1, 0, 0x01);
+                api.ClearRenderTarget(FBT_COLOR, glm::vec4(0), 1, 0, 0x02);
+                if (!renderer.Render(compactionSnapshot))
+                    return false;
+                api.SubmitCommandBuffer(nullptr);
+                color->ReadData(pixels);
+                ids->ReadData(picking);
+                return true;
+            };
+            if (!render(reference, referenceColor, referenceIds) || !render(compute, actualColor, actualIds))
+            {
+                error = "Stable sprite compaction could not render its CPU/GPU comparison";
+                return false;
+            }
+            const auto& stats = compute.GetStatistics();
+            const bool capable = RenderAPI::GetAPI() == RenderAPI::API::Vulkan && api.GetCapabilities().HasCapability(CW_COMPUTE_SHADER) &&
+                                 api.GetCapabilities().HasCapability(CW_LOAD_STORE) && api.GetCapabilities().HasCapability(CW_MULTI_DRAW_INDIRECT);
+            const bool cacheHit = capable && (frame == 1 || frame == 2 || frame == 4 || frame == 5 || frame == 6 || frame == 14);
+            if (stats.GpuCulling != capable ||
+                (capable && (frame == 1 || frame == 2) &&
+                 (!stats.VisibilitySampleValid || stats.Visible != previousVisible || stats.VisibilityFrameNumber != frame)) ||
+                (frame > 0 && frame < 5 && stats.InstanceUploadBytes) || (cacheHit && stats.OrderUploadBytes) ||
+                stats.DrawListCacheHits != uint32_t(cacheHit))
+            {
+                error = "GPU sprite visibility diagnostics or retained candidate order is incorrect";
+                return false;
+            }
+            previousVisible = reference.GetStatistics().Visible;
+            for (uint32_t y = 0; y < size; ++y)
+                for (uint32_t x = 0; x < size * 4; ++x)
+                    if (std::abs(int(referenceColor.GetData()[y * referenceColor.GetRowPitch() + x]) -
+                                 int(actualColor.GetData()[y * actualColor.GetRowPitch() + x])) > 1 ||
+                        referenceIds.GetData()[y * referenceIds.GetRowPitch() + x] != actualIds.GetData()[y * actualIds.GetRowPitch() + x])
+                    {
+                        error = "Stable GPU sprite compaction differs from CPU color/picking on frame " + std::to_string(frame);
+                        return false;
+                    }
+        }
+        return CheckSpriteGeometry(target, color, ids, error);
     }
 } // namespace Crowny::RenderTests

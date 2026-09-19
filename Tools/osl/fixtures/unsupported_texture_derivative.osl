@@ -1,0 +1,4 @@
+shader unsupported_texture_derivative(string image = "", output color Cout = 0)
+{
+    Cout = Dx(texture(image, u, v));
+}

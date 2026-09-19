@@ -1,0 +1,40 @@
+diff --git a/src/liboslexec/backendcpp.cpp b/src/liboslexec/backendcpp.cpp
+index 8ac4bf3..6670d58 100644
+--- a/src/liboslexec/backendcpp.cpp
++++ b/src/liboslexec/backendcpp.cpp
+@@ -50,6 +50,10 @@ BackendCpp::compile_to_dso(const std::string& cpp_path,
+                                 shadingsys().cpp_compiler(),
+                                 shadingsys().cpp_compiler_flags(), dso_path,
+                                 cpp_path);
++#ifdef _WIN32
++    // _popen passes this through cmd.exe, which strips an outer quote pair.
++    cmd = "\"" + cmd + "\"";
++#endif
+     // Remove any stale DSO so its existence after the command is a reliable
+     // success indicator (compilers don't write output on failure).
+     OIIO::Filesystem::remove(dso_path);
+@@ -155,7 +159,11 @@ BackendCpp::lang_function_qualifier()
+ std::string
+ BackendCpp::lang_linkage_prefix()
+ {
++#ifdef _WIN32
++    return "extern \"C\" __declspec(dllexport)";
++#else
+     return "extern \"C\"";
++#endif
+ }
+ 
+ 
+diff --git a/src/liboslexec/opcolor_impl.h b/src/liboslexec/opcolor_impl.h
+index 7f6cdef..a9d7d2e 100644
+--- a/src/liboslexec/opcolor_impl.h
++++ b/src/liboslexec/opcolor_impl.h
+@@ -54,7 +54,7 @@ namespace {  // anon namespace to avoid duplicate OptiX symbols
+ #ifdef __CUDACC__
+ OSL_CONSTANT_DATA const float cie_colour_match[81*3] =
+ #else
+-OSL_CONSTANT_DATA const float cie_colour_match[81 * 3] OSL_ALIGNAS(64) =
++OSL_ALIGNAS(64) OSL_CONSTANT_DATA const float cie_colour_match[81 * 3] =
+ #endif
+ {
+     0.0014,0.0000,0.0065, 0.0022,0.0001,0.0105, 0.0042,0.0001,0.0201,

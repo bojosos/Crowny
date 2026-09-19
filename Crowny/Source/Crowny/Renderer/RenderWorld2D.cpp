@@ -36,7 +36,10 @@ namespace Crowny
         slot.Value.Data.Color = desc.Color;
         slot.Value.Data.UvRect = desc.UvRect;
         if (slot.Value.TextureResource != desc.TextureResource)
+        {
             slot.Value.TextureResource = desc.TextureResource;
+            slot.Value.TextureChanged = true;
+        }
         slot.Value.VisibilityLayers = desc.VisibilityLayers;
         slot.Value.ObjectID = desc.ObjectID;
         slot.Value.SortingLayer = desc.SortingLayer;
@@ -147,7 +150,23 @@ namespace Crowny
         {
             Slot& slot = m_Slots[index];
             if (slot.Value.Type != RenderChange2DType::Cancelled)
-                append(slot.Value);
+            {
+                // The retained world owns the texture. Snapshot resources only
+                // need another reference when establishing or changing that binding.
+                RenderChange2D& change = append();
+                change.Handle = slot.Value.Handle;
+                change.Type = slot.Value.Type;
+                change.Data = slot.Value.Data;
+                change.VisibilityLayers = slot.Value.VisibilityLayers;
+                change.ObjectID = slot.Value.ObjectID;
+                change.SortingLayer = slot.Value.SortingLayer;
+                change.OrderInLayer = slot.Value.OrderInLayer;
+                change.Visible = slot.Value.Visible;
+                change.TextureChanged =
+                  slot.Value.Type == RenderChange2DType::Create || (slot.Value.Type == RenderChange2DType::Update && slot.Value.TextureChanged);
+                change.TextureResource = change.TextureChanged ? slot.Value.TextureResource : nullptr;
+            }
+            slot.Value.TextureChanged = false;
             slot.PendingChange = false;
         }
         m_Changes.clear();
@@ -171,7 +190,7 @@ namespace Crowny
     {
         output.clear();
         output.reserve(m_Changes.size());
-        DrainTo([&](const RenderChange2D& change) { output.push_back(change); });
+        DrainTo([&]() -> RenderChange2D& { return output.emplace_back(); });
     }
 
     void RenderWorld2D::DrainChanges(FrameVector<RenderChange2D>& output)
@@ -180,6 +199,6 @@ namespace Crowny
             change.TextureResource.Reset();
         output.Reset();
         output.Reserve(m_Changes.size());
-        DrainTo([&](const RenderChange2D& change) { output.Acquire() = change; });
+        DrainTo([&]() -> RenderChange2D& { return output.Acquire(); });
     }
 } // namespace Crowny

@@ -108,6 +108,12 @@ namespace Crowny
             return ViewportDropFileKind::Prefab;
         if (normalized == "cwscene")
             return ViewportDropFileKind::Scene;
+        if (normalized == "cwsprite")
+            return ViewportDropFileKind::Sprite;
+        if (normalized == "cwspriteanim")
+            return ViewportDropFileKind::SpriteAnimation;
+        if (normalized == "cwatlas")
+            return ViewportDropFileKind::SpriteAtlas;
         return ViewportDropFileKind::Unsupported;
     }
 

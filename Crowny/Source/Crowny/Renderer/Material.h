@@ -20,7 +20,11 @@
 
 namespace Crowny
 {
-    enum class MaterialDomain : uint8_t { Surface, Decal };
+    enum class MaterialDomain : uint8_t
+    {
+        Surface,
+        Decal
+    };
     class Material;
     class MaterialPreset;
 
@@ -103,7 +107,11 @@ namespace Crowny
         static Ref<Material> CreateDecal();
         MaterialDomain GetDomain() const;
         uint32_t GetDecalResponseMask() const { return m_DecalResponseMask; }
-        void SetDecalResponseMask(uint32_t mask) { m_DecalResponseMask = mask & 255u; ++m_ParamVersion; }
+        void SetDecalResponseMask(uint32_t mask)
+        {
+            m_DecalResponseMask = mask & 255u;
+            ++m_ParamVersion;
+        }
         static Ref<Material> CreateToon(const AssetHandle<Shader>& shader);
         static Ref<Material> CreateUnlit(const AssetHandle<Shader>& shader);
 
@@ -127,6 +135,8 @@ namespace Crowny
                     assets.push_back(texture);
         }
         void OnDependentAssigned(const Ref<Asset>& dependent, const UUID& uuid) override;
+        void NotifyAssetChanged(const AssetHandle<Asset>& asset) override;
+        void NotifyAssetLoaded(const AssetHandle<Asset>& asset) override { NotifyAssetChanged(asset); }
 
         void SetShader(const AssetHandle<Shader>& shader);
         void SetVariation(const ShaderVariation& variation);

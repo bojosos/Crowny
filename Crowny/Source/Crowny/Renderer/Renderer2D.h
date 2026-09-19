@@ -52,7 +52,8 @@ namespace Crowny
          * @param texture Texture to use.
          * @param color Color to draw with.
          */
-        static void FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId);
+        static void FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId,
+                             const glm::vec4& uvRect = { 0, 0, 1, 1 });
 
         /**
          * @brief Draws a filled Rectangle.

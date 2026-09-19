@@ -1,0 +1,4 @@
+shader unsupported_texture_option(string image = "", output color Cout = 0)
+{
+    Cout = texture(image, u, v, "blur", 0.25);
+}

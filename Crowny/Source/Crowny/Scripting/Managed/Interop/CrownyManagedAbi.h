@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define CW_MANAGED_ABI_VERSION 20u
+#define CW_MANAGED_ABI_VERSION 22u
 #define CW_MANAGED_BOOTSTRAP_TYPE "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost"
 #define CW_MANAGED_BOOTSTRAP_METHOD "GetApi"
 
@@ -323,6 +323,17 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_read_mode_f
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_format_fn)(void* context, cw_managed_uuid asset, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_clip_get_is3d_fn)(void* context, cw_managed_uuid asset, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_texture_get_width_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_get_texture_fn)(void* context, cw_managed_uuid asset, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_atlas_get_page_count_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_atlas_get_entry_count_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_atlas_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_atlas_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_get_pixels_per_unit_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_get_pivot_fn)(void* context, cw_managed_uuid asset, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_get_original_size_fn)(void* context, cw_managed_uuid asset, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_get_size_fn)(void* context, cw_managed_uuid asset, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_get_uv_rect_fn)(void* context, cw_managed_uuid asset, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_get_borders_fn)(void* context, cw_managed_uuid asset, cw_managed_vec4* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_texture_get_height_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_mixer_set_active_fn)(void* context, cw_managed_uuid asset);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_audio_mixer_get_bus_volume_fn)(void* context, cw_managed_uuid asset, cw_managed_string_view name, float* result);
@@ -372,6 +383,13 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_clip_get_length_
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_clip_get_sample_rate_fn)(void* context, cw_managed_uuid asset, float* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_clip_get_is_additive_fn)(void* context, cw_managed_uuid asset, uint8_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_play_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_play_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_pause_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_stop_fn)(void* context, cw_managed_uuid entity);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_consume_completions_fn)(void* context, cw_managed_uuid entity, uint64_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animation_clip_get_duration_fn)(void* context, cw_managed_uuid asset, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animation_clip_get_frame_count_fn)(void* context, cw_managed_uuid asset, uint32_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animation_clip_get_mode_fn)(void* context, cw_managed_uuid asset, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_pause_fn)(void* context, cw_managed_uuid entity);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_stop_fn)(void* context, cw_managed_uuid entity);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_text_hit_test_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* position, uint32_t* result);
@@ -417,9 +435,27 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_set_occlusion_culli
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_primary_fn)(void* context, cw_managed_uuid* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_camera_get_projection_matrix_fn)(void* context, cw_managed_uuid entity, cw_managed_mat4* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_texture_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_sprite_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_sprite_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_use_sprite_size_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_use_sprite_size_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_use_sprite_pivot_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_use_sprite_pivot_fn)(void* context, cw_managed_uuid entity, uint8_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_texture_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_color_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_color_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_size_fn)(void* context, cw_managed_uuid entity, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_size_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_pivot_fn)(void* context, cw_managed_uuid entity, cw_managed_vec2* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_pivot_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec2* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_uv_rect_fn)(void* context, cw_managed_uuid entity, cw_managed_vec4* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_uv_rect_fn)(void* context, cw_managed_uuid entity, const cw_managed_vec4* value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_flip_x_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_flip_x_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_flip_y_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_flip_y_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_visible_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_visible_fn)(void* context, cw_managed_uuid entity, uint8_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_set_sorting_layer_fn)(void* context, cw_managed_uuid entity, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_renderer_get_order_in_layer_fn)(void* context, cw_managed_uuid entity, int32_t* result);
@@ -639,6 +675,16 @@ typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_get_fri
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_set_friction_combine_fn)(void* context, cw_managed_uuid asset, int32_t value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_get_restitution_combine_fn)(void* context, cw_managed_uuid asset, int32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_physics_material3d_set_restitution_combine_fn)(void* context, cw_managed_uuid asset, int32_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_get_clip_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_set_clip_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_get_speed_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_set_speed_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_get_play_on_awake_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_set_play_on_awake_fn)(void* context, cw_managed_uuid entity, uint8_t value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_get_time_fn)(void* context, cw_managed_uuid entity, float* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_set_time_fn)(void* context, cw_managed_uuid entity, float value);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_get_is_playing_fn)(void* context, cw_managed_uuid entity, uint8_t* result);
+typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_sprite_animator_get_frame_index_fn)(void* context, cw_managed_uuid entity, uint32_t* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_clip_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid* result);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_set_clip_fn)(void* context, cw_managed_uuid entity, cw_managed_uuid value);
 typedef cw_managed_status(CW_MANAGED_CALL* cw_managed_animation_component_get_speed_fn)(void* context, cw_managed_uuid entity, float* result);
@@ -872,6 +918,17 @@ typedef struct cw_managed_host_api
     cw_managed_audio_clip_get_format_fn audio_clip_get_format;
     cw_managed_audio_clip_get_is3d_fn audio_clip_get_is3d;
     cw_managed_texture_get_width_fn texture_get_width;
+    cw_managed_sprite_get_texture_fn sprite_get_texture;
+    cw_managed_sprite_atlas_get_page_count_fn sprite_atlas_get_page_count;
+    cw_managed_sprite_atlas_get_entry_count_fn sprite_atlas_get_entry_count;
+    cw_managed_sprite_renderer_get_atlas_fn sprite_renderer_get_atlas;
+    cw_managed_sprite_renderer_set_atlas_fn sprite_renderer_set_atlas;
+    cw_managed_sprite_get_pixels_per_unit_fn sprite_get_pixels_per_unit;
+    cw_managed_sprite_get_pivot_fn sprite_get_pivot;
+    cw_managed_sprite_get_original_size_fn sprite_get_original_size;
+    cw_managed_sprite_get_size_fn sprite_get_size;
+    cw_managed_sprite_get_uv_rect_fn sprite_get_uv_rect;
+    cw_managed_sprite_get_borders_fn sprite_get_borders;
     cw_managed_texture_get_height_fn texture_get_height;
     cw_managed_audio_mixer_set_active_fn audio_mixer_set_active;
     cw_managed_audio_mixer_get_bus_volume_fn audio_mixer_get_bus_volume;
@@ -921,6 +978,13 @@ typedef struct cw_managed_host_api
     cw_managed_animation_clip_get_sample_rate_fn animation_clip_get_sample_rate;
     cw_managed_animation_clip_get_is_additive_fn animation_clip_get_is_additive;
     cw_managed_animation_component_play_fn animation_component_play;
+    cw_managed_sprite_animator_play_fn sprite_animator_play;
+    cw_managed_sprite_animator_pause_fn sprite_animator_pause;
+    cw_managed_sprite_animator_stop_fn sprite_animator_stop;
+    cw_managed_sprite_animator_consume_completions_fn sprite_animator_consume_completions;
+    cw_managed_sprite_animation_clip_get_duration_fn sprite_animation_clip_get_duration;
+    cw_managed_sprite_animation_clip_get_frame_count_fn sprite_animation_clip_get_frame_count;
+    cw_managed_sprite_animation_clip_get_mode_fn sprite_animation_clip_get_mode;
     cw_managed_animation_component_pause_fn animation_component_pause;
     cw_managed_animation_component_stop_fn animation_component_stop;
     cw_managed_text_hit_test_fn text_hit_test;
@@ -966,9 +1030,27 @@ typedef struct cw_managed_host_api
     cw_managed_camera_get_primary_fn camera_get_primary;
     cw_managed_camera_get_projection_matrix_fn camera_get_projection_matrix;
     cw_managed_sprite_renderer_get_texture_fn sprite_renderer_get_texture;
+    cw_managed_sprite_renderer_get_sprite_fn sprite_renderer_get_sprite;
+    cw_managed_sprite_renderer_set_sprite_fn sprite_renderer_set_sprite;
+    cw_managed_sprite_renderer_get_use_sprite_size_fn sprite_renderer_get_use_sprite_size;
+    cw_managed_sprite_renderer_set_use_sprite_size_fn sprite_renderer_set_use_sprite_size;
+    cw_managed_sprite_renderer_get_use_sprite_pivot_fn sprite_renderer_get_use_sprite_pivot;
+    cw_managed_sprite_renderer_set_use_sprite_pivot_fn sprite_renderer_set_use_sprite_pivot;
     cw_managed_sprite_renderer_set_texture_fn sprite_renderer_set_texture;
     cw_managed_sprite_renderer_get_color_fn sprite_renderer_get_color;
     cw_managed_sprite_renderer_set_color_fn sprite_renderer_set_color;
+    cw_managed_sprite_renderer_get_size_fn sprite_renderer_get_size;
+    cw_managed_sprite_renderer_set_size_fn sprite_renderer_set_size;
+    cw_managed_sprite_renderer_get_pivot_fn sprite_renderer_get_pivot;
+    cw_managed_sprite_renderer_set_pivot_fn sprite_renderer_set_pivot;
+    cw_managed_sprite_renderer_get_uv_rect_fn sprite_renderer_get_uv_rect;
+    cw_managed_sprite_renderer_set_uv_rect_fn sprite_renderer_set_uv_rect;
+    cw_managed_sprite_renderer_get_flip_x_fn sprite_renderer_get_flip_x;
+    cw_managed_sprite_renderer_set_flip_x_fn sprite_renderer_set_flip_x;
+    cw_managed_sprite_renderer_get_flip_y_fn sprite_renderer_get_flip_y;
+    cw_managed_sprite_renderer_set_flip_y_fn sprite_renderer_set_flip_y;
+    cw_managed_sprite_renderer_get_visible_fn sprite_renderer_get_visible;
+    cw_managed_sprite_renderer_set_visible_fn sprite_renderer_set_visible;
     cw_managed_sprite_renderer_get_sorting_layer_fn sprite_renderer_get_sorting_layer;
     cw_managed_sprite_renderer_set_sorting_layer_fn sprite_renderer_set_sorting_layer;
     cw_managed_sprite_renderer_get_order_in_layer_fn sprite_renderer_get_order_in_layer;
@@ -1188,6 +1270,16 @@ typedef struct cw_managed_host_api
     cw_managed_physics_material3d_set_friction_combine_fn physics_material3d_set_friction_combine;
     cw_managed_physics_material3d_get_restitution_combine_fn physics_material3d_get_restitution_combine;
     cw_managed_physics_material3d_set_restitution_combine_fn physics_material3d_set_restitution_combine;
+    cw_managed_sprite_animator_get_clip_fn sprite_animator_get_clip;
+    cw_managed_sprite_animator_set_clip_fn sprite_animator_set_clip;
+    cw_managed_sprite_animator_get_speed_fn sprite_animator_get_speed;
+    cw_managed_sprite_animator_set_speed_fn sprite_animator_set_speed;
+    cw_managed_sprite_animator_get_play_on_awake_fn sprite_animator_get_play_on_awake;
+    cw_managed_sprite_animator_set_play_on_awake_fn sprite_animator_set_play_on_awake;
+    cw_managed_sprite_animator_get_time_fn sprite_animator_get_time;
+    cw_managed_sprite_animator_set_time_fn sprite_animator_set_time;
+    cw_managed_sprite_animator_get_is_playing_fn sprite_animator_get_is_playing;
+    cw_managed_sprite_animator_get_frame_index_fn sprite_animator_get_frame_index;
     cw_managed_animation_component_get_clip_fn animation_component_get_clip;
     cw_managed_animation_component_set_clip_fn animation_component_set_clip;
     cw_managed_animation_component_get_speed_fn animation_component_get_speed;
@@ -1417,6 +1509,17 @@ typedef struct cw_managed_host_api
     X(AudioClipGetFormat, audio_clip_get_format) \
     X(AudioClipGetIs3D, audio_clip_get_is3d) \
     X(TextureGetWidth, texture_get_width) \
+    X(SpriteGetTexture, sprite_get_texture) \
+    X(SpriteAtlasGetPageCount, sprite_atlas_get_page_count) \
+    X(SpriteAtlasGetEntryCount, sprite_atlas_get_entry_count) \
+    X(SpriteRendererGetAtlas, sprite_renderer_get_atlas) \
+    X(SpriteRendererSetAtlas, sprite_renderer_set_atlas) \
+    X(SpriteGetPixelsPerUnit, sprite_get_pixels_per_unit) \
+    X(SpriteGetPivot, sprite_get_pivot) \
+    X(SpriteGetOriginalSize, sprite_get_original_size) \
+    X(SpriteGetSize, sprite_get_size) \
+    X(SpriteGetUvRect, sprite_get_uv_rect) \
+    X(SpriteGetBorders, sprite_get_borders) \
     X(TextureGetHeight, texture_get_height) \
     X(AudioMixerSetActive, audio_mixer_set_active) \
     X(AudioMixerGetBusVolume, audio_mixer_get_bus_volume) \
@@ -1466,6 +1569,13 @@ typedef struct cw_managed_host_api
     X(AnimationClipGetSampleRate, animation_clip_get_sample_rate) \
     X(AnimationClipGetIsAdditive, animation_clip_get_is_additive) \
     X(AnimationComponentPlay, animation_component_play) \
+    X(SpriteAnimatorPlay, sprite_animator_play) \
+    X(SpriteAnimatorPause, sprite_animator_pause) \
+    X(SpriteAnimatorStop, sprite_animator_stop) \
+    X(SpriteAnimatorConsumeCompletions, sprite_animator_consume_completions) \
+    X(SpriteAnimationClipGetDuration, sprite_animation_clip_get_duration) \
+    X(SpriteAnimationClipGetFrameCount, sprite_animation_clip_get_frame_count) \
+    X(SpriteAnimationClipGetMode, sprite_animation_clip_get_mode) \
     X(AnimationComponentPause, animation_component_pause) \
     X(AnimationComponentStop, animation_component_stop) \
     X(TextHitTest, text_hit_test) \
@@ -1511,9 +1621,27 @@ typedef struct cw_managed_host_api
     X(CameraGetPrimary, camera_get_primary) \
     X(CameraGetProjectionMatrix, camera_get_projection_matrix) \
     X(SpriteRendererGetTexture, sprite_renderer_get_texture) \
+    X(SpriteRendererGetSprite, sprite_renderer_get_sprite) \
+    X(SpriteRendererSetSprite, sprite_renderer_set_sprite) \
+    X(SpriteRendererGetUseSpriteSize, sprite_renderer_get_use_sprite_size) \
+    X(SpriteRendererSetUseSpriteSize, sprite_renderer_set_use_sprite_size) \
+    X(SpriteRendererGetUseSpritePivot, sprite_renderer_get_use_sprite_pivot) \
+    X(SpriteRendererSetUseSpritePivot, sprite_renderer_set_use_sprite_pivot) \
     X(SpriteRendererSetTexture, sprite_renderer_set_texture) \
     X(SpriteRendererGetColor, sprite_renderer_get_color) \
     X(SpriteRendererSetColor, sprite_renderer_set_color) \
+    X(SpriteRendererGetSize, sprite_renderer_get_size) \
+    X(SpriteRendererSetSize, sprite_renderer_set_size) \
+    X(SpriteRendererGetPivot, sprite_renderer_get_pivot) \
+    X(SpriteRendererSetPivot, sprite_renderer_set_pivot) \
+    X(SpriteRendererGetUvRect, sprite_renderer_get_uv_rect) \
+    X(SpriteRendererSetUvRect, sprite_renderer_set_uv_rect) \
+    X(SpriteRendererGetFlipX, sprite_renderer_get_flip_x) \
+    X(SpriteRendererSetFlipX, sprite_renderer_set_flip_x) \
+    X(SpriteRendererGetFlipY, sprite_renderer_get_flip_y) \
+    X(SpriteRendererSetFlipY, sprite_renderer_set_flip_y) \
+    X(SpriteRendererGetVisible, sprite_renderer_get_visible) \
+    X(SpriteRendererSetVisible, sprite_renderer_set_visible) \
     X(SpriteRendererGetSortingLayer, sprite_renderer_get_sorting_layer) \
     X(SpriteRendererSetSortingLayer, sprite_renderer_set_sorting_layer) \
     X(SpriteRendererGetOrderInLayer, sprite_renderer_get_order_in_layer) \
@@ -1733,6 +1861,16 @@ typedef struct cw_managed_host_api
     X(PhysicsMaterial3DSetFrictionCombine, physics_material3d_set_friction_combine) \
     X(PhysicsMaterial3DGetRestitutionCombine, physics_material3d_get_restitution_combine) \
     X(PhysicsMaterial3DSetRestitutionCombine, physics_material3d_set_restitution_combine) \
+    X(SpriteAnimatorGetClip, sprite_animator_get_clip) \
+    X(SpriteAnimatorSetClip, sprite_animator_set_clip) \
+    X(SpriteAnimatorGetSpeed, sprite_animator_get_speed) \
+    X(SpriteAnimatorSetSpeed, sprite_animator_set_speed) \
+    X(SpriteAnimatorGetPlayOnAwake, sprite_animator_get_play_on_awake) \
+    X(SpriteAnimatorSetPlayOnAwake, sprite_animator_set_play_on_awake) \
+    X(SpriteAnimatorGetTime, sprite_animator_get_time) \
+    X(SpriteAnimatorSetTime, sprite_animator_set_time) \
+    X(SpriteAnimatorGetIsPlaying, sprite_animator_get_is_playing) \
+    X(SpriteAnimatorGetFrameIndex, sprite_animator_get_frame_index) \
     X(AnimationComponentGetClip, animation_component_get_clip) \
     X(AnimationComponentSetClip, animation_component_set_clip) \
     X(AnimationComponentGetSpeed, animation_component_get_speed) \

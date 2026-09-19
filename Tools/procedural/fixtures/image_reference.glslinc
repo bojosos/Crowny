@@ -1,0 +1,15 @@
+layout(set = 0, binding = 14) uniform ImageTestInputs { float imageScale; float imageBlend; };
+layout(set = 0, binding = 15) uniform sampler2D imageMap;
+layout(set = 0, binding = 16) uniform sampler2D detailMap;
+
+vec4 cwEvaluateProceduralTexture(CwTextureContext context)
+{
+    vec2 uv = context.uv * imageScale;
+    if (context.uv.x > 0.5)
+        uv.x += 0.25;
+    vec4 base = textureGrad(imageMap, uv, context.uvDx * imageScale, context.uvDy * imageScale);
+    vec3 overlay = textureGrad(detailMap, context.uv * vec2(2, 3) + vec2(0.13, -0.17),
+                               context.uvDx * vec2(2, 3), context.uvDy * vec2(2, 3)).rgb;
+    float channel = textureGrad(detailMap, context.uv, context.uvDx, context.uvDy).r;
+    return vec4(mix(base.rgb, overlay, imageBlend) * base.a * (0.5 + 0.5 * channel), 1);
+}

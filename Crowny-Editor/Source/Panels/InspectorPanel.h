@@ -5,6 +5,10 @@
 #include "ImGuiPanel.h"
 #include "MaterialInspectorSchemaCache.h"
 
+#include "Crowny/Renderer/Sprite.h"
+#include "Crowny/Renderer/SpriteAnimationClip.h"
+#include "Crowny/Renderer/SpriteAtlas.h"
+#include "Editor/AssetDataInspectorTransaction.h"
 #include "Editor/AssetSaveTracker.h"
 #include "Editor/MaterialInspectorTransaction.h"
 #include "Editor/PhysicsMaterialInspectorTransaction.h"
@@ -26,6 +30,9 @@ namespace Crowny
         GameObject,
         Material,
         PhysicsMaterial,
+        Sprite,
+        SpriteAnimation,
+        SpriteAtlas,
         AudioClipImport,
         FontImport,
         ScriptImport,
@@ -67,6 +74,9 @@ namespace Crowny
         void RefreshMaterialPresetOptions();
         void SaveMaterialAsPreset(const Material& material);
         void RenderPhysicsMaterialInspector();
+        void RenderSpriteInspector();
+        void RenderSpriteAnimationInspector();
+        void RenderSpriteAtlasInspector();
         void RenderAudioClipImportInspector();
         void RenderFontImportInspector();
         void RenderScriptImportInspector();
@@ -141,6 +151,12 @@ namespace Crowny
         Ref<AssetSaveTracker> m_AssetSaveTracker = CreateRef<AssetSaveTracker>();
         Ref<MaterialInspectorTransaction> m_MaterialUndo = CreateRef<MaterialInspectorTransaction>();
         Ref<PhysicsMaterialInspectorTransaction> m_PhysicsMaterialUndo = CreateRef<PhysicsMaterialInspectorTransaction>();
+        Ref<AssetDataInspectorTransaction<Sprite, SpriteData>> m_SpriteUndo = CreateRef<AssetDataInspectorTransaction<Sprite, SpriteData>>();
+        Ref<AssetDataInspectorTransaction<SpriteAnimationClip, SpriteAnimationClipData>> m_SpriteAnimationUndo =
+          CreateRef<AssetDataInspectorTransaction<SpriteAnimationClip, SpriteAnimationClipData>>();
+        SpriteAnimationPlayback m_SpriteAnimationPreview;
+        Ref<AssetDataInspectorTransaction<SpriteAtlas, SpriteAtlasData>> m_SpriteAtlasUndo =
+          CreateRef<AssetDataInspectorTransaction<SpriteAtlas, SpriteAtlasData>>();
 
         std::function<void(AssetHandle<NodeGraphAsset>)> m_OpenNodeEditorCallback;
     };

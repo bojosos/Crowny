@@ -87,6 +87,10 @@ namespace Crowny
 
     private:
         VulkanBuffer* CreateBuffer(VulkanDevice& device, uint32_t size, bool staging, bool readable);
+        VulkanBuffer* AcquireWriteBuffer();
+        void RetireWriteBuffer(VulkanBuffer* buffer);
+        Vector<VulkanBuffer*> m_WriteVersions;
+        Vector<Ref<GpuBufferReadback>> m_Readbacks;
 
         VkBufferCreateInfo m_BufferCreateInfo{};
         VkBufferUsageFlags m_UsageFlags;

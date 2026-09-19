@@ -1,0 +1,12 @@
+shader editable(
+    float frequency = 4 [[ string label = "Frequency", float min = 0.1, float max = 32 ]],
+    int mode = -3,
+    color tint = color(0.15, 0.4, 0.7),
+    point offset = point(0.1, -0.2, 0.3),
+    vector direction = vector(0.2, 0.3, 0.4),
+    normal axis = normal(0.1, 0.2, 0.3),
+    output color Cout = 0)
+{
+    float wave = 0.5 + 0.5 * sin((u + offset[0]) * frequency + v * direction[1]);
+    Cout = tint * wave + color(axis[2] * 0.1 + float(mode) * 0.02);
+}

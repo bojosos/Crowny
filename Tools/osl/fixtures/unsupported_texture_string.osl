@@ -1,0 +1,4 @@
+shader unsupported_texture_string(string image = "", output color Cout = 0)
+{
+    Cout = image == "" ? 0 : texture(image, u, v);
+}

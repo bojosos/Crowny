@@ -27,7 +27,14 @@ namespace Crowny
         uint32_t TransferPasses = 0;
         uint32_t SubmittedSprites2D = 0;
         uint32_t VisibleSprites2D = 0;
+        // GPU visibility is a completed diagnostic sample, never a draw dependency.
+        bool SpriteVisibilitySampleValid = true;
+        uint64_t SpriteVisibilityFrameNumber = 0;
         uint32_t SpriteBatches2D = 0;
+        uint32_t SpriteDrawListCacheHits2D = 0;
+        double SpriteUploadCpuTimeMs = 0.0;
+        double SpritePrepareCpuTimeMs = 0.0;
+        double SpriteSubmissionCpuTimeMs = 0.0;
         uint64_t UploadedBytes2D = 0;
         DecalRenderStats Decals;
         uint32_t Barriers = 0;

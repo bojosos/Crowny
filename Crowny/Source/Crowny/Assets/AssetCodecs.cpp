@@ -28,6 +28,9 @@
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MaterialPreset.h"
 #include "Crowny/Renderer/Mesh.h"
+#include "Crowny/Renderer/Sprite.h"
+#include "Crowny/Renderer/SpriteAnimationClip.h"
+#include "Crowny/Renderer/SpriteAtlas.h"
 
 #include "Crowny/Renderer/EnvironmentMap.h"
 
@@ -1049,6 +1052,117 @@ namespace Crowny
         archive(material.m_DecalResponseMask);
     }
 
+    void Save(BinaryDataStreamOutputArchive& archive, const SpriteAtlas& atlas)
+    {
+        WriteAssetHeader(archive, AssetType::SpriteAtlas, SPRITE_ATLAS_FORMAT_VERSION, atlas.GetSourceTimestamp(), atlas.GetSourceContentHash());
+        archive(cereal::base_class<Asset>(&atlas));
+        archive(atlas.m_Data.PageSize, atlas.m_Data.MipLevels, atlas.m_Data.Sprites);
+        archive(static_cast<uint32_t>(atlas.m_Pages.size()), static_cast<uint32_t>(atlas.m_Entries.size()));
+        for (const auto& page : atlas.m_Pages)
+            archive(page.GetInternalPtr());
+        for (const auto& entry : atlas.m_Entries)
+        {
+            const auto& data = entry.Metadata;
+            archive(entry.SpriteId, entry.Page, data.TextureId, data.UvRect.x, data.UvRect.y, data.UvRect.z, data.UvRect.w);
+            archive(data.Pivot.x, data.Pivot.y, data.OriginalSize.x, data.OriginalSize.y, data.PixelsPerUnit);
+            archive(data.Borders.x, data.Borders.y, data.Borders.z, data.Borders.w);
+            const auto& geometry = entry.Geometry;
+            archive(geometry.Size.x, geometry.Size.y, geometry.Pivot.x, geometry.Pivot.y, geometry.UvRect.x, geometry.UvRect.y, geometry.UvRect.z,
+                    geometry.UvRect.w);
+        }
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, SpriteAtlas& atlas)
+    {
+        ValidateAssetHeader(ReadAssetHeader(archive), AssetType::SpriteAtlas, SPRITE_ATLAS_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&atlas));
+        archive(atlas.m_Data.PageSize, atlas.m_Data.MipLevels, atlas.m_Data.Sprites);
+        if (atlas.m_Data.Sprites.size() > 65536)
+            throw cereal::Exception("Invalid atlas source count.");
+        uint32_t pages, entries;
+        archive(pages, entries);
+        if (pages > 65536 || entries > 65536 || (entries && !pages))
+            throw cereal::Exception("Invalid sprite atlas counts.");
+        Vector<AssetHandle<Texture>> textures;
+        for (uint32_t page = 0; page < pages; ++page)
+        {
+            Ref<Texture> texture;
+            archive(texture);
+            if (!texture || texture->GetDesc().Shape != TextureShape::TEXTURE_2D)
+                throw cereal::Exception("Invalid sprite atlas page.");
+            textures.push_back(static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(texture)));
+        }
+        Vector<SpriteAtlasEntry> records(entries);
+        for (auto& entry : records)
+        {
+            auto& data = entry.Metadata;
+            archive(entry.SpriteId, entry.Page, data.TextureId, data.UvRect.x, data.UvRect.y, data.UvRect.z, data.UvRect.w);
+            archive(data.Pivot.x, data.Pivot.y, data.OriginalSize.x, data.OriginalSize.y, data.PixelsPerUnit);
+            archive(data.Borders.x, data.Borders.y, data.Borders.z, data.Borders.w);
+            auto& geometry = entry.Geometry;
+            archive(geometry.Size.x, geometry.Size.y, geometry.Pivot.x, geometry.Pivot.y, geometry.UvRect.x, geometry.UvRect.y, geometry.UvRect.z,
+                    geometry.UvRect.w);
+            if (entry.SpriteId.Empty() || entry.Page >= pages || !data.IsValid() || !geometry.IsValid())
+                throw cereal::Exception("Invalid sprite atlas entry.");
+        }
+        for (size_t i = 1; i < records.size(); ++i)
+            if (!(records[i - 1].SpriteId < records[i].SpriteId))
+                throw cereal::Exception("Unordered or duplicate sprite atlas identities.");
+        atlas.m_Entries = std::move(records);
+        atlas.m_Pages = std::move(textures);
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const SpriteAnimationClip& clip)
+    {
+        WriteAssetHeader(archive, AssetType::SpriteAnimationClip, SPRITE_ANIMATION_CLIP_FORMAT_VERSION, clip.GetSourceTimestamp(),
+                         clip.GetSourceContentHash());
+        archive(cereal::base_class<Asset>(&clip));
+        const auto& data = clip.GetData();
+        archive(static_cast<uint8_t>(data.Mode), static_cast<uint32_t>(data.Frames.size()));
+        for (const auto& frame : data.Frames)
+            archive(frame.SpriteId, frame.Duration);
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, SpriteAnimationClip& clip)
+    {
+        ValidateAssetHeader(ReadAssetHeader(archive), AssetType::SpriteAnimationClip, SPRITE_ANIMATION_CLIP_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&clip));
+        SpriteAnimationClipData data;
+        uint8_t mode;
+        uint32_t count;
+        archive(mode, count);
+        if (count > 65536)
+            throw cereal::Exception("Sprite animation frame limit exceeded.");
+        data.Mode = static_cast<SpriteAnimationMode>(mode);
+        data.Frames.resize(count);
+        for (auto& frame : data.Frames)
+            archive(frame.SpriteId, frame.Duration);
+        if (!clip.SetData(data))
+            throw cereal::Exception("Invalid sprite animation clip.");
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const Sprite& sprite)
+    {
+        WriteAssetHeader(archive, AssetType::Sprite, SPRITE_FORMAT_VERSION, sprite.GetSourceTimestamp(), sprite.GetSourceContentHash());
+        archive(cereal::base_class<Asset>(&sprite));
+        const auto& data = sprite.GetData();
+        archive(data.TextureId, data.UvRect.x, data.UvRect.y, data.UvRect.z, data.UvRect.w);
+        archive(data.Pivot.x, data.Pivot.y, data.OriginalSize.x, data.OriginalSize.y, data.PixelsPerUnit);
+        archive(data.Borders.x, data.Borders.y, data.Borders.z, data.Borders.w);
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, Sprite& sprite)
+    {
+        ValidateAssetHeader(ReadAssetHeader(archive), AssetType::Sprite, SPRITE_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&sprite));
+        SpriteData data;
+        archive(data.TextureId, data.UvRect.x, data.UvRect.y, data.UvRect.z, data.UvRect.w);
+        archive(data.Pivot.x, data.Pivot.y, data.OriginalSize.x, data.OriginalSize.y, data.PixelsPerUnit);
+        archive(data.Borders.x, data.Borders.y, data.Borders.z, data.Borders.w);
+        if (!sprite.SetData(data))
+            throw cereal::Exception("Sprite asset contains invalid geometry or texture reference.");
+    }
+
     void Save(BinaryDataStreamOutputArchive& archive, const MaterialPreset& preset)
     {
         WriteAssetHeader(archive, AssetType::MaterialPreset, MATERIAL_PRESET_FORMAT_VERSION, preset.m_SourceTimestamp, preset.m_SourceContentHash);
@@ -1538,6 +1652,12 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::AnimationClip, "AnimationClip")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AnimationClip)
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::MaterialPreset, "MaterialPreset")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::MaterialPreset)
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Sprite, "Sprite")
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Sprite)
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SpriteAnimationClip, "SpriteAnimationClip")
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::SpriteAnimationClip)
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SpriteAtlas, "SpriteAtlas")
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::SpriteAtlas)
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Prefab, "Prefab")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Prefab)
 CEREAL_REGISTER_DYNAMIC_INIT(AssetCodecs)

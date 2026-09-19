@@ -47,6 +47,19 @@ def build_parser():
 
     subparsers.add_parser("doctor", help="Report discovered tools and dependency roots.")
 
+    osl_parser = subparsers.add_parser("osl", help="Compile OSL assets or run GPU validation.")
+    osl_commands = osl_parser.add_subparsers(dest="osl_command", required=True)
+    osl_compile = osl_commands.add_parser("compile")
+    osl_compile.add_argument("source")
+    osl_compile.add_argument("destination")
+    osl_compile.add_argument("--output", default="Cout")
+    osl_compile.add_argument("--spirv-bin")
+    osl_tests = osl_commands.add_parser("test")
+    osl_tests.add_argument("--spirv-bin")
+    osl_tests.add_argument("--no-build", action="store_true")
+    osl_tests.add_argument("--runner")
+    osl_tests.add_argument("--procedural-only", action="store_true", help="Test GLSL without an OSL installation.")
+
     build_parser = subparsers.add_parser("build", help="Build engine targets.")
     build_parser.add_argument(
         "target_pos", nargs="?", default=None, choices=[None, "Engine", "Editor", "Player", "Tests", "RenderTests", "All"]
@@ -113,6 +126,11 @@ def build_parser():
     deps_parser = subparsers.add_parser("deps", help="Bootstrap a single dependency.")
     deps_sub = deps_parser.add_subparsers(dest="dependency", required=True)
 
+    osl_deps = deps_sub.add_parser("osl")
+    osl_deps.add_argument("--deps-prefix", help="Use an existing LLVM/Clang/OIIO dependency prefix instead of micromamba.")
+    osl_deps.add_argument("--micromamba", help="Path to micromamba if it is not on PATH.")
+    osl_deps.add_argument("--jobs", type=int, default=2)
+
     vulkan_parser = deps_sub.add_parser("vulkan")
     vulkan_parser.add_argument("--version", default=None)
     vulkan_parser.add_argument("--force", action="store_true")
@@ -147,6 +165,15 @@ def main(argv=None):
     root = args.root or None
 
     try:
+        if args.command == "osl":
+            from . import osl
+
+            if args.osl_command == "compile":
+                osl.cook(root, args.source, args.destination, args.output, args.spirv_bin)
+            else:
+                osl.run_tests(root, args.spirv_bin, args.no_build, args.runner, args.procedural_only)
+            return 0
+
         if args.command == "doctor":
             from . import doctor
 
@@ -268,6 +295,10 @@ def main(argv=None):
                 )
             elif args.dependency == "dotnet":
                 dotnet.ensure(root, version=args.version, architecture=args.architecture, install_directory=args.install_dir)
+            elif args.dependency == "osl":
+                from . import osl
+
+                osl.ensure(root, args.deps_prefix, args.micromamba, args.jobs)
             return 0
 
         parser.error(f"Unknown command: {args.command}")

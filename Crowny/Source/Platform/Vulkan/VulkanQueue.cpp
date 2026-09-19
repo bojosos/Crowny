@@ -231,6 +231,10 @@ namespace Crowny
 
         {
             Lock lock(m_SubmitMutex);
+            // Borrow retained storage while holding the queue lock. Concurrent
+            // refreshes use their own arrays while this cleanup is in progress.
+            semaphoresToNotify.swap(m_CompletedSemaphores);
+            buffersToReset.swap(m_CompletedBuffers);
             uint32_t lastFinished = 0;
             auto iter = m_ActiveSubmissions.begin();
             while (iter != m_ActiveSubmissions.end())
@@ -280,6 +284,16 @@ namespace Crowny
 
         for (VulkanCmdBuffer* cmdBuffer : buffersToReset)
             cmdBuffer->Reset();
+
+        semaphoresToNotify.clear();
+        buffersToReset.clear();
+        {
+            Lock lock(m_SubmitMutex);
+            if (semaphoresToNotify.capacity() > m_CompletedSemaphores.capacity())
+                semaphoresToNotify.swap(m_CompletedSemaphores);
+            if (buffersToReset.capacity() > m_CompletedBuffers.capacity())
+                buffersToReset.swap(m_CompletedBuffers);
+        }
     }
 
 } // namespace Crowny

@@ -25,6 +25,9 @@
 #include "Crowny/Common/Constants.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/Sprite.h"
+#include "Crowny/Renderer/SpriteAnimationClip.h"
+#include "Crowny/Renderer/SpriteAtlas.h"
 
 #include "UI/UIUtils.h"
 
@@ -47,12 +50,20 @@ namespace Crowny
             return "New Folder";
         case AssetBrowserItem::Material:
             return "New Material.cwmat";
+        case AssetBrowserItem::Sprite:
+            return "New Sprite.cwsprite";
+        case AssetBrowserItem::SpriteAnimation:
+            return "New Sprite Animation.cwspriteanim";
+        case AssetBrowserItem::SpriteAtlas:
+            return "New Sprite Atlas.cwatlas";
         case AssetBrowserItem::DecalMaterial:
             return "New Decal Material.cwmat";
         case AssetBrowserItem::Prefab:
             return "New Prefab.cwprefab";
         case AssetBrowserItem::Shader:
             return "New Shader.shader";
+        case AssetBrowserItem::OslTexture:
+            return "New OSL Texture.osl";
         case AssetBrowserItem::ComputeShader:
             return "New ComputeShader.cshader";
         case AssetBrowserItem::PhysicsMaterial2D:
@@ -78,6 +89,12 @@ namespace Crowny
             return "Audio";
         case AssetType::Texture:
             return "Texture";
+        case AssetType::Sprite:
+            return "Sprite";
+        case AssetType::SpriteAnimationClip:
+            return "Sprite Animation";
+        case AssetType::SpriteAtlas:
+            return "Sprite Atlas";
         case AssetType::Shader:
             return "Shader";
         case AssetType::Material:
@@ -1070,7 +1087,7 @@ namespace Crowny
         case AssetBrowserFilter::Scenes:
             return { AssetType::Scene, AssetType::Prefab };
         case AssetBrowserFilter::Images:
-            return { AssetType::Texture, AssetType::EnvironmentMap };
+            return { AssetType::Texture, AssetType::EnvironmentMap, AssetType::Sprite, AssetType::SpriteAtlas, AssetType::SpriteAnimationClip };
         case AssetBrowserFilter::Materials:
             return { AssetType::Material, AssetType::PhysicsMaterial, AssetType::PhysicsMaterial2D };
         case AssetBrowserFilter::Models:
@@ -1816,10 +1833,18 @@ namespace Crowny
             ImGui::Separator();
             if (ImGui::MenuItem("Material"))
                 CreateNew(AssetBrowserItem::Material);
+            if (ImGui::MenuItem("Sprite"))
+                CreateNew(AssetBrowserItem::Sprite);
+            if (ImGui::MenuItem("Sprite Animation"))
+                CreateNew(AssetBrowserItem::SpriteAnimation);
+            if (ImGui::MenuItem("Sprite Atlas"))
+                CreateNew(AssetBrowserItem::SpriteAtlas);
             if (ImGui::MenuItem("Decal Material"))
                 CreateNew(AssetBrowserItem::DecalMaterial);
             if (ImGui::MenuItem("Shader"))
                 CreateNew(AssetBrowserItem::Shader);
+            if (ImGui::MenuItem("OSL Texture"))
+                CreateNew(AssetBrowserItem::OslTexture);
             if (ImGui::MenuItem("Compute Shader"))
                 CreateNew(AssetBrowserItem::ComputeShader);
             if (ImGui::MenuItem("Render Texture"))
@@ -1914,6 +1939,15 @@ namespace Crowny
             ProjectLibrary::Get().CreateEntry(CreateRef<PhysicsMaterial2D>(), newEntryPath);
             break;
         }
+        case AssetBrowserItem::Sprite:
+            ProjectLibrary::Get().CreateEntry(CreateRef<Sprite>(), newEntryPath);
+            break;
+        case AssetBrowserItem::SpriteAnimation:
+            ProjectLibrary::Get().CreateEntry(CreateRef<SpriteAnimationClip>(), newEntryPath);
+            break;
+        case AssetBrowserItem::SpriteAtlas:
+            ProjectLibrary::Get().CreateEntry(CreateRef<SpriteAtlas>(), newEntryPath);
+            break;
         case AssetBrowserItem::PhysicsMaterial3D: {
             ProjectLibrary::Get().CreateEntry(CreateRef<PhysicsMaterial3D>(), newEntryPath);
             break;
@@ -1983,6 +2017,14 @@ namespace Crowny
         case AssetBrowserItem::Shader:
         case AssetBrowserItem::ComputeShader:
             return "# Crowny Shader"; // Need to decide on shader format
+        case AssetBrowserItem::OslTexture:
+            return "shader texture_pattern(\n"
+                   "    float frequency = 8 [[ string label = \"Frequency\", float min = 0.1, float max = 32 ]],\n"
+                   "    color tint = color(0.2, 0.5, 0.9),\n"
+                   "    output color Cout = 0)\n"
+                   "{\n"
+                   "    Cout = tint * (0.5 + 0.5 * sin(u * frequency * 6.2831853));\n"
+                   "}\n";
         case AssetBrowserItem::PhysicsMaterial2D:
         case AssetBrowserItem::PhysicsMaterial3D:
             return "# Crowny Physics Material\\n"; // Replace with uuid

@@ -53,7 +53,10 @@ namespace Crowny
             params.Usage = TextureUsage::TEXTURE_STATIC;
 
             m_DummyReadTextures[idx] = StaticRefCast<VulkanTexture>(Texture::Create(params));
-            m_DummyReadTextures[idx]->WriteData(*pixelData);
+            // Every face exposed by an array/cubemap view must have initialized
+            // contents and a readable layout, even for an unassigned sampler.
+            for (uint32_t face = 0; face < params.Faces; ++face)
+                m_DummyReadTextures[idx]->WriteData(*pixelData, 0, face);
             params.Usage = TextureUsage::TEXTURE_LOADSTORE;
             m_DummyStorageTextures[idx] = StaticRefCast<VulkanTexture>(Texture::Create(params));
             idx++;

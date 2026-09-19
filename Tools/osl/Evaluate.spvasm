@@ -1,0 +1,72 @@
+; Sample ABI v1: two float4s per input (u,v,time,reserved; dudx,dudy,dvdx,dvdy).
+; One float4 output per sample. This wrapper owns dispatch/resources; the OSL
+; evaluator owns shading and can later be called from other shader stages.
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %id %samples %results
+OpExecutionMode %main LocalSize 64 1 1
+OpName %samples "OslSamples"
+OpName %results "OslResults"
+OpDecorate %id BuiltIn GlobalInvocationId
+OpDecorate %sample_array ArrayStride 32
+OpMemberDecorate %sample 0 Offset 0
+OpMemberDecorate %sample 1 Offset 16
+OpMemberDecorate %input_block 0 Offset 0
+OpDecorate %input_block Block
+OpDecorate %samples DescriptorSet 0
+OpDecorate %samples Binding 0
+OpDecorate %samples NonWritable
+OpDecorate %result_array ArrayStride 16
+OpMemberDecorate %output_block 0 Offset 0
+OpDecorate %output_block Block
+OpDecorate %results DescriptorSet 0
+OpDecorate %results Binding 1
+OpDecorate %results NonReadable
+OpDecorate %evaluate LinkageAttributes "crowny_osl_evaluate" Import
+%void = OpTypeVoid
+%bool = OpTypeBool
+%uint = OpTypeInt 32 0
+%float = OpTypeFloat 32
+%uint3 = OpTypeVector %uint 3
+%float4 = OpTypeVector %float 4
+%sample = OpTypeStruct %float4 %float4
+%sample_array = OpTypeRuntimeArray %sample
+%result_array = OpTypeRuntimeArray %float4
+%input_block = OpTypeStruct %sample_array
+%output_block = OpTypeStruct %result_array
+%input_ptr = OpTypePointer StorageBuffer %input_block
+%output_ptr = OpTypePointer StorageBuffer %output_block
+%float4_ptr = OpTypePointer StorageBuffer %float4
+%id_ptr = OpTypePointer Input %uint3
+%samples = OpVariable %input_ptr StorageBuffer
+%results = OpVariable %output_ptr StorageBuffer
+%id = OpVariable %id_ptr Input
+%zero = OpConstant %uint 0
+%one = OpConstant %uint 1
+%void_fn = OpTypeFunction %void
+%eval_fn = OpTypeFunction %float4 %float4 %float4
+%evaluate = OpFunction %float4 None %eval_fn
+%arg0 = OpFunctionParameter %float4
+%arg1 = OpFunctionParameter %float4
+OpFunctionEnd
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%gid = OpLoad %uint3 %id
+%index = OpCompositeExtract %uint %gid 0
+%count = OpArrayLength %uint %samples 0
+%valid = OpULessThan %bool %index %count
+OpSelectionMerge %exit None
+OpBranchConditional %valid %shade %exit
+%shade = OpLabel
+%uv_ptr = OpAccessChain %float4_ptr %samples %zero %index %zero
+%derivs_ptr = OpAccessChain %float4_ptr %samples %zero %index %one
+%uv = OpLoad %float4 %uv_ptr
+%derivs = OpLoad %float4 %derivs_ptr
+%color = OpFunctionCall %float4 %evaluate %uv %derivs
+%destination = OpAccessChain %float4_ptr %results %zero %index
+OpStore %destination %color
+OpBranch %exit
+%exit = OpLabel
+OpReturn
+OpFunctionEnd

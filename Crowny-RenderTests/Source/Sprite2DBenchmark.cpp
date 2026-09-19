@@ -92,8 +92,12 @@ namespace Crowny::RenderTests
         struct Sample
         {
             double FrameMs = 0, UpdateMs = 0, ExtractMs = 0, RenderMs = 0, PresentMs = 0, GpuMs = -1;
+            double UploadMs = 0, PrepareMs = 0, SubmitMs = 0;
             uint64_t UpdateAllocations = 0, ExtractAllocations = 0, RenderAllocations = 0, PresentAllocations = 0, UploadBytes = 0;
             uint32_t Visible = 0, Batches = 0;
+            uint32_t DrawListCacheHits = 0;
+            uint64_t VisibilityFrameNumber = 0;
+            bool VisibilitySampleValid = false;
         };
         Vector<Sample> samples(warmup + measured);
         struct PendingQuery
@@ -156,7 +160,9 @@ namespace Crowny::RenderTests
             const auto presented = Clock::now();
             const auto afterPresent = Memory::GetThreadAllocationSnapshot();
             const auto stats = SceneRenderer::GetStatistics();
-            if (!stats.RenderGraphSucceeded || stats.SubmittedSprites2D != spriteCount || stats.VisibleSprites2D != spriteCount)
+            if (!stats.RenderGraphSucceeded || stats.SubmittedSprites2D != spriteCount ||
+                (stats.SpriteVisibilitySampleValid && stats.VisibleSprites2D != spriteCount) ||
+                (frame >= warmup && (!stats.SpriteVisibilitySampleValid || stats.SpriteVisibilityFrameNumber + 16 < snapshot.FrameNumber)))
                 throw std::runtime_error("Sprite benchmark lost visible ECS sprites or fell back from the render graph");
             sample.FrameMs = milliseconds(start, presented);
             sample.UpdateMs = milliseconds(updateStart, updated);
@@ -169,12 +175,18 @@ namespace Crowny::RenderTests
             sample.PresentAllocations = afterPresent.AllocationCount - afterRender.AllocationCount;
             sample.UploadBytes = stats.UploadedBytes2D;
             sample.Visible = stats.VisibleSprites2D;
+            sample.VisibilityFrameNumber = stats.SpriteVisibilityFrameNumber;
+            sample.VisibilitySampleValid = stats.SpriteVisibilitySampleValid;
             sample.Batches = stats.SpriteBatches2D;
+            sample.DrawListCacheHits = stats.SpriteDrawListCacheHits2D;
+            sample.UploadMs = stats.SpriteUploadCpuTimeMs;
+            sample.PrepareMs = stats.SpritePrepareCpuTimeMs;
+            sample.SubmitMs = stats.SpriteSubmissionCpuTimeMs;
             if ((frame + 1) % 300 == 0)
                 std::cout << "Completed " << frame + 1 << " frames" << std::endl;
         }
         // Drain timing results after measurement. Reuse the normal presentation
-        // retirement path; never read visibility or instance data back to the CPU.
+        // retirement path. Visibility diagnostics are asynchronous and never drive draws.
         const auto deadline = Clock::now() + std::chrono::seconds(10);
         while (Clock::now() < deadline)
         {
@@ -192,7 +204,7 @@ namespace Crowny::RenderTests
         std::ofstream csv(artifacts / "sprites.csv");
         csv << "frame,frame_ms,update_ms,extract_ms,render_ms,present_ms,gpu_ms,update_allocations,extract_allocations,render_allocations,present_"
                "allocations,upload_"
-               "bytes,visible,batches\n";
+               "bytes,visible,batches,visibility_frame,visibility_valid,draw_list_cache_hits,upload_ms,prepare_ms,submit_ms\n";
         Vector<double> times;
         times.reserve(measured);
         uint64_t renderAllocations = 0, extractAllocations = 0, presentAllocations = 0;
@@ -203,7 +215,8 @@ namespace Crowny::RenderTests
             csv << std::setprecision(9) << frame - warmup << ',' << sample.FrameMs << ',' << sample.UpdateMs << ',' << sample.ExtractMs << ','
                 << sample.RenderMs << ',' << sample.PresentMs << ',' << sample.GpuMs << ',' << sample.UpdateAllocations << ','
                 << sample.ExtractAllocations << ',' << sample.RenderAllocations << ',' << sample.PresentAllocations << ',' << sample.UploadBytes
-                << ',' << sample.Visible << ',' << sample.Batches << '\n';
+                << ',' << sample.Visible << ',' << sample.Batches << ',' << sample.VisibilityFrameNumber << ',' << sample.VisibilitySampleValid << ','
+                << sample.DrawListCacheHits << ',' << sample.UploadMs << ',' << sample.PrepareMs << ',' << sample.SubmitMs << '\n';
             times.push_back(sample.FrameMs);
             renderAllocations += sample.RenderAllocations;
             extractAllocations += sample.ExtractAllocations;

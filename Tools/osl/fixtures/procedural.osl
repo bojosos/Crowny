@@ -1,0 +1,9 @@
+shader procedural(float frequency = 8, output color Cout = 0, output color derivatives = 0)
+{
+    float wave = sin(u * frequency + time) * cos(v * frequency - time);
+    float detail = noise("perlin", point(u * 4, v * 4, time));
+    Cout = color(0.5 + 0.5 * wave, 0.5 + 0.5 * detail, u * v);
+    if (u > 0.5)
+        Cout *= color(0.75, 1, 0.5);
+    derivatives = color(Dx(wave), Dy(wave), filterwidth(wave));
+}

@@ -1,11 +1,66 @@
-#include "Editor/SelectionProperty.h"
 #include "Editor/ComponentUndoSnapshot.h"
+#include "Editor/SelectionProperty.h"
 
+#include "Crowny/Scene/PrefabSync.h"
 #include "Crowny/Scene/Scene.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 using namespace Crowny;
+
+TEST_CASE("Sprite inspector edits survive prefab synchronization and undo", "[Editor][Inspector][2D][Prefab]")
+{
+    const auto scene = CreateRef<Scene>(false);
+    Entity source = scene->CreateEntity("Source");
+    Entity instance = scene->CreateEntity("Instance");
+    auto& authored = source.AddComponent<SpriteRendererComponent>();
+    authored.Size = { 4, 2 };
+    authored.Pivot = { 0, 1 };
+    authored.UvRect = { 0.25f, 0.125f, 0.75f, 0.875f };
+    authored.FlipX = authored.FlipY = true;
+    authored.Visible = false;
+    authored.SortingLayer = -4;
+    authored.OrderInLayer = 9;
+    instance.AddComponent<SpriteRendererComponent>();
+    auto& overrides = instance.AddComponent<PrefabComponent>();
+    PrefabSync::SyncEntity(instance, source, overrides);
+    const auto& applied = instance.GetComponent<SpriteRendererComponent>();
+    CHECK(applied.Size == authored.Size);
+    CHECK(applied.Pivot == authored.Pivot);
+    CHECK(applied.UvRect == authored.UvRect);
+    CHECK(applied.FlipX);
+    CHECK(applied.FlipY);
+    CHECK_FALSE(applied.Visible);
+    CHECK(applied.SortingLayer == -4);
+    CHECK(applied.OrderInLayer == 9);
+    const Vector<Entity> selection{ instance };
+    ComponentUndoSnapshot<SpriteRendererComponent> before;
+    before.Capture(selection);
+    const auto properties = InspectorSelection(selection, "Sprite Renderer").Components<SpriteRendererComponent>();
+    CHECK(properties.Bind("Size", &SpriteRendererComponent::Size).Assign(glm::vec2(7, 8)).ChangedCount == 1);
+    CHECK(properties.Bind("FlipX", &SpriteRendererComponent::FlipX).Assign(false).ChangedCount == 1);
+    CHECK(overrides.IsPropertyOverridden("Sprite Renderer.Size"));
+    CHECK(overrides.IsPropertyOverridden("Sprite Renderer.FlipX"));
+    PrefabSync::SyncEntity(instance, source, overrides);
+    CHECK(applied.Size == glm::vec2(7, 8));
+    CHECK_FALSE(applied.FlipX);
+    const Ref<Scene> playCopy = CreateRef<Scene>(*scene);
+    Entity copied = playCopy->GetEntityFromUuid(instance.GetUuid());
+    REQUIRE(copied);
+    CHECK(copied.GetComponent<SpriteRendererComponent>().Size == glm::vec2(7, 8));
+    copied.GetComponent<SpriteRendererComponent>().Size = glm::vec2(10);
+    CHECK(applied.Size == glm::vec2(7, 8));
+    auto undo = before.Build();
+    REQUIRE(undo != nullptr);
+    before.CompleteFrame();
+    undo->Revert();
+    CHECK(instance.GetComponent<SpriteRendererComponent>().Size == glm::vec2(4, 2));
+    CHECK(instance.GetComponent<SpriteRendererComponent>().FlipX);
+    CHECK_FALSE(instance.GetComponent<PrefabComponent>().IsPropertyOverridden("Sprite Renderer.Size"));
+    undo->Commit();
+    CHECK(instance.GetComponent<SpriteRendererComponent>().Size == glm::vec2(7, 8));
+    CHECK_FALSE(instance.GetComponent<SpriteRendererComponent>().FlipX);
+}
 
 TEST_CASE("Selection properties aggregate only accessible entities", "[Editor][Inspector]")
 {

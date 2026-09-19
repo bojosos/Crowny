@@ -94,7 +94,7 @@ namespace Crowny
 
         bool IsPersistableAssetType(uint32_t type)
         {
-            return type > static_cast<uint32_t>(AssetType::None) && type <= static_cast<uint32_t>(AssetType::AnimationClip);
+            return type > static_cast<uint32_t>(AssetType::None) && type <= static_cast<uint32_t>(AssetType::SpriteAtlas);
         }
 
         bool ReadText(const Path& path, String& output, String& error)

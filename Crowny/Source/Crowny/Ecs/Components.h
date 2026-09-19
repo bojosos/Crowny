@@ -15,6 +15,9 @@
 #include "Crowny/Physics/Physics3DTypes.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/RenderLight.h"
+#include "Crowny/Renderer/Sprite.h"
+#include "Crowny/Renderer/SpriteAnimationClip.h"
+#include "Crowny/Renderer/SpriteAtlas.h"
 
 #include <glm/gtx/quaternion.hpp>
 
@@ -386,10 +389,29 @@ namespace Crowny
 
     struct SpriteRendererComponent : public ComponentBase
     {
+        AssetHandle<Crowny::Sprite> Sprite;
+        AssetHandle<SpriteAtlas> Atlas;
         AssetHandle<Crowny::Texture> Texture;
         glm::vec4 Color{ 1.0f };
+        // Local dimensions and normalized pivot; the entity transform stays at the pivot.
+        glm::vec2 Size{ 1.0f };
+        glm::vec2 Pivot{ 0.5f };
+        // Normalized texture endpoints (u0, v0, u1, v1).
+        glm::vec4 UvRect{ 0.0f, 0.0f, 1.0f, 1.0f };
+        bool FlipX = false;
+        bool FlipY = false;
+        bool Visible = true;
+        bool UseSpriteSize = true;
+        bool UseSpritePivot = true;
         int32_t SortingLayer = 0;
         int32_t OrderInLayer = 0;
+
+        bool HasValidGeometry() const;
+        SpriteGeometry ResolveGeometry() const;
+        const SpriteAtlas* ResolveAtlas() const;
+        const AssetHandle<Crowny::Texture>& GetTexture() const;
+        glm::mat4 GetQuadTransform(const glm::mat4& world) const;
+        glm::vec4 GetQuadUvRect() const;
 
         SpriteRendererComponent() : ComponentBase() {}
         SpriteRendererComponent(const SpriteRendererComponent&) = default;
@@ -398,7 +420,10 @@ namespace Crowny
         // ECS pool compaction moves the component to another storage slot.
         // Preserve its identity; copying for duplication still creates a new one.
         SpriteRendererComponent(SpriteRendererComponent&& other) noexcept
-          : Texture(std::move(other.Texture)), Color(other.Color), SortingLayer(other.SortingLayer), OrderInLayer(other.OrderInLayer)
+          : Sprite(std::move(other.Sprite)), Atlas(std::move(other.Atlas)), Texture(std::move(other.Texture)), Color(other.Color), Size(other.Size),
+            Pivot(other.Pivot), UvRect(other.UvRect), FlipX(other.FlipX), FlipY(other.FlipY), Visible(other.Visible),
+            UseSpriteSize(other.UseSpriteSize), UseSpritePivot(other.UseSpritePivot), SortingLayer(other.SortingLayer),
+            OrderInLayer(other.OrderInLayer)
         {
             InstanceId = other.InstanceId;
         }
@@ -408,8 +433,18 @@ namespace Crowny
             if (this != &other)
             {
                 InstanceId = other.InstanceId;
+                Sprite = std::move(other.Sprite);
+                Atlas = std::move(other.Atlas);
                 Texture = std::move(other.Texture);
                 Color = other.Color;
+                Size = other.Size;
+                Pivot = other.Pivot;
+                UvRect = other.UvRect;
+                FlipX = other.FlipX;
+                FlipY = other.FlipY;
+                Visible = other.Visible;
+                UseSpriteSize = other.UseSpriteSize;
+                UseSpritePivot = other.UseSpritePivot;
                 SortingLayer = other.SortingLayer;
                 OrderInLayer = other.OrderInLayer;
             }
@@ -1139,6 +1174,66 @@ namespace Crowny
         }
     };
 
+    struct SpriteAnimatorComponent : public ComponentBase
+    {
+        AssetHandle<SpriteAnimationClip> Clip;
+        float Speed = 1.0f;
+        bool PlayOnAwake = true;
+
+        SpriteAnimatorComponent() = default;
+        SpriteAnimatorComponent(const SpriteAnimatorComponent& other)
+          : ComponentBase(other), Clip(other.Clip), Speed(other.Speed), PlayOnAwake(other.PlayOnAwake)
+        {
+        }
+        SpriteAnimatorComponent& operator=(const SpriteAnimatorComponent& other)
+        {
+            if (this != &other)
+            {
+                Clip = other.Clip;
+                Speed = other.Speed;
+                PlayOnAwake = other.PlayOnAwake;
+                ResetRuntime();
+            }
+            return *this;
+        }
+        SpriteAnimatorComponent(SpriteAnimatorComponent&& other) noexcept { *this = std::move(other); }
+        SpriteAnimatorComponent& operator=(SpriteAnimatorComponent&& other) noexcept
+        {
+            if (this != &other)
+            {
+                InstanceId = other.InstanceId;
+                Clip = std::move(other.Clip);
+                Speed = other.Speed;
+                PlayOnAwake = other.PlayOnAwake;
+                m_Playback = other.m_Playback;
+                m_BoundClip = other.m_BoundClip;
+                m_Initialized = other.m_Initialized;
+            }
+            return *this;
+        }
+        void Play();
+        void Pause();
+        void Stop();
+        void Seek(float time);
+        void Advance(double delta);
+        float GetTime() const { return static_cast<float>(m_Playback.GetTime()); }
+        bool IsPlaying() const { return m_Playback.IsPlaying(); }
+        uint32_t GetFrameIndex() const;
+        UUID GetFrameSpriteId() const;
+        const AssetHandle<Crowny::Sprite>& ResolveFrame() const;
+        uint64_t ConsumeCompletions() { return m_Playback.ConsumeCompletions(); }
+        void ResetRuntime();
+
+    private:
+        const SpriteAnimationClip* ResolveClip() const;
+        void SynchronizeClip();
+        SpriteAnimationPlayback m_Playback;
+        UUID m_BoundClip;
+        bool m_Initialized = false;
+    };
+
+    template <> void ComponentEditorWidget<SpriteAnimatorComponent>(Entity e);
+
     struct AnimationComponent : public ComponentBase
     {
         AssetHandle<AnimationClip> Clip;
@@ -1214,11 +1309,12 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<AnimationComponent>(Entity e);
 
-    using AllComponents = ComponentGroup<TransformComponent, CameraComponent, LightComponent, DecalComponent, TextComponent, SpriteRendererComponent,
-                                         MeshRendererComponent, ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent,
-                                         RelationshipComponent, ManagedScriptComponent, Rigidbody2DComponent, BoxCollider2DComponent,
-                                         CircleCollider2DComponent, Rigidbody3DComponent, BoxCollider3DComponent, SphereCollider3DComponent,
-                                         CapsuleCollider3DComponent, MeshCollider3DComponent, AnimationComponent, PrefabComponent>;
+    using AllComponents =
+      ComponentGroup<TransformComponent, CameraComponent, LightComponent, DecalComponent, TextComponent, SpriteRendererComponent,
+                     MeshRendererComponent, ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent, RelationshipComponent,
+                     ManagedScriptComponent, Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent, Rigidbody3DComponent,
+                     BoxCollider3DComponent, SphereCollider3DComponent, CapsuleCollider3DComponent, MeshCollider3DComponent, AnimationComponent,
+                     SpriteAnimatorComponent, PrefabComponent>;
 
     using TransformChangedNotifyComponents = ComponentGroup<AudioListenerComponent, AudioSourceComponent>;
 } // namespace Crowny

@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage.git",
+  "revision": "ff51e4e4dd1d7841fa802cbfe10da2b1fc0bc666",
+  "llvm": "20.1.8",
+  "packages": [
+    "llvmdev=20.1.8", "clangdev=20.1.8", "clang=20.1.8", "clangxx=20.1.8",
+    "openimageio=3.1.17.0", "imath=3.2.2", "pugixml", "zlib",
+    "ninja", "python=3.12", "fmt", "libxml2-devel"
+  ],
+  "platform_packages": {
+    "windows": ["winflexbison"],
+    "linux": ["flex", "bison"],
+    "macos": ["flex", "bison"]
+  },
+  "patches": ["windows-build.patch", "export-bitcode.patch"]
+}

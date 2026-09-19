@@ -1,0 +1,27 @@
+// Mandelbrot example from Chaos, OSL Support:
+// https://documentation.chaos.com/space/VMAX/113575764/OSL+Support
+shader mandelbrot
+(
+    color background_color = color(1.0),
+    color fractal_color = color(0.0),
+    int max_iterations = 40,
+    output color result = fractal_color
+)
+{
+    float x0 = (u * 3.5) - 2.5;
+    float y0 = (v * 2.0) - 1.0;
+    float x = 0.0;
+    float y = 0.0;
+
+    int iteration = 0;
+    while ((x * x + y * y < 2.0 * 2.0) && (iteration < max_iterations)) {
+        float xtemp = x * x - y * y + x0;
+        y = 2.0 * x * y + y0;
+        x = xtemp;
+        iteration = iteration + 1;
+    }
+
+    if (x * x + y * y >= 2.0 * 2.0) {
+        result = background_color;
+    }
+}

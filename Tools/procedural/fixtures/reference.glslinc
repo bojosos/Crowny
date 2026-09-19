@@ -1,0 +1,6 @@
+// Test oracle only: CPU OSL output evaluated at the corresponding pixel center.
+layout(set = 0, binding = 14) uniform sampler2D referenceMap;
+vec4 cwEvaluateProceduralTexture(CwTextureContext context)
+{
+    return texelFetch(referenceMap, ivec2(gl_FragCoord.xy), 0);
+}

@@ -1,0 +1,12 @@
+layout(set = 0, binding = 14) uniform CheckerParams
+{
+    vec4 checkerColorA;
+    vec4 checkerColorB;
+    float checkerFrequency;
+} checker;
+
+vec4 cwEvaluateProceduralTexture(CwTextureContext context)
+{
+    vec2 cell = floor((context.uv + vec2(context.time * 0.1, 0)) * checker.checkerFrequency);
+    return mix(checker.checkerColorA, checker.checkerColorB, mod(cell.x + cell.y, 2.0));
+}

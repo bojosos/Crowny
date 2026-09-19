@@ -490,6 +490,7 @@ namespace Crowny
                 return;
             const Ref<Material> renderMaterial = s_Data->OverridePolygonMode == PolygonMode::Wireframe ? s_Data->WireframeMaterial : sourceMaterial;
             ApplySceneUniforms(renderMaterial, transform);
+            s_Data->Decals.BindCompatibility(*renderMaterial, 0u, 0u);
             DrawMaterialPasses(rapi, renderMaterial, drawMode, indexOffset, indexCount, mesh->GetVertexCount());
         };
 

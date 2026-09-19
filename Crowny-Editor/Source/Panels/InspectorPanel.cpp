@@ -128,6 +128,7 @@ namespace Crowny
         m_EntityInspector.RegisterComponent<AnimationComponent>("Animation");
         m_EntityInspector.RegisterComponent<TextComponent>("Text");
         m_EntityInspector.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
+        m_EntityInspector.RegisterComponent<SpriteAnimatorComponent>("Sprite Animator");
         m_EntityInspector.RegisterComponent<ProceduralMeshComponent>("Procedural Mesh", [this](Entity entity) {
             auto& comp = entity.GetComponent<ProceduralMeshComponent>();
             const Entity receiverEntities[] = { entity };
@@ -416,6 +417,15 @@ namespace Crowny
             break;
         case InspectorMode::PhysicsMaterial:
             RenderPhysicsMaterialInspector();
+            break;
+        case InspectorMode::Sprite:
+            RenderSpriteInspector();
+            break;
+        case InspectorMode::SpriteAnimation:
+            RenderSpriteAnimationInspector();
+            break;
+        case InspectorMode::SpriteAtlas:
+            RenderSpriteAtlasInspector();
             break;
         case InspectorMode::AudioClipImport:
             if (m_ImportOptions)
@@ -1236,6 +1246,231 @@ namespace Crowny
         return changed;
     }
 
+    void InspectorPanel::RenderSpriteAtlasInspector()
+    {
+        const auto asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
+        if (!asset || asset->GetAssetType() != AssetType::SpriteAtlas)
+        {
+            ImGui::TextDisabled("The sprite atlas could not be loaded.");
+            return;
+        }
+        const auto atlas = StaticRefCast<SpriteAtlas>(asset.GetInternalPtr());
+        auto& undo = UndoRedo::Get();
+        if (undo.BeginComponentScope(m_SpriteAtlasUndo))
+            m_SpriteAtlasUndo->Capture(m_InspectedAssetPath, atlas, m_AssetSaveTracker);
+        auto data = atlas->GetData();
+        const auto edit = [&](bool changed) {
+            const bool applied = changed && atlas->SetData(data);
+            ObserveAssetEdit(atlas, applied);
+            if (changed && !applied)
+                data = atlas->GetData();
+        };
+        UI::BeginPropertyGrid();
+        int page = 0;
+        const uint32_t sizes[] = { 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
+        for (int i = 0; i < 8; ++i)
+            if (sizes[i] == data.PageSize)
+                page = i;
+        const bool pageChanged = UI::PropertyDropdown("Page Size", { "64", "128", "256", "512", "1024", "2048", "4096", "8192" }, page);
+        data.PageSize = sizes[page];
+        edit(pageChanged);
+        int levels = static_cast<int>(data.MipLevels);
+        const bool mipChanged = UI::Property("Mip Levels", levels, 1, 8);
+        data.MipLevels = static_cast<uint32_t>(std::max(levels, 1));
+        edit(mipChanged);
+        AssetHandle<Sprite> addSprite;
+        const bool add = UIUtils::AssetReference<Sprite>("Add Sprite", addSprite);
+        if (add && addSprite.HasUUID())
+        {
+            data.Sprites.push_back(addSprite.GetUUID());
+            edit(true);
+        }
+        UI::EndPropertyGrid();
+        for (size_t i = 0; i < data.Sprites.size(); ++i)
+        {
+            ImGui::PushID(static_cast<int>(i));
+            auto sprite = static_asset_cast<Sprite>(AssetManager::Get().GetAssetHandle(data.Sprites[i]));
+            UI::BeginPropertyGrid();
+            const bool changed = UIUtils::AssetReference<Sprite>("Sprite", sprite);
+            if (changed)
+                data.Sprites[i] = sprite.GetUUID();
+            edit(changed);
+            UI::EndPropertyGrid();
+            if (ImGui::Button("Remove"))
+            {
+                data.Sprites.erase(data.Sprites.begin() + i);
+                edit(true);
+                ImGui::PopID();
+                break;
+            }
+            ImGui::PopID();
+        }
+        if (ImGui::Button("Repack Sources"))
+            ObserveAssetEdit(atlas, atlas->Rebuild());
+        if (!atlas->GetLastError().empty())
+            ImGui::TextWrapped("%s", atlas->GetLastError().c_str());
+        ImGui::Text("%u sprites on %u pages", static_cast<unsigned>(atlas->GetEntries().size()), static_cast<unsigned>(atlas->GetPages().size()));
+        for (size_t pageIndex = 0; pageIndex < atlas->GetPages().size(); ++pageIndex)
+        {
+            ImGui::PushID(static_cast<int>(pageIndex));
+            if (ImGui::TreeNode("Page", "Page %u", static_cast<unsigned>(pageIndex + 1)))
+            {
+                const auto& texture = atlas->GetPages()[pageIndex];
+                const float size = std::min(512.0f, ImGui::GetContentRegionAvail().x);
+                ImGui::Image(ImGuiVulkanTexture::Get(texture.GetInternalPtr()), { size, size }, { 0, 1 }, { 1, 0 });
+                for (const auto& entry : atlas->GetEntries())
+                    if (entry.Page == pageIndex)
+                        ImGui::TextWrapped("%s", entry.SpriteId.ToString().c_str());
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
+        undo.EndComponentScope();
+    }
+
+    void InspectorPanel::RenderSpriteAnimationInspector()
+    {
+        const auto asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
+        if (!asset || asset->GetAssetType() != AssetType::SpriteAnimationClip)
+        {
+            ImGui::TextDisabled("The sprite animation could not be loaded.");
+            return;
+        }
+        const auto clip = StaticRefCast<SpriteAnimationClip>(asset.GetInternalPtr());
+        auto& undo = UndoRedo::Get();
+        if (undo.BeginComponentScope(m_SpriteAnimationUndo))
+            m_SpriteAnimationUndo->Capture(m_InspectedAssetPath, clip, m_AssetSaveTracker);
+        auto data = clip->GetData();
+        const auto edit = [&](bool changed) {
+            const bool applied = changed && clip->SetData(data);
+            ObserveAssetEdit(clip, applied);
+            if (changed && !applied)
+                data = clip->GetData();
+        };
+        UI::BeginPropertyGrid();
+        int mode = static_cast<int>(data.Mode);
+        const bool modeChanged = UI::PropertyDropdown("Mode", { "Loop", "Once", "Ping Pong" }, mode);
+        data.Mode = static_cast<SpriteAnimationMode>(mode);
+        edit(modeChanged);
+        UI::EndPropertyGrid();
+        for (size_t i = 0; i < data.Frames.size(); ++i)
+        {
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::Text("Frame %u", static_cast<unsigned>(i));
+            auto sprite = static_asset_cast<Sprite>(AssetManager::Get().GetAssetHandle(data.Frames[i].SpriteId));
+            UI::BeginPropertyGrid();
+            const bool changed = UIUtils::AssetReference<Sprite>("Sprite", sprite);
+            if (changed)
+                data.Frames[i].SpriteId = sprite.GetUUID();
+            edit(changed);
+            edit(UI::Property("Duration", data.Frames[i].Duration, 0.01f, 0.001f, 0.0f));
+            UI::EndPropertyGrid();
+            if (ImGui::Button("Remove"))
+            {
+                data.Frames.erase(data.Frames.begin() + i);
+                edit(true);
+                ImGui::PopID();
+                break;
+            }
+            if (i > 0)
+            {
+                ImGui::SameLine();
+                if (ImGui::Button("Move Up"))
+                {
+                    std::swap(data.Frames[i - 1], data.Frames[i]);
+                    edit(true);
+                }
+            }
+            ImGui::PopID();
+        }
+        if (ImGui::Button("Add Frame"))
+        {
+            data.Frames.emplace_back();
+            edit(true);
+        }
+        undo.EndComponentScope();
+        ImGui::Separator();
+        if (ImGui::Button(m_SpriteAnimationPreview.IsPlaying() ? "Pause Preview" : "Play Preview"))
+        {
+            if (m_SpriteAnimationPreview.IsPlaying())
+                m_SpriteAnimationPreview.Pause();
+            else
+            {
+                if (m_SpriteAnimationPreview.GetTime() >= clip->GetDuration())
+                    m_SpriteAnimationPreview.Seek(0, *clip);
+                m_SpriteAnimationPreview.Play();
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset Preview"))
+            m_SpriteAnimationPreview.Stop();
+        m_SpriteAnimationPreview.Advance(ImGui::GetIO().DeltaTime, 1, *clip);
+        float time = static_cast<float>(m_SpriteAnimationPreview.GetTime());
+        if (ImGui::SliderFloat("Time", &time, 0, static_cast<float>(clip->GetDuration())))
+            m_SpriteAnimationPreview.Seek(time, *clip);
+        const auto frame = clip->Sample(m_SpriteAnimationPreview.GetTime());
+        if (frame != UINT32_MAX)
+        {
+            const auto sprite = AssetManager::Get().LoadFromUUID(data.Frames[frame].SpriteId, false);
+            if (sprite && sprite->GetAssetType() == AssetType::Sprite)
+            {
+                const auto image = static_asset_cast<Sprite>(sprite);
+                const auto geometry = image->GetGeometry();
+                if (image->GetTexture() && geometry.IsValid())
+                {
+                    const float width = std::min(256.0f, ImGui::GetContentRegionAvail().x);
+                    const auto size = width * geometry.Size / std::max(geometry.Size.x, geometry.Size.y);
+                    const auto uv = geometry.UvRect;
+                    ImGui::Image(ImGuiVulkanTexture::Get(image->GetTexture().GetInternalPtr()), { size.x, size.y }, { uv.x, uv.w }, { uv.z, uv.y });
+                }
+            }
+        }
+    }
+
+    void InspectorPanel::RenderSpriteInspector()
+    {
+        const auto asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
+        if (!asset || asset->GetAssetType() != AssetType::Sprite)
+        {
+            ImGui::TextDisabled("The sprite could not be loaded.");
+            return;
+        }
+        const auto sprite = StaticRefCast<Sprite>(asset.GetInternalPtr());
+        auto& undo = UndoRedo::Get();
+        if (undo.BeginComponentScope(m_SpriteUndo))
+            m_SpriteUndo->Capture(m_InspectedAssetPath, sprite, m_AssetSaveTracker);
+        SpriteData data = sprite->GetData();
+        auto texture = sprite->GetTexture();
+        const auto edit = [&](bool changed) {
+            const bool applied = changed && sprite->SetData(data);
+            ObserveAssetEdit(sprite, applied);
+            if (changed && !applied)
+                data = sprite->GetData();
+        };
+        UI::BeginPropertyGrid();
+        const bool textureChanged = UIUtils::AssetReference<Texture>("Texture", texture);
+        if (textureChanged)
+            data.TextureId = texture.GetUUID();
+        edit(textureChanged);
+        edit(UI::Property("UV Rectangle", data.UvRect, 0.01f, 0.0f, 1.0f));
+        edit(UI::Property("Pivot", data.Pivot, 0.01f));
+        edit(UI::Property("Pixels Per Unit", data.PixelsPerUnit, 1.0f, 0.001f, 0.0f));
+        edit(UI::Property("Original Pixels", data.OriginalSize, 1.0f, 0.0f, 0.0f));
+        edit(UI::Property("Borders", data.Borders, 1.0f, 0.0f, 0.0f));
+        UI::EndPropertyGrid();
+        const auto geometry = sprite->GetGeometry();
+        if (texture && geometry.IsValid())
+        {
+            const float width = std::min(256.0f, ImGui::GetContentRegionAvail().x);
+            const auto size = width * geometry.Size / std::max(geometry.Size.x, geometry.Size.y);
+            const auto uv = geometry.UvRect;
+            ImGui::Image(ImGuiVulkanTexture::Get(texture.GetInternalPtr()), { size.x, size.y }, { uv.x, uv.w }, { uv.z, uv.y });
+        }
+        else
+            ImGui::TextDisabled("Assign an available texture to preview this sprite.");
+        undo.EndComponentScope();
+    }
+
     void InspectorPanel::RenderPhysicsMaterialInspector()
     {
         AssetHandle<Asset> asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
@@ -1321,8 +1556,24 @@ namespace Crowny
                 undoRedo->FinishComponentScope(m_PhysicsMaterialUndo);
             else
                 undoRedo->CancelComponentScope(m_PhysicsMaterialUndo);
+            if (finishInteraction)
+                undoRedo->FinishComponentScope(m_SpriteUndo);
+            else
+                undoRedo->CancelComponentScope(m_SpriteUndo);
+            if (finishInteraction)
+                undoRedo->FinishComponentScope(m_SpriteAnimationUndo);
+            else
+                undoRedo->CancelComponentScope(m_SpriteAnimationUndo);
+            if (finishInteraction)
+                undoRedo->FinishComponentScope(m_SpriteAtlasUndo);
+            else
+                undoRedo->CancelComponentScope(m_SpriteAtlasUndo);
         }
         m_PhysicsMaterialUndo->Reset();
+        m_SpriteUndo->Reset();
+        m_SpriteAnimationUndo->Reset();
+        m_SpriteAnimationPreview.Stop();
+        m_SpriteAtlasUndo->Reset();
     }
 
     void InspectorPanel::ResetMaterialUndoTransaction(bool finishInteraction)
@@ -1629,6 +1880,22 @@ namespace Crowny
     void InspectorPanel::RenderShaderImportInspector()
     {
         Ref<ShaderImportOptions> shaderImport = StaticRefCast<ShaderImportOptions>(m_ImportOptions);
+        if (NormalizeImportExtension(m_InspectedAssetPath.extension().string()) == "osl")
+        {
+            String output = "Cout";
+            shaderImport->GetDefine("CROWNY_OSL_OUTPUT", output);
+            ImGui::TextDisabled("OSL texture shader");
+            ImGui::TextWrapped(
+              "Choose this shader on a material to edit its OSL inputs and preview the result. Input edits update the GPU without recompiling.");
+            if (ImGui::InputText("Color output", &output))
+            {
+                shaderImport->SetDefine("CROWNY_OSL_OUTPUT", output);
+                m_HasPropertyChanged = true;
+            }
+            ImGui::TextWrapped("Source import uses the configured offline OSL compiler. The compiled material requires Vulkan.");
+            DrawApplyRevert(0.0f, ImGui::GetContentRegionAvail().x);
+            return;
+        }
         UnorderedMap<String, String>& defines = shaderImport->GetDefines();
         String removeKey;
         String renameFrom;
@@ -1844,6 +2111,15 @@ namespace Crowny
         case InspectorMode::PhysicsMaterial:
             drawAssetHeader("Physics Material");
             break;
+        case InspectorMode::Sprite:
+            drawAssetHeader("Sprite");
+            break;
+        case InspectorMode::SpriteAnimation:
+            drawAssetHeader("Sprite Animation");
+            break;
+        case InspectorMode::SpriteAtlas:
+            drawAssetHeader("Sprite Atlas");
+            break;
         case InspectorMode::ScriptImport:
             drawAssetHeader("C# Script");
             break;
@@ -1970,6 +2246,21 @@ namespace Crowny
         if (selectedEntry && selectedEntry->Type == LibraryEntryType::File)
         {
             FileEntry* fileEntry = static_cast<FileEntry*>(selectedEntry.get());
+            if (fileEntry->Metadata && fileEntry->Metadata->Type == AssetType::SpriteAtlas)
+            {
+                m_InspectorMode = InspectorMode::SpriteAtlas;
+                return;
+            }
+            if (fileEntry->Metadata && fileEntry->Metadata->Type == AssetType::SpriteAnimationClip)
+            {
+                m_InspectorMode = InspectorMode::SpriteAnimation;
+                return;
+            }
+            if (fileEntry->Metadata && fileEntry->Metadata->Type == AssetType::Sprite)
+            {
+                m_InspectorMode = InspectorMode::Sprite;
+                return;
+            }
             if (fileEntry->Metadata &&
                 (fileEntry->Metadata->Type == AssetType::PhysicsMaterial2D || fileEntry->Metadata->Type == AssetType::PhysicsMaterial))
             {

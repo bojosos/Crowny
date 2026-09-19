@@ -2,9 +2,133 @@
 
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
+#include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Renderer/GpuWorld2D.h"
+#include "Crowny/Renderer/RenderSnapshot.h"
 #include "Crowny/Renderer/RenderWorld2D.h"
 
 using namespace Crowny;
+
+namespace
+{
+    class SnapshotTexture2D final : public Texture
+    {
+    public:
+        SnapshotTexture2D() : Texture(TextureDesc{}, true) {}
+        PixelData Lock(GpuLockOptions, uint32_t, uint32_t, uint32_t) override { return {}; }
+        void Unlock() override {}
+        void ReadData(PixelData&, uint32_t, uint32_t, uint32_t) override {}
+        bool ReadPixel(uint32_t, uint32_t, void*, size_t, uint32_t, uint32_t, uint32_t) override { return false; }
+        void WriteData(const PixelData&, uint32_t, uint32_t, uint32_t) override {}
+    };
+} // namespace
+
+TEST_CASE("Moving 2D snapshots retain texture bindings without copying resource ownership", "[Renderer][2D][Memory]")
+{
+    const auto firstTexture = CreateRef<SnapshotTexture2D>();
+    const auto secondTexture = CreateRef<SnapshotTexture2D>();
+    RenderWorld2D world;
+    GpuWorld2D mirror;
+    RenderInstance2DDesc desc;
+    desc.TextureResource = firstTexture;
+    const auto handle = world.Create(desc);
+    Vector<RenderChange2D> create;
+    world.DrainChanges(create);
+    REQUIRE(create.size() == 1);
+    CHECK(create[0].TextureChanged);
+    CHECK(create[0].TextureResource == firstTexture);
+    mirror.Apply(create);
+    const auto referenceCount = firstTexture->GetRefCount();
+    FrameVector<RenderChange2D> updates;
+    for (uint64_t frame = 1; frame < 4; ++frame)
+    {
+        world.BeginFrame(frame);
+        desc.Transform[3].x = float(frame);
+        desc.Color.a = float(frame) * 0.2f;
+        REQUIRE(world.Update(handle, desc));
+        world.DrainChanges(updates);
+        REQUIRE(updates.Size() == 1);
+        CHECK_FALSE(updates[0].TextureChanged);
+        CHECK(updates[0].TextureResource == nullptr);
+        mirror.Apply({ updates.begin(), updates.Size() });
+        CHECK(firstTexture->GetRefCount() == referenceCount);
+        RenderableSprite sprite;
+        REQUIRE(mirror.GetSprite(handle, sprite));
+        CHECK(sprite.Texture == firstTexture);
+        CHECK(sprite.WorldMatrix[3].x == float(frame));
+    }
+
+    // A later transform/paint write must not erase a pending texture replacement.
+    desc.TextureResource = secondTexture;
+    REQUIRE(world.Update(handle, desc));
+    desc.Color.r = 0.25f;
+    REQUIRE(world.Update(handle, desc));
+    world.DrainChanges(updates);
+    REQUIRE(updates.Size() == 1);
+    CHECK(updates[0].TextureChanged);
+    CHECK(updates[0].TextureResource == secondTexture);
+    RenderableSprite before;
+    REQUIRE(mirror.GetSprite(handle, before));
+    CHECK(before.Texture == firstTexture);
+    mirror.Apply({ updates.begin(), updates.Size() });
+    RenderableSprite after;
+    REQUIRE(mirror.GetSprite(handle, after));
+    CHECK(after.Texture == secondTexture);
+    CHECK(create[0].TextureResource == firstTexture);
+
+    // Null with the change flag explicitly clears the old binding.
+    desc.TextureResource.Reset();
+    REQUIRE(world.Update(handle, desc));
+    world.DrainChanges(updates);
+    REQUIRE(updates.Size() == 1);
+    CHECK(updates[0].TextureChanged);
+    CHECK(updates[0].TextureResource == nullptr);
+    mirror.Apply({ updates.begin(), updates.Size() });
+    REQUIRE(mirror.GetSprite(handle, after));
+    CHECK(after.Texture == nullptr);
+
+    desc.TextureResource = secondTexture;
+    REQUIRE(world.Update(handle, desc));
+    REQUIRE(world.Destroy(handle));
+    world.DrainChanges(updates);
+    REQUIRE(updates.Size() == 1);
+    CHECK(updates[0].Type == RenderChange2DType::Destroy);
+    CHECK_FALSE(updates[0].TextureChanged);
+    CHECK(updates[0].TextureResource == nullptr);
+    mirror.Apply({ updates.begin(), updates.Size() });
+    CHECK_FALSE(mirror.GetSprite(handle, after));
+}
+
+TEST_CASE("Unpublished 2D creates publish their final texture and slot reuse starts a new binding", "[Renderer][2D]")
+{
+    RenderWorld2D world;
+    GpuWorld2D mirror;
+    Vector<RenderChange2D> changes;
+    RenderInstance2DDesc desc;
+    desc.TextureResource = CreateRef<SnapshotTexture2D>();
+    const auto handle = world.Create(desc);
+    desc.TextureResource = CreateRef<SnapshotTexture2D>();
+    REQUIRE(world.Update(handle, desc));
+    world.DrainChanges(changes);
+    REQUIRE(changes.size() == 1);
+    CHECK(changes[0].Type == RenderChange2DType::Create);
+    CHECK(changes[0].TextureChanged);
+    CHECK(changes[0].TextureResource == desc.TextureResource);
+    mirror.Apply(changes);
+    REQUIRE(world.Destroy(handle));
+    world.DrainChanges(changes);
+    mirror.Apply(changes);
+    const auto reused = world.Create({});
+    REQUIRE(reused.GetIndex() == handle.GetIndex());
+    world.DrainChanges(changes);
+    REQUIRE(changes.size() == 1);
+    CHECK(changes[0].TextureChanged);
+    CHECK(changes[0].TextureResource == nullptr);
+    mirror.Apply(changes);
+    RenderableSprite sprite;
+    REQUIRE(mirror.GetSprite(reused, sprite));
+    CHECK(sprite.Texture == nullptr);
+}
 
 TEST_CASE("2D world coalesces direct updates and rejects retired handles", "[Renderer][2D]")
 {

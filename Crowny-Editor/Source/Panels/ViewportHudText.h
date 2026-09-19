@@ -19,11 +19,14 @@ namespace Crowny
     {
         Unsupported = 0,
         Mesh,    // .obj/.gltf/.glb/.fbx/... -> import, then spawn a mesh entity
-        Texture, // import only
+        Texture, // import, then spawn a legacy texture-only sprite
         Material,
         AudioClip, // import, then spawn an audio source
         Prefab,    // import, then instantiate
-        Scene      // import, then open
+        Scene,     // import, then open
+        Sprite,
+        SpriteAnimation,
+        SpriteAtlas
     };
 
     /// Classifies a dropped file by extension (case-insensitive). Pure; does not touch the filesystem.

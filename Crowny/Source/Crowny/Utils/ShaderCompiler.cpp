@@ -1036,6 +1036,75 @@ namespace Crowny
         shader.VertexLayout = std::move(reflected->VertexLayout);
     }
 
+    Ref<BinaryShaderData> ShaderCompiler::LoadComputeSpirv(const Vector<uint8_t>& data, String& error)
+    {
+        return LoadSpirv(data, COMPUTE_SHADER, error);
+    }
+
+    Ref<BinaryShaderData> ShaderCompiler::LoadSpirv(const Vector<uint8_t>& data, ShaderType stage, String& error)
+    {
+        error.clear();
+        spv::ExecutionModel executionModel;
+        switch (stage)
+        {
+        case VERTEX_SHADER:
+            executionModel = spv::ExecutionModelVertex;
+            break;
+        case FRAGMENT_SHADER:
+            executionModel = spv::ExecutionModelFragment;
+            break;
+        case COMPUTE_SHADER:
+            executionModel = spv::ExecutionModelGLCompute;
+            break;
+        default:
+            error = "Unsupported offline shader stage";
+            return nullptr;
+        }
+        if (data.size() < 5 * sizeof(uint32_t) || data.size() % sizeof(uint32_t) != 0)
+        {
+            error = "Invalid SPIR-V byte count";
+            return nullptr;
+        }
+        Vector<uint32_t> words(data.size() / sizeof(uint32_t));
+        std::memcpy(words.data(), data.data(), data.size());
+        if (words[0] != 0x07230203u || words[3] == 0 || words[3] > 1000000u || words[4] != 0)
+        {
+            error = "Invalid or unsupported SPIR-V header";
+            return nullptr;
+        }
+        for (size_t offset = 5; offset < words.size();)
+        {
+            const uint32_t count = words[offset] >> 16;
+            if (count == 0 || count > words.size() - offset)
+            {
+                error = "Truncated SPIR-V instruction";
+                return nullptr;
+            }
+            offset += count;
+        }
+        try
+        {
+            spirv_cross::Compiler compiler(words);
+            const auto entries = compiler.get_entry_points_and_stages();
+            if (entries.size() != 1 || entries[0].name != "main" || entries[0].execution_model != executionModel)
+            {
+                error = "Expected one main entry point matching the requested shader stage";
+                return nullptr;
+            }
+            auto result = CreateRef<BinaryShaderData>();
+            result->Data = data;
+            result->EntryPoint = "main";
+            result->Type = stage;
+            Reflect(data, result);
+            return result;
+        }
+        catch (const std::exception& exception)
+        {
+            error = String("SPIR-V reflection failed: ") + exception.what();
+            return nullptr;
+        }
+    }
+
     void ShaderCompiler::Reflect(const Vector<uint8_t>& shaderBinaryData, Ref<BinaryShaderData>& outData)
     {
         ZoneScopedN("ShaderCompiler::Reflect");

@@ -331,7 +331,7 @@ namespace Crowny
 
     void VulkanRenderAPI::SwapBuffers(const Ref<RenderTarget>& renderTarget, uint32_t syncMask)
     {
-        SubmitCommandBuffer(m_CommandBuffer, syncMask);
+        SubmitCommandBuffer(nullptr, syncMask);
         renderTarget->SwapBuffers(syncMask);
 
         GetPresentDevice()->Refresh();
@@ -380,7 +380,14 @@ namespace Crowny
         VulkanTransferManager::Get().FlushTransferBuffers();
         cmdBuffer->Submit(syncMask);
         if (cmdBuffer == m_CommandBuffer.get())
-            m_CommandBuffer = StaticRefCast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
+        {
+            // The internal GPU command buffer remains owned by its pool until
+            // completion. Reuse only a wrapper that has no external owner.
+            if (m_CommandBuffer->GetRefCount() == 1)
+                m_CommandBuffer->Reset();
+            else
+                m_CommandBuffer = StaticRefCast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
+        }
     }
 
     void VulkanRenderAPI::SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer)

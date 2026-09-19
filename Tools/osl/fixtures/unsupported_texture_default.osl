@@ -1,0 +1,4 @@
+shader unsupported_texture_default(string image = "image.png", output color Cout = 0)
+{
+    Cout = texture(image, u, v);
+}

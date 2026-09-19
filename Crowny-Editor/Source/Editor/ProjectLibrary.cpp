@@ -8,6 +8,9 @@
 #include "Crowny/Serialization/MaterialSerializer.h"
 #include "Crowny/Serialization/NodeGraphSerializer.h"
 #include "Crowny/Serialization/SceneSerializer.h"
+#include "Crowny/Serialization/SpriteAnimationSerializer.h"
+#include "Crowny/Serialization/SpriteAtlasSerializer.h"
+#include "Crowny/Serialization/SpriteSerializer.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorUtils.h"
@@ -694,14 +697,55 @@ namespace Crowny
                     if (dependent)
                         logical = Path("Subassets") / (metadata->Uuid.ToString() + ".asset");
                     Vector<UUID> dependencies;
-                    if (!dependent &&
-                        (metadata->Type == AssetType::Scene || metadata->Type == AssetType::Prefab || metadata->Type == AssetType::Material))
+                    if (!dependent && (metadata->Type == AssetType::Scene || metadata->Type == AssetType::Prefab ||
+                                       metadata->Type == AssetType::Material || metadata->Type == AssetType::Sprite ||
+                                       metadata->Type == AssetType::SpriteAnimationClip || metadata->Type == AssetType::SpriteAtlas))
                     {
                         try
                         {
                             const auto source = YAML::LoadFile(file->Filepath.string());
-                            dependencies = metadata->Type == AssetType::Material ? MaterialSerializer::GatherTextureDependencies(source)
-                                                                                 : SceneSerializer::GatherDecalMaterialDependencies(source);
+                            if (metadata->Type == AssetType::SpriteAtlas)
+                            {
+                                const auto sprites = source["Sprites"];
+                                if (sprites && !sprites.IsSequence())
+                                    throw std::runtime_error("Atlas Sprites must be a sequence.");
+                                for (const auto& id : sprites)
+                                {
+                                    const UUID sprite = id.as<UUID>();
+                                    if (!sprite.Empty())
+                                        dependencies.push_back(sprite);
+                                }
+                            }
+                            else if (metadata->Type == AssetType::SpriteAnimationClip)
+                            {
+                                const auto frames = source["Frames"];
+                                if (frames && !frames.IsSequence())
+                                    throw std::runtime_error("Sprite animation Frames must be a sequence.");
+                                for (const auto& frame : frames)
+                                {
+                                    const UUID sprite = frame["Sprite"].as<UUID>();
+                                    if (!sprite.Empty())
+                                        dependencies.push_back(sprite);
+                                }
+                                std::sort(dependencies.begin(), dependencies.end());
+                                dependencies.erase(std::unique(dependencies.begin(), dependencies.end()), dependencies.end());
+                            }
+                            else if (metadata->Type == AssetType::Sprite)
+                            {
+                                const UUID texture = source["Texture"].as<UUID>(UUID::EMPTY);
+                                if (!texture.Empty())
+                                    dependencies.push_back(texture);
+                            }
+                            else if (metadata->Type == AssetType::Material)
+                                dependencies = MaterialSerializer::GatherTextureDependencies(source);
+                            else
+                            {
+                                dependencies = SceneSerializer::GatherDecalMaterialDependencies(source);
+                                const auto sprites = SceneSerializer::GatherSpriteDependencies(source);
+                                dependencies.insert(dependencies.end(), sprites.begin(), sprites.end());
+                                std::sort(dependencies.begin(), dependencies.end());
+                                dependencies.erase(std::unique(dependencies.begin(), dependencies.end()), dependencies.end());
+                            }
                         }
                         catch (const std::exception& error)
                         {
@@ -969,6 +1013,30 @@ namespace Crowny
         {
             MaterialPresetSerializer serializer(StaticRefCast<MaterialPreset>(asset));
             return serializer.Serialize(absPath);
+        }
+        if (asset->GetAssetType() == AssetType::Sprite || asset->GetAssetType() == AssetType::SpriteAnimationClip ||
+            asset->GetAssetType() == AssetType::SpriteAtlas)
+        {
+            const bool saved = asset->GetAssetType() == AssetType::Sprite ? SpriteSerializer(StaticRefCast<Sprite>(asset)).Serialize(absPath)
+                               : asset->GetAssetType() == AssetType::SpriteAnimationClip
+                                 ? SpriteAnimationSerializer(StaticRefCast<SpriteAnimationClip>(asset)).Serialize(absPath)
+                                 : SpriteAtlasSerializer(StaticRefCast<SpriteAtlas>(asset)).Serialize(absPath);
+            if (!saved)
+                return false;
+            const auto entry = FindEntry(absPath);
+            if (entry && entry->Type == LibraryEntryType::File)
+            {
+                const auto file = StaticRefCast<FileEntry>(entry);
+                Path cachedPath;
+                if (file->Metadata && m_AssetManifest->UuidToFilepath(file->Metadata->Uuid, cachedPath))
+                {
+                    if (!AssetManager::Get().Save(asset, cachedPath))
+                        return false;
+                    ++file->Revision;
+                    file->LastUpdateTime = std::time(nullptr);
+                }
+            }
+            return true;
         }
 
         AssetManager* assetManager = AssetManager::TryGet();

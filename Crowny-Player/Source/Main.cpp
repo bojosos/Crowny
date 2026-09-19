@@ -78,8 +78,8 @@ namespace Crowny
                 ScriptRuntime::OnFixedUpdate(scene, frame.FixedDelta);
                 scene->OnFixedUpdate(frame.FixedDelta);
             }
-            scene->OnUpdateRuntime(delta);
             ScriptRuntime::OnUpdate(delta, false);
+            scene->OnUpdateRuntime(delta);
             m_Renderer->UpdateAnimations(delta);
             ScriptRuntime::OnLateUpdate(delta);
             m_Renderer->UpdateProceduralMeshes();

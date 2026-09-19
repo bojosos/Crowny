@@ -1,0 +1,43 @@
+// Shared fragment-stage interface for GLSL sources and compiled language adapters.
+// Positions and normals are world-space; UV derivatives include the instance transform.
+struct CwTextureContext
+{
+    vec2 uv;
+    vec2 uvDx;
+    vec2 uvDy;
+    vec3 position;
+    vec3 positionDx;
+    vec3 positionDy;
+    vec3 normal;
+    float time;
+};
+
+layout(set = 0, binding = 13) uniform ProceduralTextureParams
+{
+    vec4 proceduralUVTransform; // scale.xy, offset.zw
+    float proceduralTime;
+    float proceduralAmount; // 0 = image only; 1 = image multiplied by the procedure
+} proceduralTexture;
+
+// The material cook supplies exactly one implementation. It may declare extra
+// per-instance uniform blocks at set 0, binding 14 and above.
+vec4 cwEvaluateProceduralTexture(CwTextureContext context);
+
+vec4 cwEvaluateBaseColor(vec2 uv, vec3 position, vec3 normal)
+{
+    CwTextureContext context;
+    context.uv = uv * proceduralTexture.proceduralUVTransform.xy + proceduralTexture.proceduralUVTransform.zw;
+    context.uvDx = dFdx(context.uv);
+    context.uvDy = dFdy(context.uv);
+    context.position = position;
+    context.positionDx = dFdx(position);
+    context.positionDy = dFdy(position);
+    context.normal = normalize(normal);
+    context.time = proceduralTexture.proceduralTime;
+    vec4 imageColor = texture(albedoMap, uv);
+    vec4 proceduralColor = cwEvaluateProceduralTexture(context);
+    // The first material route is opaque. Procedural alpha is reserved for a
+    // later implementation shared with masked depth and shadow passes.
+    return vec4(imageColor.rgb * mix(vec3(1), proceduralColor.rgb,
+                clamp(proceduralTexture.proceduralAmount, 0.0, 1.0)), imageColor.a);
+}

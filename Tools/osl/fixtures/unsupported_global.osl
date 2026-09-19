@@ -1,0 +1,4 @@
+shader unsupported_global(output color Cout = 0)
+{
+    Cout = color(N);
+}

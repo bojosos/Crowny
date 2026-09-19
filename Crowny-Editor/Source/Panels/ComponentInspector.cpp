@@ -505,12 +505,46 @@ namespace Crowny
         const auto properties = InspectorSelection(entities, "Sprite Renderer").Components<SpriteRendererComponent>();
         if (entities.size() == 1u)
         {
-            const AssetHandle<Texture>& texture = primary.GetComponent<SpriteRendererComponent>().Texture;
+            const auto& sprite = primary.GetComponent<SpriteRendererComponent>();
+            const AssetHandle<Texture>& texture = sprite.GetTexture();
             const Ref<Texture>& preview = texture ? texture.GetInternalPtr() : EditorAssets::Get().UnassignedTexture;
-            ImGui::Image(ImGuiVulkanTexture::Get(preview), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
+            if (sprite.HasValidGeometry())
+            {
+                const glm::vec4 uv = sprite.GetQuadUvRect();
+                const glm::vec2 size = sprite.ResolveGeometry().Size;
+                const glm::vec2 previewSize = 50.0f * size / std::max(size.x, size.y);
+                ImGui::Image(ImGuiVulkanTexture::Get(preview), { previewSize.x, previewSize.y }, { uv.x, uv.w }, { uv.z, uv.y });
+            }
+            else
+                ImGui::TextDisabled("Sprite hidden: missing asset or invalid geometry.");
         }
-        UI::PropertyAsset<Texture>("Texture", properties.Bind("Texture", &SpriteRendererComponent::Texture));
+        UI::PropertyAsset<Sprite>("Sprite", properties.Bind("Sprite", &SpriteRendererComponent::Sprite));
+        UI::PropertyAsset<SpriteAtlas>("Atlas", properties.Bind("Atlas", &SpriteRendererComponent::Atlas));
+        const auto selectedSprite = properties.Bind("Sprite", &SpriteRendererComponent::Sprite).Read();
+        const bool hasSprite = selectedSprite.Mixed || (selectedSprite.Primary && selectedSprite.Primary->HasUUID());
+        if (hasSprite)
+        {
+            UI::Property("Use Sprite Size", properties.Bind("UseSpriteSize", &SpriteRendererComponent::UseSpriteSize));
+            UI::Property("Use Sprite Pivot", properties.Bind("UseSpritePivot", &SpriteRendererComponent::UseSpritePivot));
+        }
+        else
+            UI::PropertyAsset<Texture>("Texture", properties.Bind("Texture", &SpriteRendererComponent::Texture));
         UI::PropertyColor("Color", properties.Bind("Color", &SpriteRendererComponent::Color));
+        {
+            const auto useSize = properties.Bind("UseSpriteSize", &SpriteRendererComponent::UseSpriteSize).Read();
+            UI::ScopedDisable disabled(hasSprite && !selectedSprite.Mixed && useSize && !useSize.Mixed && *useSize.Primary);
+            UI::Property("Size", properties.Bind("Size", &SpriteRendererComponent::Size), 0.01f, 0.0f, 0.0f);
+        }
+        {
+            const auto usePivot = properties.Bind("UseSpritePivot", &SpriteRendererComponent::UseSpritePivot).Read();
+            UI::ScopedDisable disabled(hasSprite && !selectedSprite.Mixed && usePivot && !usePivot.Mixed && *usePivot.Primary);
+            UI::Property("Pivot", properties.Bind("Pivot", &SpriteRendererComponent::Pivot), 0.01f);
+        }
+        if (!hasSprite)
+            UI::Property("UV Rectangle", properties.Bind("UvRect", &SpriteRendererComponent::UvRect), 0.01f, 0.0f, 1.0f);
+        UI::Property("Flip X", properties.Bind("FlipX", &SpriteRendererComponent::FlipX));
+        UI::Property("Flip Y", properties.Bind("FlipY", &SpriteRendererComponent::FlipY));
+        UI::Property("Visible", properties.Bind("Visible", &SpriteRendererComponent::Visible));
         UI::Property("Sorting Layer", properties.Bind("SortingLayer", &SpriteRendererComponent::SortingLayer));
         UI::Property("Order In Layer", properties.Bind("OrderInLayer", &SpriteRendererComponent::OrderInLayer));
     }
@@ -550,6 +584,14 @@ namespace Crowny
                        [](MeshRendererComponent& mesh, float value) { mesh.LodBias = std::clamp(value, -8.0f, 8.0f); }),
                      0.05f, -8.0f, 8.0f);
         UI::Property("Render Layer Order", properties.Bind("RenderLayerOrder", &MeshRendererComponent::RenderLayerOrder));
+    }
+
+    template <> void ComponentSelectionEditorWidget<SpriteAnimatorComponent>(CW_MAYBE_UNUSED Entity primary, const Vector<Entity>& entities)
+    {
+        const auto properties = InspectorSelection(entities, "Sprite Animator").Components<SpriteAnimatorComponent>();
+        UI::PropertyAsset<SpriteAnimationClip>("Clip", properties.Bind("Clip", &SpriteAnimatorComponent::Clip));
+        UI::Property("Speed", properties.Bind("Speed", &SpriteAnimatorComponent::Speed), 0.05f);
+        UI::Property("Play On Awake", properties.Bind("PlayOnAwake", &SpriteAnimatorComponent::PlayOnAwake));
     }
 
     template <> void ComponentSelectionEditorWidget<AnimationComponent>(CW_MAYBE_UNUSED Entity primary, const Vector<Entity>& entities)

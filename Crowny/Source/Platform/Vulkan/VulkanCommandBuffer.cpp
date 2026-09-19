@@ -43,7 +43,8 @@ namespace Crowny
     {
         VulkanCommandBufferPool& pool = m_Device.GetCmdBufferPool();
         if (m_Buffer != nullptr)
-            CW_ENGINE_ASSERT(m_Buffer->IsSubmitted());
+            // Refresh may already have completed and reset a submitted buffer.
+            CW_ENGINE_ASSERT(GetState() != CommandBufferState::Recording);
 
         uint32_t queueFamily = m_Device.GetQueueFamily(m_Type);
         m_Buffer = pool.GetBuffer(queueFamily, m_IsSecondary);

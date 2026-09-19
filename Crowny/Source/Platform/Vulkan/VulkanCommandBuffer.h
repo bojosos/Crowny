@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory_resource>
+
 #include "Crowny/Common/Module.h"
 #include "Crowny/RenderAPI/CommandBuffer.h"
 #include "Platform/Vulkan/VulkanResource.h"
@@ -348,16 +350,19 @@ namespace Crowny
 
         mutable uint32_t m_NumUsedInterQueueSemaphores = 0;
         std::array<VkClearValue, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1> m_ClearValues{};
-        UnorderedMap<VulkanResource*, BufferInfo> m_Buffers;
-        UnorderedMap<VulkanResource*, ResourceUseHandle> m_Resources;
-        UnorderedMap<VulkanResource*, uint32_t> m_Images;
-        UnorderedMap<VulkanSwapChain*, ResourceUseHandle> m_SwapChains;
+        // Recycle tracking nodes with this command buffer. Clearing bindings
+        // still releases their resources; CPU allocation storage survives reset.
+        std::pmr::unsynchronized_pool_resource m_TrackingMemory;
+        std::pmr::unordered_map<VulkanResource*, BufferInfo> m_Buffers{ &m_TrackingMemory };
+        std::pmr::unordered_map<VulkanResource*, ResourceUseHandle> m_Resources{ &m_TrackingMemory };
+        std::pmr::unordered_map<VulkanResource*, uint32_t> m_Images{ &m_TrackingMemory };
+        std::pmr::unordered_map<VulkanSwapChain*, ResourceUseHandle> m_SwapChains{ &m_TrackingMemory };
 
-        UnorderedMap<VulkanTimerQuery*, Ref<VulkanTimerQuery>> m_TimerQueries;
-        UnorderedSet<VulkanPipelineQuery*> m_PipelineQueries;
-        UnorderedSet<VulkanOcclusionQuery*> m_OcclusionQueries;
+        std::pmr::unordered_map<VulkanTimerQuery*, Ref<VulkanTimerQuery>> m_TimerQueries{ &m_TrackingMemory };
+        std::pmr::unordered_set<VulkanPipelineQuery*> m_PipelineQueries{ &m_TrackingMemory };
+        std::pmr::unordered_set<VulkanOcclusionQuery*> m_OcclusionQueries{ &m_TrackingMemory };
 
-        Set<uint32_t> m_ShaderBoundSubresourceInfos;
+        std::pmr::set<uint32_t> m_ShaderBoundSubresourceInfos{ &m_TrackingMemory };
         uint32_t m_GlobalQueueIdx = -1;
 
         uint32_t m_RenderTargetReadOnlyFlags = 0; // TODO Use the flags class
@@ -384,8 +389,8 @@ namespace Crowny
         Vector<VkImageMemoryBarrier> m_LayoutTransitionBarriersTemp;
         Vector<Ref<VulkanVertexBuffer>> m_VertexBuffers;
         Vector<VulkanQuery*> m_QueuedQueryResets;
-        UnorderedMap<uint32_t, TransitionInfo> m_TransitionInfoTemp;
-        UnorderedMap<VulkanImage*, uint32_t> m_QueuedLayoutTransitions;
+        std::pmr::unordered_map<uint32_t, TransitionInfo> m_TransitionInfoTemp{ &m_TrackingMemory };
+        std::pmr::unordered_map<VulkanImage*, uint32_t> m_QueuedLayoutTransitions{ &m_TrackingMemory };
         Vector<VulkanSemaphore*> m_SemaphoresTemp{ MAX_UNIQUE_QUEUES };
         VkBuffer m_VertexBuffersTemp[MAX_BOUND_VERTEX_BUFFERS] = {};
         VkDeviceSize m_VertexBufferOffsets[MAX_BOUND_VERTEX_BUFFERS]{};
@@ -397,7 +402,7 @@ namespace Crowny
         Ref<VulkanRayTracingPipeline> m_RayTracingPipeline;
         Ref<VulkanBufferLayout> m_ResolvedVertexLayout;
         VulkanDevice& m_Device;
-        Set<VulkanSwapChain*> m_ActiveSwapChains;
+        std::pmr::set<VulkanSwapChain*> m_ActiveSwapChains{ &m_TrackingMemory };
         Ref<BufferLayout> m_VertexLayout;
 
         VulkanGpuBuffer* m_RaygenShadingTable = nullptr;

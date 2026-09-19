@@ -566,9 +566,9 @@ namespace Crowny
                 ScriptRuntime::OnFixedUpdate(activeScene, simulationFrame.FixedDelta);
                 activeScene->OnFixedUpdate(simulationFrame.FixedDelta);
             }
-            activeScene->OnUpdateRuntime(simulationStep);
             // Unity order: Update -> animation -> LateUpdate.
             ScriptRuntime::OnUpdate(simulationStep, false);
+            activeScene->OnUpdateRuntime(simulationStep);
             m_SceneRenderer->UpdateAnimations(simulationStep);
             ScriptRuntime::OnLateUpdate(simulationStep);
             m_SceneRenderer->UpdateProceduralMeshes();
@@ -587,7 +587,10 @@ namespace Crowny
             scene->SynchronizePhysicsTransforms(1.0f, Timestep(0.0f));
             time.ExecuteSimulationFrame(
               frame, [&](Timestep fixedDelta) { scene->OnSimulationFixedUpdate(fixedDelta); },
-              [&](Timestep frameDelta) { m_SceneRenderer->UpdateAnimations(frameDelta); },
+              [&](Timestep frameDelta) {
+                  scene->OnUpdateRuntime(frameDelta);
+                  m_SceneRenderer->UpdateAnimations(frameDelta);
+              },
               [&](float interpolationAlpha, Timestep extrapolationTime) {
                   scene->SynchronizePhysicsTransforms(interpolationAlpha, extrapolationTime);
               });

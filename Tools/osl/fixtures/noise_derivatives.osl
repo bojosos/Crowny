@@ -1,0 +1,5 @@
+shader noise_derivatives(output color Cout = 0)
+{
+    float detail = noise("perlin", point(u * 4, v * 4, time));
+    Cout = color(Dx(detail), Dy(detail), filterwidth(detail));
+}

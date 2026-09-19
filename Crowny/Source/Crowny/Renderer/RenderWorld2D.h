@@ -74,6 +74,9 @@ namespace Crowny
         int32_t SortingLayer = 0;
         int32_t OrderInLayer = 0;
         bool Visible = true;
+        // False retains the renderer's texture. True with a null resource clears
+        // it. Explicit native changes default to a complete resource assignment.
+        bool TextureChanged = true;
     };
 
     // Simulation-thread owner. DrainChanges transfers values/resources into a

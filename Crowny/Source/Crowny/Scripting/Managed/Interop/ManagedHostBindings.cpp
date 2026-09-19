@@ -83,6 +83,25 @@ namespace Crowny
             return uuid.Empty() ? AssetHandle<T>() : manager->LoadFromUUID<T>(uuid);
         }
 
+        template <> AssetHandle<Sprite> ResolveAsset<Sprite>(const cw_managed_uuid& assetId)
+        {
+            const auto asset = ResolveAsset<Asset>(assetId);
+            return asset && asset->GetAssetType() == AssetType::Sprite ? static_asset_cast<Sprite>(asset) : AssetHandle<Sprite>();
+        }
+
+        template <> AssetHandle<SpriteAtlas> ResolveAsset<SpriteAtlas>(const cw_managed_uuid& assetId)
+        {
+            const auto asset = ResolveAsset<Asset>(assetId);
+            return asset && asset->GetAssetType() == AssetType::SpriteAtlas ? static_asset_cast<SpriteAtlas>(asset) : AssetHandle<SpriteAtlas>();
+        }
+
+        template <> AssetHandle<SpriteAnimationClip> ResolveAsset<SpriteAnimationClip>(const cw_managed_uuid& assetId)
+        {
+            const auto asset = ResolveAsset<Asset>(assetId);
+            return asset && asset->GetAssetType() == AssetType::SpriteAnimationClip ? static_asset_cast<SpriteAnimationClip>(asset)
+                                                                                    : AssetHandle<SpriteAnimationClip>();
+        }
+
         cw_managed_status ResolveFontHandle(const cw_managed_uuid& fontId, AssetHandle<Font>& font)
         {
             AssetManager* assetManager = AssetManager::TryGet();
@@ -1691,6 +1710,22 @@ namespace Crowny
         CW_ASSET_GET(AudioClipGetIs3D, AudioClip, uint8_t, asset->GetDesc().Is3D ? 1 : 0)
         CW_ASSET_GET(TextureGetWidth, Texture, uint32_t, asset->GetWidth())
         CW_ASSET_GET(TextureGetHeight, Texture, uint32_t, asset->GetHeight())
+        CW_ASSET_GET(SpriteGetTexture, Sprite, cw_managed_uuid, ToAbiUuid(asset->GetData().TextureId))
+        CW_ASSET_GET(SpriteAtlasGetPageCount, SpriteAtlas, uint32_t, static_cast<uint32_t>(asset->GetPages().size()))
+        CW_ASSET_GET(SpriteAtlasGetEntryCount, SpriteAtlas, uint32_t, static_cast<uint32_t>(asset->GetEntries().size()))
+        CW_ASSET_GET(SpriteGetPixelsPerUnit, Sprite, float, asset->GetData().PixelsPerUnit)
+        CW_ASSET_GET(SpriteGetPivot, Sprite, cw_managed_vec2, (cw_managed_vec2{ asset->GetData().Pivot.x, asset->GetData().Pivot.y }))
+        CW_ASSET_GET(SpriteGetOriginalSize, Sprite, cw_managed_vec2,
+                     (cw_managed_vec2{ asset->GetData().OriginalSize.x, asset->GetData().OriginalSize.y }))
+        CW_ASSET_GET(SpriteGetSize, Sprite, cw_managed_vec2, (cw_managed_vec2{ asset->GetGeometry().Size.x, asset->GetGeometry().Size.y }))
+        CW_ASSET_GET(SpriteGetUvRect, Sprite, cw_managed_vec4,
+                     (cw_managed_vec4{ asset->GetData().UvRect.x, asset->GetData().UvRect.y, asset->GetData().UvRect.z, asset->GetData().UvRect.w }))
+        CW_ASSET_GET(SpriteGetBorders, Sprite, cw_managed_vec4,
+                     (cw_managed_vec4{ asset->GetData().Borders.x, asset->GetData().Borders.y, asset->GetData().Borders.z,
+                                       asset->GetData().Borders.w }))
+        CW_ASSET_GET(SpriteAnimationClipGetDuration, SpriteAnimationClip, float, static_cast<float>(asset->GetDuration()))
+        CW_ASSET_GET(SpriteAnimationClipGetFrameCount, SpriteAnimationClip, uint32_t, static_cast<uint32_t>(asset->GetData().Frames.size()))
+        CW_ASSET_GET(SpriteAnimationClipGetMode, SpriteAnimationClip, int32_t, static_cast<int32_t>(asset->GetData().Mode))
 #undef CW_ASSET_GET
 
         cw_managed_status CW_MANAGED_CALL AudioMixerSetActive(void* context, cw_managed_uuid assetId)
@@ -2214,6 +2249,61 @@ namespace Crowny
         CW_ANIMATION_CLIP_GET(AnimationClipGetSampleRate, float, clip->GetSampleRate())
         CW_ANIMATION_CLIP_GET(AnimationClipGetIsAdditive, uint8_t, clip->IsAdditive() ? 1 : 0)
 #undef CW_ANIMATION_CLIP_GET
+
+#define CW_SPRITE_ANIM_GET(functionName, resultType, expression)                                                                                     \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, resultType* result)                                      \
+    {                                                                                                                                                \
+        return Execute(context, [&]() {                                                                                                              \
+            if (!result)                                                                                                                             \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                                           \
+            auto* animation = ResolveComponent<SpriteAnimatorComponent>(entityId);                                                                   \
+            if (!animation)                                                                                                                          \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                                               \
+            *result = expression;                                                                                                                    \
+            return CW_MANAGED_STATUS_OK;                                                                                                             \
+        });                                                                                                                                          \
+    }
+#define CW_SPRITE_ANIM_SET(functionName, valueType, statement)                                                                                       \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, valueType value)                                         \
+    {                                                                                                                                                \
+        return Execute(context, [&]() {                                                                                                              \
+            auto* animation = ResolveComponent<SpriteAnimatorComponent>(entityId);                                                                   \
+            if (!animation)                                                                                                                          \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                                               \
+            statement;                                                                                                                               \
+            return CW_MANAGED_STATUS_OK;                                                                                                             \
+        });                                                                                                                                          \
+    }
+#define CW_SPRITE_ANIM_COMMAND(functionName, statement)                                                                                              \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId)                                                          \
+    {                                                                                                                                                \
+        return Execute(context, [&]() {                                                                                                              \
+            auto* animation = ResolveComponent<SpriteAnimatorComponent>(entityId);                                                                   \
+            if (!animation)                                                                                                                          \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                                               \
+            statement;                                                                                                                               \
+            return CW_MANAGED_STATUS_OK;                                                                                                             \
+        });                                                                                                                                          \
+    }
+        CW_SPRITE_ANIM_GET(SpriteAnimatorGetClip, cw_managed_uuid, ToAbiUuid(animation->Clip.GetUUID()))
+        CW_SPRITE_ANIM_SET(SpriteAnimatorSetClip, cw_managed_uuid, const auto clip = ResolveAsset<SpriteAnimationClip>(value);
+                           if (!FromAbiUuid(value).Empty() && !clip) return CW_MANAGED_STATUS_INVALID_ARGUMENT; animation->Clip = clip)
+        CW_SPRITE_ANIM_GET(SpriteAnimatorGetSpeed, float, animation->Speed)
+        CW_SPRITE_ANIM_SET(SpriteAnimatorSetSpeed, float, if (!std::isfinite(value)) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                           animation->Speed = value)
+        CW_SPRITE_ANIM_GET(SpriteAnimatorGetPlayOnAwake, uint8_t, animation->PlayOnAwake ? 1 : 0)
+        CW_SPRITE_ANIM_SET(SpriteAnimatorSetPlayOnAwake, uint8_t, animation->PlayOnAwake = value != 0)
+        CW_SPRITE_ANIM_GET(SpriteAnimatorGetTime, float, animation->GetTime())
+        CW_SPRITE_ANIM_SET(SpriteAnimatorSetTime, float, if (!std::isfinite(value)) return CW_MANAGED_STATUS_INVALID_ARGUMENT; animation->Seek(value))
+        CW_SPRITE_ANIM_GET(SpriteAnimatorGetIsPlaying, uint8_t, animation->IsPlaying() ? 1 : 0)
+        CW_SPRITE_ANIM_GET(SpriteAnimatorGetFrameIndex, uint32_t, animation->GetFrameIndex())
+        CW_SPRITE_ANIM_GET(SpriteAnimatorConsumeCompletions, uint64_t, animation->ConsumeCompletions())
+        CW_SPRITE_ANIM_COMMAND(SpriteAnimatorPlay, animation->Play())
+        CW_SPRITE_ANIM_COMMAND(SpriteAnimatorPause, animation->Pause())
+        CW_SPRITE_ANIM_COMMAND(SpriteAnimatorStop, animation->Stop())
+#undef CW_SPRITE_ANIM_GET
+#undef CW_SPRITE_ANIM_SET
+#undef CW_SPRITE_ANIM_COMMAND
 
 #define CW_ANIMATION_GET(functionName, resultType, expression)                                                                                       \
     cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, resultType* result)                                      \
@@ -2772,13 +2862,51 @@ namespace Crowny
         });                                                                                                                                          \
     }
         CW_SPRITE_GET(SpriteRendererGetTexture, cw_managed_uuid, ToAbiUuid(component->Texture.GetUUID()))
+        CW_SPRITE_GET(SpriteRendererGetSprite, cw_managed_uuid, ToAbiUuid(component->Sprite.GetUUID()))
+        CW_SPRITE_GET(SpriteRendererGetAtlas, cw_managed_uuid, ToAbiUuid(component->Atlas.GetUUID()))
+        CW_SPRITE_SET(SpriteRendererSetAtlas, cw_managed_uuid, const auto atlas = ResolveAsset<SpriteAtlas>(value);
+                      if (!FromAbiUuid(value).Empty() && !atlas) return CW_MANAGED_STATUS_INVALID_ARGUMENT; component->Atlas = atlas)
+        CW_SPRITE_SET(SpriteRendererSetSprite, cw_managed_uuid, const auto sprite = ResolveAsset<Sprite>(value);
+                      if (!FromAbiUuid(value).Empty() && !sprite) return CW_MANAGED_STATUS_INVALID_ARGUMENT; component->Sprite = sprite)
+        CW_SPRITE_GET(SpriteRendererGetUseSpriteSize, uint8_t, component->UseSpriteSize ? 1 : 0)
+        CW_SPRITE_SET(SpriteRendererSetUseSpriteSize, uint8_t, component->UseSpriteSize = value != 0)
+        CW_SPRITE_GET(SpriteRendererGetUseSpritePivot, uint8_t, component->UseSpritePivot ? 1 : 0)
+        CW_SPRITE_SET(SpriteRendererSetUseSpritePivot, uint8_t, component->UseSpritePivot = value != 0)
         CW_SPRITE_SET(SpriteRendererSetTexture, cw_managed_uuid, component->Texture = ResolveAsset<Texture>(value))
+        CW_SPRITE_GET(SpriteRendererGetFlipX, uint8_t, component->FlipX ? 1 : 0)
+        CW_SPRITE_SET(SpriteRendererSetFlipX, uint8_t, component->FlipX = value != 0)
+        CW_SPRITE_GET(SpriteRendererGetFlipY, uint8_t, component->FlipY ? 1 : 0)
+        CW_SPRITE_SET(SpriteRendererSetFlipY, uint8_t, component->FlipY = value != 0)
+        CW_SPRITE_GET(SpriteRendererGetVisible, uint8_t, component->Visible ? 1 : 0)
+        CW_SPRITE_SET(SpriteRendererSetVisible, uint8_t, component->Visible = value != 0)
+        CW_SPRITE_GET(SpriteRendererGetSize, cw_managed_vec2, (cw_managed_vec2{ component->Size.x, component->Size.y }))
+        CW_SPRITE_GET(SpriteRendererGetPivot, cw_managed_vec2, (cw_managed_vec2{ component->Pivot.x, component->Pivot.y }))
+        CW_SPRITE_GET(SpriteRendererGetUvRect, cw_managed_vec4,
+                      (cw_managed_vec4{ component->UvRect.x, component->UvRect.y, component->UvRect.z, component->UvRect.w }))
         CW_SPRITE_GET(SpriteRendererGetSortingLayer, int32_t, component->SortingLayer)
         CW_SPRITE_SET(SpriteRendererSetSortingLayer, int32_t, component->SortingLayer = value)
         CW_SPRITE_GET(SpriteRendererGetOrderInLayer, int32_t, component->OrderInLayer)
         CW_SPRITE_SET(SpriteRendererSetOrderInLayer, int32_t, component->OrderInLayer = value)
 #undef CW_SPRITE_SET
 #undef CW_SPRITE_GET
+
+#define CW_SPRITE_SET_GEOMETRY(functionName, valueType, member, expression)                                                                          \
+    cw_managed_status CW_MANAGED_CALL functionName(void* context, cw_managed_uuid entityId, const valueType* value)                                  \
+    {                                                                                                                                                \
+        return Execute(context, [&]() {                                                                                                              \
+            if (value == nullptr)                                                                                                                    \
+                return CW_MANAGED_STATUS_INVALID_ARGUMENT;                                                                                           \
+            auto* component = ResolveComponent<SpriteRendererComponent>(entityId);                                                                   \
+            if (component == nullptr)                                                                                                                \
+                return CW_MANAGED_STATUS_STALE_HANDLE;                                                                                               \
+            component->member = expression;                                                                                                          \
+            return CW_MANAGED_STATUS_OK;                                                                                                             \
+        });                                                                                                                                          \
+    }
+        CW_SPRITE_SET_GEOMETRY(SpriteRendererSetSize, cw_managed_vec2, Size, (glm::vec2(value->x, value->y)))
+        CW_SPRITE_SET_GEOMETRY(SpriteRendererSetPivot, cw_managed_vec2, Pivot, (glm::vec2(value->x, value->y)))
+        CW_SPRITE_SET_GEOMETRY(SpriteRendererSetUvRect, cw_managed_vec4, UvRect, (glm::vec4(value->x, value->y, value->z, value->w)))
+#undef CW_SPRITE_SET_GEOMETRY
 
         cw_managed_status CW_MANAGED_CALL SpriteRendererGetColor(void* context, cw_managed_uuid entityId, cw_managed_vec4* result)
         {
@@ -4041,24 +4169,42 @@ namespace Crowny
         {
             switch (field)
             {
-            case 0: return &d.BottomRadius;
-            case 1: return &d.TopRadius;
-            case 2: return &d.Height;
-            case 3: return &d.ShellThickness;
-            case 4: return &d.Arc;
-            case 5: return &d.SeamRotation;
-            case 6: return &d.Opacity;
-            case 7: return &d.UVRotation;
-            case 8: return &d.EdgeFeather;
-            case 9: return &d.DepthFeather;
-            case 10: return &d.AngleFadeStart;
-            case 11: return &d.AngleFadeEnd;
-            case 12: return &d.DistanceFadeStart;
-            case 13: return &d.DistanceFadeEnd;
-            case 14: return &d.FadeIn;
-            case 15: return &d.Lifetime;
-            case 16: return &d.FadeOut;
-            default: return nullptr;
+            case 0:
+                return &d.BottomRadius;
+            case 1:
+                return &d.TopRadius;
+            case 2:
+                return &d.Height;
+            case 3:
+                return &d.ShellThickness;
+            case 4:
+                return &d.Arc;
+            case 5:
+                return &d.SeamRotation;
+            case 6:
+                return &d.Opacity;
+            case 7:
+                return &d.UVRotation;
+            case 8:
+                return &d.EdgeFeather;
+            case 9:
+                return &d.DepthFeather;
+            case 10:
+                return &d.AngleFadeStart;
+            case 11:
+                return &d.AngleFadeEnd;
+            case 12:
+                return &d.DistanceFadeStart;
+            case 13:
+                return &d.DistanceFadeEnd;
+            case 14:
+                return &d.FadeIn;
+            case 15:
+                return &d.Lifetime;
+            case 16:
+                return &d.FadeOut;
+            default:
+                return nullptr;
             }
         }
 
@@ -4066,9 +4212,11 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
                 const float* value = DecalFloat(*d, field);
-                if (!result || !value) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                if (!result || !value)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 *result = *value;
                 return CW_MANAGED_STATUS_OK;
             });
@@ -4077,9 +4225,11 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
                 float* target = DecalFloat(*d, field);
-                if (!target || !std::isfinite(value)) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                if (!target || !std::isfinite(value))
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 *target = value;
                 return CW_MANAGED_STATUS_OK;
             });
@@ -4088,18 +4238,35 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
-                if (!result) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!result)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 switch (field)
                 {
-                case 0: *result = static_cast<int32_t>(d->Projection); break;
-                case 1: *result = static_cast<int32_t>(d->TargetMode); break;
-                case 2: *result = d->SortOrder; break;
-                case 3: *result = static_cast<int32_t>(d->ReceiverLayers); break;
-                case 4: *result = d->Enabled; break;
-                case 5: *result = d->PreserveTexelDensity; break;
-                case 6: *result = d->DestroyOwnerOnExpiry; break;
-                default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                case 0:
+                    *result = static_cast<int32_t>(d->Projection);
+                    break;
+                case 1:
+                    *result = static_cast<int32_t>(d->TargetMode);
+                    break;
+                case 2:
+                    *result = d->SortOrder;
+                    break;
+                case 3:
+                    *result = static_cast<int32_t>(d->ReceiverLayers);
+                    break;
+                case 4:
+                    *result = d->Enabled;
+                    break;
+                case 5:
+                    *result = d->PreserveTexelDensity;
+                    break;
+                case 6:
+                    *result = d->DestroyOwnerOnExpiry;
+                    break;
+                default:
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 }
                 return CW_MANAGED_STATUS_OK;
             });
@@ -4108,17 +4275,37 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
                 switch (field)
                 {
-                case 0: if (value < 0 || value > 1) return CW_MANAGED_STATUS_INVALID_ARGUMENT; d->Projection = static_cast<DecalProjection>(value); break;
-                case 1: if (value < 0 || value > 2) return CW_MANAGED_STATUS_INVALID_ARGUMENT; d->TargetMode = static_cast<DecalTargetMode>(value); break;
-                case 2: d->SortOrder = value; break;
-                case 3: d->ReceiverLayers = static_cast<uint32_t>(value); break;
-                case 4: d->Enabled = value != 0; break;
-                case 5: d->PreserveTexelDensity = value != 0; break;
-                case 6: d->DestroyOwnerOnExpiry = value != 0; break;
-                default: return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                case 0:
+                    if (value < 0 || value > 1)
+                        return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                    d->Projection = static_cast<DecalProjection>(value);
+                    break;
+                case 1:
+                    if (value < 0 || value > 2)
+                        return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                    d->TargetMode = static_cast<DecalTargetMode>(value);
+                    break;
+                case 2:
+                    d->SortOrder = value;
+                    break;
+                case 3:
+                    d->ReceiverLayers = static_cast<uint32_t>(value);
+                    break;
+                case 4:
+                    d->Enabled = value != 0;
+                    break;
+                case 5:
+                    d->PreserveTexelDensity = value != 0;
+                    break;
+                case 6:
+                    d->DestroyOwnerOnExpiry = value != 0;
+                    break;
+                default:
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 }
                 return CW_MANAGED_STATUS_OK;
             });
@@ -4127,9 +4314,14 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
-                if (!result || field > 3) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
-                glm::vec4 v = field == 0 ? d->Tint : field == 1 ? glm::vec4(d->Offset, 0) : field == 2 ? glm::vec4(d->Size, 0) : glm::vec4(d->UVScale, d->UVOffset);
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!result || field > 3)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                glm::vec4 v = field == 0   ? d->Tint
+                              : field == 1 ? glm::vec4(d->Offset, 0)
+                              : field == 2 ? glm::vec4(d->Size, 0)
+                                           : glm::vec4(d->UVScale, d->UVOffset);
                 *result = { v.x, v.y, v.z, v.w };
                 return CW_MANAGED_STATUS_OK;
             });
@@ -4138,14 +4330,23 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
-                if (!value || field > 3 || !std::isfinite(value->x) || !std::isfinite(value->y) || !std::isfinite(value->z) || !std::isfinite(value->w))
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!value || field > 3 || !std::isfinite(value->x) || !std::isfinite(value->y) || !std::isfinite(value->z) ||
+                    !std::isfinite(value->w))
                     return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 glm::vec4 v(value->x, value->y, value->z, value->w);
-                if (field == 0) d->Tint = v;
-                else if (field == 1) d->Offset = glm::vec3(v);
-                else if (field == 2) d->Size = glm::vec3(v);
-                else { d->UVScale = glm::vec2(v); d->UVOffset = { v.z, v.w }; }
+                if (field == 0)
+                    d->Tint = v;
+                else if (field == 1)
+                    d->Offset = glm::vec3(v);
+                else if (field == 2)
+                    d->Size = glm::vec3(v);
+                else
+                {
+                    d->UVScale = glm::vec2(v);
+                    d->UVOffset = { v.z, v.w };
+                }
                 return CW_MANAGED_STATUS_OK;
             });
         }
@@ -4153,8 +4354,10 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
-                if (!result || field > 1) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (!result || field > 1)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 *result = ToAbiUuid(field == 0 ? d->Material.GetUUID() : d->Target);
                 return CW_MANAGED_STATUS_OK;
             });
@@ -4163,15 +4366,19 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
-                if (field > 1) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (field > 1)
+                    return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                 if (field == 0)
                 {
                     auto material = ResolveAsset<Material>(value);
-                    if (material && material->GetDomain() != MaterialDomain::Decal) return CW_MANAGED_STATUS_INVALID_ARGUMENT;
+                    if (material && material->GetDomain() != MaterialDomain::Decal)
+                        return CW_MANAGED_STATUS_INVALID_ARGUMENT;
                     d->Material = material;
                 }
-                else d->Target = FromAbiUuid(value);
+                else
+                    d->Target = FromAbiUuid(value);
                 return CW_MANAGED_STATUS_OK;
             });
         }
@@ -4179,8 +4386,12 @@ namespace Crowny
         {
             return Execute(context, [&]() {
                 auto* d = ResolveComponent<DecalComponent>(entity);
-                if (!d) return CW_MANAGED_STATUS_STALE_HANDLE;
-                if (restart) d->RestartLifetime(); else d->StopLifetime();
+                if (!d)
+                    return CW_MANAGED_STATUS_STALE_HANDLE;
+                if (restart)
+                    d->RestartLifetime();
+                else
+                    d->StopLifetime();
                 return CW_MANAGED_STATUS_OK;
             });
         }

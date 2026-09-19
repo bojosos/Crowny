@@ -84,6 +84,10 @@ layout (binding = 10) uniform sampler2D aoMap;
 // @name("Emission Map") @default(white)
 layout (binding = 12) uniform sampler2D emissiveMap;
 
+#ifdef CW_PROCEDURAL_BASE_COLOR
+#include "CrownyProceduralTexture.glslinc"
+#endif
+
 layout (binding = 11) uniform Parameters {
     // @color @name("Emission") @default(0.0, 0.0, 0.0, 1.0)
     vec4 emissive;
@@ -141,14 +145,19 @@ void main()
 {
     vec3 positionDx = dFdx(fs_in.worldPos), positionDy = dFdy(fs_in.worldPos);
 	outEntity = int(cwDecalDraw.receiver.x);
-    float alpha = texture(albedoMap, fs_in.uv).a * parameters.albedo.a * fs_in.color.a;
+#ifdef CW_PROCEDURAL_BASE_COLOR
+    vec4 baseSample = cwEvaluateBaseColor(fs_in.uv, fs_in.worldPos, fs_in.normal);
+#else
+    vec4 baseSample = texture(albedoMap, fs_in.uv);
+#endif
+    float alpha = baseSample.a * parameters.albedo.a * fs_in.color.a;
     if (parameters.alphaMode == 1.0 && alpha < parameters.alphaCutoff)
         discard;
 
 	vec3 N = calculateNormal();
 	vec3 V = normalize(uboParams.camPos - fs_in.worldPos);
 
-	vec3 albedo = max(texture(albedoMap, fs_in.uv).rgb * parameters.albedo.rgb * fs_in.color.rgb, vec3(0.0));
+	vec3 albedo = max(baseSample.rgb * parameters.albedo.rgb * fs_in.color.rgb, vec3(0.0));
 	float metallic = clamp(texture(metallicMap, fs_in.uv).r * parameters.metalness, 0.0, 1.0);
 	float roughness = clamp(texture(roughnessMap, fs_in.uv).r * parameters.roughness, 0.045, 1.0);
     float ao = texture(aoMap, fs_in.uv).r;
@@ -195,7 +204,9 @@ void main()
 
 	// Match the default scene presentation in ToneMap.glsl. Surface colors and
 	// the render target are linear; sRGB conversion belongs to presentation.
+#ifndef CW_LINEAR_OUTPUT
 	color = acesFitted(color);
+#endif
 
 	outColor = vec4(color, alpha);
 }

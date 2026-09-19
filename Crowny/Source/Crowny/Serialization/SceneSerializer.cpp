@@ -18,6 +18,37 @@
 
 namespace Crowny
 {
+    Vector<UUID> SceneSerializer::GatherSpriteDependencies(const YAML::Node& source)
+    {
+        Vector<UUID> dependencies;
+        const auto entities = source["Entities"];
+        if (!entities)
+            return dependencies;
+        if (!entities.IsSequence())
+            throw std::runtime_error("Scene Entities must be a sequence when gathering sprite dependencies.");
+        for (const auto& entity : entities)
+        {
+            if (const auto animator = entity["SpriteAnimatorComponent"])
+            {
+                const UUID clip = animator["Clip"].as<UUID>(UUID::EMPTY);
+                if (!clip.Empty())
+                    dependencies.push_back(clip);
+            }
+            const auto sprite = entity["SpriteRendererComponent"];
+            if (!sprite)
+                continue;
+            for (const char* field : { "Sprite", "Texture", "Atlas" })
+            {
+                const UUID asset = sprite[field].as<UUID>(UUID::EMPTY);
+                if (!asset.Empty())
+                    dependencies.push_back(asset);
+            }
+        }
+        std::sort(dependencies.begin(), dependencies.end());
+        dependencies.erase(std::unique(dependencies.begin(), dependencies.end()), dependencies.end());
+        return dependencies;
+    }
+
     Vector<UUID> SceneSerializer::GatherDecalMaterialDependencies(const YAML::Node& source)
     {
         Vector<UUID> dependencies;
@@ -252,7 +283,7 @@ namespace Crowny
             if (!data["Scene"])
                 return false;
             const uint32_t version = data["Version"].as<uint32_t>(0);
-            if (version != FORMAT_VERSION && version != 13 && version != 12)
+            if (version != FORMAT_VERSION && version != 16 && version != 15 && version != 14 && version != 13 && version != 12)
             {
                 CW_ENGINE_ERROR("Scene '{}' uses version {}, but this build requires version {}.", filepath, version, FORMAT_VERSION);
                 return false;
@@ -328,7 +359,7 @@ namespace Crowny
         {
             uint32_t version;
             archive(version);
-            if (version != FORMAT_VERSION && version != 13 && version != 12)
+            if (version != FORMAT_VERSION && version != 16 && version != 15 && version != 14 && version != 13 && version != 12)
             {
                 CW_ENGINE_ERROR("Binary scene '{}' uses version {}, but this build requires version {}.", filepath, version, FORMAT_VERSION);
                 stream->Close();

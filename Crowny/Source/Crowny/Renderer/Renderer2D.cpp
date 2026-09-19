@@ -307,7 +307,8 @@ namespace Crowny
         FillRect(transform, nullptr, color, entityId);
     }
 
-    void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId)
+    void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId,
+                              const glm::vec4& uvRect)
     {
         if (s_Data->ActivePrimitive != Primitive2D::Sprite || s_Data->QuadVertexCount == RENDERER_MAX_SPRITES)
             End();
@@ -318,7 +319,7 @@ namespace Crowny
         instance.AxisY = transform[1];
         instance.Origin = transform[3];
         instance.Color = color;
-        instance.UvRect = { 0.0f, 0.0f, 1.0f, 1.0f };
+        instance.UvRect = uvRect;
         instance.Metadata = { static_cast<int32_t>(ts), static_cast<int32_t>(entityId), 0, 0 };
         ++s_Data->QuadVertexCount;
         s_Data->QuadIndexCount += 6;

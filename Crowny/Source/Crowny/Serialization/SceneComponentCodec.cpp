@@ -339,6 +339,16 @@ namespace Crowny
                 const auto& sprite = entity.GetComponent<SpriteRendererComponent>();
                 SerializeValueYAML(out, "Color", sprite.Color);
                 SerializeValueYAML(out, "Texture", sprite.Texture.GetUUID());
+                SerializeValueYAML(out, "Sprite", sprite.Sprite.GetUUID());
+                SerializeValueYAML(out, "Atlas", sprite.Atlas.GetUUID());
+                SerializeValueYAML(out, "UseSpriteSize", sprite.UseSpriteSize);
+                SerializeValueYAML(out, "UseSpritePivot", sprite.UseSpritePivot);
+                SerializeValueYAML(out, "Size", sprite.Size);
+                SerializeValueYAML(out, "Pivot", sprite.Pivot);
+                SerializeValueYAML(out, "UvRect", sprite.UvRect);
+                SerializeValueYAML(out, "FlipX", sprite.FlipX);
+                SerializeValueYAML(out, "FlipY", sprite.FlipY);
+                SerializeValueYAML(out, "Visible", sprite.Visible);
                 SerializeValueYAML(out, "SortingLayer", sprite.SortingLayer);
                 SerializeValueYAML(out, "OrderInLayer", sprite.OrderInLayer);
             }
@@ -348,6 +358,19 @@ namespace Crowny
                 auto& sprite = entity.AddComponent<SpriteRendererComponent>();
                 sprite.Color = node["Color"].as<glm::vec4>();
                 sprite.Texture = LoadAssetReference<Texture>(node["Texture"].as<UUID>(UUID::EMPTY));
+                sprite.Atlas = LoadAssetReference<SpriteAtlas>(node["Atlas"].as<UUID>(UUID::EMPTY));
+                const UUID spriteId = node["Sprite"].as<UUID>(UUID::EMPTY);
+                sprite.Sprite = sprite.Atlas.HasUUID() && AssetManager::TryGet()
+                                  ? static_asset_cast<Sprite>(AssetManager::Get().GetAssetHandle(spriteId))
+                                  : LoadAssetReference<Sprite>(spriteId);
+                sprite.UseSpriteSize = node["UseSpriteSize"].as<bool>(true);
+                sprite.UseSpritePivot = node["UseSpritePivot"].as<bool>(true);
+                sprite.Size = node["Size"].as<glm::vec2>(glm::vec2(1.0f));
+                sprite.Pivot = node["Pivot"].as<glm::vec2>(glm::vec2(0.5f));
+                sprite.UvRect = node["UvRect"].as<glm::vec4>(glm::vec4(0, 0, 1, 1));
+                sprite.FlipX = node["FlipX"].as<bool>(false);
+                sprite.FlipY = node["FlipY"].as<bool>(false);
+                sprite.Visible = node["Visible"].as<bool>(true);
                 sprite.SortingLayer = node["SortingLayer"].as<int32_t>(0);
                 sprite.OrderInLayer = node["OrderInLayer"].as<int32_t>(0);
             }
@@ -357,9 +380,13 @@ namespace Crowny
                 const auto& sprite = entity.GetComponent<SpriteRendererComponent>();
                 archive(sprite.Color.x, sprite.Color.y, sprite.Color.z, sprite.Color.w);
                 archive(sprite.Texture.GetUUID(), sprite.SortingLayer, sprite.OrderInLayer);
+                archive(sprite.Size.x, sprite.Size.y, sprite.Pivot.x, sprite.Pivot.y);
+                archive(sprite.UvRect.x, sprite.UvRect.y, sprite.UvRect.z, sprite.UvRect.w, sprite.FlipX, sprite.FlipY, sprite.Visible);
+                archive(sprite.Sprite.GetUUID(), sprite.UseSpriteSize, sprite.UseSpritePivot);
+                archive(sprite.Atlas.GetUUID());
             }
 
-            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
             {
                 auto& sprite = entity.AddComponent<SpriteRendererComponent>();
                 archive(sprite.Color.x, sprite.Color.y, sprite.Color.z, sprite.Color.w);
@@ -367,6 +394,25 @@ namespace Crowny
                 archive(texture);
                 sprite.Texture = LoadAssetReference<Texture>(texture);
                 archive(sprite.SortingLayer, sprite.OrderInLayer);
+                if (context.FormatVersion >= 15)
+                {
+                    archive(sprite.Size.x, sprite.Size.y, sprite.Pivot.x, sprite.Pivot.y);
+                    archive(sprite.UvRect.x, sprite.UvRect.y, sprite.UvRect.z, sprite.UvRect.w, sprite.FlipX, sprite.FlipY, sprite.Visible);
+                }
+                if (context.FormatVersion >= 16)
+                {
+                    UUID spriteId;
+                    archive(spriteId, sprite.UseSpriteSize, sprite.UseSpritePivot);
+                    if (context.FormatVersion >= 17)
+                    {
+                        UUID atlasId;
+                        archive(atlasId);
+                        sprite.Atlas = LoadAssetReference<SpriteAtlas>(atlasId);
+                    }
+                    sprite.Sprite = sprite.Atlas.HasUUID() && AssetManager::TryGet()
+                                      ? static_asset_cast<Sprite>(AssetManager::Get().GetAssetHandle(spriteId))
+                                      : LoadAssetReference<Sprite>(spriteId);
+                }
             }
         };
 
@@ -1455,6 +1501,36 @@ namespace Crowny
             }
         };
 
+        template <> struct ComponentIO<SpriteAnimatorComponent>
+        {
+            static void WriteYaml(YAML::Emitter& out, Entity entity)
+            {
+                const auto& animation = entity.GetComponent<SpriteAnimatorComponent>();
+                SerializeValueYAML(out, "Clip", animation.Clip.GetUUID());
+                SerializeValueYAML(out, "Speed", animation.Speed);
+                SerializeValueYAML(out, "PlayOnAwake", animation.PlayOnAwake);
+            }
+            static void ReadYaml(const YAML::Node& node, Entity entity, SceneComponentReadContext&)
+            {
+                auto& animation = entity.AddComponent<SpriteAnimatorComponent>();
+                animation.Clip = LoadAssetReference<SpriteAnimationClip>(node["Clip"].as<UUID>(UUID::EMPTY));
+                animation.Speed = node["Speed"].as<float>(1.0f);
+                animation.PlayOnAwake = node["PlayOnAwake"].as<bool>(true);
+            }
+            static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
+            {
+                const auto& animation = entity.GetComponent<SpriteAnimatorComponent>();
+                archive(animation.Clip.GetUUID(), animation.Speed, animation.PlayOnAwake);
+            }
+            static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
+            {
+                auto& animation = entity.AddComponent<SpriteAnimatorComponent>();
+                UUID clip;
+                archive(clip, animation.Speed, animation.PlayOnAwake);
+                animation.Clip = LoadAssetReference<SpriteAnimationClip>(clip);
+            }
+        };
+
         template <> struct ComponentIO<AnimationComponent>
         {
             static void WriteYaml(YAML::Emitter& out, Entity entity)
@@ -1643,7 +1719,7 @@ namespace Crowny
                      editorName };
         }
 
-        static constexpr std::array<SceneComponentCodec, 23> COMPONENT_CODECS = {
+        static constexpr std::array<SceneComponentCodec, 24> COMPONENT_CODECS = {
             MakeCodec<TagComponent>(SceneComponentId::Tag, "TagComponent", nullptr, "Tag"),
             MakeCodec<TransformComponent>(SceneComponentId::Transform, "TransformComponent", "Transform", "Transform"),
             MakeCodec<CameraComponent>(SceneComponentId::Camera, "CameraComponent", "Camera", "Camera"),
@@ -1671,7 +1747,8 @@ namespace Crowny
             MakeCodec<AnimationComponent>(SceneComponentId::Animation, "AnimationComponent", "Animation", "Animation"),
             MakeCodec<LightComponent>(SceneComponentId::Light, "LightComponent", "Light", "Light"),
             MakeCodec<MeshCollider3DComponent>(SceneComponentId::MeshCollider3D, "MeshCollider3DComponent", "Mesh Collider 3D", "Mesh Collider 3D"),
-            MakeCodec<DecalComponent>(SceneComponentId::Decal, "DecalComponent", "Decal", "Decal")
+            MakeCodec<DecalComponent>(SceneComponentId::Decal, "DecalComponent", "Decal", "Decal"),
+            MakeCodec<SpriteAnimatorComponent>(SceneComponentId::SpriteAnimator, "SpriteAnimatorComponent", "Sprite Animator", "Sprite Animator")
         };
 
         constexpr bool HasStableIds()

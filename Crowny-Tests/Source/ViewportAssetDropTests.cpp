@@ -86,13 +86,62 @@ TEST_CASE("Viewport drops share acceptance for source paths and library metadata
     CHECK(drops.Describe("outside/model.OBJ") != nullptr);
     CHECK(drops.Describe("outside/clip.wav") != nullptr);
     CHECK(drops.Describe("outside/file.txt") == nullptr);
-    CHECK(drops.Describe("outside/image.png") == nullptr);
+    CHECK(drops.Describe("outside/image.png") != nullptr);
+    CHECK(drops.Describe("outside/image.cwsprite") != nullptr);
+    CHECK(drops.Describe("outside/walk.cwspriteanim") != nullptr);
+    CHECK(drops.Describe("outside/sprites.cwatlas") != nullptr);
     library.Complete(AssetType::Mesh);
     CHECK(String(drops.Describe(library.File->Filepath)) == String(drops.Describe("outside/model.obj")));
     library.File->Metadata->Type = AssetType::Texture;
-    CHECK(drops.Describe(library.File->Filepath) == nullptr);
+    CHECK(drops.Describe(library.File->Filepath) != nullptr);
     CHECK_FALSE(drops.Submit("outside/file.txt", { CreateRef<Scene>(false), {}, {} }, 0));
     CHECK(library.Imports == 0);
+}
+
+TEST_CASE("Viewport sprite placement retains its asset through undo and redo", "[Editor][Viewport][Drop][2D]")
+{
+    DropRuntime runtime;
+    DropLibrary library;
+    library.Asset = AssetManager::Get().CreateAssetHandle(CreateRef<Sprite>());
+    library.Complete(AssetType::Sprite);
+    auto drops = library.Create();
+    Entity selected;
+    drops.SetActions({ {}, [&](Entity entity) { selected = entity; } });
+    const auto scene = CreateRef<Scene>(false);
+    REQUIRE(drops.Submit(library.File->Filepath, { scene, {}, glm::vec3(2, 3, 4) }, 0));
+    REQUIRE(selected);
+    CHECK(glm::vec3(selected.GetWorldMatrix()[3]) == glm::vec3(2, 3, 4));
+    CHECK(selected.GetComponent<SpriteRendererComponent>().Sprite.GetUUID() == library.Asset.GetUUID());
+    const UUID id = selected.GetUuid();
+    UndoRedo::Get().Undo();
+    CHECK_FALSE(scene->TryGetEntityFromUuid(id));
+    UndoRedo::Get().Redo();
+    Entity restored = scene->TryGetEntityFromUuid(id);
+    REQUIRE(restored);
+    CHECK(restored.GetComponent<SpriteRendererComponent>().Sprite.GetUUID() == library.Asset.GetUUID());
+}
+
+TEST_CASE("Viewport animation placement preserves its clip through undo", "[Editor][Viewport][Drop][2D]")
+{
+    DropRuntime runtime;
+    DropLibrary library;
+    library.Asset = AssetManager::Get().CreateAssetHandle(CreateRef<SpriteAnimationClip>());
+    library.Complete(AssetType::SpriteAnimationClip);
+    auto drops = library.Create();
+    Entity selected;
+    drops.SetActions({ {}, [&](Entity entity) { selected = entity; } });
+    const auto scene = CreateRef<Scene>(false);
+    REQUIRE(drops.Submit(library.File->Filepath, { scene, {}, glm::vec3(2, 3, 4) }, 0));
+    REQUIRE(selected);
+    REQUIRE(selected.HasComponent<SpriteAnimatorComponent>());
+    CHECK(selected.GetComponent<SpriteAnimatorComponent>().Clip.GetUUID() == library.Asset.GetUUID());
+    const UUID id = selected.GetUuid();
+    UndoRedo::Get().Undo();
+    CHECK_FALSE(scene->TryGetEntityFromUuid(id));
+    UndoRedo::Get().Redo();
+    Entity restored = scene->TryGetEntityFromUuid(id);
+    REQUIRE(restored);
+    CHECK(restored.GetComponent<SpriteAnimatorComponent>().Clip.GetUUID() == library.Asset.GetUUID());
 }
 
 TEST_CASE("Viewport mesh sources share placement selection and undo after import", "[Editor][Viewport][Drop]")

@@ -1,0 +1,4 @@
+shader unsupported_texture_filename(output color Cout = 0)
+{
+    Cout = texture("image.png", u, v);
+}

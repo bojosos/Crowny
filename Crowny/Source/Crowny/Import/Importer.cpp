@@ -15,6 +15,7 @@
 #include "Crowny/Import/SceneImporter.h"
 #include "Crowny/Import/ScriptImporter.h"
 #include "Crowny/Import/ShaderImporter.h"
+#include "Crowny/Import/SpriteImporter.h"
 #include "Crowny/Import/TextFileImporter.h"
 #include "Crowny/Import/TextureImporter.h"
 
@@ -108,11 +109,15 @@ namespace Crowny
         Importer::Get().RegisterImporter(new FontImporter(), { "ttf", "ttc", "otf", "otc", "fnt" });
         Importer::Get().RegisterImporter(new ScriptImporter(), { "cs" });
         Importer::Get().RegisterImporter(new ShaderImporter(), { "cwsl", "glsl" });
+        Importer::Get().RegisterImporter(new OslShaderImporter(), { "osl" });
         Importer::Get().RegisterImporter(new TextFileImporter(), { "txt", "yaml", "json", "xml" });
         Importer::Get().RegisterImporter(new TextureImporter(),
                                          { "png", "jpeg", "psd", "gif", "tga", "bmp", "hdr", "pic", "ppm", "pgm", "jpg", "ktx2" });
         Importer::Get().RegisterImporter(new MaterialImporter(), { "cwmat", "mat" });
         Importer::Get().RegisterImporter(new MaterialPresetImporter(), { "cwpreset" });
+        Importer::Get().RegisterImporter(new SpriteImporter(), { "cwsprite" });
+        Importer::Get().RegisterImporter(new SpriteAnimationImporter(), { "cwspriteanim" });
+        Importer::Get().RegisterImporter(new SpriteAtlasImporter(), { "cwatlas" });
         Importer::Get().RegisterImporter(new MeshImporter());
         Importer::Get().RegisterImporter(new SceneImporter(), { "cwscene" });
         Importer::Get().RegisterImporter(new PrefabImporter(), { "cwprefab" });

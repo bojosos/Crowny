@@ -40,7 +40,8 @@ namespace Crowny
         Animation = 19,
         Light = 20,
         MeshCollider3D = 21,
-        Decal = 22
+        Decal = 22,
+        SpriteAnimator = 23
     };
 
     enum class SceneComponentYamlType : uint8_t
@@ -53,7 +54,7 @@ namespace Crowny
     {
         Scene* TargetScene = nullptr;
         UnorderedMap<Entity, Vector<UUID>>* Relationships = nullptr;
-        uint32_t FormatVersion = 14;
+        uint32_t FormatVersion = 17;
     };
 
     struct SceneComponentCodec
