@@ -18,13 +18,17 @@ SOLUTION_TARGETS = {
     "All": ["Crowny", "Crowny-Editor", "Crowny-Builder", "Crowny-Player", "Crowny-Tests", "Crowny-RenderTests"],
 }
 
-# "All" builds in two MSBuild invocations: the engine first (pulling in every
-# dependency project), then the five applications with project reference
+# "All" builds in two MSBuild invocations: the engine and application-only
+# dependency projects first, then the five applications with project reference
 # building disabled. A single multi-target invocation makes MSBuild re-evaluate
 # the freshly rebuilt Crowny project once per application (its reference
 # chain), which cost ~45s per re-check on a clean build. Overlapping the
 # applications across build nodes was measured and is not worth the
 # oversubscription cost on typical hardware.
+# Project generation always enables node editors via --with-nodes.
+ALL_PREREQUISITE_TARGETS = [
+    "Crowny", r"Dependencies\ImNodeFlow", r"Dependencies\imgui-node-editor", r"Dependencies\catch2"
+]
 ALL_FOLLOW_UP_TARGETS = ["Crowny-Editor", "Crowny-Builder", "Crowny-Player", "Crowny-Tests", "Crowny-RenderTests"]
 
 TARGETS = tuple(SOLUTION_TARGETS)
@@ -186,7 +190,7 @@ def build(
                     )
 
                 if target == "All":
-                    results = [invoke(["Crowny"])]
+                    results = [invoke(ALL_PREREQUISITE_TARGETS)]
                     results.append(
                         invoke(ALL_FOLLOW_UP_TARGETS, build_project_references=False)
                     )

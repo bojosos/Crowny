@@ -48,7 +48,10 @@ class AllTargetSplitTests(unittest.TestCase):
                 skip_editor_resources=True,
             )
 
-            self.assertEqual([targets for targets, _ in recorded], [["Crowny"], build_module.ALL_FOLLOW_UP_TARGETS])
+            self.assertEqual([targets for targets, _ in recorded], [
+                ["Crowny", r"Dependencies\ImNodeFlow", r"Dependencies\imgui-node-editor", r"Dependencies\catch2"],
+                build_module.ALL_FOLLOW_UP_TARGETS,
+            ])
             managed_build.assert_called_once_with(root, "Release")
             resource_update.assert_not_called()
 
@@ -75,7 +78,11 @@ class AllTargetSplitTests(unittest.TestCase):
 
             self.assertEqual(len(recorded), 2)
             first_targets, first_kwargs = recorded[0]
-            self.assertEqual(first_targets, ["Crowny"])
+            # Editor node libraries and Catch2 are not engine dependencies.
+            # They must exist before application reference builds are disabled.
+            self.assertEqual(first_targets, [
+                "Crowny", r"Dependencies\ImNodeFlow", r"Dependencies\imgui-node-editor", r"Dependencies\catch2"
+            ])
             self.assertTrue(first_kwargs["build_project_references"])
             self.assertEqual(first_kwargs["nodes"], 1)
 

@@ -54,6 +54,6 @@ namespace Crowny
             return glm::vec2(viewport.x + (ndc.x + 1.0f) * 0.5f * (viewport.z - viewport.x),
                              viewport.y + (1.0f - ndc.y) * 0.5f * (viewport.w - viewport.y));
         };
-        return Pair{ project(first), project(second) };
+        return std::pair{ project(first), project(second) };
     }
 } // namespace Crowny

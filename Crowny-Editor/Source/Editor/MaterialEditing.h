@@ -25,7 +25,7 @@ namespace Crowny
         {
             const AssetHandle<Texture> texture = material.GetTextureHandle(name);
             if (name.rfind("cw_", 0) != 0 && texture.HasUUID())
-                textures.emplace(name, Pair{ descriptor.Type, texture });
+                textures.emplace(name, std::pair{ descriptor.Type, texture });
         }
         material.SetShader(shader);
         material.ApplyModelDefaults();

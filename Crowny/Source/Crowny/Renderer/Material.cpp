@@ -264,7 +264,7 @@ namespace Crowny
         UnorderedMap<String, Pair<UniformResourceType, Ref<Texture>>> textures;
         for (const auto& [name, descriptor] : m_TextureDescriptors)
             if (!name.starts_with("cw_"))
-                textures.emplace(name, Pair{ descriptor.Type, GetTexture(descriptor.Set, descriptor.Slot) });
+                textures.emplace(name, std::pair{ descriptor.Type, GetTexture(descriptor.Set, descriptor.Slot) });
         ReloadParams();
         ApplyModelDefaults();
         for (const auto& value : values)
