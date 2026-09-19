@@ -16,18 +16,19 @@ namespace
 
     CodeProjectData MakeProject(CSharpProjectRuntime runtime = CSharpProjectRuntime::Mono)
     {
+        const Path root = fs::temp_directory_path() / "crowny-script-project-fixture";
         CodeProjectData project;
         project.Name = "Game&Assembly";
-        project.ProjectDirectory = "C:/Projects/Crowny Game";
+        project.ProjectDirectory = root / "Projects/Crowny Game";
         project.Runtime = runtime;
         project.Defines = "CROWNY_WIN;CROWNY_64";
         project.ScriptFiles = {
-            "C:/Projects/Crowny Game/Assets/Gameplay/Zeta.cs",
-            "C:/Projects/Crowny Game/Assets/Gameplay/A & B.cs",
+            project.ProjectDirectory / "Assets/Gameplay/Zeta.cs",
+            project.ProjectDirectory / "Assets/Gameplay/A & B.cs",
         };
-        project.NonScriptFiles = { "C:/Projects/Crowny Game/Assets/Readme & Notes.txt" };
-        project.AssemblyReferences = { { "Crowny&Sharp", "C:/Shared/Crowny&Sharp.dll" } };
-        project.ProjectReferences = { { "Shared&Tools", "C:/Projects/Crowny Game/Libraries/Shared & Tools.csproj" } };
+        project.NonScriptFiles = { project.ProjectDirectory / "Assets/Readme & Notes.txt" };
+        project.AssemblyReferences = { { "Crowny&Sharp", root / "Shared/Crowny&Sharp.dll" } };
+        project.ProjectReferences = { { "Shared&Tools", project.ProjectDirectory / "Libraries/Shared & Tools.csproj" } };
         return project;
     }
 } // namespace
