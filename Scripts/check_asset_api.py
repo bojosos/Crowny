@@ -61,6 +61,26 @@ RULES = (
 # These are boundaries, not general-purpose exemptions. Add an exact path and the
 # smallest applicable rule set when a new boundary is unavoidable.
 ALLOWLIST = (
+    Allow("Crowny/Source/Crowny/Assets/AssetManager.cpp", frozenset({"physical-stream"}),
+          "compare an existing physical cook output before replacing it", "std::ifstream stream(path, std::ios::binary | std::ios::ate)"),
+    Allow("Crowny/Source/Crowny/Import/MeshImporter.cpp", frozenset({"physical-stream"}),
+          "source-byte deduplication and disposable alpha-coverage cook cache", "std::ifstream"),
+    Allow("Crowny/Source/Crowny/Import/TextureImporter.cpp", frozenset({"physical-stream"}),
+          "source-byte hashing and disposable texture cook caches", "std::ifstream"),
+    Allow("Crowny/Source/Crowny/Import/OslShaderImporter.cpp", frozenset({"physical-stream"}),
+          "read external compiler diagnostics", 'std::ifstream stream(package / "compiler.log"'),
+    Allow("Crowny/Source/Crowny/Renderer/ProceduralMaterialProgram.cpp", frozenset({"physical-stream"}),
+          "explicit offline compiler package ingestion; cooked shaders use AssetManager", "std::ifstream stream(path, std::ios::binary | std::ios::ate)"),
+    Allow("Crowny/Source/Crowny/Renderer/SpriteAtlas.cpp", frozenset({"raw-read"}),
+          "pack-aware private cooked texture decode preserves the shared runtime handle", "FileSystem::OpenFile(path)"),
+    Allow("Crowny/Source/Crowny/Serialization/SpriteSerializer.cpp", frozenset({"raw-read"}),
+          "sprite serialization boundary", "FileSystem::ReadTextFile(path)"),
+    Allow("Crowny/Source/Crowny/Serialization/SpriteAtlasSerializer.cpp", frozenset({"raw-read"}),
+          "sprite atlas serialization boundary", "FileSystem::ReadTextFile(path)"),
+    Allow("Crowny/Source/Crowny/Serialization/SpriteAnimationSerializer.cpp", frozenset({"raw-read"}),
+          "sprite animation serialization boundary", "FileSystem::ReadTextFile(path)"),
+    Allow("Crowny-Editor/Source/Editor/EditorLayerCapture.cpp", frozenset({"physical-stream"}),
+          "write a user-requested screenshot outside the asset system", "std::ofstream stream(output, std::ios::binary | std::ios::trunc)"),
     Allow("Crowny/Source/Crowny/Import/**", frozenset({"direct-import", "raw-read"}), "source importer boundary"),
     Allow("Crowny/Source/Crowny/Assets/AssetManager.cpp", frozenset({"raw-read"}), "asset residency I/O boundary"),
     Allow("Crowny/Source/Crowny/Assets/AssetCodecs.cpp", frozenset({"raw-read", "physical-metadata"}), "domain asset serialization boundary"),
@@ -179,6 +199,12 @@ def self_test() -> None:
     assert is_allowed("Crowny-Editor/Source/Editor/Script/ScriptProjectGenerator.cpp", "raw-read", "FileSystem::ReadTextFile(path)")
     assert is_allowed("Crowny-Editor/Source/Editor/Script/VSCodeEditor.cpp", "raw-read", "FileSystem::ReadTextFile(path)")
     assert is_allowed("Crowny/Source/Crowny/Serialization/MaterialPresetSerializer.cpp", "raw-read", "FileSystem::ReadTextFile(filepath)")
+    assert is_allowed("Crowny/Source/Crowny/Import/OslShaderImporter.cpp", "physical-stream", 'std::ifstream stream(package / "compiler.log", std::ios::binary)')
+    assert not is_allowed("Crowny/Source/Crowny/Import/OslShaderImporter.cpp", "physical-stream", "std::ifstream stream(assetPath)")
+    assert is_allowed("Crowny/Source/Crowny/Renderer/SpriteAtlas.cpp", "raw-read", "FileSystem::OpenFile(path)")
+    assert not is_allowed("Crowny/Source/Crowny/Renderer/SpriteAtlas.cpp", "direct-import", "Importer::Get().Import(path)")
+    assert not is_allowed("Crowny/Source/Crowny/Renderer/OtherRenderer.cpp", "raw-read", "FileSystem::OpenFile(path)")
+    assert not is_allowed("Crowny-Editor/Source/Editor/EditorLayerCapture.cpp", "physical-stream", "std::ifstream stream(output)")
 
 
 def main() -> int:

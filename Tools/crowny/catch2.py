@@ -87,7 +87,14 @@ def run(
                     executable, runtime_env, "[.ProcessIsolated]~[Benchmark]", root
                 ):
                     log.info(f"Running isolated test: {isolated_test}")
-                    cmd.run_checked([str(executable), isolated_test], cwd=root, env=runtime_env)
+                    try:
+                        cmd.run_checked([str(executable), isolated_test], cwd=root, env=runtime_env)
+                    except cmd.CommandError as error:
+                        # Catch2 returns 4 when an optional isolated test skips.
+                        # Keep failures/crashes fatal, as in check_catch2_exit.py.
+                        if error.exit_code != 4:
+                            raise
+                        log.info(f"Skipped optional isolated test: {isolated_test}")
 
             arguments = [str(executable)]
             if filter:
