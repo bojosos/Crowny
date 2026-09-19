@@ -222,7 +222,7 @@ def build(
                     resources.update(root, configuration, sanitizer)
                     metrics["phases"]["editorResourcesSeconds"] = round(time.time() - started, 3)
 
-            if target in ("Editor", "Player", "All"):
+            if target in ("Editor", "Player", "All") and not skip_editor_resources:
                 from . import player
                 player.stage_template(root, configuration, workspace_config)
 

@@ -73,7 +73,7 @@ def build_parser():
     build_parser.add_argument("--profile", action="store_true")
     build_parser.add_argument(
         "--skip-editor-resources", action="store_true",
-        help="Skip editor resource cooking and packing for headless CI; still build native and managed targets.",
+        help="Skip editor resource cooking and player template staging for headless CI; still build native and managed targets.",
     )
     build_parser.add_argument("--compiler-cache", default="None", choices=["None", "Sccache"])
     build_parser.add_argument(

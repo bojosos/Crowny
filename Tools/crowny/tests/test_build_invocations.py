@@ -27,14 +27,14 @@ def _run_build(root, target, recorded, resource_error=None, **build_options):
         )[1],
     ), mock.patch(
         "crowny.managed.ensure"
-    ) as managed_build, mock.patch("crowny.player.stage_template"), mock.patch(
+    ) as managed_build, mock.patch("crowny.player.stage_template") as stage_template, mock.patch(
         "crowny.resources.update", side_effect=resource_error
     ) as resource_update, mock.patch.dict(
         "os.environ", {"CROWNY_OUTPUT_WRITE_LOCK": ""}
     ):
         lease.return_value.__enter__.return_value = {"jobs": 8, "budget": 12}
         build_module.build(root=root, target=target, jobs=8, **build_options)
-        return managed_build, resource_update
+        return managed_build, resource_update, stage_template
 
 
 class AllTargetSplitTests(unittest.TestCase):
@@ -42,7 +42,7 @@ class AllTargetSplitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             recorded = []
-            managed_build, resource_update = _run_build(
+            managed_build, resource_update, stage_template = _run_build(
                 root, "All", recorded,
                 resource_error=RuntimeError("No Vulkan-capable physical device was found"),
                 skip_editor_resources=True,
@@ -54,6 +54,14 @@ class AllTargetSplitTests(unittest.TestCase):
             ])
             managed_build.assert_called_once_with(root, "Release")
             resource_update.assert_not_called()
+            stage_template.assert_not_called()
+
+    def test_default_all_build_stages_player_template(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, resource_update, stage_template = _run_build(root, "All", [])
+            resource_update.assert_called_once()
+            stage_template.assert_called_once_with(root, "Release", "Release")
 
     def test_default_all_build_still_cooks_editor_resources(self):
         with tempfile.TemporaryDirectory() as directory:
