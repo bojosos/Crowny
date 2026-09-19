@@ -7,7 +7,7 @@
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderCapabilities.h"
 #include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/Renderer/MSDFData.h"
+#include "Crowny/Renderer/MSDFdata.h"
 #include "Crowny/Renderer/RenderSnapshot.h"
 #include "Crowny/Renderer/VisibilityCulling.h"
 
